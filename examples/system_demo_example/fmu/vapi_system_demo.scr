@@ -1,0 +1,57 @@
+
+/*                                                                      */
+/* This script file uses the DemoExampleFMU.fmu to be run in OpenXilEnv */
+/*                                                                      */
+ADD_BBVARI(IncreaseSpeed, DWORD)
+ADD_BBVARI(IncreaseSteeringWheel, DWORD)
+ADD_BBVARI(Loop, UDWORD)
+
+SET_BBVARI(IncreaseSpeed = 2)
+SET_BBVARI(IncreaseSteeringWheel= 1)
+SET_BBVARI(Loop = 0)
+SET_BBVARI(IsActiveCounter = 0)
+SET_BBVARI(RearAngle = 0)
+SET_BBVARI(Speed = 0)
+SET_BBVARI(SteeringWheel = 0)
+
+
+WHILE(Loop < 100)
+  SET_BBVARI(Speed = Speed + IncreaseSpeed)
+  SET_BBVARI(SteeringWheel = SteeringWheel + IncreaseSteeringWheel)
+
+  IF(SteeringWheel>20)
+    SET_BBVARI(IncreaseSteeringWheel = -1)
+  ENDIF
+
+  DELAY(100)
+  SET(Loop = Loop + 1)
+ENDWHILE
+
+
+
+/*                                                                      */
+/* This script file uses the DemoExampleFMU.fmu to be run in OpenXilEnv */
+/*                                                                      */
+ADD_BBVARI(IncreaseSpeed, DWORD)
+ADD_BBVARI(IncreaseSteeringWheel, DWORD)
+ADD_BBVARI(Loop, UDWORD)
+
+SET_BBVARI(IncreaseSpeed = 2)
+SET_BBVARI(IncreaseSteeringWheel= 1)
+SET_BBVARI(Loop = 0)
+
+RESET_PROCESS(DemoExampleFMU.fmu)
+
+WHILE(Loop < 100)
+  SET_BBVARI(Speed = Speed + IncreaseSpeed)
+  SET_BBVARI(SteeringWheel = SteeringWheel + IncreaseSteeringWheel)
+
+  IF(SteeringWheel>20)
+    SET_BBVARI(IncreaseSteeringWheel = -1)
+  ENDIF
+
+  DELAY(100)
+  SET(Loop = Loop + 1)
+ENDWHILE
+
+

@@ -1,0 +1,10 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "testcase4_vd_txclassforu8string_tx.sdv"
+Class = "Vehicle.Chassis.Vehicle.U8String_Device"
+
+[[Component]]
+Path = "testcase4_bs_txclassforu8string_tx.sdv"
+Class = "Vehicle.Chassis.Vehicle.U8String_Service"

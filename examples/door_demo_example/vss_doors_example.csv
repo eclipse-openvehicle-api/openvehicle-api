@@ -1,0 +1,18 @@
+﻿;Class name;Function name;Signal name;vss;Signal direction;type;DBC CAN name includes CAN message name
+;;;;;;;
+VD;FrontDoorLeft;IsOpen;leftDoorIsOpen01;Vehicle.Body.Door.Axle.01.Left;RX;boolean;CAN_Input_L1.Door01LeftIsOpen
+VD;FrontDoorRight;IsOpen;rightDoorIsOpen01;Vehicle.Body.Door.Axle.01.Right;RX;boolean;CAN_Input_R1.Door01RightIsOpen
+VD;RearDoorLeft;IsOpen;leftDoorIsOpen02;Vehicle.Body.Door.Axle.02.Left;RX;boolean;CAN_Input_L2.Door02LeftIsOpen
+VD;RearDoorRight;IsOpen;rightDoorIsOpen02;Vehicle.Body.Door.Axle.02.Right;RX;boolean;CAN_Input_R2.Door02RightIsOpen
+VD;FrontDoorLeft;Lock;leftLatch01;Vehicle.Body.Door.Axle.01.Left;TX;boolean;CAN_Output.LockDoor01Left
+VD;FrontDoorRight;Lock;rightLatch01;Vehicle.Body.Door.Axle.01.Right;TX;boolean;CAN_Output.LockDoor01Right
+VD;RearDoorLeft;Lock;leftLatch02;Vehicle.Body.Door.Axle.02.Left;TX;boolean;CAN_Output.LockDoor02Left
+VD;RearDoorRight;Lock;rightLatch02;Vehicle.Body.Door.Axle.02.Right;TX;boolean;CAN_Output.LockDoor02Right
+BS;FrontDoorLeft;IsOpenL1;leftDoorIsOpen01;Vehicle.Body.Door.Axle.01.Left;RX;boolean;Vehicle.Body.Door.Axle.01.Left
+BS;FrontDoorRight;IsOpenR1;rightDoorIsOpen01;Vehicle.Body.Door.Axle.01.Right;RX;boolean;Vehicle.Body.Door.Axle.01.Right
+BS;RearDoorLeft;IsOpenL2;leftDoorIsOpen02;Vehicle.Body.Door.Axle.02.Left;RX;boolean;Vehicle.Body.Door.Axle.02.Left
+BS;RearDoorRight;IsOpenR2;rightDoorIsOpen02;Vehicle.Body.Door.Axle.02.Right;RX;boolean;Vehicle.Body.Door.Axle.02.Right
+BS;FrontDoorLeft;Lock;leftLatch01;Vehicle.Body.Door.Axle.01.Left;TX;boolean;Vehicle.Body.Door.Axle.01.Left
+BS;FrontDoorRight;Lock;rightLatch01;Vehicle.Body.Door.Axle.01.Right;TX;boolean;Vehicle.Body.Door.Axle.01.Right
+BS;RearDoorLeft;Lock;leftLatch02;Vehicle.Body.Door.Axle.02.Left;TX;boolean;Vehicle.Body.Door.Axle.02.Left
+BS;RearDoorRight;Lock;rightLatch02;Vehicle.Body.Door.Axle.02.Right;TX;boolean;Vehicle.Body.Door.Axle.02.Right

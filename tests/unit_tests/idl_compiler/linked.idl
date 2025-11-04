@@ -1,0 +1,5 @@
+exception InsufficientFunds
+{
+	int32 i;
+};
+

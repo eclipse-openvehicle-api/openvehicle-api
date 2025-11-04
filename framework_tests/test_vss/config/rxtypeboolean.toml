@@ -1,0 +1,10 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "testcase4_vd_rxclassforboolean_rx.sdv"
+Class = "Vehicle.Chassis.Vehicle.Boolean_Device"
+
+[[Component]]
+Path = "testcase4_bs_rxclassforboolean_rx.sdv"
+Class = "Vehicle.Chassis.Vehicle.Boolean_Service"

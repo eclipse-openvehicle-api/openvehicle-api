@@ -1,0 +1,37 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "demo_vd_isactivecounter_tx.sdv"
+Class = "Vehicle.Software.Application.IsActiveCounter_Device"
+
+[[Component]]
+Path = "demo_vd_steeringwheel_rx.sdv"
+Class = "Vehicle.Chassis.SteeringWheel.Angle_Device"
+
+[[Component]]
+Path = "demo_vd_vehiclechassisaxle_tx.sdv"
+Class = "Vehicle.Chassis.RearAxle.Row.Wheel_Device"
+
+[[Component]]
+Path = "demo_vd_vehiclespeed_rx.sdv"
+Class = "Vehicle.Speed_Device"
+
+[[Component]]
+Path = "demo_bs_isactivecounter_tx.sdv"
+Class = "Vehicle.Software.Application.IsActiveCounter_Service"
+
+[[Component]]
+Path = "demo_bs_steeringwheel_rx.sdv"
+Class = "Vehicle.Chassis.SteeringWheel.Angle_Service"
+
+[[Component]]
+Path = "demo_bs_vehiclechassisaxle_tx.sdv"
+Class = "Vehicle.Chassis.RearAxle.Row.Wheel_Service"
+
+[[Component]]
+Path = "demo_bs_vehiclespeed_rx.sdv"
+Class = "Vehicle.Speed_Service"
+
+
+

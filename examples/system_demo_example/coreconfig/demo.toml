@@ -1,0 +1,11 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "demo_complex_service.sdv"
+Class = "Counter Steering Example Service"
+Name = "Counter Steering Example Service"
+
+[[Module]]
+Path = "example_service_proxystub.sdv"
+

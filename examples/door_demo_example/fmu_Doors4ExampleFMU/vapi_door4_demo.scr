@@ -1,0 +1,52 @@
+
+/*                                                                     */
+/* This script file uses the Doors4ExampleFMU.fmu to be run in OpenXiL */
+/*                                                                     */
+ADD_BBVARI(Loop, UDWORD)
+SET_BBVARI(Loop = 0)
+
+/*                                                                     */
+/* Door01Left = 1 represents a open door                               */
+/* wait more then 2 seconds                                            */
+/* Open all doors                                                      */
+/*                                                                     */
+
+SET_BBVARI(Door01LeftIsOpen = 1)
+SET_BBVARI(Door01RightIsOpen = 1)
+SET_BBVARI(Door02LeftIsOpen = 1)
+SET_BBVARI(Door02RightIsOpen = 1)
+
+/*                                                                     */
+/* Close each door one by one                                          */
+/* wait more then 2 seconds                                            */
+/* Open all doors                                                      */
+/*                                                                     */
+
+
+WHILE(Loop < 10)
+
+  SET_BBVARI(Door01LeftIsOpen = 0)
+  DELAY(100)
+
+  SET_BBVARI(Door01RightIsOpen = 0)
+  DELAY(100)
+
+  SET_BBVARI(Door02LeftIsOpen = 0)
+  DELAY(100)
+
+  SET_BBVARI(Door02RightIsOpen = 0)
+
+/*                                                                     */
+/*  wait until the doors are locked, < 2 seconds                       */
+/*                                                                     */
+  DELAY(1000)
+
+  SET_BBVARI(Door01LeftIsOpen = 1)
+  SET_BBVARI(Door01RightIsOpen = 1)
+  SET_BBVARI(Door02LeftIsOpen = 1)
+  SET_BBVARI(Door02RightIsOpen = 1)
+
+  DELAY(100)
+  SET(Loop = Loop + 1)
+ENDWHILE
+

@@ -1,0 +1,10 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "testcase4_vd_txclassforwchar_tx.sdv"
+Class = "Vehicle.Chassis.Vehicle.WChar_Device"
+
+[[Component]]
+Path = "testcase4_bs_txclassforwchar_tx.sdv"
+Class = "Vehicle.Chassis.Vehicle.WChar_Service"

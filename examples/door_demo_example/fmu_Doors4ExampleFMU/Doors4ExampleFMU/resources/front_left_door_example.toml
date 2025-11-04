@@ -1,0 +1,14 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "doors_vd_frontdoorleft.sdv"
+Class = "Vehicle.Chassis.Door.Axle01.Left_Device"
+
+[[Component]]
+Path = "doors_bs_frontdoorleft.sdv"
+Class = "Vehicle.Chassis.Door.Axle01.Left_Service"
+
+
+
+

@@ -1,0 +1,42 @@
+/*******************************************************************************
+ * @file AutoHeadlight.idl
+ * @details Auto Headlight example service interface definition.
+ */
+
+
+/**
+ * @brief AutoHeadlight example service interface. The interface provides functions for the
+ * Auto Headlight example complex service.
+ */
+interface IAutoheadlightService
+{
+
+    /**
+     * @brief Tunnel Bounding box Coordinates struct. 
+     */   
+    struct SGPSBoundBox 
+    {
+        float   fTunnelMinLat = 0.0;  ///< Minimum latitude value of bounding box
+        float   fTunnelMinLon = 0.0;  ///< Minimum longitude value of bounding box
+        float   fTunnelMaxLat = 0.0;  ///< Maximum latitude value of bounding box
+        float   fTunnelMaxLon = 0.0;  ///< Maximum longitude value of bounding box
+    };
+
+    /**
+     * @brief Gets status of vehicle position if it is inside tunnel or not
+     * @return Returns true if position of vehicle is inside tunnel and false if outside.
+     */
+    boolean IsinTunnel() const;
+
+    /**
+     * @brief Get status of headlights
+     * @return Returns the status of headlights (true if switched on , false if not switched on)
+     */
+    boolean GetHeadlightStatus() const;
+
+    /**
+     * @brief Get the GPS bounding box
+     * @return Returns the bounding box structure
+     */
+    SGPSBoundBox GetGPSBoundBox() const;
+};

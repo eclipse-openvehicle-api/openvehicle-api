@@ -1,0 +1,6 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "ComponentTest_Logger_Module.sdv"
+Class = "LoggerTestService"

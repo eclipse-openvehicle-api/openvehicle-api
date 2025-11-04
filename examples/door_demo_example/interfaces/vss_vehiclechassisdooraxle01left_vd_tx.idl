@@ -1,0 +1,39 @@
+/**
+ * @file vss_vehiclechassisdooraxle01left_vd_tx.idl
+ * @date 2025-07-11 11:03:55
+ * File is auto generated from VSS utility.
+ * VSS Version:1.0.0.1
+ */
+#include <interfaces/core.idl>
+
+module vss
+{
+    module Vehicle
+    {
+        module Chassis
+        {
+            module Door
+            {
+                module Axle01
+                {
+                    module LeftDevice
+                    {
+                        /**
+                        * @brief IVSS_WriteLock Device interface
+                        */
+                        interface IVSS_WriteLock
+                        {
+                            /**
+                            * @brief Write leftLatch01 signal
+                            * @param[in] value
+                            * @return true on success otherwise false
+                            */
+                            boolean WriteLock(in boolean value);
+                        };
+                    };
+                };
+            };
+        };
+    };
+};
+

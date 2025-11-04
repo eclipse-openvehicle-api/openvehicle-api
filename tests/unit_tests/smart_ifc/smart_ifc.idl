@@ -1,0 +1,344 @@
+#include <interfaces/core.idl>
+
+/**
+ * @brief Other interface (test for sdv::TInterfaceAccessPtr and sdv::TObjectPtr).
+ */
+interface IOther
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+* @brief Module to test namespaces.
+*/
+module NamespaceTest1
+{
+    /**
+    * @brief Interface in first namespace.
+    */
+    interface INamespaceIfc1
+    {
+        /**
+         * @brief Test function.
+         */
+        void Test();
+    };
+};
+
+/**
+* @brief Module to test namespaces.
+*/
+module NamespaceTest2
+{
+    /**
+    * @brief Interface in first namespace.
+    */
+    interface INamespaceIfc2
+    {
+        /**
+         * @brief Test function.
+         */
+        void Test();
+    };
+};
+
+/**
+* @brief Interface for member testing
+*/
+interface IMember
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for member testing
+ */
+interface IMemberPointerEmpty
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for member testing
+ */
+interface IMemberPointer
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for member testing
+ */
+interface IMemberSharedPointerEmpty
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for member testing
+ */
+interface IMemberSharedPointer
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for member testing
+ */
+interface IMemberWeakPointerEmpty
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for member testing
+ */
+interface IMemberWeakPointer
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for ambiguity testing.
+ */
+interface IAmbiguousInterface
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for denial testing.
+ */
+interface IDeniedInterface
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for chain map base class testing.
+ */
+interface IBaseInterface1
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for chain map base class testing.
+ */
+interface IBaseInterface2
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+* @brief Interface for chain map member class testing.
+*/
+interface IChainMapMemberInterface1
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for chain map base class testing.
+ */
+interface IChainMapMemberInterface2
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+* @brief Interface for chain map member class testing.
+*/
+interface IChainMapMemberSmartPointerInterface1
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for chain map base class testing.
+ */
+interface IChainMapMemberSmartPointerInterface2
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+* @brief Interface for chain map member class testing.
+*/
+interface IChainMapMemberPointerInterface1
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for chain map base class testing.
+ */
+interface IChainMapMemberPointerInterface2
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+* @brief Interface for chain map member class testing.
+*/
+interface IChainMapMemberSharedPointerInterface1
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for chain map base class testing.
+ */
+interface IChainMapMemberSharedPointerInterface2
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+* @brief Interface for chain map member class testing.
+*/
+interface IChainMapMemberWeakPointerInterface1
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for chain map base class testing.
+ */
+interface IChainMapMemberWeakPointerInterface2
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for condition testing.
+ */
+interface IConditionInterface
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for section testing.
+ */
+interface IMainSectionInterface1
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for section testing.
+ */
+interface IMainSectionInterface2
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for section testing.
+ */
+interface ISection0Interface
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for section testing.
+ */
+interface ISection1Interface
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+
+/**
+ * @brief Interface for section testing.
+ */
+interface ISection2Interface
+{
+    /**
+     * @brief Test function.
+     */
+    void Test();
+};
+

@@ -1,0 +1,291 @@
+/**
+ * @file      core.idl
+ * @brief     This file provides the core interface definitions of the core SDV framework.
+ * @version   0.1
+ * @date      2023.04.26
+ * @author    erik.verhoeven@zf.com
+ * @copyright Copyright ZF Friedrichshaven AG (c) 2023
+ */
+
+#include "core_types.idl"
+
+#verbatim #include "../support/pointer.h"
+#verbatim #include "../support/iterator.h"
+#verbatim #include "../support/string.h"
+#verbatim #include "../support/sequence.h"
+#verbatim #include "../support/any.h"
+
+#verbatim_begin
+#if defined(_WIN32) && defined(GetClassInfo)
+#undef GetClassinfo
+#endif
+#ifdef _MSC_VER
+#pragma warning(disable: 4190)  // Disable C-linkage warning when using C++ objects.
+#endif
+#verbatim_end
+
+/**
+* @brief Software Defined Vehicle framework.
+*/
+module sdv
+{
+    /**
+     * @brief Access interface
+     */
+    interface IInterfaceAccess
+    {
+        /**
+         * @brief Get access to another interface.
+         *
+         * @param[in] idInterface The interface id to get access to.
+         * @return Returns a pointer to the interface or NULL when the interface is not supported.
+         */
+        interface_t GetInterface(in interface_id idInterface);
+
+#verbatim_begin
+        /**
+         * @brief Templated version of GetInterface.
+         * @tparam TInterface The interface type.
+         * @return Returns a pointer to the interface or NULL when the interface is not supported.
+         */
+        template <typename TInterface>
+        TInterface* GetInterface()
+        {
+            return GetInterface(sdv::GetInterfaceId<TInterface>()).template get<TInterface>();
+        }
+#verbatim_end
+    };
+
+    /**
+     * @brief Object type enumeration.
+     */
+    enum EObjectType : uint32
+    {
+        SystemObject = 0,       ///< System object
+        Device = 10,            ///< Abstract device
+        BasicService = 20,      ///< Basic service
+        ComplexService = 21,    ///< Complex service
+        Application = 30,       ///< Application
+        Proxy = 100,            ///< Proxy object
+        Stub = 101,             ///< Stub object
+        Utility = 1000,         ///< Utility object
+    };
+
+    /**
+     * @brief Object flags.
+     */
+    enum EObjectFlags : uint32
+    {
+        singleton = 256,        ///< The object is a singleton object.
+    };
+
+    /**
+     * @brief Class information structure.
+     */
+    struct SClassInfo
+    {
+        u8string            ssModulePath;           ///< Path to the module that contains the class.
+        u8string            ssClassName;            ///< String representing the class name.
+        sequence<u8string>  seqClassAliases;        ///< Sequence with class name aliases.
+        u8string            ssDefaultObjectName;    ///< The default object name.
+        EObjectType         eType;                  ///< Type of object.
+        uint32              uiFlags;                ///< Zero or more object flags from EObjectFlags.
+        sequence<u8string>  seqDependencies;        ///< Sequence with object class names this object is dependent on.
+    };
+
+    /**
+     * @brief Interface implemented by each module and used for managing the objects.
+     */
+    interface IObjectFactory
+    {
+        /**
+         * @brief Create or get the object using the name from the object class info.
+         * @attention The objects lifetime is ended by a call to the DestroyObject function or the unloading of the module.
+         * @param[in] ssClassName The name of the class object to instantiate.
+         * @return Pointer to IInterfaceAccess interface of the object or NULL when the requested object doesn't exist.
+         */
+        IInterfaceAccess CreateObject(in u8string ssClassName);
+
+        /**
+         * @brief Destroy an instantiated object using the pointer to the object instance.
+         * @param[in] sdvObject The object to destroy
+         */
+        void DestroyObject(in IInterfaceAccess sdvObject);
+
+        /**
+         * @brief Destroys all currently instantiated objects in reverse order of creation
+         */
+        void DestroyAllObjects();
+    };
+
+    /**
+    * @brief Object status enumeration
+    */
+    enum EObjectStatus : uint32
+    {
+        initialization_pending = 0,     ///< constructor called, but no call to initialize yet
+        initializing = 10,              ///< Initialize was called and is being executed.
+        initialization_failure = 11,    ///< Initialization failed
+        initialized = 12,               ///< Initialization succeeded
+        configuring = 20,               ///< In configuration mode (available after initialization).
+        config_error = 21,              ///< While configuring, error encountered
+        running = 30,                   ///< In running mode (available after initialization).
+        runtime_error = 31,             ///< While running, error encountered
+        shutdown_in_progress = 90,      ///< Shutdown called, but not finished yet
+        destruction_pending = 99,       ///< All threads stopped + does no longer fire callbacks or events, ready to be destroyed
+    };
+
+    /**
+     * @brief Component operation mode.
+    */
+    enum EOperationMode : uint32
+    {
+        configuring = 20,               ///< The component should switch to configuration mode.
+        running = 30,                   ///< The component should switch to running mode.
+    };
+
+    /**
+     * @brief Optional interface allowing for additional control of more complex SDVObjects.
+     * To be implemented if the object in question calls other SDVobjects via running threads or callbacks,
+     * requires configuration or performs other complex behavior during creation/shutdown
+     */
+    interface IObjectControl
+    {
+        /**
+         * @brief Initialize the object.
+         * @param[in] ssObjectConfig Optional configuration string.
+         */
+        void Initialize(in u8string ssObjectConfig);
+
+        /**
+         * @brief Get the current status of the object.
+         * @return Return the current status of the object.
+         */
+        EObjectStatus GetStatus() const;
+
+        /**
+         * @brief Set the component operation mode.
+         * @param[in] eMode The operation mode, the component should run in.
+         */
+        void SetOperationMode(in EOperationMode eMode);
+
+        /**
+         * @brief Shutdown called before the object is destroyed.
+         * @attention Implement calls to other SDV objects here as this is no longer considered safe during the destructor of the object!
+         * After a call to shutdown any threads/callbacks/etc that could call other SDV objects need to have been stopped.
+         * The SDV object itself is to remain in a state where it can respond to calls to its interfaces as other objects may still call it during the shutdown sequence!
+         * Any subsequent call to GetStatus should return EObjectStatus::destruction_pending
+         */
+        void Shutdown();
+    };
+
+    /**
+     * @brief Interface that might be exposed by objects to allow self-destruction if the owner doesn't need to object any more.
+     */
+    interface IObjectDestroy
+    {
+        /**
+         * @brief Destroy the object.
+         * @attention After a call of this function, all exposed interfaces render invalid and should not be used any more.
+         */
+        void DestroyObject();
+    };
+
+    /**
+     * @brief Lifetime management through reference counting.
+     */
+    interface IObjectLifetime
+    {
+        /**
+         * @brief Increment the lifetime. Needs to be balanced by a call to Decrement.
+         */
+        void Increment();
+
+        /**
+         * @brief Decrement the lifetime. If the lifetime reaches zero, the object will be destroyed (through the exposed
+         * IObjectDestroy interface).
+         * @return Returns 'true' if the object was destroyed, false if not.
+         */
+        boolean Decrement();
+
+        /**
+         * @brief Get the current lifetime count.
+         * @remarks The GetCount function returns a momentary value, which can be changed at any moment.
+         * @return Returns the current counter value.
+         */
+        uint32 GetCount() const;
+    };
+
+    /**
+     * @brief Attribute flags.
+     */
+    enum EAttributeFlags : uint32
+    {
+        read_only = 0x100,      ///< When set, the attribute is readonly.
+    };
+
+    /**
+     * @brief Attribute interface
+     */
+    interface IAttributes
+    {
+        /**
+         * @brief Get a sequence with the available attribute names.
+         * @return The sequence of attribute names.
+         */
+        sequence<u8string> GetNames() const;
+
+        /**
+         * @brief  Get the attribute value.
+         * @param[in] ssAttribute Name of the attribute.
+         * @return The attribute value or an empty any-value if the attribute wasn't found or didn't have a value.
+         */
+        any Get(in u8string ssAttribute) const;
+
+        /**
+         * @brief Set the attribute value.
+         * @param[in] ssAttribute Name of the attribute.
+         * @param[in] anyAttribute Attribute value to set.
+         * @return Returns 'true' when setting the attribute was successful or 'false' when the attribute was not found or the
+         * attribute is read-only or another error occurred.
+        */
+        boolean Set(in u8string ssAttribute, in any anyAttribute);
+
+        /**
+         * @brief Get the attribute flags belonging to a certain attribute.
+         * @param[in] ssAttribute Name of the attribute.
+         * @return Returns the attribute flags (zero or more EAttributeFlags flags) or 0 when the attribute could not be found.
+         */
+        uint32 GetFlags(in u8string ssAttribute) const;
+    };
+
+}; // module sdv
+
+#verbatim_begin
+/**
+ * @brief Returns whether or not instances of objects implemented by this module are running. If none, the module can be unloaded.
+ * @remarks Unloading the module with running instances could cause a crash and should be prevented at all costs. Unloading the
+ * module removes the code of the objects still running.
+ * @return Returns true when object instances are running; otherwise returns 'false'.
+ */
+extern "C" SDV_SYMBOL_PUBLIC bool HasActiveObjects();
+
+/**
+ * @brief Get the module factory interface with a specific version.
+ * @details This function provides access to the objects being implemented in this module.
+ * @param[in] interfaceVersion Request the module factory for a specific interface version.
+ * Using another interface version than the one returned from the GetInterfaceVersion, might cause the function to fail.
+ * @return Returns pointer to the IInterfaceAccess interface of the module factory object.
+ */
+extern "C" SDV_SYMBOL_PUBLIC sdv::IInterfaceAccess* GetModuleFactory(uint32_t interfaceVersion);
+
+/**
+ * @brief Get the the module manifest.
+ * @details Each module contains a manifest containing general information as well as information about the component classes. This
+ * allows installing the component without having to instantiate the classes.
+ * @return Returns the pointer to a zero terminated string containing the module manifest or NULL when there is no string.
+ */
+extern "C" SDV_SYMBOL_PUBLIC const char* GetManifest();
+#verbatim_end
+
+#include "mem.idl"

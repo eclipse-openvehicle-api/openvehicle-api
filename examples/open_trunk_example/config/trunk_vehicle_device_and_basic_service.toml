@@ -1,0 +1,22 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "trunk_vd_vehiclespeed_rx.sdv"
+Class = "Vehicle.Speed_Device"
+
+[[Component]]
+Path = "trunk_vd_vehicletrunk_tx.sdv"
+Class = "Vehicle.Body.Trunk_Device"
+
+[[Component]]
+Path = "trunk_bs_vehiclespeed_rx.sdv"
+Class = "Vehicle.Speed_Service"
+
+[[Component]]
+Path = "trunk_bs_vehicletrunk_tx.sdv"
+Class = "Vehicle.Body.Trunk_Service"
+
+
+
+

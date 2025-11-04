@@ -1,0 +1,245 @@
+/**
+ * @file      core_types.idl
+ * @brief     This file provides all data types for the core SDV framework.
+ * @version   0.1
+ * @date      2023.05.08
+ * @author    erik.verhoeven@zf.com
+ * @copyright Copyright ZF Friedrichshaven AG (c) 2023
+ */
+
+/**
+ * @brief Current interface version.
+ */
+const uint32 SDVFrameworkInterfaceVersion = 100;
+
+/**
+ * @brief Current framework build version.
+ */
+const uint32 SDVFrameworkBuildVersion = 100;
+
+/**
+ * @brief Current framework sub-build version.
+ */
+const uint32 SDVFrameworkSubbuildVersion = 100;
+
+#verbatim_begin
+/* Define SDV_SYMBOL_PUBLIC attribute for exported functions. */
+#if !defined(SDV_SYMBOL_PUBLIC) || !defined(SDV_SYMBOL_HIDDEN)
+#if defined _WIN32 || defined __CYGWIN__
+#ifdef __GNUC__
+#define SDV_SYMBOL_PUBLIC __attribute__((dllexport))
+#else \
+#define SDV_SYMBOL_PUBLIC __declspec(dllexport)
+#endif
+#define SDV_SYMBOL_HIDDEN
+#else
+#if __GNUC__ >= 4
+#define SDV_SYMBOL_PUBLIC __attribute__((visibility("default"))) __attribute__((used))
+#define SDV_SYMBOL_HIDDEN __attribute__((visibility("hidden")))
+#else
+#define SDV_SYMBOL_PUBLIC /**< SDV_SYMBOL_PUBLIC: exportable function attribute */
+#define SDV_SYMBOL_HIDDEN  /**< SDV_SYMBOL_HIDDEN: private function attribute */
+#endif
+#endif
+#endif /* !defined(SDV_SYMBOL_PUBLIC) || !defined(SDV_SYMBOL_HIDDEN) */
+
+#ifdef __unix__
+#if _POSIX_C_SOURCE < 200809L
+#error POSIX version POSIX.1-2008 or higher needed
+#endif
+#endif
+#verbatim_end
+
+#verbatim_begin
+#include "../support/interface.h"
+#include "../support/except.h"
+#verbatim_end
+
+/**
+* @brief Software Defined Vehicle framework.
+*/
+module sdv
+{
+    /**
+    * @brief Endian enum
+    */
+    enum EEndian : uint8
+    {
+        big_endian	  = 0,
+        little_endian = 1,
+    };
+
+    /**
+     * @brief System exception.
+     */
+    exception XSysExcept
+    {};
+
+    /**
+     * @brief Access to the function is denied exception.
+     */
+    exception XAccessDenied : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "Access denied.";
+    };
+
+    /**
+    * @brief The requested resource hasn't been found.
+    */
+    exception XNotFound : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "Resource not found.";
+    };
+
+    /**
+     * @brief The system is in an invalid state exception.
+     */
+    exception XInvalidState : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "The system is in an invalid state.";
+    };
+
+    /**
+     * @brief A timeout occurred exception.
+     */
+    exception XTimeout : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "A timeout occurred.";
+    };
+
+    /**
+     * @brief No interface found exception.
+     */
+    exception XNoInterface : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "The interface could not be found.";
+    };
+
+    /**
+     * @brief Invalid index (index >= size or index < 0).
+     */
+    exception XIndexOutOfRange : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "The supplied index was out of range.";
+
+        uint32 uiIndex;  ///< Index
+        uint32 uiSize;   ///< Size
+    };
+
+    /**
+     * @brief Invalid iterator.
+     */
+    exception XInvalidIterator : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "The supplied iterator was invalid.";
+    };
+
+    /**
+     * @brief Null pointer.
+     */
+    exception XNullPointer : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "A NULL-pointer was supplied.";
+    };
+
+    /**
+     * @brief Invalid value for the reference counter.
+     */
+    exception XInvalidRefCount : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "The reference counter has an invalid/unexpected value.";
+
+        uint32 uiCount; ///< Reference counter value.
+    };
+
+    /**
+     * @brief Buffer is too small.
+     */
+    exception XBufferTooSmall : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "The buffer was too small to store the data.";
+
+        uint64 uiSize;      ///< Requested size.
+        uint64 uiCapacity;  ///< Size of the buffer.
+    };
+
+    /**
+     * @brief Hash value doesn't match.
+     */
+    exception XHashNotMatching : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "The provided hash value doesn't match to the calculated hash value.";
+
+        uint64 uiCalculated;        ///< Calculated hash value.
+        uint64 uiProvided;          ///< Provided hash value.
+    };
+
+    /**
+     * @brief Offset out of range.
+     */
+    exception XOffsetPastBufferSize : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "The provided offset doesn't is not pointing to a location within the buffer.";
+
+        uint64 uiOffset;         ///< Offset value.
+        uint64 uiSize;           ///< Buffer size.
+    };
+
+    /**
+     * @brief Unknown exception.
+     */
+    exception XUnknownException : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "An exception was fired, but no handler found for it.";
+
+        exception_id unknown_id;        ///< The ID of the unknown exception.
+    };
+
+    /**
+     * @brief Unhandled exception.
+     */
+    exception XUnhandledException : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "An unhandled exception was caught.";
+    };
+
+    /**
+     * @brief Core features.
+     */
+    module core
+    {
+        /**
+         * @brief No memory manager available exception.
+         */
+        exception XNoMemMgr : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "The memory manager could not be accessed.";
+        };
+
+        /**
+         * @brief Allocation failed exception
+         */
+        exception XAllocFailed : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "The allocation of memory failed.";
+
+            uint32 uiSize; ///< Size of the allocation.
+        };
+	};
+};

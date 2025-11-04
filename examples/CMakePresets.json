@@ -1,0 +1,182 @@
+{
+  "version": 2,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "config_base",
+      "hidden": true,
+      "displayName": "Base configuration",
+      "description": "Default build",
+      "binaryDir": "${sourceDir}/../build/${presetName}/examples",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/../install/${presetName}/examples",
+        "SDV_FRAMEWORK_RUNTIME": "${sourceDir}/../build/${presetName}/bin",
+        "SDV_COMPONENT_INSTALL": "${sourceDir}/../build/${presetName}/bin",
+        "SDV_FRAMEWORK_DEV_TOOLS": "${sourceDir}/../build/${presetName}/bin",
+        "SDV_FRAMEWORK_DEV_INCLUDE": "${sourceDir}/../export"
+      }
+    },
+    {
+      "name": "msvc_x64_x64_ninja_debug",
+      "displayName": "msvc_x64_x64 (Ninja - Debug)",
+      "description": "MS Visual C++ Compiler - Ninja Generator - Debug Build",
+      "inherits": "config_base",
+      "generator": "Ninja",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl.exe",
+        "CMAKE_CXX_COMPILER": "cl.exe",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "msvc_x64_x64_ninja_release",
+      "displayName": "msvc_x64_x64 (Ninja - Release)",
+      "description": "MS Visual C++ Compiler - Ninja Generator - Release Build",
+      "inherits": "config_base",
+      "generator": "Ninja",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl.exe",
+        "CMAKE_CXX_COMPILER": "cl.exe",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "gcc_ninja_debug",
+      "displayName": "GCC w64 (Ninja - Debug)",
+      "description": "GCC Compiler - Ninja Generator - Debug Build",
+      "inherits": "config_base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "gcc_ninja_release",
+      "displayName": "GCC w64 (Ninja - Release)",
+      "description": "GCC Compiler - Ninja Generator - Release Build",
+      "inherits": "config_base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "gcc_mingw_debug",
+      "displayName": "GCC w64 (MINGW Make - Debug)",
+      "description": "GCC Compiler - MINGW Make Generator - Debug Build",
+      "inherits": "config_base",
+      "generator": "MinGW Makefiles",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "gcc_mingw_release",
+      "displayName": "GCC w64 (MINGW Make - Release)",
+      "description": "GCC Compiler - MINGW Make Generator - Release Build",
+      "inherits": "config_base",
+      "generator": "MinGW Makefiles",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "gcc_unix_debug",
+      "displayName": "GCC w64 (UNIX Make - Debug)",
+      "description": "GCC Compiler - UNIX Make Generator - Debug Build",
+      "inherits": "config_base",
+      "generator": "Unix Makefiles",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "gcc_unix_release",
+      "displayName": "GCC w64 (UNIX Make - Release)",
+      "description": "GCC Compiler - UNIX Make Generator - Release Build",
+      "inherits": "config_base",
+      "generator": "Unix Makefiles",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "msvc_x64_x64_ninja_debug",
+      "displayName": "msvc_x64_x64 (Ninja - Debug)",
+      "description": "MS Visual C++ Compiler - Ninja Generator - Debug Build",
+      "configurePreset": "msvc_x64_x64_ninja_debug"
+    },
+    {
+      "name": "msvc_x64_x64_ninja_release",
+      "displayName": "msvc_x64_x64 (Ninja - Release)",
+      "description": "MS Visual C++ Compiler - Ninja Generator - Release Build",
+      "configurePreset": "msvc_x64_x64_ninja_release"
+    },
+    {
+      "name": "gcc_ninja_debug",
+      "displayName": "GCC w64 (Ninja - Debug)",
+      "description": "GCC Compiler - Ninja Generator - Debug Build",
+      "configurePreset": "gcc_ninja_debug"
+    },
+    {
+      "name": "gcc_ninja_release",
+      "displayName": "GCC w64 (Ninja - Release)",
+      "description": "GCC Compiler - Ninja Generator - Release Build",
+      "configurePreset": "gcc_ninja_release"
+    },
+    {
+      "name": "gcc_mingw_debug",
+      "displayName": "GCC w64 (MINGW Make - Debug)",
+      "description": "GCC Compiler - MINGW Make Generator - Debug Build",
+      "configurePreset": "gcc_mingw_debug",
+      "jobs": 8
+    },
+    {
+      "name": "gcc_mingw_release",
+      "displayName": "GCC w64 (MINGW Make - Release)",
+      "description": "GCC Compiler - MINGW Make Generator - Release Build",
+      "configurePreset": "gcc_mingw_release",
+      "jobs": 8
+    },
+    {
+      "name": "gcc_unix_debug",
+      "displayName": "GCC w64 (UNIX Make - Debug)",
+      "description": "GCC Compiler - UNIX Make Generator - Debug Build",
+      "configurePreset": "gcc_unix_debug",
+      "jobs": 8
+    },
+    {
+      "name": "gcc_unix_release",
+      "displayName": "GCC w64 (UNIX Make - Release)",
+      "description": "GCC Compiler - UNIX Make Generator - Release Build",
+      "configurePreset": "gcc_unix_release",
+      "jobs": 8
+    }
+  ]
+}

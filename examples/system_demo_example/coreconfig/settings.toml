@@ -1,0 +1,28 @@
+# Settings file
+[Settings]
+Version = 100
+
+# The system config array can contain zero or more configurations that are loaded at the time
+# the system ist started. It is advisable to split the configurations in:
+#  platform config     - containing all the components needed to interact with the OS,
+#                        middleware, vehicle bus, Ethernet.
+#  vehicle interface   - containing the vehicle bus interpretation components like data link
+#                        based on DBC and devices for their abstraction.
+#  vehicle abstraction - containing the basic services
+# Load the system configurations by providing the "SystemConfig" keyword as an array of strings.
+# A relative path is relative to the installation directory (being "exe_location/instance_id").
+#
+# Example:
+#   SystemConfig = [ "platform.toml", "vehicle_ifc.toml", "vehicle_abstract.toml" ]
+#
+SystemConfig = [ "platform.toml", "vehicle_ifc.toml", "vehicle_abstract.toml" ]
+
+# The application config contains the configuration file that can be updated when services and
+# apps are being added to the system (or being removed from the system). Load the application
+# config by providing the "AppConfig" keyword as a string value. A relative path is relative to
+# the installation directory (being "exe_location/instance_id").
+#
+# Example
+#   AppConfig = "app_config.toml"
+#
+AppConfig = "Demo.toml"

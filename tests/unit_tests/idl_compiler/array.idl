@@ -1,0 +1,54 @@
+const int32 iGlobalLength = 32;
+
+const char szGlobalArray1[] = "12345678901234567890123456789801";
+const char szGlobalArray2[32] = "1234567890123456789012345678901";
+const char szGlobalArray3[iGlobalLength] = "1234567890123456789012345678901";
+//const char rgszGlobalArray4[4][] = { "1234567", "1234567", "1234567", "1234567" };
+const char rgszGlobalArray5[4][8] = { "1234567", "1234567", "1234567", "1234567" };
+const char rgszGlobalArray6[4][iGlobalLength/4] = { "1234567", "1234567", "1234567", "1234567" };
+
+struct SFixedArrayLength
+{
+    const int32     iStaticLength = 32;
+    char            szArray1[32];
+    char            szArray2[iGlobalLength];
+    char            szArray3[iStaticLength];
+    char            szArray5[4][iGlobalLength / 4];
+    char            szArray6[4][iStaticLength / 4];
+    char            szArray8[iGlobalLength / 4][4];
+    char            szArray9[iStaticLength / 4][4];
+};
+
+struct SArrayTest
+{
+    // Member variable
+    uint32 rguiValSingle[10];
+    uint32 rguiValMulti[4][3][2];
+
+    // Const variable
+    const uint32 rgConstValSingle[10]		 = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
+    const uint32 rgConstValMulti[4][3][2]	 = {{{011, 012}, {021, 022}, {031, 032}},
+                                                {{111, 112}, {121, 122}, {131, 132}},
+                                                {{211, 212}, {221, 222}, {231, 232}},
+                                                {{311, 312}, {321, 322}, {331, 332}}};
+    const uint32 rgConstValUnboundSingle[]	 = {10, 20, 30, 40};
+    //const uint32 rgConstValUnboundMulti[2][] = {{10, 20, 30, 40}, {50, 60, 70, 80}};
+
+    // Typedef
+    typedef uint32 TArray;
+    typedef uint32 TArraySingle[10];
+    typedef uint32 TArrayMulti[3][2];
+    typedef uint32 TArrayUnbound[];
+
+    TArray tArrayVar = 10;
+    TArray tArrayVarArry[10] = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
+    TArraySingle tArraySingleVar = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
+    TArraySingle tArraySingleVarArray[2] = {{10, 20, 30, 40, 50, 60, 70, 80, 90, 100}, {10, 20, 30, 40, 50, 60, 70, 80, 90, 100}};
+    TArrayMulti tArrayMultiVar[4] = {{{011, 012}, {021, 022}, {031, 032}},
+    				   {{111, 112}, {121, 122}, {131, 132}},
+    				   {{211, 212}, {221, 222}, {231, 232}},
+    				   {{311, 312}, {321, 322}, {331, 332}}};
+    //TArrayUnbound tArrayUnboundVar = {10, 20, 30}; // TODO --> Error... only with const
+	//TArrayUnbound tARrayUnboundVar2[2] = {{20, 30, 40}, {120, 130, 140}}; // TODO --> Error... only with const
+	//TArrayUnbound tARrayUnboundVar3[2] = {{30, 40}, {120, 130, 140}}; // TODO --> Error... only with const and invalid size
+};

@@ -1,0 +1,62 @@
+/**
+ * @file timer.idl
+ * @author Erik Verhoeven DISDS1 (mailto:erik.verhoeven@zf.com)
+ * @brief This file includes all the interfaces used for timer creation.
+ * @version 1.0
+ * @date 2024-05-09
+ *
+ * @copyright Copyright ZF Friedrichshafen AG (c) 2023-2025
+ */
+
+#include "core.idl"
+
+/**
+ * @brief Software Defined Vehicle framework.
+ */
+module sdv
+{
+    /**
+     * @brief Core features.
+     */
+    module core
+    {
+        /**
+         * @brief Interface to be implemented by user-defined tasks so that the core::ITaskTimer interface can periodically execute the
+         * task
+         */
+        interface ITaskExecute
+        {
+            /**
+             * @brief Execute a task. This function is triggered by the task timer service.
+             */
+            void Execute();
+        };
+
+        /**
+         * @brief Interface to execute tasks periodically
+         */
+        interface ITaskTimer
+        {
+            /**
+             * @brief Method to execute the user-defined task periodically.
+             * @param[in] uiPeriod The time period in milliseconds in which the task should executed.
+             * @param[in] pTask Interface to the task object exposing the ITaskExecute interface. The object must be kept alive
+             * until the timer has been destroyed.
+             * @return Returns an interface to the task timer object. Use sdv::IObjectDestroy to terminate the timer.
+             */
+            IInterfaceAccess CreateTimer(in uint32 uiPeriod, in IInterfaceAccess pTask);
+        };
+
+        /**
+         * @brief Interface to set the simulation time between 2 simulation steps.
+         */
+        interface ITimerSimulationStep
+        {
+            /**
+             * @brief Method to set the time which has past from the last simulation step.
+             * @param[in] uiSimulationStep the time in microseconds which has past from the last simulation step.
+             */
+            void SimulationStep(in uint64 uiSimulationStep);
+        };
+    };
+};

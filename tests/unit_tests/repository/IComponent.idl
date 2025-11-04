@@ -1,0 +1,17 @@
+#include <interfaces/core.idl>
+
+/**
+ * @brief Example interface
+ */
+interface ITestLock
+{
+	/**
+	 * @brief Lock Mutex
+	 */
+	void Lock();
+
+	/**
+	 * @brief Unlock Mutex
+	 */
+	void Unlock();
+};

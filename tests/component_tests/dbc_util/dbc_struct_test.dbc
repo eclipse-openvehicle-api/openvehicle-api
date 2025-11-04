@@ -1,0 +1,233 @@
+VERSION ""
+
+
+NS_ : 
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	VAL_
+	CAT_DEF_
+	CAT_
+	FILTER
+	BA_DEF_DEF_
+	EV_DATA_
+	ENVVAR_DATA_
+	SGTYPE_
+	SGTYPE_VAL_
+	BA_DEF_SGTYPE_
+	BA_SGTYPE_
+	SIG_TYPE_REF_
+	VAL_TABLE_
+	SIG_GROUP_
+	SIG_VALTYPE_
+	SIGTYPE_VALTYPE_
+	BO_TX_BU_
+	BA_DEF_REL_
+	BA_REL_
+	BA_DEF_DEF_REL_
+	BU_SG_REL_
+	BU_EV_REL_
+	BU_BO_REL_
+	SG_MUL_VAL_
+
+BS_:
+
+BU_: TestECU_Rx TestECU_Tx
+
+
+BO_ 39 TestLE_MinMax: 8 TestECU_Tx
+ SG_ SignalLE6 : 32|32@1+ (-1.5,5000) [-5000|5000] ""  TestECU_Rx
+ SG_ SignalLE5 : 24|8@1- (12.34567,0) [-1000|1000] ""  TestECU_Rx
+ SG_ SignalLE4 : 18|6@1+ (0.5,-16) [-15|15] ""  TestECU_Rx
+ SG_ SignalLE3 : 12|6@1- (1,25) [0|50] ""  TestECU_Rx
+ SG_ SignalLE2 : 4|8@1+ (2,-100) [-100|300] ""  TestECU_Rx
+ SG_ SignalLE1 : 0|4@1- (1,0) [-6|6] ""  TestECU_Rx
+
+BO_ 38 TestBE_MinMax: 8 TestECU_Tx
+ SG_ SignalBE1 : 7|4@0- (1,0) [-6|6] ""  TestECU_Rx
+ SG_ SignalBE2 : 3|8@0+ (2,-100) [-100|300] ""  TestECU_Rx
+ SG_ SignalBE3 : 11|6@0- (1,25) [0|50] ""  TestECU_Rx
+ SG_ SignalBE4 : 21|6@0+ (0.5,-16) [-15|15] ""  TestECU_Rx
+ SG_ SignalBE5 : 31|8@0- (12.34567,0) [-1000|1000] ""  TestECU_Rx
+ SG_ SignalBE6 : 39|32@0+ (-1.5,5000) [-5000|5000] ""  TestECU_Rx
+
+BO_ 8 TestCyclic: 1 TestECU_Tx
+ SG_ Counter : 7|3@0+ (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 9 TestCyclicAndSpontaneous: 1 TestECU_Tx
+ SG_ Counter : 7|3@0+ (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 10 TestCyclicIfActive: 1 TestECU_Tx
+ SG_ Counter : 7|3@0+ (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 11 TestCyclicIfActiveAndSpontaneous: 1 TestECU_Tx
+ SG_ Counter : 7|3@0+ (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 12 TestSpontaneousDelay: 1 TestECU_Tx
+ SG_ Counter : 7|3@0+ (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 13 TestCyclicAndSpontaneousDelay: 1 TestECU_Tx
+ SG_ Counter : 7|3@0+ (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 100 TestUintLE: 8 TestECU_Tx
+ SG_ SignalUintLE6 : 34|30@1+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalUintLE5 : 16|18@1+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalUintLE4 : 9|7@1+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalUintLE3 : 3|6@1+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalUintLE2 : 1|2@1+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalUintLE1 : 0|1@1+ (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 101 TestUintBE: 8 TestECU_Tx
+ SG_ SignalUintBE1 : 7|1@0+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalUintBE2 : 6|2@0+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalUintBE3 : 4|6@0+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalUintBE4 : 14|7@0+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalUintBE5 : 23|18@0+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalUintBE6 : 37|30@0+ (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 102 TestUint64LE: 8 TestECU_Tx
+ SG_ SignalUint64LE : 0|64@1+ (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 103 TestUint64BE: 8 TestECU_Tx
+ SG_ SignalUint64BE : 7|64@0+ (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 200 TestIntLE: 8 TestECU_Tx
+ SG_ SignalIntLE6 : 34|30@1- (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalIntLE5 : 16|18@1- (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalIntLE4 : 13|3@1- (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalIntLE3 : 7|6@1- (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalIntLE2 : 2|5@1- (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalIntLE1 : 0|2@1- (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 201 TestIntBE: 8 TestECU_Tx
+ SG_ SignalIntBE1 : 7|2@0- (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalIntBE2 : 5|5@0- (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalIntBE3 : 0|6@0- (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalIntBE4 : 10|3@0- (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalIntBE5 : 23|18@0- (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalIntBE6 : 37|30@0- (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 202 TestInt64LE: 8 TestECU_Tx
+ SG_ SignalInt64LE : 0|64@1- (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 203 TestInt64BE: 8 TestECU_Tx
+ SG_ SignalInt64BE : 7|64@0- (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 300 TestFloatLE: 8 TestECU_Tx
+ SG_ SignalFloatLE2 : 32|32@1- (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalFloatLE1 : 0|32@1- (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 301 TestFloatBE: 8 TestECU_Tx
+ SG_ SignalFloatBE1 : 7|32@0- (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalFloatBE2 : 39|32@0- (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 400 TestDoubleLE: 8 TestECU_Tx
+ SG_ SignalDoubleLE1 : 0|64@1- (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 401 TestDoubleBE: 8 TestECU_Tx
+ SG_ SignalDoubleBE1 : 7|64@0- (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 500 TestScaleLE: 7 TestECU_Tx
+ SG_ SignalScaleFloatLE7 : 24|32@1- (0.001,100) [-1000|1000] ""  TestECU_Rx
+ SG_ SignalScaleIntLE6 : 20|4@1- (1,-3.5) [-14|15] ""  TestECU_Rx
+ SG_ SignalScaleIntLE5 : 16|4@1- (0.001,0.008) [0.002|0.012] ""  TestECU_Rx
+ SG_ SignalScaleUintLE4 : 12|4@1+ (1,-2) [-1|10.5] ""  TestECU_Rx
+ SG_ SignalScaleUintLE3 : 8|4@1+ (-1,0) [-14|-2] ""  TestECU_Rx
+ SG_ SignalScaleUintLE2 : 4|4@1+ (1,-3.5) [-2|11.5] ""  TestECU_Rx
+ SG_ SignalScaleUintLE1 : 0|4@1+ (0.001,0) [0.002|0.012] ""  TestECU_Rx
+
+BO_ 501 TestScaleBE: 7 TestECU_Tx
+ SG_ SignalScaleUintBE1 : 7|4@0+ (0.001,0) [0.002|0.012] ""  TestECU_Rx
+ SG_ SignalScaleUintBE2 : 3|4@0+ (1,-3.5) [-2|11.5] ""  TestECU_Rx
+ SG_ SignalScaleUintBE3 : 15|4@0+ (-1,0) [-14|-2] ""  TestECU_Rx
+ SG_ SignalScaleUintBE4 : 11|4@0+ (1,-2) [-1|10.5] ""  TestECU_Rx
+ SG_ SignalScaleIntBE5 : 23|4@0- (0.001,0.008) [0.002|0.012] ""  TestECU_Rx
+ SG_ SignalScaleIntBE6 : 19|4@0- (1,-3.5) [-14|15] ""  TestECU_Rx
+ SG_ SignalScaleFloatBE7 : 31|32@0- (0.001,100) [-1000|1000] ""  TestECU_Rx
+
+BO_ 502 TestScale64LE: 8 TestECU_Tx
+ SG_ SignalScaleInt64LE : 0|64@1- (1e-9,0) [-1000|1000] ""  TestECU_Rx
+
+BO_ 503 TestScale64BE: 8 TestECU_Tx
+ SG_ SignalScaleInt64BE : 7|64@0- (1e-9,0) [-1000|1000] ""  TestECU_Rx
+
+BO_ 7 TestLE: 8 TestECU_Tx
+ SG_ SignalLE6 : 32|32@1+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalLE5 : 24|8@1+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalLE4 : 18|6@1+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalLE3 : 12|6@1+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalLE2 : 4|8@1+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalLE1 : 0|4@1+ (1,0) [0|0] ""  TestECU_Rx
+
+BO_ 6 TestBE: 8 TestECU_Tx
+ SG_ SignalBE1 : 7|4@0+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalBE2 : 3|8@0+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalBE3 : 11|6@0+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalBE4 : 21|6@0+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalBE5 : 31|8@0+ (1,0) [0|0] ""  TestECU_Rx
+ SG_ SignalBE6 : 39|32@0+ (1,0) [0|0] ""  TestECU_Rx
+
+
+
+BA_DEF_ BO_  "GenMsgStartDelayTime" INT 0 0;
+BA_DEF_ BO_  "GenMsgSendType" ENUM  "cyclic","triggered","cyclicIfActive","cyclicAndTriggered","cyclicIfActiveAndTriggered","none";
+BA_DEF_ BO_  "GenMsgRequestable" INT 0 0;
+BA_DEF_ BO_  "GenMsgNrOfRepetition" INT 0 0;
+BA_DEF_ BO_  "GenMsgLSupport" INT 0 0;
+BA_DEF_ BO_  "GenMsgFastOnStart" INT 0 0;
+BA_DEF_ BO_  "GenMsgDelayTime" INT 0 0;
+BA_DEF_ BO_  "GenMsgCycleTimeFast" INT 0 1000;
+BA_DEF_ BO_  "GenMsgCycleTime" INT 0 1000;
+BA_DEF_ SG_  "GenSigStartValue" FLOAT 0 0;
+BA_DEF_  "BusType" STRING ;
+BA_DEF_DEF_  "GenMsgStartDelayTime" 0;
+BA_DEF_DEF_  "GenMsgSendType" "triggered";
+BA_DEF_DEF_  "GenMsgRequestable" 0;
+BA_DEF_DEF_  "GenMsgNrOfRepetition" 0;
+BA_DEF_DEF_  "GenMsgLSupport" 0;
+BA_DEF_DEF_  "GenMsgFastOnStart" 0;
+BA_DEF_DEF_  "GenMsgDelayTime" 0;
+BA_DEF_DEF_  "GenMsgCycleTimeFast" 100;
+BA_DEF_DEF_  "GenMsgCycleTime" 100;
+BA_DEF_DEF_  "GenSigStartValue" 0;
+BA_DEF_DEF_  "BusType" "";
+BA_ "BusType" "CAN";
+BA_ "GenMsgCycleTime" BO_ 8 10;
+BA_ "GenMsgSendType" BO_ 8 0;
+BA_ "GenMsgCycleTime" BO_ 9 50;
+BA_ "GenMsgSendType" BO_ 9 3;
+BA_ "GenMsgCycleTime" BO_ 10 10;
+BA_ "GenMsgSendType" BO_ 10 2;
+BA_ "GenMsgCycleTime" BO_ 11 50;
+BA_ "GenMsgSendType" BO_ 11 4;
+BA_ "GenMsgDelayTime" BO_ 12 20;
+BA_ "GenMsgSendType" BO_ 12 1;
+BA_ "GenMsgDelayTime" BO_ 13 25;
+BA_ "GenMsgCycleTime" BO_ 13 50;
+BA_ "GenMsgSendType" BO_ 13 3;
+BA_ "GenSigStartValue" SG_ 10 Counter 2;
+BA_ "GenSigStartValue" SG_ 11 Counter 2;
+BA_ "GenSigStartValue" SG_ 500 SignalScaleFloatLE7 100;
+BA_ "GenSigStartValue" SG_ 500 SignalScaleIntLE6 10;
+BA_ "GenSigStartValue" SG_ 500 SignalScaleIntLE5 10;
+BA_ "GenSigStartValue" SG_ 500 SignalScaleUintLE4 10;
+BA_ "GenSigStartValue" SG_ 500 SignalScaleUintLE3 10;
+BA_ "GenSigStartValue" SG_ 500 SignalScaleUintLE2 10;
+BA_ "GenSigStartValue" SG_ 500 SignalScaleUintLE1 10;
+BA_ "GenSigStartValue" SG_ 501 SignalScaleUintBE1 10;
+BA_ "GenSigStartValue" SG_ 501 SignalScaleUintBE2 10;
+BA_ "GenSigStartValue" SG_ 501 SignalScaleUintBE3 10;
+BA_ "GenSigStartValue" SG_ 501 SignalScaleUintBE4 10;
+BA_ "GenSigStartValue" SG_ 501 SignalScaleIntBE5 10;
+BA_ "GenSigStartValue" SG_ 501 SignalScaleIntBE6 10;
+BA_ "GenSigStartValue" SG_ 501 SignalScaleFloatBE7 100;
+SIG_VALTYPE_ 300 SignalFloatLE2 : 1;
+SIG_VALTYPE_ 300 SignalFloatLE1 : 1;
+SIG_VALTYPE_ 301 SignalFloatBE1 : 1;
+SIG_VALTYPE_ 301 SignalFloatBE2 : 1;
+SIG_VALTYPE_ 400 SignalDoubleLE1 : 2;
+SIG_VALTYPE_ 401 SignalDoubleBE1 : 2;
+SIG_VALTYPE_ 500 SignalScaleFloatLE7 : 1;
+SIG_VALTYPE_ 501 SignalScaleFloatBE7 : 1;
+

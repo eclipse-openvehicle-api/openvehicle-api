@@ -1,0 +1,13 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "task_timer.sdv"
+Class = "TaskTimerService"
+
+[[Component]]
+Path = "tasktimer_component_example.sdv"
+Class = "Timer_Example"
+Timer = 175
+
+

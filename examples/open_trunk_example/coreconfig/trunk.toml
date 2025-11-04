@@ -1,0 +1,20 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "trunk_complex_service.sdv"
+Class = "Open Trunk Service"
+Name = "Open Trunk Service"
+
+[[Module]]
+Path = "trunk_service_proxystub.sdv"
+
+[[Module.Component]]
+Class = "Proxy_13181601229896482092"
+Aliases = ["Proxy_ITrunkKitService"]
+Type = "Proxy"
+
+[[Module.Component]]
+Class = "Stub_13181601229896482092"
+Aliases = ["Stub_ITrunkKitService"]
+Type = "Stub"

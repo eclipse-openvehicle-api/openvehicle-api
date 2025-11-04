@@ -1,0 +1,184 @@
+# CLANG-FORMAT V12 supported list (supported version of Visual Studion 2019)
+
+---
+Language:        Cpp
+
+## Coding Guidelines Start
+ColumnLimit:     132
+
+## Coding Guidelines End
+
+# BasedOnStyle:  Microsoft
+AccessModifierOffset: -4
+AlignAfterOpenBracket: DontAlign
+# AlignArrayOfStructures: Right
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: false
+AlignConsecutiveMacros: false
+AlignEscapedNewlines: Right
+AlignOperands: true
+# AlignOperands: AlignAfterOperator
+AlignTrailingComments: true
+AllowAllArgumentsOnNextLine: true # false?
+AllowAllConstructorInitializersOnNextLine: true # deprecated -> PackConstructorInitializers.NextLine
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: Always
+AllowShortCaseLabelsOnASingleLine: false
+# AllowShortEnumsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterDefinitionReturnType: None # deprecated
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: false
+AlwaysBreakTemplateDeclarations: Yes
+# AttributeMacros:
+  # - ...
+BinPackArguments: false
+BinPackParameters: false
+# BitFieldColonSpacing: Both
+BraceWrapping:
+  AfterCaseLabel:  true
+  AfterClass:      true
+  AfterControlStatement: true
+  AfterEnum:       true
+  AfterFunction:   true
+  AfterNamespace:  true
+  AfterObjCDeclaration: true
+  AfterStruct:     true
+  AfterUnion:      true
+  AfterExternBlock: true
+  BeforeCatch:     true
+  BeforeElse:      true
+  BeforeLambdaBody: true
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Custom
+# BreakBeforeConceptDeclaration: Always
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: AfterColon
+BreakInheritanceList: AfterColon
+BreakStringLiterals: true
+CommentPragmas:  '^ IWYU pragma:'
+CompactNamespaces: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: false # deprecated -> PackConstructorInitializers.CurrentLine
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
+Cpp11BracedListStyle: true
+DeriveLineEnding: true
+DerivePointerAlignment: false
+DisableFormat:   false
+# EmptyLineAfterAccessModifier: Never
+# EmptyLineBeforeAccessModifier: Always
+ExperimentalAutoDetectBinPacking: false
+FixNamespaceComments: true
+# ForEachMacros:
+  # - foreach
+  # - ...
+# IfMacros:
+  # - ...
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex:           '^"'
+    Priority:        3
+    SortPriority:    0
+  - Regex:           '^<sdv/' # depending on how we agree on namespaces
+    Priority:        2
+    SortPriority:    0
+  - Regex:           '^<'
+    Priority:        1
+    SortPriority:    0
+IncludeIsMainRegex: '(Test)?$'
+IncludeIsMainSourceRegex: ''
+# IndentAccessModifiers: false
+IndentCaseBlocks: true
+IndentCaseLabels: false
+# IndentExternBlock: AfterExternBlock
+IndentGotoLabels: false
+IndentPPDirectives: BeforeHash
+# IndentRequiresClause: true
+IndentWidth:     4
+IndentWrappedFunctionNames: true
+# InsertBraces: false
+# InsertTrailingCommas: None # Only for JS...
+# JavaScriptQuotes: Leave
+# JavaScriptWrapImports: true
+KeepEmptyLinesAtTheStartOfBlocks: false
+# LambdaBodyIndentation: Signature
+MacroBlockBegin: '^BEGIN_'
+MacroBlockEnd:   '^END_'
+MaxEmptyLinesToKeep: 2
+NamespaceIndentation: All
+# NamespaceMacros:
+  # - ...
+# ObjCBinPackProtocolList: Auto
+# ObjCBlockIndentWidth: 2
+# ObjCSpaceAfterProperty: false
+# ObjCSpaceBeforeProtocolList: true
+# PPIndentWidth: -1 # (default: -1 == IndentWidth)
+# PackConstructorInitializers: Never
+PenaltyBreakAssignment: 2
+PenaltyBreakBeforeFirstCallParameter: 19
+PenaltyBreakComment: 300
+PenaltyBreakFirstLessLess: 120
+PenaltyBreakString: 1000
+PenaltyBreakTemplateDeclaration: 10
+PenaltyExcessCharacter: 1000000
+PenaltyReturnTypeOnItsOwnLine: 1000
+PointerAlignment: Left
+# QualifierAlignmanet: Custom
+# QualifierOrder: ['inline', 'static', 'constexpr', 'const', 'type', 'volatile']
+# RawStringFormats:
+  # - ...
+# ReferenceAlignment: Pointer
+ReflowComments: true
+# RemoveBracesLLVM: false
+# RequiresClausePosition: OwnLine
+# SeparateDefinitionBlocks: Always
+# ShortNamespaceLines: 1?
+SortIncludes:    true
+# SortIncludes: CaseInsensitive
+SortUsingDeclarations: true
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: true
+# SpaceAfterTemplateQualifiers: Both
+SpaceBeforeAssignmentOperators: true
+# SpaceBeforeCaseColon: false
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+# SpaceBeforeParensOptions:
+  # - ...
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles:  false # Never
+SpacesInConditionalStatement: false
+SpacesInContainerLiterals: true
+# SpacesInLineCommentPrefix:
+  # - Minimum: 1
+  # - Maximum: -1
+SpacesInCStyleCastParentheses: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+Standard:        Latest
+# StatementAttributeLikeMacros: ['', ...]
+# StatementMacros:
+#   - Q_UNUSED
+#   - QT_REQUIRE_VERSION
+TabWidth:        4
+UseCRLF:         false
+# TypenameMacros: ['', ...]
+UseTab:          Never # AlignWithSpaces
+# WhitespaceSensitiveMacros: ['', ...]
+...
+

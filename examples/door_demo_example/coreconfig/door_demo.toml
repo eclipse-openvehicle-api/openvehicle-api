@@ -1,0 +1,12 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "door_complex_service.sdv"
+Class = "Doors Example Service"
+Name = "Doors Example Service"
+
+[[Module]]
+Path = "doors_service_proxystub.sdv"
+
+

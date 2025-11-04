@@ -1,0 +1,36 @@
+/**
+ * @file hw_ident.idl
+ * @author Erik Verhoeven DISDS1 (mailto:erik.verhoeven@zf.com)
+ * @brief This file includes all the interfaces used for hardware identification.
+ * @version 1.0
+ * @date 2024-05-09
+ *
+ * @copyright Copyright ZF Friedrichshafen AG (c) 2023-2025
+ */
+
+#include "core.idl"
+
+ /**
+  * @brief Software Defined Vehicle framework.
+  */
+module sdv
+{
+    /**
+     * @brief Hardware specific features.
+     */
+    module hardware
+    {
+        /**
+         * @brief Interface to obtain Hardware ID
+         */
+        interface IHardwareID
+        {
+            /**
+            * @brief Gets the hardware ID of the current hardware.
+            * It's same for the all processes running in the same hardware and different for the processes of each different hardwares.
+            * @return Returns the hardware ID or 0 in case of failure.
+            */
+            uint64 GetHardwareID();
+        };
+    };
+};

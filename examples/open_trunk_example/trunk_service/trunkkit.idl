@@ -1,0 +1,16 @@
+/*******************************************************************************
+ * @file trunkkit.idl
+ * @details Service interface definition to open the trunk.
+ */
+
+/**
+ * @brief Service to open the trunk
+ */
+interface ITrunkKitService
+{
+    /**
+     * @brief Save call to open the trunk. Opening the trunk is onkly allowed when the vehicle is not moving
+     * @return Returns whether the trunk could be opened or not.
+     */
+    boolean PopTrunk();
+};

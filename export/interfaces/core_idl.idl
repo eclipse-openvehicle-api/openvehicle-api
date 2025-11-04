@@ -1,0 +1,650 @@
+/**
+ * @file      core_idl.idl
+ * @brief     This file provides all interface definitions for generator of the IDL compiler as part of the core SDV framework.
+ * @version   0.1
+ * @date      2023.06.29
+ * @author    erik.verhoeven@zf.com
+ * @copyright Copyright ZF Friedrichshaven AG (c) 2022-2025
+ */
+
+#include "core.idl"
+#include "mem.idl"
+
+ /**
+ * @brief Software Defined Vehicle framework.
+ */
+module sdv
+{
+    /**
+     * @brief IDL features.
+     */
+    module idl
+    {
+        /**
+         * @brief Compilation error.
+         */
+        exception XCompileError
+        {
+
+            u8string    ssReason;   ///< Explanation of the compilation error.
+            u8string    ssFile;     ///< Path to the file causing the compilation error.
+            uint32      uiLine;     ///< Line in the source file that contains the error (starts at 1).
+            uint32      uiCol;      ///< Column in the source file that contains the error (starts at 1).
+            u8string    ssToken;    ///< Token that caused the error.
+            u8string    ssLine;     ///< Source code line that contains the error.
+        };
+
+
+        const u8string ssOptionDevEnvDir = u8"DevEnvDir";       ///< The installation directory of the compiler.
+        const u8string ssOptionOutDir = u8"OutDir";             ///< Path to the output file directory. Default "." - relative to the file path.
+        const u8string ssOptionFilename = u8"Filename";         ///< Name of the input file.
+        const u8string ssOptionFilePath = u8"FilePath";         ///< Path to the input file.
+        const u8string ssOptionCodeGen = u8"CodeGen";           ///< List of code generators
+
+        /**
+         * @brief Compiler option access.
+         */
+        interface ICompilerOption
+        {
+            /**
+             * @brief Get the compiler option.
+             * @param[in] rssOption Reference to the string containing the name of the option to retrieve.
+             * @return The requested compiler option (if available).
+             */
+            u8string GetOption(in u8string rssOption) const;
+
+            /**
+             * @brief Get the amount of option values.
+             * @param[in] rssOption Reference to the string containing the name of the option to retrieve.
+             * @return The amount of option values.
+             */
+            uint32 GetOptionCnt(in u8string rssOption) const;
+
+            /**
+             * @brief Get the compiler option.
+             * @param[in] rssOption Reference to the string containing the name of the option to retrieve.
+             * @param[in] uiIndex The index of the option value.
+             * @return The requested compiler option value.
+             */
+            u8string GetOptionN(in u8string rssOption, in uint32 uiIndex) const;
+        };
+
+        /**
+        * @brief Compiler information access.
+        */
+        interface ICompilerInfo
+        {
+            /**
+             * @brief Get the path of the processed file.
+             * @return The path string.
+             */
+            u8string GetFilePath() const;
+
+            /**
+             * @brief Return the path to the output directory.
+             * @return The directory string.
+             */
+            u8string GetOutputDir() const;
+        };
+
+        /**
+         * @brief The entity type.
+         * @remarks Const entities, declaration entities and typedef entities return the base type of the entity they declare/define.
+         */
+        enum EEntityType : uint32
+        {
+            type_unknown,                   ///< Unknown entity type
+            type_variable,                  ///< Variable entity type
+            type_enum,                      ///< Enum entity type
+            type_struct,                    ///< Struct entity type
+            type_union,                     ///< Union entity type
+            type_module,                    ///< Module entity type
+            type_interface,                 ///< Interface entity type
+            type_exception,                 ///< Interface entity type
+            type_attribute,                 ///< Attribute entity type
+            type_operation,                 ///< Operation entity type
+            type_parameter,                 ///< Parameter entity type
+            type_enum_entry,                ///< Enum entry entity type
+            type_case_entry,                ///< Case entry entity type
+            type_switch_variable,           ///< Switch variable entity type (used by unions)
+            type_typedef,                   ///< Typedef entity type
+            type_meta,                      ///< Meta data entity type
+        };
+
+        /**
+         * @brief The entity declaration type.
+         */
+        enum EDeclType : uint32
+        {
+            decltype_unknown,                   ///< Unknown type
+            decltype_short,                     ///< Integer type (int16_t)
+            decltype_long,                      ///< Integer type (int32_t)
+            decltype_long_long,                 ///< Integer type (int64_t)
+            decltype_octet,                     ///< Octet type (uint8_t)
+            decltype_unsigned_short,            ///< Integer type (uint16_t)
+            decltype_unsigned_long,             ///< Integer type (uint32)
+            decltype_unsigned_long_long,        ///< Integer type (uint64_t)
+            decltype_float,                     ///< Floating point type
+            decltype_double,                    ///< Floating point type
+            decltype_long_double,               ///< Floating point type
+            decltype_fixed,                     ///< Fixed point templated type
+            decltype_char,                      ///< Character type (int8_t)
+            decltype_char16,                    ///< UTF-16 character
+            decltype_char32,                    ///< UTF-32 character
+            decltype_wchar,                     ///< Character type
+            decltype_boolean,                   ///< Boolean type
+            decltype_native,                    ///< Native type
+            decltype_string,                    ///< ASCII templated string type
+            decltype_u8string,                  ///< UTF-8 templated string type
+            decltype_u16string,                 ///< UTF-16 templated string type
+            decltype_u32string,                 ///< UTF-32 templated string type
+            decltype_wstring,                   ///< Wide templated string type
+            decltype_enum,                      ///< Enum type
+            decltype_struct,                    ///< Struct type
+            decltype_union,                     ///< Union type
+            decltype_module,                    ///< Module type
+            decltype_interface,                 ///< Interface type (not used in declarations)
+            decltype_exception,                 ///< Interface type (not used in declarations)
+            decltype_attribute,                 ///< Attribute type (not used in declarations)
+            decltype_operation,                 ///< Operation type (not used in declarations)
+            decltype_parameter,                 ///< Parameter type (only for operations)
+            decltype_enum_entry,                ///< Enum entry type (only for enums)
+            decltype_case_entry,                ///< Case entry type (only for unions)
+            decltype_typedef,                   ///< Typedef type
+            decltype_void,                      ///< Void type (only for operations)
+            decltype_meta,                      ///< Meta data type
+            decltype_pointer,                   ///< Pointer templated data type
+            decltype_sequence,                  ///< Sequence templated data type
+            decltype_map,                       ///< Map templated data type
+            decltype_bitset,                    ///< Bitset data type
+            decltype_bitfield,                  ///< Bitfield templated data type
+            decltype_bitmask,                   ///< Bitmask data type
+            decltype_any,                       ///< Any composite data type
+            decltype_interface_id,              ///< Interface ID data type
+            decltype_interface_type,            ///< Interface data type
+            decltype_exception_id,              ///< Exception ID data type
+        };
+
+        /**
+        * @brief Entity base information interface.
+        */
+        interface IEntityInfo
+        {
+            /**
+             * @brief Get the type of the entity. Default type is EEntityType::type_unknown.
+             * @return Returns the type of the entity.
+             */
+            EEntityType GetType() const;
+
+            /**
+             * @brief Get the name of the entity.
+             * @return Returns the name string.
+             */
+            u8string GetName() const;
+
+            /**
+             * @brief Get the scoped name of the entity (including the modules separated by the scope separator).
+             * @details The scoped name is composed of the entities of the parents separated by the scope operator '::'. For
+             * members of a compound entity (struct, union), the separation is done through the member operator '.'.
+             * @return The scoped name build from the entities of the parents separated by '::'. An empty name means global
+             * scope.
+             */
+            u8string GetScopedName() const;
+
+            /**
+             * @brief Is the entity defined as (forward) declaration only?
+             * @return Returns 'true' when the entity is defined as forward declaration; otherwise returns 'false'.
+             */
+            boolean ForwardDeclaration() const;
+
+            /**
+             * @brief Get the entity ID. This ID is a hash value composed from its definition and all declarative members not
+             * including const values. The ID can be used to uniquely identify the entity (e.g. as interface ID or exception ID).
+             * @return The ID of the entity.
+             */
+            uint64 GetId() const;
+
+            /**
+             * @brief Get the parent entity of this entity.
+             * @return Returns an interface to the parent entity or NULL when this is the root parent (when there is no parent).
+             */
+            IInterfaceAccess GetParent() const;
+        };
+
+        /**
+        * @brief Iterate through a vector of entities.
+        */
+        interface IEntityIterator
+        {
+            /**
+            * @brief Get amount of entities.
+            * @return Returns the amount of entities available to this iterator.
+            */
+            uint32 GetCount() const;
+
+            /**
+            * @brief Get entity at supplied index.
+            * @param[in] uiIndex The index to get the entity for.
+            * @return The entity at the index or NULL when there is no entity at this index.
+            */
+            IInterfaceAccess GetEntityByIndex(in uint32 uiIndex);
+        };
+
+        /**
+        * @brief Context information interface.
+        */
+        interface IEntityContext
+        {
+            /**
+             * @brief The location of the parsed file.
+             */
+            enum ELocation : uint32
+            {
+                source,                 ///< Source code or source file.
+                local_include,          ///< Local include file.
+                global_include          ///< Global include file.
+            };
+
+            /**
+             * @brief Get the location.
+             * @return Returns context location.
+             */
+            ELocation GetLocation() const;
+
+            /**
+             * @brief Get the path to the file.
+             * @return Returns the source path string.
+             */
+            u8string GetSourcePath() const;
+
+            /**
+             * @brief Get the position in the file.
+             * @remarks Not all entities have a position. If no position is available, the position return value has the
+             * value 0.
+             * @param[out] ruiLineBegin Reference to the variable receiving the line number of the entity beginning.
+             * @param[out] ruiColBegin Reference to the variable receiving the column number of the entity beginning.
+             * @param[out] ruiLineEnd Reference to the variable receiving the line number of the entity ending.
+             * @param[out] ruiColEnd Reference to the variable receiving the column number of the entity ending.
+             */
+            void GetPosition(out uint32 ruiLineBegin, out uint32 ruiColBegin, out uint32 ruiLineEnd, out uint32 ruiColEnd);
+        };
+
+        /**
+         * @brief Meta information interface. Exposed by the meta entity.
+         */
+        interface IMetaEntity
+        {
+            /**
+             * @brief Token meta type (valid when token is a meta token).
+             */
+            enum EType : uint32
+            {
+                include_local = 10,             ///< Local include file
+                include_global = 11,            ///< Global include file
+                define = 20,                    ///< Definition
+                undef = 21,                     ///< Remove definition
+                verbatim = 100,                 ///< Verbatim text to be inserted in the generated code
+            };
+
+            /**
+             * @brief Get the meta data type.
+             * @return Returns the meta type.
+             */
+            EType GetMetaType() const;
+
+            /**
+             * @brief Get the meta data content.
+             * @return Returns a string object.
+             */
+            u8string GetContent() const;
+        };
+
+        /**
+        * @brief Comment interface.
+        */
+        interface IEntityComments
+        {
+            /**
+            * \brief Comment mask
+            */
+            enum ECommentMask : uint32
+            {
+                c_style_javadoc = 0x40001000,               ///< Comment of the form "/** ... */"
+                c_style_javadoc_post = 0x40201000,          ///< Comment of the form "/**< ... */"
+                c_style_qt = 0x40002000,                    ///< Comment of the form "/*! ... */"
+                c_style_qt_post = 0x40202000,               ///< Comment of the form "/*!< ... */"
+                c_style = 0x40000000,                       ///< Comment of the form "/* ... */"
+                cpp_style_javadoc = 0x80001000,             ///< Comment of the form "/// ..."
+                cpp_style_javadoc_post = 0x80201000,        ///< Comment of the form "///< ..."
+                cpp_style_qt = 0x80002000,                  ///< Comment of the form "//! ..."
+                cpp_style_qt_post = 0x80202000,             ///< Comment of the form "///< ..."
+                cpp_style = 0x80000000,                     ///< Comment of the form "// ..."
+                loc_succeeding = 0x00200000,                ///< Comment location is succeeding statement
+                format_javadoc = 0x00001000,                ///< Comment using javadoc form
+                format_qt = 0x00002000,                     ///< Comment using QT form
+                format_mask = 0x0000f000,                   ///< Comment formatting mask
+            };
+
+            /**
+             * @brief Get the comment lines for this entity as one string.
+             * @remarks For c-style multi-line comments, the indentation and additional asterisk character at the beginning of
+             * each line is removed.
+             * @param[out] ruiFlags Reference to the variable receiving the comment flags (a bitmask combination of
+             * sdv::idl::IEntityComments::ECommentMask).
+             * @return Returns the comment string. If the comment contains multiple lines, each line is ending with a newline.
+             */
+            u8string GetComments(out uint32 ruiFlags) const;
+        };
+
+        /**
+         * @brief Entity definition information interface.
+         */
+        interface IDefinitionEntity
+        {
+            /**
+            * \brief Does the entity have an unnamed definition.
+            * @return Returns 'true' when the entity has an unnamed definition; otherwise returns 'false'.
+            */
+            boolean IsUnnamed() const;
+
+            /**
+             * @brief Get child entity iterator if children are available and supported by the definition.
+             * @return Returns a pointer to the child entity iterator or NULL when not available.
+             */
+            IEntityIterator GetChildren();
+
+            /**
+             * @brief Get inheritance entity iterator if the definition was inheriting from other entities.
+             * @return Returns a pointer to the inheritance entity iterator or NULL when not available.
+             */
+            IEntityIterator GetInheritance();
+        };
+
+        /**
+         * @brief Entities declared in a forward declaration expose this interface.
+         */
+        interface IForwardDeclarationEntity
+        {
+            /**
+             * @brief Get access to the actual declaration (if there is one).
+             * @return Pointer to the interface of the entity definition or NULL when there is no definition.
+             */
+            IInterfaceAccess GetEntity();
+        };
+
+        /**
+         * @brief Declaration type interface containing the base type, type string as defined in the code as well as the
+         * definition object interface and template parameters.
+         */
+        interface IDeclarationType
+        {
+            /**
+             * @brief Return the base type.
+             * @details The bse type might be a templated type (string, sequence, map, etc.) which means that additional
+             * information is needed. Furthermore, the type might be a complex type (struct, union, enum) or a typedef. In these
+             * cases the type definition interface is available.
+             * @return The base type of this type.
+             */
+            EDeclType GetBaseType() const;
+
+            /**
+             * @brief Return the string that described the type in the code.
+             * @return The type string.
+             */
+            u8string  GetTypeString() const;
+
+            /**
+             * @brief Return the type definition for complex types or typedefs.
+             * @return Pointer to the interface representing the type definition. Will be NULL for all other types.
+             */
+            IInterfaceAccess GetTypeDefinition() const;
+
+            /**
+             * @brief Fixed length parameter for some templated types.
+             * @details Fixed length template parameter for "fixed", "string", "sequence", "pointer", "map" and "bitfields".
+             * When not compulsory (for "fixed", "string", "sequence", "pointer" and "map") could be 0 to indicate a dynamic
+             * length (or defined over assignment with "fixed"). Bitfields allow a length between 1 and 64 bits.
+             * @return Returns the fixed length for some templated types or 0 for all other other types.
+            */
+            uint32 GetFixedLength() const;
+
+            /**
+             * @brief The amount of decimals of the "fixed" data type. Must be equal or smaller than the fixed length.
+             * @return The amount of decimals for the "fixed" data type or 0 for all other data types.
+            */
+            uint32 GetDecimals() const;
+
+            /**
+             * @brief The value type template parameter for the "sequence", "pointer", "map" and "bitfield" data types.
+             * @return Interface to the value data type for some templated types of NULL for all other types.
+            */
+            IInterfaceAccess GetValueType() const;
+
+            /**
+             * @brief The key type template parameter for the "map" data type.
+             * @return Interface to the key data type for the "map" type of NULL for all other types.
+             */
+            IInterfaceAccess GetKeyType() const;
+        };
+
+        /**
+            * @brief Array dimension definition.
+            * @details Multi-dimensional arrays are possible. Each dimension is defined between square-brackets
+            * (eg. var[a][b][]). An unbound dimension can only occur as the last dimension. Fixed-bound dimensions can be
+            * specified using a constant expression. If variables are used in the constant expression, they need to be in
+            * scope of the array variable.
+            */
+        struct SArrayDimension
+        {
+            /**
+             * @brief Dimension type.
+             */
+            enum EDimensionType : uint32
+            {
+                bound = 0,             ///< Bound array
+                unbound = 2,           ///< Unbound array
+            } eType;    ///< The dimension type
+
+            u8string ssExpression; ///< Expression defining the dimension size either as constant- or as runtime-expression.
+        };
+
+        /**
+        * @brief Declaration entity information interface.
+        */
+        interface IDeclarationEntity
+        {
+            /**
+             * @brief Get declaration type.
+             * @return Interface to the declaration type object.
+             */
+            IInterfaceAccess GetDeclarationType() const;
+
+            /**
+             * @brief Is the entity readonly?
+             * @return Returns 'true' when the declaration is defined as readonly declaration; otherwise returns 'false'.
+             */
+            boolean IsReadOnly() const;
+
+            /**
+             * @brief Is the entity anonymous when used in a struct/union (unnamed and not declared)?
+             * @details Returns whether the entity is anonymous when used in a struct/union. This allows its members to appear
+             * directly as members within the struct.
+             * @return Returns 'true' when the declaration is defined as anonymous declaration; otherwise returns 'false'.
+             */
+            boolean IsAnonymous() const;
+
+            /**
+             * @brief Has array?
+             * @return Returns 'true' when the declaration is part of an array; otherwise returns 'false'.
+             */
+            boolean HasArray() const;
+
+            /**
+             * @brief Get the array dimensions (if there are any).
+             * @return Smart pointer to the sequence of array dimensions.
+            */
+            sequence<SArrayDimension> GetArrayDimensions() const;
+
+            /**
+             * @brief Has assignment?
+             * @return Returns 'true' when the declaration is followed by an assignment; otherwise returns 'false'.
+             */
+            boolean HasAssignment() const;
+
+            /**
+             * @brief Get assignment string.
+             * @details The assignment can be an algebraic expression composed from constants and variables. If the assignment is an
+             * array, the expression is composed like this: {{expr1},{expr2},{expr...}}
+             * @return Returns the assignment string when available.
+             */
+            u8string GetAssignment() const;
+        };
+
+        /**
+         * @brief Interface entity
+         */
+        interface IInterfaceEntity
+        {
+            /**
+             * @brief Is this interface local?
+             * @details When set, the interface is defined as local and not intended to be marshalled.
+             * @return Returns 'true' when the interface is defined as local interface; otherwise returns 'false'.
+             */
+            boolean IsLocal() const;
+        };
+
+        /**
+         * @brief Operation entity
+         */
+        interface IOperationEntity
+        {
+            /**
+             * @brief Get parameter entity iterator if the definition has any parameters.
+             * @return Returns a pointer to the parameter entity iterator or NULL when not available.
+             */
+            IEntityIterator GetParameters();
+
+            /**
+             * @brief Get the list of possible exceptions that might be fired for this operation.
+             * @return Returns a pointer to the exception entity iterator or NULL when not available.
+             */
+            IEntityIterator GetExceptions();
+        };
+
+        /**
+         * @brief Attribute entity
+         */
+        interface IAttributeEntity
+        {
+            /**
+            * @brief Get the list of possible exceptions that might be fired during a read operation.
+            * @return Returns a pointer to the exception entity iterator or NULL when not available.
+            */
+            IEntityIterator GetReadExceptions();
+
+            /**
+            * @brief Get the list of possible exceptions that might be fired during a write operation.
+            * @return Returns a pointer to the exception entity iterator or NULL when not available.
+            */
+            IEntityIterator GetWriteExceptions();
+        };
+
+        /**
+         * @brief Parameter entity information interface.
+         */
+        interface IParameterEntity
+        {
+            /**
+             * @brief Parameter direction enumeration
+             */
+            enum EParameterDirection : uint32
+            {
+                unknown,    ///< The parameter direction is not known.
+                input,      ///< The parameter is defined as input parameter.
+                output,     ///< The parameter is defined as output parameter.
+                in_out,     ///< The parameter is defined as input and output parameter.
+            };
+
+            /**
+             * @brief Get the parameter direction.
+             * @return Returns the parameter direction.
+             */
+            EParameterDirection GetDirection() const;
+        };
+
+        /**
+         * @brief Enum entity information interface.
+         */
+        interface IEnumEntity
+        {
+            /**
+             * @brief Get the enumerator base type.
+             * @param[out] reType Reference to the declaration type. The type if EEntityType::type_unknown if not available.
+             * @param[out] rpType Reference to the interface pointer if the type is a complex type. Otherwise is NULL.
+             */
+            void GetBaseType(out EDeclType reType, out IInterfaceAccess rpType) const;
+        };
+
+        /**
+         * @brief Union entity information interface.
+         */
+        interface IUnionEntity
+        {
+            /**
+             * @brief The interpretation of the switch case.
+             */
+            enum ESwitchInterpret : uint32
+            {
+                switch_variable,        ///< The switch case is determined by a variable of the parent struct.
+                switch_type,            ///< The switch case is determined by the value of a type.
+            };
+
+            /**
+             * @brief Return the switch interpretation.
+             * @return The interpretation of the switch case of this union.
+             */
+            ESwitchInterpret GetSwitchInterpretation() const;
+
+            /**
+             * @brief Return type information for the switch case. If the switch case is type base, this is the type information
+             * that is used to select. If the switch case is variable based, this is the type of the variable.
+             * @param[out] reType Reference to the declaration type (either enum or an integral type).
+             * @param[out] rpType Reference to the type entity if existing.
+             */
+            void GetSwitchType(out EDeclType reType, out IInterfaceAccess rpType) const;
+
+            /**
+             * @brief Get the switch variable information if the switch case is variable based. Will be empty/NULL when the switch
+             * case is type based.
+             * @param[out] rssVarStr Reference to the string receiving the exact scoped declaration name of the switch variable if
+             * the interpretation is variable based. The variable name uses the scope separator '::' to define the common parent
+             * definition and the member separator '.' to define the variable declaration as member from the common parent.
+             * @param[out] rpVarEntity Reference to the variable entity if the interpretation is variable based.
+             * @param[out] rpVarContainer Reference to the variable entity of the container of both the switch variable and the
+             * union.
+             */
+            void GetSwitchVar(out u8string rssVarStr, out IInterfaceAccess rpVarEntity,
+                out IInterfaceAccess rpVarContainer) const;
+        };
+
+        /**
+         * @brief Case entity information interface.
+         */
+        interface ICaseEntity
+        {
+            /**
+             * @brief Get the case label string. The case label string will be empty for the default case entry.
+             * @return Returns the label (of not default).
+             */
+            u8string GetLabel() const;
+
+            /**
+             * @brief Is this case entry the default entry.
+             * @return Return whether the case entry is the default entry.
+             */
+            boolean IsDefault() const;
+        };
+
+    }; // module idl
+}; // module sdv
+

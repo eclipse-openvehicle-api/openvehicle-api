@@ -1,0 +1,370 @@
+#include <interfaces/core.idl>
+#include "linked.idl"
+// Test: split nested module definitions
+// Nested module definitions
+module Test1
+{
+    /**
+    * @brief Javadoc like comments
+    */
+    module Test2
+    {
+        struct SModuleTest1
+        {};
+    };
+};
+
+// Extending module definitions
+module Test1
+{
+    module Test2
+    {
+        struct SModuleTest2
+        {};
+    };
+};
+
+// Test: forward declaration of struct
+struct SForward1;
+
+/*!
+ * @brief Implementation of forward declared structure
+*/
+struct SForward1
+{};
+
+/**
+ * @brief Second level base interface.
+ */
+interface I2ndLevelBase : sdv::IInterfaceAccess
+{
+    void Test2nd_1();
+    void Test2nd_2();
+};
+
+/**
+ * @brief Base interface
+ */
+interface IBase : I2ndLevelBase
+{
+    void TestBase_1();
+    void TestBase_2();
+};
+
+/**
+ * @brief Inheritance test interface.
+ */
+interface IInheritanceTest : IBase
+{
+    void Test1();
+    void Test2();
+};
+
+/**
+ * @brief Complex structure
+ */
+struct SComplex
+{
+    uint8 uiVal8 = 0x08;
+    uint16 uiVal16 = 0x0106;
+    uint32 uiVal32 = 0x00030002;
+    uint64 uiVal64 = 0x0000000600000004;
+    float fVal = 1234.1234f;
+    double dVal = 5678.5678;
+    // GCC issue with generated initialization in the constructor for the "long double" type: BUG #3982727
+    //long double ldVal = 12345678.12345678l;
+    boolean bVal = true;
+    uint32 rguiVal32[5] = { 0x10, 0x20, 0x30, 0x40, 0x50 };
+    char16 rgcVal[6] = u"Hello";
+    string ssEmptyVal;
+    string ssVal;
+    u8string ss8Val;
+    u16string ss16Val;
+    u32string ss32Val;
+    wstring sswVal;
+    string<15> ssFixedVal;
+    u8string<15> ss8FixedVal;
+    u16string<15> ss16FixedVal;
+    u32string<15> ss32FixedVal;
+    wstring<15> sswFixedVal;
+
+    struct SRGB
+    {
+        string ssRed;
+        string ssGreen;
+        string ssBlue;
+    };
+    sequence<SRGB> seqEmptyVal;
+    sequence<SRGB> seqRgbVal;
+    sequence<SRGB, 20> seqFixedRgbVal;
+    pointer<SRGB> ptrEmptyVal;
+    pointer<SRGB> ptrRgbVal;
+    pointer<SRGB, 200> ptrFixedRgbVal;
+    any anyString;
+    any anyFloat;
+    any anyInteger;
+};
+
+/**
+ * @brief Exception defined
+ */
+exception XExceptionTest
+{
+    SComplex    sComplex;   ///< Complex data in the exception
+};
+
+/**
+ * @brief Interface to test the marshalling of variables.
+ */
+interface IVarTest
+{
+    /**
+     * @{
+     * @brief Test signed fixed integral.
+     */
+    void SetFixedInt(in int8 i8Val, in int16 i16Val, in int32 i32Val, in int64 i64Val);
+    void GetFixedInt(out int8 i8Val, out int16 i16Val, out int32 i32Val, out int64 i64Val) const;
+    /**
+     * @}
+     */
+
+    /**
+     * @{
+     * @brief Test unsigned fixed integral.
+     */
+    void SetFixedUInt(in boolean bVal, in native nVal, in uint8 ui8Val, in uint16 ui16Val, in uint32 ui32Val, in uint64 ui64Val);
+    void GetFixedUInt(out boolean bVal, out native nVal, out uint8 ui8Val, out uint16 ui16Val, out uint32 ui32Val, out uint64 ui64Val) const;
+    /**
+     * @}
+     */
+
+    /**
+     * @{
+     * @brief Test character integral.
+     */
+    void SetFixedChar(in char cVal, in wchar cwVal, in char16 c16Val, in char32 c32Val);
+    void GetFixedChar(out char cVal, out wchar cwVal, out char16 c16Val, out char32 c32Val) const;
+    /**
+     * @}
+     */
+
+    /**
+     * @{
+     * @brief Test floating point.
+     */
+     // GCC issue with generated initialization in the consructor for the "long double" type: BUG #3982727
+    void SetFloatingPoint(in float fVal, in double dVal/*, in long double ldVal*/);
+    void GetFloatingPoint(out float fVal, out double dVal/*, out long double ldVal*/) const;
+    /**
+     * @}
+     */
+
+    /**
+     * @{
+     * @brief Test fixed point.
+     */
+    void SetFixedPoint(in fixed<10, 3> fixVal10, in fixed<8, 2> fixVal8, in fixed<5, 0> fixVal5);
+    void GetFixedPoint(out fixed<10, 3> fixVal10, out fixed<8, 2> fixVal8, out fixed<5, 0> fixVal5) const;
+    /**
+     * @}
+     */
+
+    /**
+     * @{
+     * @brief Test string.
+     */
+    void SetString(in string ssText, in u8string ss8Text, in u16string ss16Text, in u32string ss32Text, in wstring sswText);
+    void GetString(out string ssText, out u8string ss8Text, out u16string ss16Text, out u32string ss32Text, out wstring sswText) const;
+    /**
+     * @}
+     */
+
+    /**
+     * @{
+     * @brief Test fixed size string.
+     */
+    void SetFixedString(in string<10> ssText, in u8string<10> ss8Text, in u16string<10> ss16Text, in u32string<10> ss32Text, in wstring<10> sswText);
+    void GetFixedString(out string<15> ssText, out u8string<15> ss8Text, out u16string<15> ss16Text, out u32string<15> ss32Text, out wstring<15> sswText) const;
+    /**
+     * @}
+     */
+
+    /**
+     * @{
+     * @brief Test sequence.
+     */
+    void SetSequence(in sequence<uint32> seqUInts, in sequence<string> seqTexts, in sequence<sequence<uint32>> seqSequences);
+    void GetSequence(out sequence<uint32> seqUInts, out sequence<string> seqTexts, out sequence<sequence<uint32>> seqSequences);
+    /**
+     * @}
+     */
+
+    /**
+     * @{
+     * @brief Test fixed size sequence.
+     */
+    void SetFixedSequence(in sequence<uint32, 10> seqUInts, in sequence<string, 10> seqTexts, in sequence<sequence<uint32, 10>, 2> seqSequences);
+    void GetFixedSequence(out sequence<uint32, 7> seqUInts, out sequence<string, 15> seqTexts, out sequence<sequence<uint32, 5>, 3> seqSequences);
+    /**
+     * @}
+     */
+
+    /**
+     * @{
+     * @brief Test map.
+     */
+    void SetMap(in map<uint32, uint32> mapUInts, in map<string, string> mapTexts, in map<string, sequence<uint32>> mapSequences);
+    void GetMap(out map<uint32, uint32> mapUInts, out map<string, string> mapTexts, out map<string, sequence<uint32>> mapSequences);
+    /**
+     * @}
+     */
+
+    /**
+     * @{
+     * @brief Test fixed size map.
+     */
+    void SetFixedMap(in map<uint32, uint32, 10> mapUInts, in map<string, string, 10> mapTexts, in map<string, sequence<uint32, 10>, 2> mapSequences);
+    void GetFixedMap(out map<uint32, uint32, 7> mapUInts, out map<string, string, 15> mapTexts, out map<string, sequence<uint32, 5>, 3> mapSequences);
+    /**
+     * @}
+     */
+
+    /**
+     * @{
+     * @brief Test pointer.
+     */
+    void SetPointer(in pointer<uint32> ptrUInts, in pointer<string> ptrTexts, in pointer<sequence<uint32>> ptrSequences);
+    void GetPointer(out pointer<uint32> ptrUInts, out pointer<string> ptrTexts, out pointer<sequence<uint32>> ptrSequences);
+    /**
+     * @}
+     */
+
+    /**
+     * @{
+     * @brief Test fixed size pointer.
+     */
+    void SetFixedPointer(in pointer<uint32, 10> ptrUInts, in pointer<string, 10> ptrTexts, in pointer<sequence<uint32, 10>, 2> ptrSequences);
+    void GetFixedPointer(out pointer<uint32, 7> ptrUInts, out pointer<string, 15> ptrTexts, out pointer<sequence<uint32, 5>, 3> ptrSequences);
+    /**
+     * @}
+     */
+
+    /**
+     * @{
+     * @brief Test any data type.
+     */
+    void SetAny(in any anyMyValue);
+    void GetAny(out any anyMyValue);
+    /**
+     * @}
+     */
+
+    /**
+     * @{
+     * @brief Test complex data type.
+     */
+    void SetComplex(in SComplex rsComplex);
+    SComplex GetComplex() const;
+    void UpdateComplex(inout SComplex rsComplex);
+    /**
+     * @}
+     */
+
+
+    /**
+     * @{
+     * @brief Test attributes
+     */
+    attribute boolean bVal;
+    attribute native nVal;
+    attribute int8 i8Val;
+    attribute int16 i16Val;
+    attribute int32 i32Val;
+    attribute int64 i64Val;
+    attribute uint8 ui8Val;
+    attribute uint16 ui16Val;
+    attribute uint32 ui32Val;
+    attribute uint64 ui64Val;
+    attribute char cVal;
+    attribute wchar cwVal;
+    attribute char16 c16Val;
+    attribute char32 c32Val;
+    attribute float fVal;
+    attribute double dVal;
+    // GCC issue with generated initialization in the consructor for the "long double" type: BUG #3982727
+    //attribute long double ldVal;
+    attribute fixed<10, 3> fixVal10;
+    attribute fixed<8, 2> fixVal8;
+    attribute fixed<5, 0> fixVal5;
+    attribute string ssText;
+    attribute u8string ss8Text;
+    attribute u16string ss16Text;
+    attribute u32string ss32Text;
+    attribute wstring sswText;
+    attribute string<10> ssFixedText;
+    attribute u8string<10> ss8FixedText;
+    attribute u16string<10> ss16FixedText;
+    attribute u32string<10> ss32FixedText;
+    attribute wstring<10> sswFixedText;
+    attribute sequence<uint32> seqUInts;
+    attribute sequence<string> seqTexts;
+    attribute sequence<sequence<uint32>> seqSequences;
+    attribute sequence<uint32, 10> seqFixedUInts;
+    attribute sequence<string, 10> seqFixedTexts;
+    attribute sequence<sequence<uint32, 10>, 2> seqFixedSequences;
+    attribute map<uint32, uint32> mapUInts;
+    attribute map<string, string> mapTexts;
+    attribute map<string, sequence<uint32>> mapSequences;
+    attribute map<uint32, uint32, 10> mapFixedUInts;
+    attribute map<string, string, 10> mapFixedTexts;
+    attribute map<string, sequence<uint32, 10>, 2> mapFixedSequences;
+    attribute pointer<uint32> ptrUInts;
+    attribute pointer<string> ptrTexts;
+    attribute pointer<sequence<uint32>> ptrSequences;
+    attribute pointer<uint32, 10> ptrFixedUInts;
+    attribute pointer<string, 10> ptrFixedTexts;
+    attribute pointer<sequence<uint32, 10>, 2> ptrFixedSequences;
+    attribute any anyMyValue;
+    /**
+     * @}
+     */
+
+    /**
+     * Trigger complex exception.
+     */
+    void TriggerComplexException() raises(XExceptionTest);
+
+    /**
+    * Trigger system exception.
+    */
+    void TriggerSystemException();
+
+    /**
+    * Trigger unhandled exception.
+    */
+    void TriggerUnhandledException();
+
+    /**
+    * Trigger crash exception.
+    */
+    void TriggerCrashException();
+};
+
+module BankDemo
+{
+    typedef float TCashAmount;  // Type for representing cash
+    typedef string TAccountId;  // Type for representing account ids
+    //...
+    interface IAccount : sdv::IInterfaceAccess
+    {
+        readonly attribute TAccountId fAccountId;   //!< The account ID
+        attribute TCashAmount fBalance;      //!< The balance
+
+        void
+            Withdraw(in TCashAmount fAmount)
+            raises(InsufficientFunds);
+
+        void
+            Deposit(in TCashAmount fAmount);
+    };
+};

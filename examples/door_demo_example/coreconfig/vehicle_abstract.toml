@@ -1,0 +1,26 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "doors_bs_frontdoorleft.sdv"
+Class = "Vehicle.Chassis.Door.Axle01.Left_Service"
+Name = "Vehicle.Chassis.Door.Axle01.Left_Service"
+
+[[Component]]
+Path = "doors_bs_frontdoorright.sdv"
+Class = "Vehicle.Chassis.Door.Axle01.Right_Service"
+Name = "Vehicle.Chassis.Door.Axle01.Right_Service"
+
+[[Component]]
+Path = "doors_bs_reardoorleft.sdv"
+Class = "Vehicle.Chassis.Door.Axle02.Left_Service"
+Name = "Vehicle.Chassis.Door.Axle02.Left_Service"
+
+[[Component]]
+Path = "doors_bs_reardoorright.sdv"
+Class = "Vehicle.Chassis.Door.Axle02.Right_Service"
+Name = "Vehicle.Chassis.Door.Axle02.Right_Service"
+
+[[Module]]
+Path = "doors_proxystub.sdv"
+

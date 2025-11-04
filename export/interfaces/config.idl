@@ -1,0 +1,550 @@
+/**
+* @file      app.idl
+* @brief     This file provides the core interface definitions SDV framework administration.
+* @version   0.1
+* @date      2024.04.11
+* @author    erik.verhoeven@zf.com
+* @copyright Copyright ZF Friedrichshaven AG (c) 2023-2025
+*/
+
+#include "core.idl"
+
+ /**
+  * @brief Software Defined Vehicle framework.
+  */
+module sdv
+{
+    #verbatim_begin
+#include "../support/string.h"
+    #verbatim_end
+
+
+    /**
+     * @brief Failed to open a file.
+     */
+    exception XCannotOpenFile : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "Cannot open a file.";
+
+        u8string    ssPath;     ///< Path to the file that cannot be opened.
+    };
+
+    /**
+     * @brief File corruption detected.
+     */
+    exception XFileCorrupt : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "The inetrnal structure of the file is not as expected.";
+
+        u8string    ssPath;     ///< Path to the file that is corrupted.
+    };
+
+    /**
+     * @brief Failed to read file times or attributes.
+     */
+    exception XCannotReadFileTimesOrAttributes : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "Cannot read file times or attributes.";
+
+        u8string    ssPath;     ///< Path to the file that cannot be changed.
+    };
+
+    /**
+     * @brief Failed to change file times or attributes.
+     */
+    exception XCannotChangeFileTimesOrAttributes : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "Cannot change file times or attributes.";
+
+        u8string    ssPath;     ///< Path to the file that cannot be changed.
+    };
+
+    /**
+     * @brief Cannot create a directory.
+     */
+    exception XCannotCreateDir : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "Cannot create a directory.";
+
+        u8string    ssPath;     ///< Path to the directory that cannot be created.
+    };
+
+    /**
+     * @brief Cannot remove a directory.
+     */
+    exception XCannotRemoveDir : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "Cannot remove a directory.";
+
+        u8string    ssPath;     ///< Path to the directory that cannot be removed.
+    };
+
+    /**
+     * @brief An invalid path was supplied.
+     */
+    exception XInvalidPath : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "An invalid path was supplied.";
+
+        u8string    ssPath;  ///< Path.
+    };
+
+    /**
+     * @brief A file with the same path already exists.
+     */
+    exception XDuplicateFile : XSysExcept
+    {
+        /** Description */
+        const char _description[] = "A file with the same path already exists.";
+
+        u8string    ssFilePath;  ///< Path to the file.
+    };
+
+    /**
+     * @brief Core features.
+     */
+    module core
+    {
+        /**
+         * Configuration loading/processing result enumeration.
+         */
+        enum EConfigProcessResult : int32
+        {
+            failed = 0,                     ///< Loading or processing the configuration failed.
+            successful = 1,                 ///< Loading or processing the configuration was successful.
+            partially_successful = -1,      ///< Loading or processing the configuration was successful for some modules and/or
+                                            ///< components and not successful for other module and/or components.
+        };
+
+        /**
+        * @brief Application configuration.
+        * @attention This interface is available for the standalone and essential application. The main, isolated and maintenance
+        * applications cannot use this interface.
+        */
+        local interface IConfig
+        {
+            /**
+             * @brief Process the provided configuration by loading modules and creating objects/stubs/proxies defined in the
+             * configuration string. Processing a configuration resets the baseline before processing.
+             * @attention Configuration changes can only occur when the system is in configuration mode.
+             * @param[in] ssContent The contents of the configuration file (TOML).
+             * @return Returns a config process result enum value.
+             */
+            EConfigProcessResult ProcessConfig(in u8string ssContent);
+
+            /**
+             * @brief Read file pointed to by the provided file path and load modules and create components as defined in the
+             * configuration file. Loading a configuration resets the baseline before processing.
+             * @attention Configuration changes can only occur when the system is in configuration mode.
+             * @param[in] ssConfigPath Path to the file containing the configuration (TOML). The path can be an absolute as well as a
+             * relative path. In case a relative path is provided, the executable directory is searched as well as all directories
+             * supplied through the AddConfigSearchDir function.
+             * @return Returns a config process result enum value.
+             */
+            EConfigProcessResult LoadConfig(in u8string ssConfigPath);
+
+            /**
+            * @brief Save a configuration file pointed to by the provided file path. All components are saved that were added after
+            * the last baseline with the configuration specific settings.
+            * @attention Configuration changes can only occur when the system is in configuration mode.
+            * @param[in] ssConfigPath Path to the file containing the configuration (TOML). The path can be an absolute as well as a
+            * relative path. In case a relative path is provided, the configuration is stored relative to the executable directory.
+            * @return Returns 'true' on success; 'false' otherwise.
+            */
+            boolean SaveConfig(in u8string ssConfigPath) const;
+
+            /**
+             * @brief Add a search path to a folder where a config file can be found.
+             * @param[in] ssDir Relative or absolute path to an existing folder.
+             * @return Returns 'true' on success; 'false' otherwise.
+             */
+            boolean AddConfigSearchDir(in u8string ssDir);
+
+            /**
+             * @brief Reset the configuration baseline.
+             * @details The configuration baseline determines what belongs to the current configuration. Any object being added
+             * after this baseline will be stored in a configuration file.
+             */
+            void ResetConfigBaseline();
+        };
+    };      // module core
+
+    /**
+     * @brief Installation module.
+     */
+    module installation
+    {
+        /**
+         * @brief Package version struct.
+         */
+        struct SPackageVersion
+        {
+            uint32 uiMajor;             ///< Major version number
+            uint32 uiMinor;             ///< Minor version number
+            uint32 uiPatch;             ///< Patch level
+        };
+
+        /**
+         * @brief Installation package header V1.0.
+         * @todo Add signature information to prevent change after creation.
+         * @details The installation package is composed as follows:
+         * @code
+         *   +--------------------------------------------------+
+         *   | package header structure                         |
+         *   | optional info                                    |
+         *   | checksum                                         |
+         *   +--------------------------------------------------+
+         *   | 1st BLOB header                                  |
+         *   | BLOB content (e.g. file content)                 |
+         *   | BLOB checksum                                    |
+         *   +--------------------------------------------------+
+         *   | 2nd BLOB header                                  |
+         *   | BLOB content (e.g. file content)                 |
+         *   | BLOB checksum                                    |
+         *   +--------------------------------------------------+
+         *   | ...                                              |
+         *   +--------------------------------------------------+
+         *   | nth BLOB header                                  |
+         *   | BLOB content  (e.g. installation manifest)       |
+         *   | BLOB checksum                                    |
+         *   +--------------------------------------------------+
+         *   | package footer - checksum of package             |
+         *   +--------------------------------------------------+
+         * @endcode
+         */
+        struct SPackageHeader
+        {
+            EEndian     eEndian;                ///< Describes whether the data is in big or in little endian.
+            uint8       uiReserved;             ///< Reserved for alignment measures. Mus be 0.
+            uint16      uiVersion;              ///< Structure version (major * 100 + minor).
+            uint32      uiOffset;               ///< Offset to the 1st package BLOB.
+            uint8       rguiSignature[8];       ///< Signature 'SDV_IPCK'
+            uint64      uiCreationDate;         ///< Creation date (micro-seconds since 1st January 1970).
+            u8string    ssManifest;             ///< Installation manifest
+        };
+
+        /**
+         * @brief Checksum over header following the header content
+         */
+        struct SPackageHeaderChecksum
+        {
+            uint32      uiChecksum;             ///< Checksum over header (CRC32c)
+        };
+
+        /**
+         * @brief Footer at the end of the package.
+         */
+        struct SPackageFooter
+        {
+            uint32      uiChecksum;             ///< Checksum over complete package (CRC32c)
+        };
+
+        /**
+         * @brief File description structure.
+         * @details The file description structure contaions all the information to create the file, including the content. The
+         * file is stored in the installation package in a BLOB by using the serialization functions created by the IDL compiler.
+         */
+        struct SFileDesc
+        {
+            u8string            ssFileName;         ///< File name.
+            uint64              uiCreationDate;     ///< Creation date (micro-seconds since 1st January 1970).
+            uint64              uiChangeDate;       ///< Last change date (micro-seconds since 1st January 1970).
+            boolean             bAttrReadonly;      ///< Read only file flag when set.
+            boolean             bAttrExecutable;    ///< Executable file flag when set.
+            pointer<uint8>      ptrContent;         ///< The binary content of the file.
+        };
+
+        /**
+         * @brief Installation package BLOB type.
+         */
+        enum EPackageBLOBType : uint32
+        {
+            binary_file = 1,                ///< The BLOB is a binary file using the serialized SFileDesc structure.
+            final_entry = 0xffffffff,       ///< Last BLOB entry; no more BLOBs available.
+        };
+
+        /**
+         * @brief Installation package directory entry. Each BLOB is serialized using the serialization functions generated by IDL
+         * compiler.
+         */
+        struct SPackageBLOB
+        {
+            EPackageBLOBType    eBLOBType;          ///< The BLOB type, used for interpretation.
+            uint32              uiChecksumInit;     ///< Initial value of the checksum calculation (CRC32c)
+            uint32              uiBLOBSize;         ///< Size of the BLOB including header and checksum.
+
+            /// Anonymous union containing the BLOB content.
+            union switch (eBLOBType)
+            {
+            case EPackageBLOBType::binary_file:
+                SFileDesc       sFileDesc;      ///< File description
+            case final_entry:
+            };
+        };
+
+        /**
+         * @brief Checksum over BLOB following the content
+         */
+        struct SPackageBLOBChecksum
+        {
+            uint32      uiChecksum;             ///< Checksum over BLOB (CRC32c)
+        };
+
+        /**
+         * @brief The composure of an installation package failed.
+         */
+        exception XFailedToCompose : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "Faled to compose an installation package.";
+
+            u8string    ssInstallName;     ///< Name of the installation to compose.
+        };
+
+        /**
+         * @brief The installation manifest is missing.
+         */
+        exception XNoManifest : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "The installation manifest could not be found or created.";
+        };
+
+        /**
+         * @brief The installation manifest is not readable.
+         */
+        exception XInvalidManifest : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "The installation manifest could not be loaded.";
+        };
+
+        /**
+         * @brief The installation manifest could not be saved.
+         */
+        exception XFailedSaveManifest : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "The installation manifest could not be saved.";
+
+            u8string    ssInstallName;      ///< Name of the installation.
+            u8string    ssPath;             ///< Path to the target directory.
+        };
+
+        /**
+         * @brief Creating the installation manifest is not readable.
+         */
+        exception XFailedManifestCreation : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "The installation manifest could not be created.";
+
+            u8string    ssInstallName;     ///< Name of the installation.
+        };
+
+        /**
+         * @brief Multiple installation manifests found.
+         */
+        exception XDuplicateManifest : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "A duplicate installation manifest was found.";
+
+            u8string    ssInstallName1;     ///< Name of the 1st installation.
+            u8string    ssInstallName2;     ///< Name of the 2nd installation.
+        };
+
+        /**
+         * @brief An installation with the same name exists already.
+         */
+        exception XDuplicateInstall : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "An installation exists already.";
+
+            u8string    ssInstallName;     ///< Name of the installation.
+        };
+
+        /**
+         * @brief The installation doesn't contain a module.
+         */
+        exception XModuleNotFound : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "A module with the supplied name could not be found.";
+
+            u8string    ssPath;     ///< Path to the component.
+        };
+
+        /**
+         * @brief One or more components within the installation cannot be loaded. It might be that companion files are missing.
+         */
+        exception XComponentNotLoadable : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "One or more components cannot be loaded.";
+
+            sequence<u8string>   seqComponents;     ///< List of components that cannot be loaded.
+        };
+
+        /**
+         * @brief One or more files have an incorrect CRC.
+         */
+        exception XIncorrectCRC : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "The installation package has an invalid CRC.";
+        };
+
+        /**
+         * @brief The package is not compatible.
+         */
+        exception XIncompatiblePackage : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "The installation package is incompatible.";
+        };
+
+        /**
+         * @brief One or more files have an incorrect relative path to store the files.
+         */
+        exception XIncorrectPath : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "Invalid module target path.";
+
+            u8string    ssPath;     ///< The module target path is invalid.
+        };
+
+        /**
+         * @brief Missing base path.
+         */
+        exception XMissingBasePath : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "A base path is required for processing.";
+        };
+
+        /**
+         * @brief The requested installation was not found.
+         */
+        exception XInstallationNotFound : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "THe installation was not found.";
+
+            u8string    ssInstallName;     ///< Name of the installation.
+        };
+
+        /**
+         * @brief The installed components cannot be unloaded and therefore the installation cannot be uninstalled.
+         */
+        exception XUninstallCouldNotUnload : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "Unable to unload the installation.";
+
+            u8string    ssInstallName;     ///< Name of the installation.
+        };
+
+        /*
+        TODO EVE
+        Installation needs to be more flexible...
+        - Components can have calibration values. They content is stored in the config.
+        - A configuration can be made using the components and the names of the components (VSS???)
+        - Installing and configuring devices and system and basic services is possible when sdv_core is started in update mode.
+        - Installing and configuring complex services is possible at any time dynamically.
+        - Installation and configuring only in config mode
+        - extend the functionality of the sdv_packager utility to create more detailed config.
+        */
+
+        /**
+         * @brief Application installation interface.
+         * @attention This function is only available for the main application and part of the application config service.
+         */
+        interface IAppInstall
+        {
+            /**
+             * @brief Make an installation onto the system.
+             * @details Make an installation with from component modules and supporting files. At least one component module must
+             * be provided for this installation to be successful (component attribute flag must be set). Components are only
+             * installed, not activated.
+             * @remarks The system needs to run in configuration mode.
+             * @param[in] ssInstallName Name of the installation. Must be unique to the system.
+             * @param[in] seqFiles Files belonging to the installation. This could be component modules as well as supporting files.
+             * @return Returns whether the installation was successful - installation name was unique and at least one loadable
+             * component was provided.
+             */
+            boolean Install(in u8string ssInstallName, in sequence<SFileDesc> seqFiles)
+                raises(XDuplicateInstall, XModuleNotFound, XComponentNotLoadable, XIncorrectCRC,
+                    XIncorrectPath);
+
+            /**
+             * @brief Update an installation.
+             * @details Stops a component if the component is running, makes an update and if the component was running, starts
+             * the component again.
+             * @todo: Currently limited to complex services only.
+             * @remarks The system needs to run in configuration mode.
+             * @param[in] ssInstallName Name of the installation. Must be unique to the system.
+             * @param[in] seqFiles Files belonging to the installation. This could be component modules as well as supporting files.
+             * @return Returns whether the installation was successful - installation name was unique and at least one loadable
+             * component was provided.
+             */
+            boolean Update(in u8string ssInstallName, in sequence<SFileDesc> seqFiles)
+                raises(XInstallationNotFound, XModuleNotFound, XComponentNotLoadable, XIncorrectCRC,
+                    XIncorrectPath);
+
+            /**
+             * @brief Uninstall of a previous installation.
+             * @details Stops a component if the component is running and removes the files and modules.
+             * @todo: Currently limited to complex services only.
+             * @remarks The system needs to run in configuration mode.
+             * @param[in] ssInstallName Installation name.
+             * @return Returns whether the uninstallation was successful.
+             */
+            boolean Uninstall(in u8string ssInstallName) raises(XInstallationNotFound, XUninstallCouldNotUnload);
+
+            /**
+             * @brief Get a sequence of installations.
+             * @return The sequence with installations.
+             */
+            sequence<u8string> GetInstallations() const;
+
+            /**
+             * @brief Get the installed files from the installation.
+             * @param[in] ssInstallName The installation to get the files for.
+             * @return Sequence containing the file structures without the binary file content.
+             */
+            sequence<SFileDesc> GetInstallationFiles(in u8string ssInstallName) const raises(XInstallationNotFound);
+        };
+    }; // module installation
+
+    /**
+     * @brief Helper features
+     */
+    module helper
+    {
+        /**
+         * @brief Read the module manifest.
+         * @brief Interface for reading the module manifest. This interface is implemented by the manifest_util component to read
+         * the manifest while being isolated from the system, thus protecting the system for unwanted behavior in case of
+         * malfunction.
+         */
+        interface IModuleManifestHelper
+        {
+            /**
+             * @brief Read the module manifest.
+             * @param[in] ssModule Path to the module file.
+             * @return The module manifest if available. Otherwise an empty string.
+             */
+            u8string ReadModuleManifest(in u8string ssModule);
+        };
+    }; //  module helper
+}; // module sdv

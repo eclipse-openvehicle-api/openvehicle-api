@@ -1,0 +1,28 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "can_dl_example.sdv"
+Class = "CAN_data_link"
+Name = "DataLink"
+
+[[Component]]
+Path = "demo_vd_isactivecounter_tx.sdv"
+Class = "Vehicle.Software.Application.IsActiveCounter_Device"
+Name = "Vehicle.Software.Application.IsActiveCounter_Device"
+
+[[Component]]
+Path = "demo_vd_steeringwheel_rx.sdv"
+Class = "Vehicle.Chassis.SteeringWheel.Angle_Device"
+Name = "Vehicle.Chassis.SteeringWheel.Angle_Device"
+
+[[Component]]
+Path = "demo_vd_vehiclechassisaxle_tx.sdv"
+Class = "Vehicle.Chassis.RearAxle.Row.Wheel_Device"
+Name = "Vehicle.Chassis.RearAxle.Row.Wheel_Device"
+
+[[Component]]
+Path = "demo_vd_vehiclespeed_rx.sdv"
+Class = "Vehicle.Speed_Device"
+Name = "Vehicle.Speed_Device"
+

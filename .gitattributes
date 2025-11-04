@@ -1,0 +1,11 @@
+*.eapx filter=lfs diff=lfs merge=lfs -text
+
+# All files are checked into the repo with LF
+* text=auto
+
+# These files are checked out using CRLF locally
+*.bat eol=crlf
+
+# example simulation fmus
+*.fmu filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text

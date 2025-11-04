@@ -1,0 +1,172 @@
+/**
+ * @file com.idl
+ * @author Erik Verhoeven FRD DISDS1 (mailto:erik.verhoeven@zf.com) & Steffen Altmeier FRD DISS21 (mailto:steffen.altmeier@zf.com)
+ * @brief This file includes all the interfaces used by the communication control service
+ * @version 1.0
+ * @date 2024-08-12
+ *
+ * @copyright Copyright ZF Friedrichshafen AG (c) 2024
+ */
+
+#include "core.idl"
+#include "core_ps.idl"
+#include "process.idl"
+
+/**
+ * @brief Software Defined Vehicle framework.
+ */
+module sdv
+{
+    /**
+     * @brief Core features.
+     */
+    module com
+    {
+        /**
+         * @brief Connection ID used for connection identification
+         */
+        struct SConnectionID
+        {
+            uint32      uiIdent;        ///< Identification value.
+            uint32      uiControl;      ///< Control value for 2nd pass identification.
+        };
+
+        /**
+         * @brief Channel connection ID.
+         */
+        typedef SConnectionID TConnectionID;
+
+        /**
+         * @brief Request a channel to connect to the core application.
+         */
+        interface IRequestChannel
+        {
+            /**
+             * @brief Request a channel.
+             * @param[in] ssConfig Configuration; currently not used.
+             * @return The channel string needed to initialize the channel.
+             */
+            u8string RequestChannel(in u8string ssConfig);
+        };
+
+        /**
+         * @brief Connect to a remote system. Provided by the ConnectClient utility.
+         */
+        interface IClientConnect
+        {
+            /**
+             * @brief Connect to a remote system using the connection string to contact the system.
+             * @remarks After a successful connection, the ConnectClient utility is not needed any more.
+             * @param[in] ssConnectString Optional connection string to use for connection. If not provided, the connection will
+             * automatically get the connection ID from the app-control service (default). The connection string for a local
+             * connection can be of the form:
+             * @code
+             * [Client]
+             * Type = "local"
+             * Instance = 1234  # Optional: only use when connecting to a system with a different instance ID.
+             * @endcode
+             * And the following can be used for a remote connection:
+             * @code
+             * [Client]
+             * Type = "remote"
+             * Interface = "127.0.0.1"
+             * Port = 2000
+             * @endcode
+             * @return Returns an interface to the repository of the remote system or a NULL pointer if not found.
+             */
+            IInterfaceAccess Connect(in u8string ssConnectString) raises(XAccessDenied, XNotFound, XInvalidState, XTimeout);
+        };
+
+        /**
+         * @brief Channel type
+         */
+        enum EChannelType : uint32
+        {
+            local_channel  = 0,     ///< Local channel
+            remote_channel = 1,     ///< Remote channel
+            custom_channel = 2,     ///< Custom channel (not specifically defined as standard local or remote).
+        };
+
+        /**
+         * @brief Interface for creating a channel connection used for SDV communication.
+         * @details The channel control interface is used to create a connection between two processes and start the initial
+         * communication. The provided object will be accessible as initial object through the channel.
+         * Using these interfaces the following connections can be made:
+         * 1. The main application provides an endpoint with a channel to its repository and the isolated or external application
+         *    links its own repository to the repository of the main application.
+         * 2. The main application provides a listener endpoint (IPC channel is configured as listener and assigned to the
+         *    channel control) with an object to create a new private connection. Connecting applications can then connect to the
+         *    main applications and after the initial connection create a private communication.
+         * 3. The isolated application provides an object to create a private communication to another isolated or external
+         *    application
+         */
+        local interface IConnectionControl
+        {
+            /**
+             * @brief Create an IPC channel endpoint and use it for SDV communication.
+             * @remarks The channel will be destroyed automatically when a timeout occurs (no initial connection took place within
+             * the specified time).
+             * @remarks The function doesn't wait until a connection has been made, but returns straight after the channel creation.
+             * @param[in] eChannelType Type of channel to create. Must be local or remote.
+             * @param[in] pObject Initial object to start the communication with.
+             * @param[in] uiTimeoutMs Timeout for waiting for a connection.
+             * @param[out] ssConnectionString String describing the connection details to connect to this channel.
+             * @return Channel connection ID if successful or 0 if not.
+             */
+            TConnectionID CreateServerConnection(in EChannelType eChannelType, in IInterfaceAccess pObject, in uint32 uiTimeoutMs,
+                out u8string ssConnectionString);
+
+            /**
+             * @brief Connect to an IPC channel managed by the channel control.
+             * @remarks The connection will be destroyed automatically when a timeout occurs (no initial connection took place
+             * within the specified time).
+             * @param[in] ssConnectionString The string describing the connection details.
+             * @param[in] uiTimeoutMs Timeout for waiting for a connection.
+             * @param[out] pProxy Pointer to the object representing the remote object (a proxy to the remote object). Or nullptr
+             * when a timeout occurred.
+             * @return Channel connection ID if successful or 0 if not.
+             */
+            TConnectionID CreateClientConnection(in u8string ssConnectionString, in uint32 uiTimeoutMs, out IInterfaceAccess pProxy);
+
+            /**
+             * @brief Assign and take over an already initialized IPC channel server endpoint for use with SDV communication.
+             * @remarks The channel will be destroyed automatically when a timeout occurs (no initial connection took place within
+             * the specified time) unless the flag bAllowReconnect has been set.
+             * @remarks The channel uses the interface sdv::IObjectLifetime to control the lifetime of the channel. If
+             * IObjectLifetime is not available, IObjectDestroy will be used.
+             * @remarks The function doesn't wait until a connection has been made, but returns straight after the assignment.
+             * @param[in] pChannelEndpoint Pointer to the channel endpoint to be assigned.
+             * @param[in] pObject Initial object to start the communication with.
+             * @param[in] uiTimeoutMs Timeout for waiting for an initial connection. Not used when the bAllowReconnect flag has
+             * been set.
+             * @param[in] bAllowReconnect When set, the channel is allowed to be disconnected and reconnected again.
+             * @return Channel connection ID if successful or 0 if not.
+             */
+            TConnectionID AssignServerEndpoint(in IInterfaceAccess pChannelEndpoint, in IInterfaceAccess pObject,
+                in uint32 uiTimeoutMs, in boolean bAllowReconnect);
+
+            /**
+             * @brief Assign and take over an already initialized IPC channel client endpoint for use with SDV communication.
+             * @remarks The connection will be destroyed automatically when a timeout occurs (no initial connection took place
+             * within the specified time).
+             * @remarks The channel uses the interface sdv::IObjectLifetime to control the lifetime of the channel. If
+             * IObjectLifetime is not available, IObjectDestroy will be used.
+             * @param[in] pChannelEndpoint Pointer to the channel endpoint to be assigned.
+             * @param[in] uiTimeoutMs Timeout for waiting for an initial connection. Not used when the bAllowReconnect flag has
+             * been set.
+             * @param[out] pProxy Pointer to the object representing the remote object (a proxy to the remote object). Or nullptr
+             * when a timeout occurred.
+             * @return Channel connection ID if successful or 0 if not.
+             */
+            TConnectionID AssignClientEndpoint(in IInterfaceAccess pChannelEndpoint, in uint32 uiTimeoutMs,
+                out IInterfaceAccess pProxy);
+
+            /**
+             * @brief Remove a connection with the provided connection ID.
+             * @param[in] tConnectionID The connection ID of the connection to remove.
+             */
+            void RemoveConnection(in TConnectionID tConnectionID);
+        };
+
+    };  // module com
+}; // module sdv

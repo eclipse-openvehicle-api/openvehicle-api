@@ -1,0 +1,6 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "demo_complex_service.sdv"
+Class = "Counter Steering Example Service"

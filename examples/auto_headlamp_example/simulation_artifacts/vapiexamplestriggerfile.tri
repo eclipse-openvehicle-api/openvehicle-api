@@ -1,0 +1,7 @@
+Current_Latitude = CARLAout__act_pos_x;
+Current_Longitude = CARLAout__act_pos_y;
+CARLAin__Headlight_Lowbeam = HeadLight_LowBeam;
+CARLAin__DooropenStatus_FL  = Door01LeftIsOpen;
+CARLAin__DooropenStatus_FR  = Door01RightIsOpen;
+CARLAin__DooropenStatus_RL  = Door02LeftIsOpen;
+CARLAin__DooropenStatus_RR  = Door02RightIsOpen;

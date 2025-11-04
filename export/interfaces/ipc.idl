@@ -1,0 +1,184 @@
+/**
+ * @file ipc.idl
+ * @author Erik Verhoeven DISDS1 (mailto:erik.verhoeven@zf.com)
+ * @brief This file includes all the interfaces used for interpprocess communication.
+ * @version 1.0
+ * @date 2024-05-09
+ *
+ * @copyright Copyright ZF Friedrichshafen AG (c) 2023-2025
+ */
+
+#include "core.idl"
+
+/**
+ * @brief Software Defined Vehicle framework.
+ */
+module sdv
+{
+    /**
+     * @brief Interprocess communication features.
+     */
+    module ipc
+    {
+        /**
+         * @brief structure of IPC Connection to which a client can attach.
+         */
+        struct SChannelEndpoint
+        {
+            IInterfaceAccess  pConnection;      ///< Connection object
+            u8string          ssConnectString;  ///< Parameter string used by other participant to establish a connection. The
+                                                ///< parameter string is a TOMl description containing the identification of the
+                                                ///< provider among with provider specific connection details. The provider
+                                                ///< identification must be similar to the following example:
+                                                ///< @code
+                                                ///< [Provider]
+                                                ///< Name = "DefaultSharedMemoryChannelControl"
+                                                ///< @endcode
+        };
+
+        /**
+         * @brief Interface for creating an IPC connection, which other participants can connect to via IChannelAccess
+         */
+        interface ICreateEndpoint
+        {
+            /**
+             * @brief Create IPC connection object and return the endpoint information.
+             * @post Use AsyncConnect on SChannelEndpoint::pConnection to initiate the connection.
+             * @param[in] ssChannelConfig Optional channel type specific endpoint configuration. The configuration is a TOML base
+             * description specific to the provider.
+             * @return IPC connection object
+             */
+            SChannelEndpoint CreateEndpoint(in u8string ssChannelConfig);
+        };
+
+        /**
+         * @brief Interface local IPC access.
+         */
+        interface IChannelAccess
+        {
+            /**
+             * @brief Create a connection object from the channel connection parameters string.
+             * @post Use AsyncConnect to initiate the connection.
+             * @param[in] ssConnectString Reference to the string containing the channel connection parameters returned by the
+             * ICreateEndpoint::CreateEndpoint function or a TOML configuration that is provider specific and describes clearly the
+             * access to a running channel. This configuriration is identical (or similar) to the configuration supplied to the
+             * ICreateEndpoint::CreateEndpoint function.
+             * @return Pointer to IInterfaceAccess interface of the connection object or NULL when the object cannot be created.
+             */
+            IInterfaceAccess Access(in u8string ssConnectString);
+        };
+
+        /**
+         * @brief Connection status enumeration
+         */
+        enum EConnectStatus : uint32
+        {
+            uninitialized = 0,              ///< Initialization via IConnect pending/required
+            initializing = 1,               ///< Initiation channel access.
+            initialized = 2,                ///< Channel access initialized.
+            connecting = 10,                ///< Both participants are available, connecting started
+            negotiating = 20,               ///< Negotiating the connection
+            connection_error = 990,         ///< Connection error; negotiation failed
+            connected = 11,                 ///< Connection successful
+            communication_error = 991,      ///< Communication error
+            disconnected = 30,              ///< Connection terminated due to disconnection of other participant
+            disconnected_forced = 32,       ///< Connection terminated due to unplanned disconnection of other participant
+            terminating = 90,               ///< Termination of channel access (through IObjectDestroy::DestroyObject)
+        };
+
+        /**
+         * \brief Interface for managing IPC connection.
+         */
+        interface IConnect
+        {
+            /**
+             * @brief Establish a connection and start sending/receiving messages.
+             * @param[in] pReceiver Callback interface for receiving data and connect status.
+             * @return Returns 'true' when a channel connection could be initiated. Use GetStatus or IConnectEventCallback to
+             * check the connection state.
+             */
+            boolean AsyncConnect(in IInterfaceAccess pReceiver);
+
+            /**
+             * @brief Wait for a connection to take place.
+             * @param[in] uiWaitMs Wait for a connection to take place. A value of 0 doesn't wait at all, a value of 0xffffffff
+             * waits for infinite time.
+             * @return Returns 'true' when a connection took place.
+             */
+            boolean WaitForConnection(in uint32 uiWaitMs);
+
+            /**
+             * @brief Cancel a wait for connection.
+             */
+            void CancelWait();
+
+            /**
+             * @brief Disconnect from a connection. This will set the connect status to disconnected and release the interface
+             * used for the status events.
+             */
+            void Disconnect();
+
+            /**
+             * @brief Register event callback interface.
+             * @details Register a connection status event callback interface. The exposed interface must be of type
+             * IConnectEventCallback. The registration will exist until a call to the unregister function with the returned cookie
+             * or until the connection is terminated.
+             * @param[in] pEventCallback Pointer to the object exposing the IConnectEventCallback interface.
+             * @return The cookie assigned to the registration or 0 when the registration wasn't successful.
+            */
+            uint64 RegisterStatusEventCallback(in IInterfaceAccess pEventCallback);
+
+            /**
+             * @brief Unregister the status event callback with the returned cookie from the registration.
+             * @param[in] uiCookie The cookie returned by a previous call to the registration function.
+             */
+            void UnregisterStatusEventCallback(in uint64 uiCookie);
+
+            /**
+             * @brief Gets the current status of the IPC whether it is initialized/connected/disconnected or having connection
+             * error.
+             * @return Returns retrieved status of the IPC.
+             */
+            EConnectStatus GetStatus() const;
+        };
+
+        /**
+         * @brief Interface implemented by the connecting object to receive channel connection events.
+         */
+        interface IConnectEventCallback
+        {
+            /**
+             * @brief Set the current status.
+             * @param[in] eConnectStatus The connection status.
+            */
+            void SetStatus(in EConnectStatus eConnectStatus);
+        };
+
+        /**
+         * @brief Interface implemented by the channel connection object for sending messages through a channel.
+         */
+        interface IDataSend
+        {
+            /**
+             * @brief Sends data consisting of multiple data chunks via the IPC connection.
+             * @param[inout] seqData Sequence of data buffers to be sent. The sequence might be changed to optimize the
+             * communication without having to copy the data.
+             * @return Return 'true' if all data could be sent; 'false' otherwise.
+             */
+            boolean SendData(inout sequence<pointer<uint8>> seqData);
+        };
+
+        /**
+         * @brief Interface implemented by the connecting object that allows receiving messages.
+         */
+        interface IDataReceiveCallback
+        {
+            /**
+             * @brief Callback to be called by the IPC connection when receiving a data packet.
+             * @param[inout] seqData Sequence of data buffers to received. The sequence might be changed to optimize the
+             * communication without having to copy the data.
+             */
+            void ReceiveData(inout sequence<pointer<uint8>> seqData);
+        };
+    }; // module ipc
+}; // module sdv

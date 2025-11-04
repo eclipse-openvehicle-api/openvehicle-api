@@ -1,0 +1,428 @@
+// Several issues exist with the code generation of the unions:
+// - Forward declaration of unions with value based switch --> forward declarated type is union and impl. type is struct
+// - Unions with complex members --> constructor and destructor are deleted
+// Forward declaration
+union UStandard;
+
+/**
+ * @brief Standard union based on a integer.
+ */
+union UStandard switch (uint32)
+{
+case 10:        boolean bVal;  ///< Bool value
+case 20:        uint64 uiVal;  ///< 64-bit int value
+case 30:        string ssVal;  ///< String value
+default:        float fVal;    ///< Float value
+};
+
+/**
+ * \@brief Typedef of a standard union.
+ */
+typedef UStandard UTypedefStandard;
+
+/**
+ * @brief Enum variable for switch case
+*/
+enum ESwitch : long
+{
+    ten,        ///< Value 10
+    twenty,     ///< Value 20
+    thirty      ///< Value 30
+};
+
+/**
+ * @brief Standard union based on an enum.
+ */
+union UStandardEnum switch (ESwitch)
+{
+case ten:       boolean bVal;       ///< Bool value
+case twenty:    uint64 uiVal;       ///< 64-bit int value
+case thirty:    string ssVal;       ///< String value
+default:        float fVal;         ///< Float value
+};
+
+/**
+ * @brief Standard union in struct.
+ */
+struct SStandardUnion
+{
+    UStandard           uStandardVar;           ///< Standard union declaration.
+    UStandardEnum       uStandardEnumVar;       ///< Standard union declaration based on enum.
+    UTypedefStandard    uTypedefStandardVar;    ///< Typedef standard union declaration.
+
+    /**
+     * @brief Contained based union.
+     */
+    union UContained switch (uint32)
+    {
+    case 10:        boolean bVal;  ///< Bool value
+    case 20:        uint64 uiVal;  ///< 64-bit int value
+    case 30:        string ssVal;  ///< String value
+    default:        float fVal;    ///< Float value
+    };
+
+    UContained      uContainedVar; ///< Contained union declaration.
+
+    /**
+     * @brief Contained based union.
+     */
+    union UContainedEnum switch (ESwitch)
+    {
+    case ten:       boolean bVal;  ///< Bool value
+    case twenty:    uint64 uiVal;  ///< 64-bit int value
+    case thirty:    string ssVal;  ///< String value
+    default:        float fVal;    ///< Float value
+    };
+
+    UContainedEnum  uContainedEnumVar; ///< Contained union declaration based on enum.
+};
+
+/**
+ * @brief Variable based union in struct.
+ */
+struct SVariableUnion
+{
+    uint32      uiSwitch;       ///< Switch value
+
+    /**
+     * @brief Contained union based on variable.
+     */
+    union UContained switch (uiSwitch)
+    {
+    case 10:        boolean bVal;  ///< Bool value
+    case 20:        uint64 uiVal;  ///< 64-bit int value
+    case 30:        string ssVal;  ///< String value
+    default:        float fVal;    ///< Float value
+    };
+
+    UContained      uContainedVar; ///< Contained union declaration.
+};
+
+/**
+ * @brief Multiple variable based unions in struct.
+ */
+struct SMultiVariableUnion
+{
+    uint32      uiSwitch1;       ///< Switch1 value
+    uint32      uiSwitch2;       ///< Switch2 value
+
+    /**
+     * @brief Contained union based on variable #1.
+     */
+    union UContained1 switch (uiSwitch1)
+    {
+    case 10:        boolean bVal1;  ///< Bool value
+    case 20:        uint64 uiVal1;  ///< 64-bit int value
+    case 30:        string ssVal1;  ///< String value
+    default:        float fVal1;    ///< Float value
+    };
+
+    /**
+     * @brief Contained union based on variable #2.
+     */
+    union UContained2 switch (uiSwitch2)
+    {
+    case 10:        boolean bVal2;  ///< Bool value
+    case 20:        uint64 uiVal2;  ///< 64-bit int value
+    case 30:        string ssVal2;  ///< String value
+    default:        float fVal2;    ///< Float value
+    };
+
+    UContained1      uContainedVar1; ///< Contained union #1 declaration.
+    UContained2      uContainedVar2; ///< Contained union #2 declaration.
+};
+
+/**
+ * @brief Multiple variable based unions with simple data types in struct.
+ */
+struct SSimpleMultiVariableUnion
+{
+    uint32      uiSwitch1;       ///< Switch1 value
+    uint32      uiSwitch2;       ///< Switch2 value
+
+    /**
+     * @brief Contained union based on variable #1.
+     */
+    union UContained1 switch (uiSwitch1)
+    {
+    case 10:        boolean bVal1;      ///< Bool value
+    case 20:        uint64 ui64Val1;    ///< 64-bit int value
+    case 30:        uint32 ui32Val1;    ///< 32-bit int value
+    default:        float fVal1;        ///< Float value
+    };
+
+    /**
+     * @brief Contained union based on variable #2.
+     */
+    union UContained2 switch (uiSwitch2)
+    {
+    case 10:        boolean bVal2;      ///< Bool value
+    case 20:        uint64 ui64Val2;    ///< 64-bit int value
+    case 30:        uint32 ui32Val2;    ///< 32-bit int value
+    default:        float fVal2;        ///< Float value
+    };
+
+    UContained1      uContainedVar1; ///< Contained union #1 declaration.
+    UContained2      uContainedVar2; ///< Contained union #2 declaration.
+};
+
+// This union will only work after anonymous struct/union support has been implemented: PBI #397894
+/**
+* @brief Use transparent unions with switches from the struct holding the unions.
+*/
+struct SSimpleAnonymousUnion
+{
+    int32 iVal = 10;            ///< Variable for the switch of the first union.
+    union switch (iVal)         ///< Anonymous union
+    {
+    case 10:
+        int32 a;    ///< Var a
+    case 20:
+        int32 b;    ///< Var b
+    case 30:
+        int32 c;    ///< Var c
+    };
+};
+
+/**
+* @brief Use transparent unions with switches from the struct holding the unions.
+*/
+struct SSimpleMultipleAnonymousUnion
+{
+    int32 iVal1 = 10;            ///< Variable for the switch of the first union.
+    union switch (iVal1)         ///< Anonymous union
+    {
+    case 10:
+        int32 a;    ///< Var a
+    case 20:
+        int32 b;    ///< Var b
+    case 30:
+        int32 c;    ///< Var c
+    };
+    int32 iVal2 = 10;            ///< Variable for the switch of the first union.
+    union switch (iVal2)         ///< Anonymous union
+    {
+    case 10:
+        int32 d;    ///< Var a
+    case 20:
+        int32 e;    ///< Var b
+    case 30:
+        int32 f;    ///< Var c
+    };
+};
+
+/**
+ * @brief Union with complex type as a variable.
+ */
+struct SComplexVarUnion
+{
+    /// Complex type
+    struct SComplex
+    {
+        u8string    ss1;        ///< First string
+        u8string    ss2;        ///< Second string
+    };
+    int32 iVal = 10;            ///< Variable for the switch of the first union.
+    union switch (iVal)         ///< Anonymous union
+    {
+    case 10:
+        int32 i;        ///< Simple type
+    case 20:
+        SComplex s;     ///< Complex type
+    case 30:
+        u8string ss;    ///< String type
+    };
+};
+
+struct STrippleIndirect
+{
+    struct SDoubleIndirect
+    {
+        struct SIndirect
+        {
+            struct SSwitchValStruct
+            {
+                double dOtherVal;
+                int32 iVal = 5;            ///< Variable for the switch of a separate union.
+                string ssOtherVal;
+            } sSwitchValStruct;
+        };
+        SIndirect sIndirect;
+
+        union UIndirect switch (sIndirect.sSwitchValStruct.iVal)
+        {
+        case 5:
+            int i;
+        case 6:
+            double d;
+        default:
+            string ss;
+        } uIndirect;
+    };
+};
+
+/**
+ * @brief Union with complex type as a variable and switch case that is in a variable of a variable array within a structure
+ * declaration of a base class two levels higher defined after the union definition.
+ */
+struct SComplexIndirectVarUnion
+{
+    /// Complex type
+    struct SComplex
+    {
+        u8string    ss1;        ///< First string
+        u8string    ss2;        ///< Second string
+    };
+
+    struct SIndirect
+    {
+        int32 rgiVal[3] = { 10, 20, 30 };   ///< Variable for the switch of parallel laying unions.
+    };
+    SIndirect sIndirect;
+
+    STrippleIndirect::SDoubleIndirect sDoubleIndirect;
+    STrippleIndirect::SDoubleIndirect::SIndirect sOneHalfIndirect;
+
+    // Child structure
+    struct SChild
+    {
+        const int32 iArrayLen = 4;      ///< Array length
+
+        /// Transparent union
+        union /*UUnnamed*/ switch (SComplexIndirectVarUnion::sIndirect.rgiVal[0])
+        {
+        case 10:
+            int32 i;        ///< Simple type
+        case 20:
+            SComplex s;     ///< Complex type
+        case 30:
+            u8string ss;    ///< String type
+        } /*Anonymous*/;
+
+        /// Unnamed, but declared union
+        union /*UUnnamed2*/ switch (sIndirect.rgiVal[1])
+        {
+        case 10:
+            int32 i;        ///< Simple type
+        case 20:
+            SComplex s;     ///< Complex type
+        case 30:
+            u8string ss;    ///< String type
+        } uUnnamed;
+
+        /// Named and declared union
+        union UNamed switch (/*Comment in switch case*/ sIndirect.rgiVal[2])
+        {
+        case 10:
+            int32 i;        ///< Simple type
+        case 20:
+            SComplex s;     ///< Complex type
+        case 30:
+            u8string ss;    ///< String type
+        } uNamed;
+
+        UNamed uNamedArray[2][iArrayLen];   ///< Named array
+
+        union UDoubleIndirect switch (sDoubleIndirect.sIndirect.sSwitchValStruct.iVal /*Comment in switch case*/)
+        {
+        case 1:
+            int32 i;        ///< Simple type
+        case 5:
+            SComplex s;     ///< Complex type
+        case 10:
+            u8string ss;    ///< String type
+        } uDoubleIndirect;
+
+        union UOneHalfIndirect switch (sOneHalfIndirect.sSwitchValStruct.iVal /*Comment in switch case*/)
+        {
+        case 1:
+            int32 i;        ///< Simple type
+        case 5:
+            SComplex s;     ///< Complex type
+        case 10:
+            u8string ss;    ///< String type
+        } uOneHalfIndirect;
+    };
+
+    SChild      sChild1;                                ///< Child declaration
+    SChild      sChildArray[5][SChild::iArrayLen];      ///< Child array declaration
+};
+
+union UEmptyCase switch (int32)
+{
+case 10:
+    int32   i;
+case 20:
+    uint32  ui;
+case 30:
+    // nothing
+case 40:
+    string ss;
+default:
+    // nothing
+};
+
+
+#if 0
+// NOTE: The following union is not allowed, since it uses an anonymous structure in a case switch. Anonymous structures are
+// allowed in C, but not in C++ - therefore they are not supported by the compiler.
+
+/**
+ * @brief Use transparent unions with switches from the struct holding the unions.
+ */
+struct STransparentUnion
+{
+    int32 iVal = 10;            ///< Variable for the switch of the first union.
+    union switch (iVal)         ///< Anonymous union
+    {
+    case 10:
+        // NOTE: A variable based switched union cannot be used here, since it lacks the posibility for accessing the variable.
+        // NOTE: Only one nested anonymous type based union can be used; otherwise there would be multiple switch_value-variables.
+        union switch (int32)    ///< Anonymous union
+        {
+        case 1: int32 a;        ///< Var a
+        case 2: int32 b;        ///< Var b
+        case 3: int32 c;        ///< Var c
+        };
+    case 20:
+        struct                  ///< Anonymous struct
+        {
+            int32 d;            ///< Var d
+            int32 e;            ///< Var e
+            int32 f;            ///< Var f
+        };
+    case 30:
+        int32 g;                ///< Var g
+    };
+};
+#endif
+
+/**
+ * @brief Union test interface to enforce proxy/stub creation.
+ */
+interface IUnionTest
+{
+    /// Test a standard union with type based integral switch.
+    void TestStandardUnion(in UStandard uStandardVar);
+
+    /// Test a standard union with type based enum switch.
+    void TestStandardEnumUnion(in UStandardEnum uStandardEnumVar);
+
+    /// Test a contained standard union with type based switch.
+    void TestStandardContainedUnion(in SStandardUnion::UContained uStandardContainedVar);
+
+    /// Test a structure containing unions
+    void TestStandardUnionStruct(in SStandardUnion sStandardStructVar);
+
+    /// Test a structure with a union with variable based switch.
+    void TestVariableUnion(in SVariableUnion sVariableStructVar);
+
+    /// Test a structure with multiple unions with variable based switch.
+    void TestMultiVariableUnion(in SMultiVariableUnion sVariableStructVar);
+
+    /// Test a structure with multiple unions with variable based switch and simple data types.
+    void TestSimpleMultiVariableUnion(in SSimpleMultiVariableUnion sVariableStructVar);
+
+    /// Test a structure with an anonymous union with variable based switch and simple data types.
+    void TestSimpleAnonymousUnion(in SSimpleAnonymousUnion sVariableStructVar);
+};

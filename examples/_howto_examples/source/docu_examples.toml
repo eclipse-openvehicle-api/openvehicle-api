@@ -1,0 +1,23 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "example_general_component.sdv"
+Class = "Hello_Component"
+
+[[Component]]
+Path = "example_general_component_with_initialization.sdv"
+Class = "Hello_Component_With_Initialization"
+number = 42
+
+[[Component]]
+Path = "example_vehicle_device.sdv"
+Class = "VehicleDevice_Component"
+
+[[Component]]
+Path = "example_basic_service.sdv"
+Class = "BasicService_Component"
+
+[[Component]]
+Path = "example_complex_service.sdv"
+Class = "ComplexService_Component"

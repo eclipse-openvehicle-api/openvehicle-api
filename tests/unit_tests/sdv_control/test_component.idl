@@ -1,0 +1,35 @@
+#include <interfaces/core.idl>
+#include <interfaces/process.idl>
+
+/**
+ * @brief Example interface
+ */
+interface ITestLock
+{
+    /**
+     * @brief Lock Mutex
+     */
+    void Lock();
+
+    /**
+     * @brief Unlock Mutex
+     */
+    void Unlock();
+};
+
+/**
+ * @brief Hello interface
+ */
+interface IHello
+{
+    /**
+     * @brief Say hello
+     * @return The greetings string.
+     */
+    u8string SayHello() const;
+
+    /**
+     * @brief Get the PID of the process the component is running in...
+     */
+    //sdv::process::TProcessID GetPID() const;
+};

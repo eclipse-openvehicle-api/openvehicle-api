@@ -1,0 +1,11 @@
+The following issues need to be solved:
+- The proxy and the stub need access to the local core services (local for the exe they are running in), for:
+    - Memory allocation / release
+    - Interface marshalling
+
+--> In case the component allocates data to return (e.g. strings, vectory, maps), the stub will NOT free this memory,
+    but the memory has to be freed by the caller of the "Call" function (e.g. the receiver of the IPC communication).
+    This can be identified by the interpretation of a parameter being "indirect" for "ret", "out" and "inout" parameters.
+--> In case the component parameters do not fit in 8 bytes, the stub will allocate memory, which needs to be released
+    by the caller of the "Call" function (e.g. the receiver of the IPC communication). This can be identified by the
+    interpretation of a parameter being "indirect" for "ret", "out" and "inout" parameters.

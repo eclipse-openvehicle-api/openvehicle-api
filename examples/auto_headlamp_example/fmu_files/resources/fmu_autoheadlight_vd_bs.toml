@@ -1,0 +1,29 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "headlight_vd_currentlatitude_rx.sdv"
+Class = "Vehicle.Position.CurrentLatitude_Device"
+
+[[Component]]
+Path = "headlight_vd_currentlongitude_rx.sdv"
+Class = "Vehicle.Position.CurrentLongitude_Device"
+
+[[Component]]
+Path = "headlight_vd_headlightlowbeam_tx.sdv"
+Class = "Vehicle.Body.Light.Front.LowBeam_Device"
+
+[[Component]]
+Path = "headlight_bs_currentlatitude_rx.sdv"
+Class = "Vehicle.Position.CurrentLatitude_Service"
+
+[[Component]]
+Path = "headlight_bs_currentlongitude_rx.sdv"
+Class = "Vehicle.Position.CurrentLongitude_Service"
+
+[[Component]]
+Path = "headlight_bs_headlightlowbeam_tx.sdv"
+Class = "Vehicle.Body.Light.Front.LowBeam_Service"
+
+
+

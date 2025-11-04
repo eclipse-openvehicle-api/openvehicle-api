@@ -1,0 +1,6 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "data_dispatch_service.sdv"
+Class = "DataDispatchService"

@@ -1,0 +1,6 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "can_dl_trunk.sdv"
+Class = "CAN_data_link"

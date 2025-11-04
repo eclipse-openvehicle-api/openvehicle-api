@@ -1,0 +1,120 @@
+/**
+* @file can.idl
+* @author Erik Verhoeven FRD DISS2 (mailto:erik.verhoeven@zf.com)
+* @brief This file provides the CAN abstraction interfaces
+* @version 1.0
+* @date 2024-02-07
+*
+* @copyright Copyright ZF Friedrichshafen AG (c) 2024
+*
+*/
+
+#include "core.idl"
+
+/**
+* @brief Software Defined Vehicle framework.
+*/
+module sdv
+{
+    /**
+    * @brief CAN abstraction interface.
+    */
+    module can
+    {
+        /**
+         * @brief CAN message structure
+         */
+        struct SMessage
+        {
+            uint32          uiID;           ///< CAN ID
+            boolean         bExtended;      ///< When set, the message ID is extended.
+            boolean         bCanFd;         ///< When set, the message is of CAN-FD.
+            sequence<uint8> seqData;        ///< The data for this message (max. 8 bytes for standard CAN and 64 bytes for CAN-FD).
+        };
+
+        /**
+         * @brief Error enum
+         */
+        enum EError : uint32
+        {
+            no_error = 0,       ///< No error
+            bit_error = 1,      ///< When the bit received is not the same as the bit transmitted.
+            stuff_error = 2,    ///< If more than five consecutive bits of the same level occur on the bus.
+            form_error = 3,     ///< Violation of fixed bit format.
+            crc_error = 4,      ///< If the received CRC does not match with the calculated code.
+            ack_error = 5,      ///< The transmitter does not receive a dominant acknowledgement bit in reply.
+        };
+
+        /**
+         * @brief CAN error frame structure
+         */
+        struct SErrorFrame
+        {
+            uint32          uiID;       ///< CAN ID; could be 0 when the error is not referring to a specific ID.
+            EError       eError;     ///< The error.
+        };
+
+        /**
+        * @brief Interface to receive CAN messages; callback interface.
+        */
+        local interface IReceive
+        {
+            /**
+             * @brief Process a receive a CAN message.
+             * @param[in] sMsg Message that was received.
+             * @param[in] uiIfcIndex Interface index of the received message.
+             */
+            void Receive(in SMessage sMsg, in uint32 uiIfcIndex);
+
+            /**
+             * @brief Process an error frame.
+             * @param[in] sError Error frame that was received.
+             * @param[in] uiIfcIndex Interface index of the received message.
+            */
+            void Error(in SErrorFrame sError, in uint32 uiIfcIndex);
+        };
+
+        /**
+         * @brief Interface to register the CAN receiver.
+         */
+        local interface IRegisterReceiver
+        {
+            /**
+             * @brief Register a CAN message receiver.
+             * @param[in] pReceiver Pointer to the receiver interface.
+             */
+            void RegisterReceiver(in IReceive pReceiver);
+
+            /**
+             * @brief Unregister a previously registered CAN message receiver.
+             * @param[in] pReceiver Pointer to the receiver interface.
+             */
+            void UnregisterReceiver(in IReceive pReceiver);
+        };
+
+        /**
+         * @brief Interface to send CAN messagee.
+         */
+        local interface ISend
+        {
+            /**
+             * @brief Send a CAN message.
+             * @param[in] sMsg Message that is to be sent.
+             * @param[in] uiIfcIndex Interface index to use for sending.
+             */
+            void Send(in SMessage sMsg, in uint32 uiIfcIndex);
+        };
+
+        /**
+         * @brief Interface to request the available interfaces and nodes.
+         */
+        local interface IInformation
+        {
+            /**
+             * @brief Get a list of interface names.
+             * @return Sequence containing the names of the interfaces.
+             */
+            sequence<u8string> GetInterfaces() const;
+        };
+    };
+};
