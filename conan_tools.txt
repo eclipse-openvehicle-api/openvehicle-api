@@ -1,5 +1,0 @@
-[tool_requires]
-mingw/14.2.0
-cmake/3.26.6
-ninja/1.12.1
-azure_env_gen/0.1.0
