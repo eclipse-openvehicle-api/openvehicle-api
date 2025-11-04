@@ -1,0 +1,7 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "can_com_sockets.sdv"
+Class = "CAN_Com_Sockets"
+canSockets=["vcan3"]

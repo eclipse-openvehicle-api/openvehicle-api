@@ -1,0 +1,26 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "demo_bs_isactivecounter_tx.sdv"
+Class = "Vehicle.Software.Application.IsActiveCounter_Service"
+Name = "Vehicle.Software.Application.IsActiveCounter_Service"
+
+[[Component]]
+Path = "demo_bs_steeringwheel_rx.sdv"
+Class = "Vehicle.Chassis.SteeringWheel.Angle_Service"
+Name = "Vehicle.Chassis.SteeringWheel.Angle_Service"
+
+[[Component]]
+Path = "demo_bs_vehiclechassisaxle_tx.sdv"
+Class = "Vehicle.Chassis.RearAxle.Row.Wheel_Service"
+Name = "Vehicle.Chassis.RearAxle.Row.Wheel_Service"
+
+[[Component]]
+Path = "demo_bs_vehiclespeed_rx.sdv"
+Class = "Vehicle.Speed_Service"
+Name = "Vehicle.Speed_Service"
+
+[[Module]]
+Path = "demo_proxystub.sdv"
+

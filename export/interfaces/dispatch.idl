@@ -1,0 +1,215 @@
+/**
+*
+* @file      dispatch.idl
+* @brief     This file provides interfaces related to the data dispatch service.
+* @version   1.0
+* @date      2024.01.12
+* @author    Erik Verhoeven
+* @copyright Copyright ZF Friedrichshaven AG (c) 2024
+*
+*/
+#include "core.idl"
+
+/**
+ * @brief Software Defined Vehicle framework.
+ */
+module sdv
+{
+    /**
+     * @brief Core features.
+     */
+    module core
+    {
+        /**
+         * @brief This interface is called by the data link component transmitting and receiving signals.
+         * @remarks This interface is for local use only.
+         */
+        local interface ISignalTransmission
+        {
+            /**
+             * @brief Trigger behavior enumeration.
+             */
+            enum ETxTriggerBehavior : uint32
+            {
+                none = 0,                   ///< No specific behavior
+                spontaneous = 1,            ///< Trigger when signal value change occurs
+                periodic_if_active = 2,     ///< Trigger periodically, but only when signal differs from default value.
+            };
+
+            /**
+             * @brief Create a TX trigger object that defines how to trigger the signal transmission.
+             * @param[in] uiCycleTime When set to any value other than 0, provides a cyclic trigger (ms). Could be 0 if cyclic
+             * triggering is not required.
+             * @param[in] uiDelayTime When set to any value other than 0, ensures a minimum time between two triggers. Could be 0
+             * if minimum time should not be enforced.
+             * @param[in] uiBehaviorFlags Zero or more flags from ETxTriggerBehavior.
+             * @param[in] pTriggerCallback Pointer to the trigger callback object. This object needs to expose the
+             * ITxTriggerCallback interface. This interface must stay valid during the lifetime of the generated trigger object.
+             * @returns On success, returns an interface to the trigger object. Use the ITxTrigger interface to assign signals to
+             * the trigger. Returns null when a trigger was requested without cycletime and without trigger behavior (which would
+             * mean it would never trigger). Use IObjectDestroy to destroy the trigger object.
+             */
+            IInterfaceAccess CreateTxTrigger(in uint32 uiCycleTime, in uint32 uiDelayTime, in uint32 uiBehaviorFlags,
+                in IInterfaceAccess pTriggerCallback);
+
+            /**
+             * @brief Register a signal for sending over the network; reading from the dispatch service. Data is provided by the
+             * signal publisher and dependable on the requested behavior stored until it is sent.
+             * @remarks Multiple registrations of the same signal are allowed.
+             * @param[in] ssSignalName Name of the signal. To guarantee uniqueness, it is preferred to add the group hierarchy to
+             * the signal name separated by a dot. E.g. with CAN: MAB.BcmChas1Fr03.SteerReCtrlReqAgReq
+             * @param[in] anyDefVal The default value of the signal.
+             * @return Returns the IInterfaceAccess interface that allows access to the ISignalRead interface for reading the
+             * signal value. Use IObjectDestroy to destroy the signal object.
+             */
+            IInterfaceAccess RegisterTxSignal(in u8string ssSignalName, in any anyDefVal);
+
+            /**
+            * @brief Register a signal for reception over the network; providing to the dispatch service.
+            * @remarks Multiple registrations of the same signal are allowed.
+            * @param[in] ssSignalName Name of the signal. To guarantee uniqueness, it is preferred to add the group hierarchy to
+            * the signal name separated by a dot. E.g. with CAN: MAB.BcmChas1Fr03.SteerReCtrlReqAgReq
+            * @return Returns the IInterfaceAccess interface that allows access to the ISignalWrite interface for writing the
+            * signal value. Use IObjectDestroy to destroy the signal object.
+            */
+            IInterfaceAccess RegisterRxSignal(in u8string ssSignalName);
+        };
+
+        /**
+         * @brief Interface to add and remove signals to the trigger object.
+        */
+        interface ITxTrigger
+        {
+            /**
+             * @brief Add a signal to the trigger object. The signal must be registered as TX signal before.
+             * @param[in] ssSignalName Name of the signal.
+             * @return Returns whether adding the signal was successful.
+             */
+            boolean AddSignal(in u8string ssSignalName);
+
+            /**
+             * @brief Remove a signal from the trigger object.
+             * @param[in] ssSignalName Name of the signal.
+             */
+            void RemoveSignal(in u8string ssSignalName);
+        };
+
+        /**
+         * @brief Trigger interface to be implemented by the caller to the trigger creation function.
+         */
+        interface ITxTriggerCallback
+        {
+            /**
+             * @brief Execute the trigger.
+             */
+            void Execute();
+        };
+
+        /**
+        * @brief Signal type enumeration.
+        */
+        enum ESignalDirection
+        {
+            sigdir_tx,         ///< Signal is a transmission-signal. Use a publisher to transmit data.
+            sigdir_rx,         ///< Signal is a reception-signal. Use a subscriber to receive data.
+        };
+
+        /**
+        * @brief Signal registration entry function to be used in the GetRegisteredSignals function.
+        */
+        struct SSignalRegistration
+        {
+            u8string            ssName;     ///< Name of the signal.
+            ESignalDirection    eType;      ///< Registration type.
+        };
+
+        /**
+         * @brief Access a previously registered signal. This interface is called by the devices providing and receiving the
+         * signals.
+         */
+        local interface ISignalAccess
+        {
+            /**
+             * @brief Requested a registered signal for publication (send signal).
+             * @param[in] ssSignalName Name of the signal. To guarantee uniqueness, it is preferred to add the group hierarchy to
+             * the signal name separated by a dot. E.g. with CAN: MAB.BcmChas1Fr03.SteerReCtrlReqAgReq
+             * @return Returns the IInterfaceAccess interface that allows access to the ISignalWrite interface for writing the
+             * signal value.
+             */
+            IInterfaceAccess RequestSignalPublisher(in u8string ssSignalName);
+
+            /**
+            * @brief Add a registered signal for subscription (receive signal).
+            * @param[in] ssSignalName Name of the signal. To guarantee uniqueness, it is preferred to add the group hierarchy to
+            * the signal name separated by a dot. E.g. with CAN: MAB.BcmChas1Fr03.SteerReCtrlReqAgReq
+            * @param[in] pSubscriber Pointer to the IInterfaceAccess of the subscriber. The subscriber should implement the
+            * ISignalReceiveEvent interface.
+            * @return Returns an interface that can be used to manage the subscription.  Use IObjectDestroy to destroy the signal
+            * object.
+            */
+            IInterfaceAccess AddSignalSubscription(in u8string ssSignalName, in IInterfaceAccess pSubscriber);
+
+            /**
+             * @brief Get a list of registered signals.
+             * @return List of registration functions.
+             */
+            sequence<SSignalRegistration> GetRegisteredSignals() const;
+        };
+
+        /**
+         * @brief Interface to allow transacted updates as well as transacted readings without the interference of another update.
+         */
+        local interface IDispatchTransaction
+        {
+            /**
+             * @brief Create a transaction.
+             * @details When starting a group transaction, any writing to a signal will not be reflected yet until the transaction
+             * is finalized. For the data link layer, this also allows freezing the reading values until all values have been read.
+             * @return Returns the transaction interface or NULL when the transaction could not be started. Use IObjectDestroy to
+             * destroy the transaction object.
+             */
+            IInterfaceAccess CreateTransaction();
+        };
+
+        /**
+         * @brief Interface to update a signal value.
+         */
+        local interface ISignalWrite
+        {
+            /**
+             * @brief Update the signal value.
+             * @param[in] anyVal The value to update the signal with.
+             * @param[in] pTransaction The transaction interface. Could be NULL in case the update should occur immediately.
+             */
+            void Write(in any anyVal, in IInterfaceAccess pTransaction);
+        };
+
+        /**
+         * @brief Interface to read a signal value.
+         * @remarks This interface is only accessible by the link layer.
+         */
+        local interface ISignalRead
+        {
+            /**
+             * @brief Get the signal value.
+             * @param[in] pTransaction The transaction interface. Could be NULL in case the most up-to-date value is requested.
+             * @return Returns the value.
+             */
+            any Read(in IInterfaceAccess pTransaction) const;
+        };
+
+        /**
+         * @brief Inform, that a signal value has been received.
+         * @remarks This interface is to be implemented by the device to receive signal values.
+         */
+        local interface ISignalReceiveEvent
+        {
+            /**
+             * @brief A signal value was received.
+             * @param[in] anyVal The signal value.
+             */
+            void Receive(in any anyVal);
+        };
+
+    };      // core module
+};      // sdv module

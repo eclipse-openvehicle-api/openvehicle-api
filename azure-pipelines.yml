@@ -1,0 +1,344 @@
+trigger:
+  - main
+
+parameters:
+  - name: buildConfiguration
+    displayName: Build Configuration
+    type: string
+    default: 'debug'
+    values:
+      - debug
+      - release
+  - name: vapiFrameworkVersion
+    displayName: Vapi framework version for conan
+    default: "0.1.0"
+
+resources:
+  containers:
+    - container: createcontainer
+      image: global-registry.cloud.zf-world.com/gci-azp-074-sofdcar/com-conan-pkg:main_4.0
+      endpoint: AZP-074-global-registry_SC
+    - container: doxygencontainer
+      image: global-registry.cloud.zf-world.com/gci-azp-074-sofdcar/com-doxygen:main_1.10
+      endpoint: AZP-074-global-registry_SC
+  repositories:
+    - repository: conanconfig
+      type: git
+      name: AZP-431_DivDI_Vehicle_API/vapi-dev-conan-config
+      ref: refs/heads/main
+    - repository: azure_conan_creator
+      type: git
+      name: AZP-001_SW4ZF_ToolsDevOps/azure_conan_creator
+      ref: "refs/tags/2.0.1"
+
+variables:
+  - group: JFrog Artifactory
+  - group: Artifactory7
+  - name: isUpload
+    value: $[or(startsWith(variables['Build.SourceBranch'], 'refs/heads/main'),startsWith(variables['Build.SourceBranch'], 'refs/tags/'))]
+
+pool:
+  name: PSS-Default-pool-Ubuntu2004-VMSS
+
+stages:
+  - stage: cmakeBuildonLinux
+    displayName: SDV V-API Framework x64 Linux
+    jobs:
+      - job: cmakebuild
+        displayName: CMake build for vapi-cpp-vehicle-api-platform
+        container: createcontainer
+        steps:
+          - checkout: conanconfig
+          - checkout: self
+          - script: |
+              echo "g++ version"
+              g++ --version
+              echo "CMake version"
+              cmake --version
+            displayName: Print versions
+          - script: |
+              cd vapi-cpp-vehicle-api-platform
+              mkdir build
+              cd build
+              git config --global --add safe.directory $(Build.SourcesDirectory)/vapi-cpp-vehicle-api-platform/build/"gcc_unix_${{ parameters.buildConfiguration }}"_deps/googletest-src
+              git config --global --add safe.directory $(Build.SourcesDirectory)/vapi-cpp-vehicle-api-platform/build/_deps/"gcc_unix_${{ parameters.buildConfiguration }}"xxhash-src
+              cd ..
+              cmake -Wno-dev --preset "gcc_unix_${{ parameters.buildConfiguration }}"
+              cmake --build -Wno-dev --preset "gcc_unix_${{ parameters.buildConfiguration }}" -j 4 --verbose
+            displayName: Run CMake build for the framework
+          - script: |
+              cd vapi-cpp-vehicle-api-platform/framework_tests
+              cmake -Wno-dev --preset "gcc_unix_${{ parameters.buildConfiguration }}"
+              cmake --build -Wno-dev --preset "gcc_unix_${{ parameters.buildConfiguration }}" -j 4 --verbose
+            displayName: Run CMake build for the framework_tests
+          - script: |
+              cd vapi-cpp-vehicle-api-platform/examples
+              cmake -Wno-dev --preset "gcc_unix_${{ parameters.buildConfiguration }}"
+              cmake --build -Wno-dev --preset "gcc_unix_${{ parameters.buildConfiguration }}" -j 4 --verbose
+            displayName: Run CMake build for the examples            
+          - script: |
+              echo "Checking for hanging processes..."
+              ps aux > hanging_processes.log
+              cat hanging_processes.log
+            displayName: Log running processes
+            condition: failed()
+          - task: PublishTestResults@2
+            displayName: Publish GTest Report
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFiles: "$(Build.SourcesDirectory)/vapi-cpp-vehicle-api-platform/build/gcc_unix_${{ parameters.buildConfiguration }}/tests/bin/*.xml"
+              testRunTitle: GTest for Linux
+              failTaskOnFailedTests: true
+          - script: |
+              conan config install --type dir $(Build.SourcesDirectory)/vapi-dev-conan-config
+              conan user -p $(ARTIFACTORY-TOKEN) -r sdv_vapi_conan_public_third_party_dev $(ARTIFACTORY-USR)
+            condition: and(succeeded(), eq(variables.isUpload, true))
+            displayName: configure conan
+          - script: |
+              conan create $(Build.SourcesDirectory)/vapi-cpp-vehicle-api-platform/conanfile_unix.py ${{ parameters.vapiFrameworkVersion }}@sdv/$(Build.SourceBranchName) --profile vapi_ubuntu2004_x64_gcc9_debug  
+              conan upload "vapi*" --remote sdv_vapi_conan_public_third_party_dev --confirm --check --all
+            condition: and(succeeded(), eq(variables.isUpload, true))
+            displayName: create and upload Package Linux
+
+  - stage: cppcheckLinux
+    displayName: CppCheck static code analysis
+    dependsOn: cmakeBuildonLinux
+    jobs:
+      - job: cppcheckLinux
+        displayName: CppCheck static code analysis of SDV Framework
+        container: createcontainer
+        steps:
+          - checkout: conanconfig
+          - checkout: self
+          - script: |
+              echo "CppCheck version"
+              cppcheck --version
+            displayName: Print versions
+          - script: |
+              cd vapi-cpp-vehicle-api-platform
+              mkdir build
+              cd build
+              git config --global --add safe.directory $(Build.SourcesDirectory)/vapi-cpp-vehicle-api-platform/build/gcc_unix_cppcheck/_deps/xxhash-src
+              cd ..
+              cmake -Wno-dev --preset "gcc_unix_cppcheck"
+              cmake --build -Wno-dev --preset "gcc_unix_cppcheck" -j 4 --verbose
+              echo "CppCheck Results:"
+              cat "$(Build.SourcesDirectory)/vapi-cpp-vehicle-api-platform/build/gcc_unix_cppcheck/cppcheck-results.xml"
+              if grep -qE 'severity="(error|warning|style|performance|portability)"' $(Build.SourcesDirectory)/vapi-cpp-vehicle-api-platform/build/gcc_unix_cppcheck/cppcheck-results.xml; then
+                echo "Cppcheck issues found"
+                exit 1
+              fi
+            displayName: Run CMake build for Static Code Analysis
+          - task: PublishBuildArtifacts@1
+            displayName: Publish CppCheck Linux x64 report
+            inputs:
+              pathtoPublish: "$(Build.SourcesDirectory)/vapi-cpp-vehicle-api-platform/build/gcc_unix_cppcheck/cppcheck-results.xml"
+              artifactName: CppCheckReport
+
+  - stage: Doxygen
+    displayName: Generate Doxygen Documentation
+    dependsOn: cmakeBuildonLinux
+    jobs:
+      - job: Doxygen
+        displayName: Generate Doxygen Documentation
+        container: doxygencontainer
+        steps:
+          - script: |
+              ( cat doxygen.config; echo "WARN_LOGFILE=doxygenwarnings.txt" ) | doxygen -
+            displayName: run Doxygen
+          - script: |
+              doxygen_junit --input doxygenwarnings.txt --output doxygen-junit.xml
+            displayName: run Doxygen2Junit
+          - task: PublishBuildArtifacts@1
+            displayName: Publish Documentation
+            inputs:
+              pathtoPublish: "documentation/sdv-core"
+              artifactName: doxygen_documentation
+          - task: PublishTestResults@2
+            displayName: Publish Doxygen Report
+            inputs:
+              testResultsFiles: "$(Build.SourcesDirectory)/doxygen-junit.xml"
+              testRunTitle: Doxygen
+          - script: |
+              if [ -s doxygenwarnings.txt ] ; then
+                echo "##vso[task.complete result=SucceededWithIssues;]Doxygen errors or warnings occured."
+              fi
+            displayName: Doxygen Errorhandling
+          - script: |
+              cd $(Build.SourcesDirectory)/doc
+              sphinx-build --help
+              ./createDoxy.sh
+              iconv -f ISO-8859-1 -t UTF-8 _doxygen/xml/class_c_install_manifest.xml -o class_c_install_manifest.xml.utf8
+              mv class_c_install_manifest.xml.utf8 _doxygen/xml/class_c_install_manifest.xml
+              ls -la
+              ./createDocumentation.sh
+            displayName: Create Sphinx Documentation 
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: 'AZ-INT-AZP-431_DivDI_Vehicle_API_Subscription'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                echo "Uploading static files to Azure Blob Storage..."
+                az storage blob upload-batch \
+                  --destination '$web' \
+                  --account-name vapiwebappstorage \
+                  --source $(Build.SourcesDirectory)/doc/_build/html \
+                  --overwrite
+            displayName: 'Update Docs WebApp'
+            condition: and(succeeded(), eq(variables.isUpload, true))
+
+  - stage: cmakeBuildonWindows
+    displayName: SDV V-API Framework x64 Windows (MINGW)
+    dependsOn: []
+    pool:
+      name: PSS-LARGE-COMPUTE-SW4ZF
+      demands:
+      - ImageOverride -equals WindowsServer2019
+    jobs:
+      - job: cmakebuildonWindows
+        displayName: CMake build for vapi-cpp-vehicle-api-platform
+        steps:
+          - template: conan2_pipeline.yml@azure_conan_creator
+            parameters:
+              build_group: tools
+              conan_zf_extension_command: "zf:install"
+              allow_logs_upload: false
+              configuration_file_extensions: D:/a/_work/1/vapi-cpp-vehicle-api-platform/conanbuild.yml
+          - checkout: conanconfig
+          - checkout: self
+          - script: |
+              echo "g++ version"
+              g++ --version
+              echo "CMake version"
+              cmake --version
+            displayName: Print versions
+          - script: |
+              cd vapi-cpp-vehicle-api-platform
+              cmake -Wno-dev --preset "gcc_mingw_${{ parameters.buildConfiguration }}"
+              cmake --build -Wno-dev --preset "gcc_mingw_${{ parameters.buildConfiguration }}" -j 4 --verbose
+            displayName: Run CMake build for the framework
+          - script: |
+              cd vapi-cpp-vehicle-api-platform/framework_tests
+              cmake -Wno-dev --preset "gcc_mingw_${{ parameters.buildConfiguration }}"
+              cmake --build -Wno-dev --preset "gcc_mingw_${{ parameters.buildConfiguration }}" -j 4 --verbose
+            displayName: Run CMake build for the framework_tests            
+          - script: |
+              cd vapi-cpp-vehicle-api-platform/examples
+              cmake -Wno-dev --preset "gcc_mingw_${{ parameters.buildConfiguration }}"
+              cmake --build -Wno-dev --preset "gcc_mingw_${{ parameters.buildConfiguration }}" -j 4 --verbose
+            displayName: Run CMake build for the examples
+          - script: |
+              echo "Checking for hanging processes..."
+              Get-Process | Out-File -FilePath hanging_processes.log
+              Get-Content hanging_processes.log
+            displayName: Log running processes
+            condition: failed()
+          - task: PublishTestResults@2
+            displayName: Publish GTest Report
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFiles: "$(Build.SourcesDirectory)/vapi-cpp-vehicle-api-platform/build/gcc_mingw_${{ parameters.buildConfiguration }}/tests/bin/*.xml"
+              testRunTitle: GTest for Windows
+              failTaskOnFailedTests: true
+          - script: |
+              pip install conan~=1.0
+              conan config install --type dir $(Build.SourcesDirectory)/vapi-dev-conan-config
+              conan user -p $(ARTIFACTORY-TOKEN) -r sdv_vapi_conan_public_third_party_dev $(ARTIFACTORY-USR)
+              conan create $(Build.SourcesDirectory)/vapi-cpp-vehicle-api-platform/conanfile_mingw.py ${{ parameters.vapiFrameworkVersion }}@sdv/$(Build.SourceBranchName) --profile vapi_windows_x64_mingw_Debug 
+              conan upload "vapi*" --remote sdv_vapi_conan_public_third_party_dev --confirm --check --all
+            condition: and(succeeded(), eq(variables.isUpload, true))
+            displayName: create and upload Package Windows
+
+  - stage: cmakeBuildonLinuxARM
+    displayName: SDV V-API Framework ARM Linux
+    dependsOn: []
+    pool: AZP-431-ARM
+    jobs:
+      - job: cmakebuild
+        displayName: CMake build for vapi-cpp-vehicle-api-platform
+        steps:
+          - checkout: conanconfig
+          - checkout: self
+          - script: |
+              echo "g++ version"
+              g++ --version
+              echo "CMake version"
+              cmake --version
+            displayName: Print versions
+          - script: |
+              cd vapi-cpp-vehicle-api-platform
+              cmake -Wno-dev --preset "gcc_unix_${{ parameters.buildConfiguration }}"
+              cmake --build -Wno-dev --preset "gcc_unix_${{ parameters.buildConfiguration }}" -j 4 --verbose
+            displayName: Run CMake build for the framework
+          - script: |
+              cd vapi-cpp-vehicle-api-platform/framework_tests
+              cmake -Wno-dev --preset "gcc_unix_${{ parameters.buildConfiguration }}"
+              cmake --build -Wno-dev --preset "gcc_unix_${{ parameters.buildConfiguration }}" -j 4 --verbose
+            displayName: Run CMake build for the framework_tests            
+          - script: |
+              cd vapi-cpp-vehicle-api-platform/examples
+              cmake -Wno-dev --preset "gcc_unix_${{ parameters.buildConfiguration }}"
+              cmake --build -Wno-dev --preset "gcc_unix_${{ parameters.buildConfiguration }}" -j 4 --verbose
+            displayName: Run CMake build for the examples
+          - script: |
+              echo "Checking for hanging processes..."
+              ps aux > hanging_processes.log
+              cat hanging_processes.log
+            displayName: Log running processes
+            condition: failed()
+          - task: PublishTestResults@2
+            displayName: Publish GTest Report
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFiles: "$(Build.SourcesDirectory)/vapi-cpp-vehicle-api-platform/build/gcc_unix_${{ parameters.buildConfiguration }}/tests/bin/*.xml"
+              testRunTitle: GTest for Linux
+              failTaskOnFailedTests: true
+          - script: |
+              conan remove "*" -f
+              conan config install --type dir $(Build.SourcesDirectory)/vapi-dev-conan-config
+              conan user -p $(ARTIFACTORY-TOKEN) -r sdv_vapi_conan_public_third_party_dev $(ARTIFACTORY-USR)
+            condition: and(succeeded(), eq(variables.isUpload, true))
+            displayName: configure conan
+          - script: |
+              conan create $(Build.SourcesDirectory)/vapi-cpp-vehicle-api-platform/conanfile_unix.py ${{ parameters.vapiFrameworkVersion }}@sdv/$(Build.SourceBranchName) --profile vapi_ubuntu2204_aarch64_gcc11_debug  
+              conan upload "vapi*" --remote sdv_vapi_conan_public_third_party_dev --confirm --check --all
+              conan remove "*" -f
+            condition: and(succeeded(), eq(variables.isUpload, true))
+            displayName: create and upload Package Linux
+
+  - stage: cppcheckLinuxARM
+    displayName: CppCheck static code analysis
+    dependsOn: cmakeBuildonLinuxARM
+    pool: AZP-431-ARM
+    jobs:
+      - job: cppcheckLinuxARM
+        displayName: CppCheck static code analysis of SDV Framework
+        steps:
+          - checkout: conanconfig
+          - checkout: self
+          - script: |
+              echo "CppCheck version"
+              cppcheck --version
+            displayName: Print versions
+          - script: |
+              cd vapi-cpp-vehicle-api-platform
+              mkdir build
+              cd build
+              git config --global --add safe.directory $(Build.SourcesDirectory)/vapi-cpp-vehicle-api-platform/build/gcc_unix_cppcheck/_deps/xxhash-src
+              cd ..
+              cmake -Wno-dev --preset "gcc_unix_cppcheck"
+              cmake --build -Wno-dev --preset "gcc_unix_cppcheck" -j 4 --verbose
+              echo "CppCheck Results:"
+              cat "$(Build.SourcesDirectory)/vapi-cpp-vehicle-api-platform/build/gcc_unix_cppcheck/cppcheck-results.xml"
+              if grep -qE 'severity="(error|warning|style|performance|portability)"' $(Build.SourcesDirectory)/vapi-cpp-vehicle-api-platform/build/gcc_unix_cppcheck/cppcheck-results.xml; then
+                echo "Cppcheck issues found"
+                exit 1
+              fi
+            displayName: Run CMake build for Static Code Analysis
+          - task: PublishBuildArtifacts@1
+            displayName: Publish CppCheck Linux ARM report
+            inputs:
+              pathtoPublish: "$(Build.SourcesDirectory)/vapi-cpp-vehicle-api-platform/build/gcc_unix_cppcheck/cppcheck-results.xml"
+              artifactName: CppCheckReport
+

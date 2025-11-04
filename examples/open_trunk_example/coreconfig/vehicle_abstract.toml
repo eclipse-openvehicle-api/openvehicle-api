@@ -1,0 +1,19 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "trunk_bs_vehiclespeed_rx.sdv"
+Class = "Vehicle.Speed_Service"
+Name = "Vehicle.Speed_Service"
+
+[[Component]]
+Path = "trunk_bs_vehicletrunk_tx.sdv"
+Class = "Vehicle.Body.Trunk_Service"
+Name = "Vehicle.Body.Trunk_Service"
+
+
+[[Module]]
+Path = "trunk_proxystub.sdv"
+
+
+

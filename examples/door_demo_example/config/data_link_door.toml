@@ -1,0 +1,12 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "can_com_sim.sdv"
+Class = "CAN_Com_Sim"
+Source="door_example_receiver.asc"
+Target="door_example_writer.asc"
+
+[[Component]]
+Path = "can_dl_door.sdv"
+Class = "CAN_data_link"

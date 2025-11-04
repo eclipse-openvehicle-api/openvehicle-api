@@ -1,0 +1,10 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "door_complex_service.sdv"
+Class = "Doors Example Service"
+
+
+
+

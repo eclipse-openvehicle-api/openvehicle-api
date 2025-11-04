@@ -1,0 +1,375 @@
+VERSION "PrivateCAN"
+
+
+NS_ : 
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	VAL_
+	CAT_DEF_
+	CAT_
+	FILTER
+	BA_DEF_DEF_
+	EV_DATA_
+	ENVVAR_DATA_
+	SGTYPE_
+	SGTYPE_VAL_
+	BA_DEF_SGTYPE_
+	BA_SGTYPE_
+	SIG_TYPE_REF_
+	VAL_TABLE_
+	SIG_GROUP_
+	SIG_VALTYPE_
+	SIGTYPE_VALTYPE_
+	BO_TX_BU_
+	BA_DEF_REL_
+	BA_REL_
+	BA_DEF_DEF_REL_
+	BU_SG_REL_
+	BU_EV_REL_
+	BU_BO_REL_
+	SG_MUL_VAL_
+
+BS_:
+
+BU_: ExampleNode
+VAL_TABLE_ Fault_Codes 27 "UKWN" 26 "VEHSPDMAX_EXDD" 25 "STS_ALIVE" 24 "STEER_NOT_E2E_MODE" 23 "OTA_SPD" 22 "OTA_TIMER_DOWNLOAD_FAILED" 21 "OTA_MAX_TIME" 20 "CUBIXAD_STEERSTREQ_NOTACTV" 19 "CUBIXAD_DRVSTREQ_NOTACTV" 18 "SFTYDRV_INTV" 17 "LSDC_ALIVE" 16 "CUBIXAD_ALIVE" 15 "IBC_MAB_NO_PRIO" 14 "IBC_NOT_RDY" 13 "IBC_ALIVE" 12 "LSDC_GEAR" 11 "LSDC_SPD" 10 "LSDC_ACCL" 9 "IBC_NOT_MAB_MOD" 8 "GOLDBOX_ALIVE" 7 "CUBIXAD_GEAR" 6 "CUBIXAD_SPD_TESTTRACK" 5 "DRVREQCHG" 4 "RDY_TIMER" 3 "SFTY_CDN_FAILED" 2 "ACTVNCHK_SPD" 1 "ACTVNCHK_TIMR" 0 "NONE" ;
+VAL_TABLE_ TestMapID 6 "E_TESTMAPID_UNDEFINED" 5 "E_TESTMAPID_TEST_DRIVE" 4 "E_TESTMAPID_AD_AREA" 3 "E_TESTMAPID_STUTT_ARENA" 2 "E_TESTMAPID_ZF_LASTMILE" 1 "E_TESTMAPID_ZF_TESTTRACK_2" 0 "E_TESTMAPID_NONE" ;
+VAL_TABLE_ CtrlReqStates 7 "CtrlSts3b_RESERVED_4" 6 "CtrlSts3b_RESERVED_3" 5 "CtrlSts3b_RESERVED_2" 4 "CtrlSts3b_RESERVED_1" 3 "CtrlSts3b_ERROR" 2 "CtrlSts3b_CONTROL_REQUESTED" 1 "CtrlSts3b_CONTROL_NOT_REQUESTED" 0 "CtrlSts3b_INIT" ;
+VAL_TABLE_ SteerActrReSts 7 "Diag" 6 "Inactive" 5 "Ramping" 4 "Yellow" 3 "Red" 2 "Normal" 1 "Pending" 0 "Initialisation" ;
+VAL_TABLE_ SwtPark1 1 "SwtParkActv" 0 "SwtParkNotActv" ;
+VAL_TABLE_ PE_State 2 "ERROR" 1 "INIT" 0 "NO_ERROR" ;
+VAL_TABLE_ SSM_Req 7 "HMS_TAKEOVER" 6 "RESERVED" 5 "RELESE_VIA_RAMP" 4 "DRIVEOFF" 3 "HOLD_STANDBY" 2 "PARK" 1 "HOLD" 0 "NO_REQUEST" ;
+VAL_TABLE_ IBC_StandStillMode 12 "SSM_ERROR" 11 "SSM_INIT" 10 "SSM_DRIVEOFF_STANDBY_ACTIVE" 9 "SSM_HOLD_STANDBY_ACTIVE" 8 "SSM_HILL_SLIPPOFF_DETECTED" 7 "SSM_RELEASE_REQ_FROM_DRIVER" 6 "SSM_RELEASE_REQ_ACTIVE" 5 "SSM_DRIVEOFF_ACTIVE" 4 "SSM_PARK_RETAINED_ACTIVE" 3 "SSM_PARK_ACTIVE" 2 "SSM_PARK_REQUESTED" 1 "SSM_HOLD_ACTIVE" 0 "SSM_NO_ACTIVE_FUNCTION" ;
+VAL_TABLE_ AppTgtStDrv 3 "ACTIVE" 2 "READY" 1 "RESERVED" 0 "NOT_ACTIVE" ;
+VAL_TABLE_ IBC_Status 4 "IBC_MAB_ERR_COMM" 3 "IBC_MAB_NO_PRIO" 2 "IBC_IN_MAB_MODE" 1 "IBC_READY" 0 "IBC_NOT_READY_FAILED" ;
+VAL_TABLE_ GearLvrIndcn 7 "GearLvrIndcn2_Undefd" 6 "GearLvrIndcn2_Resd2" 5 "GearLvrIndcn2_Resd1" 4 "GearLvrIndcn2_ManModeIndcn" 3 "GearLvrIndcn2_DrvIndcn" 2 "GearLvrIndcn2_NeutIndcn" 1 "GearLvrIndcn2_RvsIndcn" 0 "GearLvrIndcn2_ParkIndcn" ;
+VAL_TABLE_ LvlgAdjReq 7 "LvlgAdjReq_Resd2" 6 "LvlgAdjReq_Resd1" 5 "LvlgAdjReq_Ll2" 4 "LvlgAdjReq_Ll1" 3 "LvlgAdjReq_Nrh" 2 "LvlgAdjReq_Hl1" 1 "LvlgAdjReq_Hl2" 0 "LvlgAdjReq_Ukwn" ;
+VAL_TABLE_ DrvModReq 15 "Err" 14 "Rock" 13 "Mud" 12 "Sand" 11 "Snow" 10 "Power" 9 "Hybrid" 8 "Pure_EV" 7 "Race" 6 "Adaptive" 5 "Offroad_CrossTerrain" 4 "Individual" 3 "Dynamic_Sport" 2 "Comfort_Normal" 1 "ECO" 0 "Undefd" ;
+VAL_TABLE_ MAB_Info_Message 4 "DRV_GEARLVR_TO_P" 3 "DRV_P_TO_D" 2 "LSDC_DI_NOT_PSBL" 1 "LSDC_ENA_NOT_POSSIBLE" 0 "NONE" ;
+VAL_TABLE_ MAB_OvrdTool_Sts 11 "HACKATHON" 10 "OTA" 9 "INIT" 8 "FINSHD" 7 "FLT" 6 "CUBIX_AD" 5 "SAVE_THE_SPOILER" 4 "LSDC" 3 "RDY" 2 "ACTVN_CHK" 1 "NO_MANIPULATION" 0 "NONE" ;
+VAL_TABLE_ HMI_Drvr_Req 9 "FCT_DEACTVN_REQ" 8 "FCT_ACTVN_OTA_CFMD" 7 "FCT_ACTVN_OTA_REQ" 6 "FCT_ACTVN_SAVETHESPOILER_CFMD" 5 "FCT_ACTVN_SAVETHESPOILER_REQ" 4 "FCT_ACTVN_LSDC_CFMD" 3 "FCT_ACTVN_LSDC_REQ" 2 "FCT_ACTVN_CUBIXAD_CFMD" 1 "FCT_ACTVN_CUBIXAD_REQ" 0 "FCT_ACTVN_NONE" ;
+VAL_TABLE_ Info_Message 4 "DRV_GEARLVR_TO_P" 3 "DRV_P_TO_D" 2 "LSDC_DI_NOT_PSBL" 1 "LSDC_ENA_NOT_POSSIBLE" 0 "NONE" ;
+VAL_TABLE_ HMI_Fct_Req 8 "FCT_DEACTVN_REQ" 7 "FCT_ACTVN_OTA_REQ" 6 "FCT_ACTVN_SAVETHESPOILER_CFMD" 5 "FCT_ACTVN_SAVETHESPOILER_REQ" 4 "FCT_ACTVN_LSDC_CFMD" 3 "FCT_ACTVN_LSDC_REQ" 2 "FCT_ACTVN_AI4MTN_CFMD" 1 "FCT_ACTVN_AI4MTN_REQ" 0 "FCT_ACTVN_NONE" ;
+VAL_TABLE_ SOVD_states 2 "SOVD_SHOWCASE_ACTIVE" 1 "SOVD_SHOWCASE_DEACTIVE" 0 "SOVD_NONE" ;
+VAL_TABLE_ OTA_states 7 "OTA_DOWNLOAD_FAILED" 6 "OTA_INSTALL_FAILED" 5 "OTA_INSTALL_FINISHED" 4 "OTA_INSTALL_START" 3 "OTA_DOWNLOAD_START" 2 "OTA_SCHEDULED" 1 "OTA_STANDBY" 0 "OTA_NONE" ;
+
+
+BO_ 21 Goldbox_Common: 1 ExampleNode
+ SG_ Goldbox_RollgCntr : 7|4@0+ (1,0) [0|15] "" Vector__XXX
+
+BO_ 20 MAB_Internal_Info: 1 Vector__XXX
+ SG_ MAB_GPS_Map_ID : 7|4@0+ (1,0) [0|15] "" Vector__XXX
+
+BO_ 257 MAB_Diagnosics_Response: 8 Vector__XXX
+ SG_ MAB_Diag_IBC_Response : 7|64@0+ (1,0) [0|1.84467440737096E+019] "unitless" Vector__XXX
+
+BO_ 256 ProConnect_Diagnostics_Request: 8 Vector__XXX
+ SG_ ProConnect_Diag_IBC_Req : 7|64@0+ (1,0) [0|1.84467440737096E+019] "" Vector__XXX
+
+BO_ 19 ProConnect_GPS_Lat_Long: 8 Vector__XXX
+ SG_ ProConnect_GPS_PE_Long_LowAccry : 39|32@0+ (8.3819E-008,-180) [-180|179.999863699605] "deg"  ExampleNode
+ SG_ ProConnect_GPS_PE_Lat_LowAccry : 7|32@0+ (4.19095E-008,-90) [-90|89.9999318498025] "deg"  ExampleNode
+
+BO_ 18 ProConnect_GPS_IMU_Status: 5 Vector__XXX
+ SG_ ProConnect_GPS_TimeStamp : 15|32@0+ (1,0) [0|4294967295] "" Vector__XXX
+ SG_ ProConnect_IMU_PE_State : 7|3@0+ (1,0) [0|7] ""  ExampleNode
+ SG_ ProConnect_GPS_PE_State : 4|3@0+ (1,0) [0|7] ""  ExampleNode
+
+BO_ 17 Goldbox_Cubix_Ctrl_2: 3 ExampleNode
+ SG_ Goldbox_TestMapId : 23|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ Goldbox_Freigabe_Radbremsmom : 8|1@0+ (1,0) [0|1] "bool" Vector__XXX
+ SG_ Goldbox_AccrPedlRatAccrPedlRat : 7|15@0+ (0.00390625,0) [0|127.99609375] "%" Vector__XXX
+
+BO_ 16 MAB_CubixAD_Ctrl_2: 6 Vector__XXX
+ SG_ MAB_IBC_Status : 15|3@0+ (1,0) [0|7] ""  ExampleNode
+ SG_ MAB_GearLvrIndc : 3|3@0+ (1,0) [0|7] ""  ExampleNode
+ SG_ MAB_BrakeStandStillMode : 7|4@0+ (1,0) [0|15] ""  ExampleNode
+ SG_ MAB_VehMNom : 39|14@0+ (1,0) [0|10000] "Kg"  ExampleNode
+ SG_ MAB_DrvrGearShiftParkReq1 : 0|1@0+ (1,0) [0|1] ""  ExampleNode
+ SG_ MAB_PinionSteerAgAct : 23|15@0- (0.0009765625,0) [-14.5|14.5] "rad"  ExampleNode
+
+BO_ 15 MAB_CubixAD_Ctrl_1: 6 Vector__XXX
+ SG_ MAB_f_cubiX_AD_Actvn : 24|1@0+ (1,0) [0|1] "bool"  ExampleNode
+ SG_ MAB_SteerActReGroupAgAct : 39|10@0- (0.01,0) [-5.12|5.11] "Deg"  ExampleNode
+ SG_ MAB_ADataRawSafeALat : 23|15@0- (0.0085,0) [-139.264|139.2555] "m/s^2"  ExampleNode
+ SG_ MAB_AgDataRawSafeYawRate : 7|16@0- (0.000244140625,0) [-8|7.999755859375] "rad/s"  ExampleNode
+
+BO_ 14 ProConnect_PE_Angle: 8 Vector__XXX
+ SG_ ProConnect_GPS_PE_Yaw_Angle : 39|32@0+ (8.3819E-008,0) [0|359.999863699605] "deg"  ExampleNode
+ SG_ ProConnect_GPS_PE_Course_Angle : 7|32@0+ (8.3819E-008,0) [0|359.999863699605] "deg"  ExampleNode
+
+BO_ 13 ProConnect_GPS_Long: 5 Vector__XXX
+ SG_ ProConnect_GPS_PE_Longitude : 7|40@0+ (3.27419E-010,-180) [-180|180.000997654463] "deg"  ExampleNode
+
+BO_ 12 ProConnect_GPS_Lat: 5 Vector__XXX
+ SG_ ProConnect_GPS_PE_Latitude : 7|40@0+ (1.6371E-010,-90) [-90|90.0010485830452] "deg"  ExampleNode
+
+BO_ 11 ProConnect_STS_Ctrl: 1 Vector__XXX
+ SG_ ProConnect_VehHeiTarReq : 2|3@0+ (1,0) [0|7] "Enum" Vector__XXX
+ SG_ ProConnect_STS_AliveCounter : 6|4@0+ (1,0) [0|15] "Unitless" Vector__XXX
+ SG_ ProConnect_f_VehInGeofence : 7|1@0+ (1,0) [0|1] "bool" Vector__XXX
+
+BO_ 5 ProConnect_OTA_STS_Status: 1 Vector__XXX
+ SG_ ProConnect_OTA_Sts : 7|8@0+ (1,0) [0|255] "enum" Vector__XXX
+
+BO_ 10 MAB_STS_Input: 6 Vector__XXX
+ SG_ MAB_WhlRotToothCntrReRi : 47|8@0+ (1,0) [0|255] "Unitless" Vector__XXX
+ SG_ MAB_WhlRotToothCntrReLe : 39|8@0+ (1,0) [0|255] "Unitless" Vector__XXX
+ SG_ MAB_WhlRotToothCntrFrntRi : 31|8@0+ (1,0) [0|255] "Unitless" Vector__XXX
+ SG_ MAB_WhlRotToothCntrFrntLe : 23|8@0+ (1,0) [0|255] "Unitless" Vector__XXX
+ SG_ MAB_VehBodyHei : 7|15@0- (6.2E-005,0) [-1.015808|1.015746] "m" Vector__XXX
+ SG_ MAB_f_STS_Actvn : 8|1@0+ (1,0) [0|1] "bool" Vector__XXX
+
+BO_ 6 MAB_LSDC_PROP_Input: 8 Vector__XXX
+ SG_ MAB_BrkFricTqWhlReRiAct : 55|13@0+ (1,0) [0|8191] "Nm"  ExampleNode
+ SG_ MAB_BrkFricTqWhlReLeAct : 39|13@0+ (1,0) [0|8191] "Nm"  ExampleNode
+ SG_ MAB_BrkFricTqWhlFrntRiAct : 23|13@0+ (1,0) [0|8191] "Nm"  ExampleNode
+ SG_ MAB_BrkFricTqWhlFrntLeAct : 7|13@0+ (1,0) [0|8191] "Nm"  ExampleNode
+
+BO_ 2 MAB_LSDC_Ctrl: 1 Vector__XXX
+ SG_ MAB_f_LSDC_Actvn : 7|1@0+ (1,0) [0|1] "bool"  ExampleNode
+
+BO_ 0 MAB_LSDC_CAN_Input: 8 Vector__XXX
+ SG_ MAB_VehSpdLgtA : 55|15@0+ (0.00391,0) [0|128.11897] "m/s"  ExampleNode
+ SG_ MAB_SteerWhlSnsrAg : 39|15@0- (0.0009765625,0) [-16|15.9990234375] "rad"  ExampleNode
+ SG_ MAB_f_VehSpd_RvsDetd : 24|1@0+ (1,0) [0|1] "bool"  ExampleNode
+ SG_ MAB_DrvModReq : 15|8@0+ (1,0) [0|255] ""  ExampleNode
+ SG_ MAB_ADataRawSafeALgt : 23|15@0- (0.0085,0) [-139.264|139.2555] "m/s^2"  ExampleNode
+ SG_ MAB_act_wheel_angle_front : 7|8@0- (0.00781,0) [-0.99968|0.99187] "rad"  ExampleNode
+
+BO_ 7 MAB_HMI_Feedback_2: 8 Vector__XXX
+ SG_ MAB_FourCornrReq_Act : 45|3@0+ (1,0) [0|7] "Enum" Vector__XXX
+ SG_ MAB_Veh_A : 15|8@0- (0.2,0) [-25.6|25.4] "m/s^2" Vector__XXX
+ SG_ MAB_SteerWhlAg_Deg : 23|11@0- (1,0) [-1024|1023] "deg" Vector__XXX
+ SG_ MAB_ReSteerAgAct : 55|10@0- (0.01,0) [-5.12|5.11] "deg" Vector__XXX
+ SG_ MAB_Goldbox_Alive : 25|1@0+ (1,0) [0|1] "bool" Vector__XXX
+ SG_ MAB_CurSpd_kmph : 7|8@0+ (1,0) [0|255] "kmph" Vector__XXX
+ SG_ MAB_AliveCounter : 28|3@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ MAB_act_wheel_angle_front_deg : 39|10@0- (0.2,0) [-102.4|102.2] "deg" Vector__XXX
+
+BO_ 4 MAB_HMI_Feedback_1: 4 Vector__XXX
+ SG_ voltage_AccrPedl_Out : 31|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ MAB_OvrdTool_Sts : 3|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ MAB_Info_Message : 7|4@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ MAB_Global_activation_status : 15|6@0+ (1,0) [0|63] "bit coded" Vector__XXX
+ SG_ MAB_Fault_codes : 23|5@0+ (1,0) [0|31] "" Vector__XXX
+
+BO_ 9 MAB_CubixAD_Ctrl_3: 6 Vector__XXX
+ SG_ MAB_SteerActReGroupSts : 43|3@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ MAB_IsgTqAct800ActuTq : 39|12@0+ (5,-10235) [-10235|10240] "Nm"  ExampleNode
+ SG_ MAB_WhlMotSysTqEst800Tq2Act : 23|14@0+ (1,-8191) [-8191|8192] "Nm"  ExampleNode
+ SG_ MAB_VehMtnSt : 8|1@0+ (1,0) [0|1] "bool"  ExampleNode
+ SG_ MAB_BrkFricTqTotAtWhlsAct : 7|15@0+ (1,0) [0|20000] "Nm"  ExampleNode
+
+BO_ 1 HMI_Requests: 2 Vector__XXX
+ SG_ HMI_f_ReSteerCtrlActvnReq : 15|1@0+ (1,0) [0|1] "bool" Vector__XXX
+ SG_ HMI_Drvr_Req : 7|8@0+ (1,0) [0|255] "enum" Vector__XXX
+
+BO_ 3 Goldbox_LSDC_Ctrl: 3 ExampleNode
+ SG_ Goldbox_SteerReCtrlReqSts : 23|3@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ Goldbox_SteerReCtrlReqAgReq : 7|10@0- (0.01,0) [-5.12|5.11] "deg" Vector__XXX
+ SG_ Goldbox_LSDC_RollgCntr : 13|4@0+ (1,0) [0|15] "" Vector__XXX
+
+BO_ 8 Goldbox_Cubix_Ctrl_1: 7 ExampleNode
+ SG_ Goldbox_DriveStateReq : 55|2@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ Goldbox_SteerStateReq : 42|3@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ Goldbox_SSM_Req : 45|3@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ Goldbox_Verz_Anf : 39|10@0+ (0.024,-20.016) [-20.016|4.536] "m/s^2" Vector__XXX
+ SG_ Goldbox_Radbremsmom : 23|12@0+ (8,0) [0|32760] "Nm" Vector__XXX
+ SG_ Goldbox_Verz_freigabe : 8|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ Goldbox_SteerWhlAgReq : 7|15@0- (0.0009765625,0) [-14.5|14.5] "rad" Vector__XXX
+ SG_ Goldbox_Cubix_RollgCntr : 27|4@0+ (1,0) [0|15] "" Vector__XXX
+
+
+
+CM_ SG_ 21 Goldbox_RollgCntr "A similar counter will be existing in MAB, Each cycle will the counter number be compared with the value from Goldbox. When these numbers have a deviation of more than 3, the MAB will switch to the series mode.";
+CM_ BO_ 20 "Internal signals for measurement and debugging";
+CM_ SG_ 257 MAB_Diag_IBC_Response "Response of IBC regarding diagnosis request  read  from Chassis can 1 ";
+CM_ SG_ 256 ProConnect_Diag_IBC_Req "Diagnosis request sent by ProConnect to MAB. MAB forwards it to IBC on chassis Can 1";
+CM_ SG_ 19 ProConnect_GPS_PE_Long_LowAccry "ProConnect GPS longitude signal with less accuracy. Instead of 40 bit is 32 bit. The accuracy will be in the 1-2  cm range.";
+CM_ SG_ 19 ProConnect_GPS_PE_Lat_LowAccry "ProConnect GPS lateral signal with less accuracy. Instead of 40 bit is 32 bit. The accuracy will be in the 1-2  cm range.";
+CM_ SG_ 17 Goldbox_TestMapId "Identifier CubixAD test map. ";
+CM_ SG_ 16 MAB_VehMNom "Estimated vehicle mass including trailer. Vehicle mass including trailer mass (if connected).";
+CM_ SG_ 16 MAB_DrvrGearShiftParkReq1 "Driver park request from gear shifter. Valid for Shift-By-Wire system.";
+CM_ SG_ 15 MAB_SteerActReGroupAgAct "AgAct (Actual angle at Rear axle)";
+CM_ SG_ 11 ProConnect_STS_AliveCounter "Save the spoiler alive rolling counter (0 -14 )";
+CM_ SG_ 11 ProConnect_f_VehInGeofence "Is vehicle in geofence area";
+CM_ SG_ 5 ProConnect_OTA_Sts "Current status of the ProConnect. ";
+CM_ SG_ 10 MAB_WhlRotToothCntrReRi "Wheel rotation ticks for each individual wheel. Wheel rotation impuls counter rear right. For one complete wheel revolution the counter will increase by 96 (with 48 magnetic pole-pairs).";
+CM_ SG_ 10 MAB_WhlRotToothCntrReLe "Wheel rotation ticks for each individual wheel. Wheel rotation impuls counter rear left. For one complete wheel revolution the counter will increase by 96 (with 48 magnetic pole-pairs).";
+CM_ SG_ 10 MAB_WhlRotToothCntrFrntRi "Wheel rotation ticks for each individual wheel. Wheel rotation impuls counter front right. For one complete wheel revolution the counter will increase by 96 (with 48 magnetic pole-pairs).";
+CM_ SG_ 10 MAB_WhlRotToothCntrFrntLe "Wheel rotation ticks for each individual wheel. Wheel rotation impuls counter front left. For one complete wheel revolution the counter will increase by 96 (with 48 magnetic pole-pairs).";
+CM_ SG_ 10 MAB_VehBodyHei "Signal forwareded from vehicle to ProConnect regarding Vehicle body height. Vehicle signal on Chassis CAN 2 is BodyHei. ";
+CM_ SG_ 10 MAB_f_STS_Actvn "Activation and deactivation flag from MAB to ProConnect regarding the activation and deactivation of save the spoiler";
+CM_ SG_ 6 MAB_BrkFricTqWhlReRiAct "Actual service brake torque. Brake torque acting on the rear right wheel. 
+Based on nominal brake parameters (e.g. constant pads friction) and (estimated) brake pressures (clamp forces). Not incl.: parking brake torque or regenerative brake torque.";
+CM_ SG_ 6 MAB_BrkFricTqWhlReLeAct "Actual service brake torque. Brake torque acting on the rear left wheel. 
+Based on nominal brake parameters (e.g. constant pads friction) and (estimated) brake pressures (clamp forces). Not incl.: parking brake torque or regenerative brake torque.";
+CM_ SG_ 6 MAB_BrkFricTqWhlFrntRiAct "Actual service brake torque. Brake torque acting on the front right wheel. 
+Based on nominal brake parameters (e.g. constant pads friction) and (estimated) brake pressures (clamp forces). Not incl.: parking brake torque or regenerative brake torque.";
+CM_ SG_ 6 MAB_BrkFricTqWhlFrntLeAct "Actual service brake torque. Brake torque acting on the front left wheel. 
+Based on nominal brake parameters (e.g. constant pads friction) and (estimated) brake pressures (clamp forces). Not incl.: parking brake torque or regenerative brake torque.";
+CM_ SG_ 2 MAB_f_LSDC_Actvn "This flag will be send via MAB in the ready state.This state is one step, before fully handover to the algorithm. It can be used to reset the rolling counter as well. ";
+CM_ SG_ 0 MAB_VehSpdLgtA "Vehicle speed longitudinal based on wheel speed sensors and longitudinal acceleration.";
+CM_ SG_ 0 MAB_SteerWhlSnsrAg "Actual steering wheel angle from the actual centre position of the steering wheel. ";
+CM_ SG_ 0 MAB_f_VehSpd_RvsDetd "VehicleVelocity.ReverseDetected. This signal should still be clarified, whether is needed or not?";
+CM_ SG_ 0 MAB_DrvModReq "driving mode request. This signal can be read on the CAN 1 and CAN 2 with different frame cyclicity. ";
+CM_ SG_ 0 MAB_ADataRawSafeALgt "Longitudinal acceleration over ground.
+end2endprotection=profile1A dataid= 12345 Longitudinal acceleration over ground";
+CM_ SG_ 0 MAB_act_wheel_angle_front "This signal is calculated by multiplying steering gear ratio with MAB_SteerWhlSnsrAg";
+CM_ SG_ 7 MAB_FourCornrReq_Act "Actual request of vehicle height adjustment from ProConnect during Save the spoiler";
+CM_ SG_ 7 MAB_Veh_A "vehicle acceleration OR deceleration ";
+CM_ SG_ 7 MAB_SteerWhlAg_Deg "actual steering wheel angle in degree";
+CM_ SG_ 7 MAB_ReSteerAgAct "Actual rear wheel steering angle in degree";
+CM_ SG_ 7 MAB_Goldbox_Alive "Status of Goldbox (alive or not)";
+CM_ SG_ 7 MAB_act_wheel_angle_front_deg "actua frontl wheel angle in degree";
+CM_ SG_ 4 MAB_OvrdTool_Sts "Current state of the MAB stateflow. ";
+CM_ SG_ 4 MAB_Info_Message "This signal can be used to show any messages to the safety driver. ";
+CM_ SG_ 4 MAB_Global_activation_status "Bit coded signal. Set true to below conditions. Value is 31 if all conditions true
+0 --> All Door closed
+1 --> Driver seat belt  fastened
+2 --> AD main switch on
+3 --> Driver seat occupied ";
+CM_ SG_ 4 MAB_Fault_codes "0 = NONE,1 = Glb Actvn Cdn Failed,2 = Emergency Button,3 = Drvr Intv Detd,4 = MAB Watchdog Err Detd,5 = GoldBox Cntr Err Detd,6 = Spd Lim Excdd,7 = Acc Lim Excdd,8 = IBC not in Manip Mod,9 = Steer Grdt Excdd,10 = Phy Lim Excdd,11 = Re Steer Grdt Excdd
+";
+CM_ SG_ 9 MAB_IsgTqAct800ActuTq "Actual Torque (at Front Motor)";
+CM_ SG_ 9 MAB_WhlMotSysTqEst800Tq2Act "Actual Torque (at Rear Motor)";
+CM_ SG_ 9 MAB_VehMtnSt "Vehicle motion state information based on wheel speed sensors. Provides information about vehicle stand still and vehicle rolling direction. Vehicle motion state;";
+CM_ SG_ 9 MAB_BrkFricTqTotAtWhlsAct "Total actual friction brake toque at all four wheels.";
+CM_ SG_ 1 HMI_f_ReSteerCtrlActvnReq "LSDC: flag for rear steering control enabled or disabled.";
+CM_ SG_ 1 HMI_Drvr_Req "HMI sends the driver request and his confirmation. ";
+CM_ SG_ 3 Goldbox_SteerReCtrlReqSts "Control bits for angle request, corporate with steer angle request and Qf to realize rear axle angle control.
+SteerReCtrlReqSteerReCtrlSts";
+CM_ SG_ 3 Goldbox_SteerReCtrlReqAgReq "Rear Steering angle request";
+CM_ SG_ 3 Goldbox_LSDC_RollgCntr "A similar counter will be existing in MAB, Each cycle will the counter number be compared with the value from Goldbox. When these numbers have a deviation of more than 3, the MAB will switch to the series mode.";
+CM_ SG_ 8 Goldbox_SteerWhlAgReq "steering wheel angle from the actual centre position of the steering wheel requested from Cubix AD application on Goldbox ";
+CM_ SG_ 8 Goldbox_Cubix_RollgCntr "A similar counter will be existing in MAB, Each cycle will the counter number be compared with the value from Goldbox. When these numbers have a deviation of more than 3, the MAB will switch to the series mode.";
+BA_DEF_  "Baudrate" INT 1000 1000000;
+BA_DEF_  "BusType" STRING ;
+BA_DEF_  "DBName" STRING ;
+BA_DEF_  "ProtocolType" STRING ;
+BA_DEF_ BU_  "NmAsrNode" ENUM  "No","Yes";
+BA_DEF_ BU_  "NmAsrNodeIdentifier" INT 0 255;
+BA_DEF_ BO_  "GenMsgCycleTime" INT 0 65536;
+BA_DEF_ BO_  "GenMsgCycleTimeFast" FLOAT 0 300000;
+BA_DEF_ BO_  "GenMsgDelayTime" INT 0 65536;
+BA_DEF_ BO_  "GenMsgNrOfRepetition" INT 0 100000;
+BA_DEF_ BO_  "GenMsgSendType" ENUM  "cyclic","spontaneous","not-used","not-used","not-used","cyclicAndSpontaneous","not-used","cyclicIfActive","NoMsgSendType";
+BA_DEF_ BO_  "GenMsgStartDelayTime" INT 0 65536;
+BA_DEF_ SG_  "GenSigSendType" ENUM  "Cyclic","OnWrite","OnWriteWithRepetition","OnChange","OnChangeWithRepetition","IfActive","IfActiveWithRepetition","NoSigSendType";
+BA_DEF_ SG_  "GenSigStartValue" HEX 0 80000000;
+BA_DEF_ BO_  "GenMsgILSupport" ENUM  "No","Yes";
+BA_DEF_ BO_  "NmAsrMessage" ENUM  "No","Yes";
+BA_DEF_  "NmAsrBaseAddress" HEX 0 536870911;
+BA_DEF_  "NmAsrMessageCount" INT 0 255;
+BA_DEF_ BU_  "NodeLayerModules" STRING ;
+BA_DEF_ BU_  "ILused" ENUM  "No","Yes";
+BA_DEF_ SG_  "GenSigFuncType" ENUM  "NoFunction","n/a","n/a","n/a","n/a","n/a","n/a","n/a","n/a","n/a","n/a","n/a","n/a","n/a","n/a","CHK","CNTR","n/a","n/a","n/a","CNTR_AR_01","CRC_AR_01_BOTH","CRC_AR_01_ALT","CRC_AR_01_LOW","CRC_AR_01_NIBBLE","CNTR_AR_04","CRC_AR_04A","CNTR_AR_05","CRC_AR_05";
+BA_DEF_ SG_  "GenSigDataID" STRING ;
+BA_DEF_ SG_  "SigGroup" STRING ;
+BA_DEF_DEF_  "Baudrate" 1000;
+BA_DEF_DEF_  "BusType" "";
+BA_DEF_DEF_  "DBName" "";
+BA_DEF_DEF_  "ProtocolType" "";
+BA_DEF_DEF_  "NmAsrNode" "No";
+BA_DEF_DEF_  "NmAsrNodeIdentifier" 0;
+BA_DEF_DEF_  "GenMsgCycleTime" 0;
+BA_DEF_DEF_  "GenMsgCycleTimeFast" 0;
+BA_DEF_DEF_  "GenMsgDelayTime" 0;
+BA_DEF_DEF_  "GenMsgNrOfRepetition" 0;
+BA_DEF_DEF_  "GenMsgSendType" "NoMsgSendType";
+BA_DEF_DEF_  "GenMsgStartDelayTime" 0;
+BA_DEF_DEF_  "GenSigSendType" "NoSigSendType";
+BA_DEF_DEF_  "GenSigStartValue" 0;
+BA_DEF_DEF_  "GenMsgILSupport" "Yes";
+BA_DEF_DEF_  "NmAsrMessage" "No";
+BA_DEF_DEF_  "NmAsrBaseAddress" 1280;
+BA_DEF_DEF_  "NmAsrMessageCount" 64;
+BA_DEF_DEF_  "NodeLayerModules" "CANoeILNLSPA.dll";
+BA_DEF_DEF_  "ILused" "Yes";
+BA_DEF_DEF_  "GenSigFuncType" "NoFunction";
+BA_DEF_DEF_  "GenSigDataID" "";
+BA_DEF_DEF_  "SigGroup" "";
+BA_ "Baudrate" 500000;
+BA_ "BusType" "CAN";
+BA_ "ProtocolType" "CAN";
+BA_ "DBName" "example_can";
+BA_ "GenMsgSendType" BO_ 21 0;
+BA_ "GenMsgCycleTime" BO_ 21 10;
+BA_ "GenMsgCycleTime" BO_ 20 10;
+BA_ "GenMsgSendType" BO_ 20 0;
+BA_ "GenMsgSendType" BO_ 257 1;
+BA_ "GenMsgDelayTime" BO_ 257 5;
+BA_ "GenMsgSendType" BO_ 256 1;
+BA_ "GenMsgDelayTime" BO_ 256 5;
+BA_ "GenMsgSendType" BO_ 19 0;
+BA_ "GenMsgCycleTime" BO_ 19 10;
+BA_ "GenMsgSendType" BO_ 18 0;
+BA_ "GenMsgCycleTime" BO_ 18 10;
+BA_ "GenMsgCycleTime" BO_ 17 10;
+BA_ "GenMsgSendType" BO_ 17 0;
+BA_ "GenMsgCycleTime" BO_ 16 10;
+BA_ "GenMsgSendType" BO_ 16 0;
+BA_ "GenMsgSendType" BO_ 15 0;
+BA_ "GenMsgCycleTime" BO_ 15 10;
+BA_ "GenMsgSendType" BO_ 14 0;
+BA_ "GenMsgCycleTime" BO_ 14 10;
+BA_ "GenMsgSendType" BO_ 13 0;
+BA_ "GenMsgCycleTime" BO_ 13 10;
+BA_ "GenMsgSendType" BO_ 12 0;
+BA_ "GenMsgCycleTime" BO_ 12 10;
+BA_ "GenMsgSendType" BO_ 11 0;
+BA_ "GenMsgCycleTime" BO_ 11 10;
+BA_ "GenMsgCycleTime" BO_ 5 10;
+BA_ "GenMsgSendType" BO_ 5 0;
+BA_ "GenMsgCycleTime" BO_ 10 10;
+BA_ "GenMsgSendType" BO_ 10 0;
+BA_ "GenMsgCycleTime" BO_ 6 10;
+BA_ "GenMsgSendType" BO_ 6 0;
+BA_ "GenMsgCycleTime" BO_ 2 10;
+BA_ "GenMsgSendType" BO_ 2 0;
+BA_ "GenMsgCycleTime" BO_ 0 10;
+BA_ "GenMsgSendType" BO_ 0 0;
+BA_ "GenMsgCycleTime" BO_ 7 10;
+BA_ "GenMsgSendType" BO_ 7 0;
+BA_ "GenMsgCycleTime" BO_ 4 10;
+BA_ "GenMsgSendType" BO_ 4 0;
+BA_ "GenMsgCycleTime" BO_ 9 10;
+BA_ "GenMsgSendType" BO_ 9 0;
+BA_ "GenMsgCycleTime" BO_ 1 10;
+BA_ "GenMsgSendType" BO_ 1 0;
+BA_ "GenMsgCycleTime" BO_ 3 10;
+BA_ "GenMsgSendType" BO_ 3 0;
+BA_ "GenMsgCycleTime" BO_ 8 10;
+BA_ "GenMsgSendType" BO_ 8 0;
+BA_ "GenSigStartValue" SG_ 19 ProConnect_GPS_PE_Long_LowAccry 0;
+BA_ "GenSigStartValue" SG_ 19 ProConnect_GPS_PE_Lat_LowAccry 0;
+BA_ "GenSigStartValue" SG_ 13 ProConnect_GPS_PE_Longitude 0;
+BA_ "GenSigStartValue" SG_ 12 ProConnect_GPS_PE_Latitude 0;
+BA_ "GenSigStartValue" SG_ 9 MAB_IsgTqAct800ActuTq 2047;
+BA_ "GenSigStartValue" SG_ 9 MAB_WhlMotSysTqEst800Tq2Act 8191;
+BA_ "GenSigStartValue" SG_ 8 Goldbox_Verz_Anf 834;
+VAL_ 20 MAB_GPS_Map_ID 6 "E_TESTMAPID_UNDEFINED" 5 "E_TESTMAPID_TEST_DRIVE" 4 "E_TESTMAPID_AD_AREA" 3 "E_TESTMAPID_STUTT_ARENA" 2 "E_TESTMAPID_ZF_LASTMILE" 1 "E_TESTMAPID_ZF_TESTTRACK_2" 0 "E_TESTMAPID_NONE" ;
+VAL_ 18 ProConnect_IMU_PE_State 2 "ERROR" 1 "INIT" 0 "NO_ERROR" ;
+VAL_ 18 ProConnect_GPS_PE_State 2 "ERROR" 1 "INIT" 0 "NO_ERROR" ;
+VAL_ 17 Goldbox_TestMapId 6 "E_TESTMAPID_UNDEFINED" 5 "E_TESTMAPID_TEST_DRIVE" 4 "E_TESTMAPID_AD_AREA" 3 "E_TESTMAPID_STUTT_ARENA" 2 "E_TESTMAPID_ZF_LASTMILE" 1 "E_TESTMAPID_ZF_TESTTRACK_2" 0 "E_TESTMAPID_NONE" ;
+VAL_ 16 MAB_IBC_Status 4 "IBC_MAB_ERR_COMM" 3 "IBC_MAB_NO_PRIO" 2 "IBC_IN_MAB_MODE" 1 "IBC_READY" 0 "IBC_NOT_READY_FAILED" ;
+VAL_ 16 MAB_GearLvrIndc 7 "GearLvrIndcn2_Undefd" 6 "GearLvrIndcn2_Resd2" 5 "GearLvrIndcn2_Resd1" 4 "GearLvrIndcn2_ManModeIndcn" 3 "GearLvrIndcn2_DrvIndcn" 2 "GearLvrIndcn2_NeutIndcn" 1 "GearLvrIndcn2_RvsIndcn" 0 "GearLvrIndcn2_ParkIndcn" ;
+VAL_ 16 MAB_BrakeStandStillMode 12 "SSM_ERROR" 11 "SSM_INIT" 10 "SSM_DRIVEOFF_STANDBY_ACTIVE" 9 "SSM_HOLD_STANDBY_ACTIVE" 8 "SSM_HILL_SLIPPOFF_DETECTED" 7 "SSM_RELEASE_REQ_FROM_DRIVER" 6 "SSM_RELEASE_REQ_ACTIVE" 5 "SSM_DRIVEOFF_ACTIVE" 4 "SSM_PARK_RETAINED_ACTIVE" 3 "SSM_PARK_ACTIVE" 2 "SSM_PARK_REQUESTED" 1 "SSM_HOLD_ACTIVE" 0 "SSM_NO_ACTIVE_FUNCTION" ;
+VAL_ 16 MAB_DrvrGearShiftParkReq1 1 "SwtParkActv" 0 "SwtParkNotActv" ;
+VAL_ 11 ProConnect_VehHeiTarReq 7 "LvlgAdjReq_Resd2" 6 "LvlgAdjReq_Resd1" 5 "LvlgAdjReq_Ll2" 4 "LvlgAdjReq_Ll1" 3 "LvlgAdjReq_Nrh" 2 "LvlgAdjReq_Hl1" 1 "LvlgAdjReq_Hl2" 0 "LvlgAdjReq_Ukwn" ;
+VAL_ 5 ProConnect_OTA_Sts 7 "OTA_DOWNLOAD_FAILED" 6 "OTA_INSTALL_FAILED" 5 "OTA_INSTALL_FINISHED" 4 "OTA_INSTALL_START" 3 "OTA_DOWNLOAD_START" 2 "OTA_SCHEDULED" 1 "OTA_STANDBY" 0 "OTA_NONE" ;
+VAL_ 0 MAB_DrvModReq 15 "Err" 14 "Rock" 13 "Mud" 12 "Sand" 11 "Snow" 10 "Power" 9 "Hybrid" 8 "Pure_EV" 7 "Race" 6 "Adaptive" 5 "Offroad_CrossTerrain" 4 "Individual" 3 "Dynamic_Sport" 2 "Comfort_Normal" 1 "ECO" 0 "Undefd" ;
+VAL_ 7 MAB_FourCornrReq_Act 7 "LvlgAdjReq_Resd2" 6 "LvlgAdjReq_Resd1" 5 "LvlgAdjReq_Ll2" 4 "LvlgAdjReq_Ll1" 3 "LvlgAdjReq_Nrh" 2 "LvlgAdjReq_Hl1" 1 "LvlgAdjReq_Hl2" 0 "LvlgAdjReq_Ukwn" ;
+VAL_ 4 MAB_OvrdTool_Sts 11 "HACKATHON" 10 "OTA" 9 "INIT" 8 "FINSHD" 7 "FLT" 6 "CUBIX_AD" 5 "SAVE_THE_SPOILER" 4 "LSDC" 3 "RDY" 2 "ACTVN_CHK" 1 "NO_MANIPULATION" 0 "NONE" ;
+VAL_ 4 MAB_Info_Message 4 "DRV_GEARLVR_TO_P" 3 "DRV_P_TO_D" 2 "LSDC_DI_NOT_PSBL" 1 "LSDC_ENA_NOT_POSSIBLE" 0 "NONE" ;
+VAL_ 4 MAB_Fault_codes 27 "UKWN" 26 "VEHSPDMAX_EXDD" 25 "STS_ALIVE" 24 "STEER_NOT_E2E_MODE" 23 "OTA_SPD" 22 "OTA_TIMER_DOWNLOAD_FAILED" 21 "OTA_MAX_TIME" 20 "CUBIXAD_STEERSTREQ_NOTACTV" 19 "CUBIXAD_DRVSTREQ_NOTACTV" 18 "SFTYDRV_INTV" 17 "LSDC_ALIVE" 16 "CUBIXAD_ALIVE" 15 "IBC_MAB_NO_PRIO" 14 "IBC_NOT_RDY" 13 "IBC_ALIVE" 12 "LSDC_GEAR" 11 "LSDC_SPD" 10 "LSDC_ACCL" 9 "IBC_NOT_MAB_MOD" 8 "GOLDBOX_ALIVE" 7 "CUBIXAD_GEAR" 6 "CUBIXAD_SPD_TESTTRACK" 5 "DRVREQCHG" 4 "RDY_TIMER" 3 "SFTY_CDN_FAILED" 2 "ACTVNCHK_SPD" 1 "ACTVNCHK_TIMR" 0 "NONE" ;
+VAL_ 9 MAB_SteerActReGroupSts 7 "Diag" 6 "Inactive" 5 "Ramping" 4 "Yellow" 3 "Red" 2 "Normal" 1 "Pending" 0 "Initialisation" ;
+VAL_ 1 HMI_Drvr_Req 9 "FCT_DEACTVN_REQ" 8 "FCT_ACTVN_OTA_CFMD" 7 "FCT_ACTVN_OTA_REQ" 6 "FCT_ACTVN_SAVETHESPOILER_CFMD" 5 "FCT_ACTVN_SAVETHESPOILER_REQ" 4 "FCT_ACTVN_LSDC_CFMD" 3 "FCT_ACTVN_LSDC_REQ" 2 "FCT_ACTVN_CUBIXAD_CFMD" 1 "FCT_ACTVN_CUBIXAD_REQ" 0 "FCT_ACTVN_NONE" ;
+VAL_ 3 Goldbox_SteerReCtrlReqSts 7 "CtrlSts3b_RESERVED_4" 6 "CtrlSts3b_RESERVED_3" 5 "CtrlSts3b_RESERVED_2" 4 "CtrlSts3b_RESERVED_1" 3 "CtrlSts3b_ERROR" 2 "CtrlSts3b_CONTROL_REQUESTED" 1 "CtrlSts3b_CONTROL_NOT_REQUESTED" 0 "CtrlSts3b_INIT" ;
+VAL_ 8 Goldbox_DriveStateReq 3 "ACTIVE" 2 "READY" 1 "RESERVED" 0 "NOT_ACTIVE" ;
+VAL_ 8 Goldbox_SteerStateReq 3 "ACTIVE" 2 "READY" 1 "RESERVED" 0 "NOT_ACTIVE" ;
+VAL_ 8 Goldbox_SSM_Req 7 "HMS_TAKEOVER" 6 "RESERVED" 5 "RELESE_VIA_RAMP" 4 "DRIVEOFF" 3 "HOLD_STANDBY" 2 "PARK" 1 "HOLD" 0 "NO_REQUEST" ;
+

@@ -1,0 +1,253 @@
+/**
+ * @file      core_ps.idl
+ * @brief     This file provides the marshalling interface definitions of the core SDV framework.
+ * @version   0.1
+ * @date      2023.05.10
+ * @author    erik.verhoeven@zf.com
+ * @copyright Copyright ZF Friedrichshaven AG (c) 2023
+ */
+
+#include "core.idl"
+#include "process.idl"
+
+ /**
+ * @brief Software Defined Vehicle framework.
+ */
+module sdv
+{
+    /**
+     * @brief Proxy/stub features
+     */
+    module ps
+    {
+        /**
+         * @brief Marshall exception.
+         */
+        exception XMarshallExcept
+        {};
+
+        /**
+         * @brief Marshalling was not initialized.
+         */
+        exception XMarshallNotInitialized : XMarshallExcept
+        {
+            /** Description */
+            const char _description[] = "Marshalling data between proxy and stub was not initialized or is in an invalid state.";
+        };
+
+        /**
+         * @brief Marshalling timeout exception.
+         */
+        exception XMarshallTimeout : XMarshallExcept
+        {
+            /** Description */
+            const char _description[] = "The marshalling call was timed out.";
+        };
+
+        /**
+         * @brief Marshalling missing data.
+         */
+        exception XMarshallMissingData : XMarshallExcept
+        {
+            /** Description */
+            const char _description[] = "Part of the marshalling data was lost during the marshalling call.";
+        };
+
+        /**
+         * @brief Incompatible interface version.
+         */
+        exception XMarshallVersion : XMarshallExcept
+        {
+            /** Description */
+            const char _description[] = "The marshalling interfaces of objects have different versions and therefore cannot be connected.";
+        };
+
+        /**
+         * @brief Marshall data integrity violation.
+         */
+        exception XMarshallIntegrity : XMarshallExcept
+        {
+            /** Description */
+            const char _description[] = "An integrity violation has occurred during marshalling.";
+        };
+
+        /**
+         * @brief No interface marshalling object found.
+         */
+        exception XMarshallNoObject : XMarshallExcept
+        {
+            /** Description */
+            const char _description[] = "No marshalling object for the interface found.";
+        };
+
+        /**
+         * @brief Marshalling flags.
+         */
+        enum EMarshallFlags : uint32
+        {
+            direction_output = 0x10,        ///< When set, direction is output. Otherwise direction is input. If an exception
+                                            ///< occurred, this flag might indicate if the exception occurred on input or on output
+                                            ///< of the call.
+            exception_triggered = 0x80,     ///< When set, a exception was triggered and is provided instead of any parameters
+                                            ///< or return value.
+        };
+
+        /**
+         * @brief Marshall ID used for proxy and stub identification
+         */
+        struct SMarshallID
+        {
+            uint32                  uiHostID;       ///< Reserved
+            process::TProcessID     tProcessID;     ///< ProcessID
+            uint32                  uiIdent;        ///< Identification value.
+            uint32                  uiControl;      ///< Control value for 2nd pass identification.
+        };
+
+        /**
+         * @brief Marshall object ID.
+         */
+        typedef SMarshallID TMarshallID;
+
+        /**
+         * @brief Marshalling header structure.
+         * @details A marshall packet contains the information about the data being broadcasted. It must be the first packet
+         * in a marshalled call.
+         */
+        struct SMarshall
+        {
+            EEndian             eEndian;        ///< Describes whether the data is in big or in little endian.
+            uint16              uiVersion;      ///< Structure version (major * 100 + minor).
+            interface_id        tIfcId;         ///< Interface id.
+            uint32              uiFuncIndex;    ///< Operation/attribute index.
+            sequence<uint16>    seqChecksums;   ///< CRC-16 CCITT-FALSE checksums for each additional stream.
+            uint32              uiFlags;        ///< Bitmask with zero or more flags from EMarshallFlags.
+            uint16              uiHdrChecksum;  ///< CRC-16 CCITT-FALSE checksum over all data members above (not including
+                                                ///< uiChkSum itself).
+        };
+
+        /**
+         * @brief Marshalling data interpretation.
+         */
+        enum EMarshallDataInterpret : uint32
+        {
+            input_data = 0,    ///< The data is input data.
+            output_data = 1,   ///< The data is output data..
+        };
+
+        /**
+         * @brief Identical marshalling header containing only the address portion of the marshall structure.
+         */
+        struct SMarshallAddress
+        {
+            EEndian                 eEndian;        ///< Describes whether the data is in big or in little endian.
+            uint16                  uiVersion;      ///< Structure version (major * 100 + minor).
+            EMarshallDataInterpret  eInterpret;     ///< Defines the data interpretation.
+            TMarshallID             tProxyID;       ///< Proxy id to identify the proxy this packet is sending from or destined to.
+            TMarshallID             tStubID;        ///< Stub id to identify the stub this packet is destined to or receiving from.
+            uint64                  uiCallIndex;    ///< Call index to uniquely identify the call.
+        };
+
+        /**
+         * @brief Set the marshall object identification. The identification will be used to verify the proper sender/receiver.
+         */
+        interface IMarshallObjectIdent
+        {
+            /**
+             * @brief Set the identification.
+             * @param[in] tMarshallID Reference to the marshall object ID. For a proxy object, this is the proxy ID. For a stub object
+             * this is a stub ID.
+             */
+            void SetIdentification(in TMarshallID tMarshallID);
+        };
+
+        /**
+         * @brief Communication interface to broadcast a marshall packet to the receiver.
+         */
+        local interface IMarshall
+        {
+            /**
+             * @brief Marshall a function call.
+             * @remarks This function call is synchronous and does not return until the call has been finalized or a timeout
+             * exception has occurred.
+             * @remarks The sequence contains all data to make the call. It is important that the data in the sequence is
+             * complete and in the correct order.
+             * @param[inout] seqInputData Reference to sequence of input data pointers. The first data pointer contains the
+             * marshalling header. The second contains the parameters (if available) and the others contain raw data pointers
+             * (if available). The call is allowed to change the sequence to be able to add additional information during the
+             * communication without having to copy the existing data.
+             * @return Sequence of output data pointers. The first data pointer contains the marshalling header. The second
+             * contains the return value and parameters (if available) and the others contain raw data pointers (if available).
+             */
+            sequence<pointer<uint8>> Call(inout sequence<pointer<uint8>> seqInputData);
+        };
+
+        /**
+         * @brief Link/unlink a communication interface to/from the object.
+         */
+        interface IMarshallLink
+        {
+            /**
+             * @brief Link the communication interface to the object.
+             * @remarks Only one link can exists at the time.
+             * @param[in] pMarshall Interface to be linked.
+             */
+            void Link(in IMarshall pMarshall);
+
+            /**
+             * @brief Unlink the linked interface.
+             */
+            void Unlink();
+        };
+
+        /**
+         * @brief Get the target interface from the proxy object.
+         */
+        interface IProxyControl
+        {
+            /**
+             * @brief Get the target interface from the proxy object.
+             * @return The target interface.
+             */
+            interface_t GetTargetInterface();
+        };
+
+        /**
+         * @brief Link/unlink the object target interface to the stub object.
+         */
+        interface IStubLink
+        {
+            /**
+             * @brief Link the object target interface to the stub-object.
+             * @remarks Only one link can exists at the time.
+             * @param[in] ifc Interface to be linked.
+             */
+            void Link(in interface_t ifc);
+
+            /**
+             * @brief Unlink the linked interface.
+             */
+            void Unlink();
+        };
+
+        /**
+         * @brief Marshall access interface.
+         */
+        interface IMarshallAccess
+        {
+            /**
+            * @brief Get a proxy for the interface connection to the stub.
+            * @param[in] tStubID Reference to the ID of the stub to connect to.
+            * @param[in] id The interface ID to get the proxy for.
+            * @return Returns the interface to the proxy object.
+            */
+            interface_t GetProxy(in TMarshallID tStubID, in interface_id id) raises(XMarshallNoObject);
+
+            /**
+            * @brief Get a stub for the interface with the supplied ID.
+            * @param[in] ifc The interface to get the stub for..
+            * @return Returns the Stub ID that is assigned to the interface. Or an empty ID when no stub could be found.
+            */
+            TMarshallID GetStub(in interface_t ifc) raises(XMarshallNoObject);
+        };
+    }; // module ps
+}; // module sdv

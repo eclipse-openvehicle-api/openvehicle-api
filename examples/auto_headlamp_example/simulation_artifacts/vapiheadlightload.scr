@@ -1,0 +1,22 @@
+IF (get_process_state (..\CarlaBridge\carlabridge_coupecar.fmu) == 0)
+MESSAGE (Starting Carla Bridge fmu)
+START_PROCESS (..\CarlaBridge\carlabridge_coupecar.fmu)
+ENDIF
+
+IF (get_process_state (carlabridge_coupecar.fmu) != 0)
+MESSAGE(Auto Headlight fmu started!)
+SET_BBVARI(CARLAin__toggle_view = 1)
+SET_BBVARI(CARLAin__operation_mode = 4)
+SET_BBVARI(CARLAin__toggle_display = 1)
+ENDIF
+
+IF (get_process_state (..\vapifmus\AutoHeadlightFMU.fmu) == 0)
+MESSAGE (Starting VAPI Headlight Example fmu)
+START_PROCESS (..\vapifmus\AutoHeadlightFMU.fmu)
+ENDIF
+
+START_EQUATION(1,vapiexamplestriggerfile.tri,Before,AutoHeadlightFMU.fmu)
+
+IF (get_process_state (AutoHeadlightFMU.fmu) != 0)
+MESSAGE(Auto Headlight fmu started!)
+ENDIF

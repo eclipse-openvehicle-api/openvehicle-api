@@ -1,0 +1,78 @@
+---
+# For clang-tidy 16
+Checks:          'bugprone-*,
+                 -bugprone-macro-parentheses,         
+                  clang-analyzer-optin.performance.Padding,
+                  cppcoreguidelines-*,
+                  -cppcoreguidelines-virtual-class-destructor,
+                  -cppcoreguidelines-init-variables,
+                  -cppcoreguidelines-avoid-non-const-global-variables,  
+                  -cppcoreguidelines-pro-type-union-access,              
+                  google-runtime-int,
+                  modernize-*,
+                  -modernize-use-trailing-return-type,
+                  performance-*,
+                  readability-*,
+                  -readability-implicit-bool-conversion'
+WarningsAsErrors: ''
+HeaderFilterRegex: ''
+AnalyzeTemporaryDtors: false
+FormatStyle:     '' #'file'
+User:            vscode
+CheckOptions:
+# Coding Guidelines Start
+  - key:              readability-identifier-naming.ClassCase
+    value:            CamelCase
+  - key:              readability-identifier-naming.StructCase
+    value:            CamelCase
+  - key:              readability-identifier-naming.MemberCase
+    value:            CamelCase
+  - key:              readability-identifier-naming.PrivateMemberPrefix
+    value:            m_
+  - key:              readability-identifier-naming.ProtectedMemberPrefix
+    value:            m_
+  - key:              readability-identifier-naming.MethodCase
+    value:            CamelCase
+  - key:              readability-identifier-naming.LocalVariableCase
+    value:            camelBack    
+  - key:              readability-identifier-naming.ParameterCase
+    value:            camelBack
+  - key:              readability-identifier-naming.PrivateMethodPrefix
+    value:            m_
+  - key:              readability-identifier-naming.ProtectedMethodPrefix
+    value:            m_
+  - key:              readability-identifier-naming.AbstractClassCase
+    value:            CamelCase
+  - key:              readability-identifier-naming.AbstractClassPrefix
+    value:            I
+  - key:              readability-identifier-naming.FunctionCase
+    value:            CamelCase
+  - key:              readability-identifier-naming.NamespaceCase
+    value:            lower_case
+  - key:              readability-identifier-naming.TemplateParameterCase
+    value:            CamelCase
+  - key:              readability-identifier-naming.TemplateParameterPrefix
+    value:            T
+  - key:              readability-identifier-naming.TypedefCase
+    value:            CamelCase
+  - key:              readability-identifier-naming.TypedefPrefix
+    value:            T
+  - key:              readability-identifier-naming.TypeAliasCase
+    value:            CamelCase
+  - key:              readability-identifier-naming.TypeAliasPrefix
+    value:            T
+# Coding Guidelines End
+  - key:              readability-identifier-naming.EnumCase
+    value:            CamelCase
+  - key:              readability-identifier-naming.EnumPrefix
+    value:            E
+  - key:              readability-identifier-naming.EnumConstantCase
+    value:            CamelCase
+  - key:              readability-identifier-naming.MacroDefinitionCase
+    value:            UPPER_CASE
+  - key:              bugprone-easily-swappable-parameters.ModelImplicitConversions
+    value:            true
+  - key:              readability-uppercase-literal-suffix.NewSuffixes
+    value:            f    
+...
+

@@ -1,0 +1,36 @@
+/**
+ * @file      mem.idl
+ * @brief     This file provides the memory management interface definitions of the core SDV framework.
+ * @version   0.1
+ * @date      2023.05.22
+ * @author    erik.verhoeven@zf.com
+ * @copyright Copyright ZF Friedrichshaven AG (c) 2023
+ */
+
+#include "core.idl"
+
+ /**
+ * @brief Software Defined Vehicle framework.
+ */
+module sdv
+{
+	/**
+	 * @brief Core features.
+	 */
+	module core
+	{
+        /**
+         * @brief Memory allocation interface.
+         * @attention This interface is not intended to be marshalled.
+         */
+        local interface IMemoryAlloc
+        {
+            /**
+             * @brief Allocate a memory block of the provided length.
+             * @param[in] uiLength The length of the memory block to allocate.
+             * @return Smart pointer to the memory allocation or NULL when allocating was not possible.
+            */
+            pointer<uint8> Allocate(in uint32 uiLength);
+        };
+    };
+};

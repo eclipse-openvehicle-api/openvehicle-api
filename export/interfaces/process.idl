@@ -1,0 +1,119 @@
+/**
+ * @file process.idl
+ * @author Erik Verhoeven DISDS1 (mailto:erik.verhoeven@zf.com)
+ * @brief This file includes all the interfaces used for process creation.
+ * @version 1.0
+ * @date 2024-05-09
+ *
+ * @copyright Copyright ZF Friedrichshafen AG (c) 2023-2025
+ */
+
+#include "core.idl"
+
+/**
+ * @brief Software Defined Vehicle framework.
+ */
+module sdv
+{
+    /**
+     * @brief Process features.
+     */
+    module process
+    {
+        /**
+         * @brief Process ID.
+         */
+        typedef uint32 TProcessID;
+
+        /**
+         * @brief Process termination callback.
+         */
+        local interface IProcessLifetimeCallback
+        {
+            /**
+             * @brief Called when the process was terminated.
+             * @remarks The process return value is not always valid. The validity depends on the support of the underlying system.
+             * @param[in] tProcessID The process ID of the process being terminated.
+             * @param[in] iRetValue Process return value or 0 when not supported.
+             */
+            void ProcessTerminated(in TProcessID tProcessID, in int64 iRetValue);
+        };
+
+        /**
+         * @brief Process lifetime monitoring.
+         */
+        local interface IProcessLifetime
+        {
+            /**
+             * @brief Register a process lifetime monitor.
+             * @param[in] tProcessID Process ID to monitor the lifetime for.
+             * @param[in] pMonitor Pointer to the monitor interface. The monitor should expose the IProcessLifetimeCallback
+             * interface.
+             * @return Returns a non-zero cookie when successful; zero when not.
+             */
+            uint32 RegisterMonitor(in TProcessID tProcessID, in IInterfaceAccess pMonitor);
+
+            /**
+             * @brief Unregistered a previously registered monitor.
+             * @param[in] uiCookie The cookie from the monitor registration.
+             */
+            void UnregisterMonitor(in uint32 uiCookie);
+
+            /**
+             * @brief Wait for a process to finalize.
+             * @param[in] tProcessID The process ID to wait for.
+             * @param[in] uiWaitMs Maximum time to wait in ms. Could be 0xffffffff to wait indefintely.
+             * @return Returns 'true' when the process was terminated (or isn't running), 'false' when still running and a timeout
+             * has occurred.
+             */
+            boolean WaitForTerminate(in TProcessID tProcessID, in  uint32 uiWaitMs);
+        };
+
+        /**
+         * @brief Process rights during process creation
+         */
+        enum EProcessRights : uint32
+        {
+            default_rights = 0,     ///< Default rights - for 'main' application the process is started using reduced rights, for a
+                                    ///< standalone application the parent rights are used.
+            parent_rights = 10,     ///< Same rights as the parent process
+            reduced_rights = 20,    ///< Reduced rights
+        };
+
+        /**
+         * @brief Interface for process control. This interface is accessible by 'main' and 'standalone' applications only.
+         */
+        local interface IProcessControl
+        {
+            /**
+             * @brief Execute a process.
+             * @param[in] ssModule Module name of the process executable.
+             * @param[in] seqArgs Instantiation arguments to supply to the process.
+             * @param[in] eRights The process rights during instantiation.
+             * @return Returns the process ID or 0 when process creation failed.
+             */
+            TProcessID Execute(in u8string ssModule, in sequence<u8string> seqArgs, in EProcessRights eRights);
+
+            /**
+             * @brief Terminate the process.
+             * @attention Use this function as a last resort only. The process will be killed and anything unsaved will render
+             * invalid.
+             * @param[in] tProcessID The process ID of the process to terminate.
+             * @return Returns 'true' if termination was successful; returns 'false' if termination was not possible or not allowed.
+             */
+            boolean Terminate(in TProcessID tProcessID);
+        };
+
+        /**
+         * @brief Interface for process information.
+         */
+        local interface IProcessInfo
+        {
+            /**
+             * @brief Gets the process ID of the own process.
+             * @return Return the process ID.
+             */
+            TProcessID GetProcessID() const;
+        };
+    };
+};

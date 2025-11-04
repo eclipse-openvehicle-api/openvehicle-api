@@ -1,0 +1,6 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "simulation_task_timer.sdv"
+Class = "SimulationTaskTimerService"

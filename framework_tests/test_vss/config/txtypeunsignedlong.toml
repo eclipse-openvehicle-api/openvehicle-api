@@ -1,0 +1,10 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "testcase4_vd_txclassforunsignedlong_tx.sdv"
+Class = "Vehicle.Chassis.Vehicle.UnsignedLong_Device"
+
+[[Component]]
+Path = "testcase4_bs_txclassforunsignedlong_tx.sdv"
+Class = "Vehicle.Chassis.Vehicle.UnsignedLong_Service"

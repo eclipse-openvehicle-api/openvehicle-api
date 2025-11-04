@@ -1,0 +1,125 @@
+/**
+ * @file module.idl
+ * @author Erik Verhoeven FRD DISDS1 (mailto:erik.verhoeven@zf.com)
+ * @brief This file includes all the interfaces used for module management
+ * @version 1.0
+ * @date 2024-05-02
+ *
+ * @copyright Copyright ZF Friedrichshafen AG (c) 2023-2025
+ *
+ */
+
+#include "core.idl"
+
+ /**
+  * @brief Software Defined Vehicle framework.
+  */
+module sdv
+{
+    /**
+     * @brief Core features.
+     */
+    module core
+    {
+        /**
+         * @brief Module ID.
+         */
+        typedef uint64 TModuleID;
+
+        /**
+         * @brief Special module ID for the Core Library module.
+         */
+        const TModuleID tCoreLibModule = 0xffffffffffffffffu;
+
+        /**
+         * @brief Interface for module control.
+         * @attention This interface is accessible by standalone and essential apps.
+         */
+        interface IModuleControl
+        {
+            /**
+             * @brief Load a module with the provided path containing SDV components. The components are available for creation
+             * through the repository.
+             * @attention Only modules with exposed SDV functions and the correct interface version can be loaded.
+             * @details This method can be used to load a module by providing a path to SDV components. Upon successful loading it
+             * will return the ID of the module. If the module Path is wrong/invalid or empty, module cannot not be loaded and 0 is
+             * returned. If the module is successfully loaded once and same module is loaded again the same module ID is returned.
+             * @param[in] ssModulePath Path to the module to load.
+             * @return Returns the ID of the module or 0 if the module could not be loaded.
+             */
+            TModuleID Load(in u8string ssModulePath);
+
+            /**
+             * @brief Unload the module by providing module ID. The function will request the repository to shutdown any running
+             * component. If there are no components running any more, the module will be unloaded.
+             * @param[in] tModuleID Id representing a module, which has previous been loaded by Load
+             * @return Returns 'true' when unloading was successful or the module was unloaded before already. Returns 'false' in
+             * case the module could not be unloaded due to having active objects.
+             */
+            boolean Unload(in TModuleID tModuleID);
+
+            /**
+             * @brief Checks for active objects - if active objects are present in a module, the module (currently) cannot be
+             * unloaded via Unload.
+             * @param[in] tModuleID Id representing a module, which has previous been loaded by Load(ModulePath)
+             * @return Returns true if the module is currently loaded and it contains at least one loaded object and false
+             * otherwise.
+             *
+             * @details The module exposes the symbol HasActiveObjects defined in
+             * export/support/component_impl.h, which is to be used in order to determine whether or not
+             * active objects remain within the module
+             */
+            boolean HasActiveObjects(in TModuleID tModuleID) const;
+        };
+
+        /**
+         * @brief Modukle control configuration interface.
+         */
+        interface IModuleControlConfig
+        {
+            /**
+             * @brief Add a search path to a folder where modules can be found.
+             * @param[in] ssDir Relative (to the executable) or absolute path to an existing folder.
+             * @return Returns 'true' if folder exists; otherwise 'false'.
+             */
+            boolean AddModuleSearchDir(in u8string ssDir);
+
+            /**
+             * @brief Get a sequence containing the current module search directories.
+             * @return The sequence with the module search directories.
+             */
+            sequence<u8string> GetModuleSearchDirs() const;
+        };
+
+        /**
+         * @brief Loaded component module information.
+         */
+        struct SModuleInfo
+        {
+            TModuleID   tModuleID;      ///< The ID of the module.
+            u8string    ssPath;         ///< The full path to the module.
+            u8string    ssFilename;     ///< The module file name.
+            uint32      uiVersion;      ///< The module version.
+            boolean     bActive;        ///< Boolean indicating whether or not objects are loaded.
+        };
+
+        /**
+         * @brief Module information access.
+         */
+        interface IModuleInfo
+        {
+            /**
+             * @brief Get a list of loaded modules.
+             * @return Sequence with the module information structures.
+             */
+            sequence<SModuleInfo> GetModuleList() const;
+
+            /**
+             * @brief Get a list of classes exposed by the provided module.
+             * @param[in] tModuleID The module ID to request the list of classes for.
+             * @return Sequence with the class information structures.
+             */
+            sequence<SClassInfo> GetClassList(in TModuleID tModuleID) const;
+        };
+    };
+};

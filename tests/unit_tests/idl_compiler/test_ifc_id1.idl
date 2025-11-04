@@ -1,0 +1,343 @@
+#include <interfaces/core_types.idl>
+
+/**
+ * @brief Empty identical
+ */
+interface IEmptyIdentical
+{};
+
+/**
+ * @brief Identical
+ */
+interface IIdentical
+{
+    void Test();
+};
+
+/**
+ * @brief Empty different name
+ */
+interface IEmptyDifferent1
+{};
+
+/**
+ * @brief Different name
+ */
+interface IDifferent1
+{};
+
+/**
+ * @brief Different module
+ */
+module mod1
+{
+    interface IDiffentModule
+    {};
+};
+
+/**
+ * @brief Different module's module
+ */
+module mod_parent1
+{
+    module mod
+    {
+        interface IEmptyIdentical
+        {};
+    };
+};
+
+/**
+* @brief Function name change
+*/
+interface IDiffentMemberFunc
+{
+    void Test1();
+};
+
+/**
+* @brief Function order
+*/
+interface IDiffentMemberFuncOrder
+{
+    void Test1();
+    void Test2();
+};
+
+/**
+ * @brief Function read/write change.
+*/
+interface IDifferentFuncVisibility
+{
+    void Test();
+};
+
+/**
+ * @brief Additional function
+*/
+interface IDifferentAddFunc
+{
+    void Test();
+};
+
+/**
+ * @brief Additional function parameter
+ */
+interface IDifferentAddFuncParam
+{
+    void Test(in int32 iParam1);
+};
+
+/**
+ * @brief Interface to test a change of the function when used as variable or return value.
+ */
+interface IParamTestInterface
+{
+    void Test(in int32 iVal);
+};
+
+/**
+* @brief Complex param type change.
+*/
+interface IComplexParamChange
+{
+    void Test(in IParamTestInterface ifc);
+};
+
+/**
+* @brief Complex return type change.
+*/
+interface IComplexReturnValChange
+{
+    IParamTestInterface Test();
+};
+
+/**
+ * @brief Function parameter order change
+*/
+interface IDifferentFuncParamOrder
+{
+    void Test(in int32 iParam1, in int32 iParam2);
+};
+
+/**
+ * @brief Function return value change
+*/
+interface IDifferentFuncRetVal
+{
+    int32 Test();
+};
+
+/**
+ * @brief Function parameter name change
+*/
+interface IDifferentFuncParamName
+{
+    void Test(in int32 iParam1);
+};
+
+/**
+ * @brief Function parameter type change
+*/
+interface IDifferentFuncParamType
+{
+    void Test(in int32 iParam);
+};
+
+/**
+ * @brief Changed directional parameter
+ */
+interface IDifferentFuncParamDirection
+{
+    void Test(inout int32 iParam);
+};
+
+/**
+* Exception definition to test the affect of an exception on the interface ID.
+*/
+exception SExcept
+{};
+
+/**
+ * @brief Add exception to function
+*/
+interface IDifferentFuncAddException
+{
+    void Test();
+};
+
+/**
+ * Exception definition to test the affect of an additional exception on the interface ID.
+ */
+exception SAdditionalExcept
+{};
+
+/**
+ * @brief Change exception in function
+*/
+interface IDifferentFuncChangeException
+{
+    void Test() raises(SExcept);
+};
+
+/**
+ * @brief Additional exception in function
+*/
+interface IDifferentFuncAdditionalException
+{
+    void Test() raises(SExcept);
+};
+
+/**
+ * @brief Identical exception order in function
+*/
+interface IDifferentFuncExceptionOrder
+{
+    void Test() raises(SExcept, SAdditionalExcept);
+};
+
+/**
+ * @brief Exception to test the affect on the interface ID with a member name change.
+*/
+exception SExceptVarName
+{
+    int32 iVar1;
+};
+
+/**
+ * @brief Change function exception name
+*/
+interface IDifferentFuncExceptionName
+{
+    void Test() raises(SExceptVarName);
+};
+
+/**
+ * @brief Exception to test the affect on the interface ID with a member type change.
+ */
+exception SExceptVarType
+{
+    int32 iVar;
+};
+
+/**
+ * @brief Change function exception type
+*/
+interface IDifferentFuncExceptionType
+{
+    void Test() raises(SExceptVarType);
+};
+
+/**
+ * @brief Attribute name change
+ */
+interface IDifferentAttrName
+{
+    attribute int32 iVar1;
+};
+
+/**
+ * @brief Attribute type change
+*/
+interface IDifferentAttrType
+{
+    attribute int32 iVar;
+};
+
+/**
+ * @brief Additional attribute
+ */
+interface IDifferentAddAttr
+{
+    attribute int32 iVar;
+};
+
+/**
+ * @brief Readonly/writable attribute
+*/
+interface IDifferentAttrVisibility
+{
+    attribute int32 iVar;
+};
+
+/**
+ * @brief Add exception to attribute
+*/
+interface IDifferentAttrAddException
+{
+    attribute int32 iVar;
+};
+
+/**
+ * @brief Change exception in attribute
+*/
+interface IDifferentAttrChangeException
+{
+    attribute int32 iVar raises(SExcept);
+};
+
+/**
+ * @brief Additional exception in attribute
+*/
+interface IDifferentAttrAdditionalException
+{
+    attribute int32 iVar raises(SExcept);
+};
+
+/**
+ * @brief Change attribnute exception direction
+*/
+interface IDifferentAttrExceptionDirection
+{
+    attribute int32 iVar getraises(SExcept);
+};
+
+/**
+ * @brief Change exception direction of two exception
+*/
+interface IDifferentFuncExceptionDirection2
+{
+    attribute int32 iVar getraises(SExcept) setraises(SAdditionalExcept);
+};
+
+/**
+ * @brief Change attribute exception name
+*/
+interface IDifferentAttrExceptionName
+{
+    attribute int32 iVar raises(SExceptVarName);
+};
+
+/**
+ * @brief Change function exception type
+*/
+interface IDifferentAttrExceptionType
+{
+    attribute int32 iVar raises(SExceptVarType);
+};
+
+/**
+ * @brief Identical, but different const vars
+ */
+interface IIdenticalAddConstDecl
+{
+    const int32 iVar1 = 10;
+};
+
+/**
+ * @brief Identical, but different comments
+ */
+interface IIdenticalAddComments
+{
+    // First comment
+    void Test1();
+};
+
+/**
+ * @brief Identical, but additional child definitions
+*/
+interface IIdenticalAddChildDef
+{
+    struct SStruct1
+    {};
+};

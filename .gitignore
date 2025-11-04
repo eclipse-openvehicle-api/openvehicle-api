@@ -1,0 +1,102 @@
+# General folders
+tools/
+out/
+doxygen/
+
+# Doxygen tools
+doxygen
+doxy*.exe
+libclang.dll
+doxygenwarnings.txt
+doxyindexer
+doxysearch.cgi
+doxywizard
+DoxygenWarning.txt
+
+# Visual Studio Code 
+.vs/
+.vscode/
+packages/
+windows_vapi/.vs
+
+#idl & dbc
+export/interfaces/*.h
+export/interfaces/ps/
+export/interfaces/serdes/
+*/*/*/*/generated/
+*/*/*/generated/
+*/*/generated/
+*/generated/
+
+
+#CMake intermediate files and folders
+
+_build/
+_conan_find_package/
+build_linux/
+build_mingw/
+CMakeCache.txt
+CMakeFiles/
+Makefile
+documentation/
+DoxygenWarningLog.txt
+
+#example code
+examples/door_demo_example/interfaces/ps
+examples/door_demo_example/interfaces/serdes
+examples/door_demo_example/interfaces/*.h
+
+# Sphinx
+doc/_build
+doc/_doxygen
+doc/BuildGV
+doc/graphviz
+doc/dependencyPictures
+doc/vapi_code
+doc/_vapi_code
+doc/DoxygenWarning.txt
+
+# Conan intermediate files and folders
+
+cmake_install.cmake
+conan.lock
+conanbuildinfo.cmake
+conanbuildinfo.txt
+conan_imports_manifest.txt
+conaninfo.txt
+graph_info.json
+
+# Byte-compiled / optimized / DLL files
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.bak
+
+# SilKit libraries
+sdv_services/can_communication_silkit/sil-kit/
+sdv_services/can_communication_silkit/sil-kit;*
+
+# CppCheck directories
+analysis-cppcheck-build-dir/

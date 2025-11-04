@@ -1,0 +1,107 @@
+/**
+ * @file log.idl
+ * @author Erik Verhoeven DISDS1 (mailto:erik.verhoeven@zf.com)
+ * @brief This file includes all the interfaces used for logging information.
+ * @version 1.0
+ * @date 2024-05-09
+ *
+ * @copyright Copyright ZF Friedrichshafen AG (c) 2023-2025
+ */
+
+#include "core.idl"
+#include "process.idl"
+
+/**
+ * @brief Software Defined Vehicle framework.
+ */
+module sdv
+{
+    /**
+     * @brief Core features.
+     */
+    module core
+    {
+        /**
+         * @brief Enumeration for the severity level of the logging from sdv platform abstraction
+         */
+        enum ELogSeverity : uint32
+        {
+            trace = 1,      ///< level: this is a code smell if used in production. This should be used during development to track
+                            ///< bugs, but never committed to your VCS.
+            debug = 2,      ///< level: log at this level about anything that happens in the program. This is mostly used during
+                            ///< debugging, and I'd advocate trimming down the number of debug statement before entering the production
+                            ///< stage, so that only the most meaningful entries are left, and can be activated during troubleshooting.
+            info = 3,       ///< level: log at this level all actions that are user-driven, or system specific (i.e. regularly scheduled
+                            ///< operations...)
+                            ///< (not included) NOTICE level: this will certainly be the level at which the program will run when in production.
+                            ///< Log at this level all the notable events that are not considered an error.
+            warning = 4,    ///< level: log at this level all events that could potentially become an error. For instance if one
+                            ///< database call took more than a predefined time, or if an in-memory cache is near capacity. This
+                            ///< will allow proper automated alerting, and during troubleshooting will allow to better understand
+                            ///< how the system was behaving before the failure.
+            error = 5,      ///< level: log every error condition at this level. That can be API calls that return errors or internal
+                            ///< error conditions.
+            fatal = 6       ///< level: too bad, it's doomsday. Use this very scarcely, this shouldn't happen a lot in a real program.
+                            ///< Usually logging at this level signifies the end of the program. For instance, if a network daemon
+                            ///< can't bind a network socket, log at this level and exit is the only sensible thing to do.
+        };
+
+        /**
+         * @brief Interface to configure the logger.
+         */
+        interface ILoggerConfig
+        {
+            /**
+             * @brief Initialize the logging from sdv platform abstraction.
+             * @details This function needs to be called before starting to log.
+             * @param[in] ssTag Provided tag to create log.
+             */
+            void SetProgramTag(in u8string ssTag);
+
+            /**
+             * @brief Get the program tag used for logging.
+             * @return The string containing the program tag.
+             */
+            u8string GetProgramTag() const;
+
+            /**
+             * @brief Filter the log messages based on severity.
+             * @param[in] eSeverity The severity level to use as a lowest level for logging. Default is "info" meaning, that
+             * debug and trace messages will not be logged.
+             * @param[in] eViewSeverity The severity level to use as a lowest level for viewing. Default is "error" meaning, that
+             * debug, trace, info, warning and error messages will not be shown in console output.
+             */
+            void SetLogFilter(in ELogSeverity eSeverity, in ELogSeverity eViewSeverity);
+
+            /**
+             * @brief Get the current log severity filter level.
+             * @return The severity level of the log filter.
+             */
+            ELogSeverity GetLogFilter() const;
+
+            /**
+             * @brief Get the current view severity level.
+             * @return The severity level of the view filter.
+             */
+            ELogSeverity GetViewFilter() const;
+        };
+
+        /**
+         * @brief Interface to enable logging information from sdv platform abstraction
+         */
+        interface ILogger
+        {
+            /**
+             * @brief Log a message to the SDV log.
+             * @param[in] eSeverity Severity level of the log message which will be logged, e.g. info, warning, error etc.
+             * @param[in] ssSrcFile The source file that caused the log entry.
+             * @param[in] iSrcLine The line number in the source file that caused the log entry.
+             * @param[in] tProcessID Process ID of the process reporting this log entry.
+             * @param[in] ssObjectName Name of the object if the log entry is supplied by a component.
+             * @param[in] ssMessage The log message that will be logged.
+             */
+            void Log(in ELogSeverity eSeverity, in u8string ssSrcFile, in uint32 iSrcLine, in process::TProcessID tProcessID,
+                in u8string ssObjectName, in u8string ssMessage);
+        };
+    };
+};

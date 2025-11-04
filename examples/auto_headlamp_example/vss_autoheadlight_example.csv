@@ -1,0 +1,8 @@
+﻿;Class name;Function name;Signal name;vss;Signal direction;type;DBC CAN name includes CAN message name
+;;;;;;;
+VD;CurrentLatitude;CurrentLatitude;fCurrentLatitude;Vehicle.Position.CurrentLatitude;RX;float;CAN_Input.Current_Latitude
+VD;CurrentLongitude;CurrentLongitude;fCurrentLongitude;Vehicle.Position.CurrentLongitude;RX;float;CAN_Input.Current_Longitude
+VD;HeadLightLowBeam;HeadLightLowBeam;bHeadLightLowBeam;Vehicle.Body.Light.Front.LowBeam;TX;boolean;CAN_Output.HeadLight_LowBeam
+BS;CurrentLatitude;CurrentLatitude;fCurrentLatitude;Vehicle.Position.CurrentLatitude;RX;float;Vehicle.Position.CurrentLatitude
+BS;CurrentLongitude;CurrentLongitude;fCurrentLongitude;Vehicle.Position.CurrentLongitude;RX;float;Vehicle.Position.CurrentLongitude
+BS;HeadLightLowBeam;HeadLightLowBeam;bHeadLightLowBeam;Vehicle.Body.Light.Front.LowBeam;TX;boolean;Vehicle.Body.Light.Front.LowBeam

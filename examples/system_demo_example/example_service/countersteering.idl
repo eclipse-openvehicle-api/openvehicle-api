@@ -1,0 +1,35 @@
+/*******************************************************************************
+ * @file countersteering.idl
+ * @details Counter steering example service interface definition.
+ */
+
+/**
+ * @brief Counter steering example service interface. The interface provides functions for the
+ * counter steering example complex service.
+ */
+interface ICounterSteeringService
+{
+    /**
+     * @brief Activate or deactivate the counter steering service.
+     * @param[in] bActivate When set, the service will be activated; otherwise deactivated.
+     */
+    void ActivateService(in boolean bActivate);
+
+    /**
+     * @brief Is the counter steering service currently activated?
+     * @return Returns whether the counter steering service is currently activated.
+     */
+    boolean IsActivated() const;
+
+    /**
+     * @brief Does counter steering currently take place (speed > 30 km/s)?
+     * @return Returns whether counter steering currently takes place.
+     */
+    boolean CounterSteeringActive() const;
+
+    /**
+     * @brief The calculated rear steering axle position.
+     * @return Returns the rear steering axle position in degrees (or 0 when not active).
+     */
+    double RearAxleAngle() const;
+};

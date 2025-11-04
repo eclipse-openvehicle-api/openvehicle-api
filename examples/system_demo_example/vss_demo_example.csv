@@ -1,0 +1,10 @@
+﻿;Class name;Function name;Signal name;vss;Signal direction;type;DBC CAN name includes CAN message name
+;;;;;;;
+VD;SteeringWheel;SteeringWheel;wheelAngle;Vehicle.Chassis.SteeringWheel.Angle;RX;float;CAN_Input.SteeringWheel
+VD;VehicleSpeed;Speed;vehicleSpeed;Vehicle.Speed;RX;float;CAN_Input.Speed
+VD;VehicleChassisAxle;RearAxle;axleAngle;Vehicle.Chassis.RearAxle.Row.Wheel;TX;float;CAN_Output.RearAngle
+VD;IsActiveCounter;Counter;liveCounter;Vehicle.Software.Application.IsActiveCounter;TX;uint8;CAN_Output.IsActiveCounter
+BS;SteeringWheel;SteeringWheel;wheelAngle;Vehicle.Chassis.SteeringWheel.Angle;RX;float;Vehicle.Chassis.SteeringWheel.Angle
+BS;VehicleSpeed;Speed;vehicleSpeed;Vehicle.Speed;RX;float;Vehicle.Speed
+BS;VehicleChassisAxle;RearAxle;axleAngle;Vehicle.Chassis.RearAxle.Row.Wheel;TX;float;Vehicle.Chassis.RearAxle.Row.Wheel
+BS;IsActiveCounter;Counter;liveCounter;Vehicle.Software.Application.IsActiveCounter;TX;uint8;Vehicle.Software.Application.IsActiveCounter

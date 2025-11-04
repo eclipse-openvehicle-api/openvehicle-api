@@ -1,0 +1,685 @@
+#include <interfaces/core.idl>
+
+enum EHello
+{
+    hi,
+    huhu,
+    hello,
+    hallo,
+    servus,
+    gruessgott
+};
+
+struct SSub
+{
+    int32 i;
+};
+
+module Indirect
+{
+    struct SIndirectSub
+    {
+        int32   i;
+    };
+};
+
+/**
+ * @brief Multiply the value with itself.
+ */
+interface IMultiplyValue
+{
+    /**
+     * @brief Multiply the value with itself.
+     * @param[in] n The value.
+     * @return The result.
+     */
+    native Multiply(in native n);
+};
+
+/**
+ * @brief Add the value with itself.
+*/
+interface IAddValue
+{
+    /**
+     * @brief Add the value with itself.
+     * @param[in] n The value.
+     * @return The result.
+    */
+    native Add(in native n);
+};
+
+typedef boolean                TBoolean;
+typedef short                  TShort;
+typedef unsigned short         TUShort;
+typedef long                   TLong;
+typedef unsigned long          TULong;
+typedef long long              TLongLong;
+typedef unsigned long long     TULongLong;
+typedef int8                   TInt8;
+typedef uint8                  TUInt8;
+typedef int16                  TInt16;
+typedef uint16                 TUInt16;
+typedef int32                  TInt32;
+typedef uint32                 TUInt32;
+typedef int64                  TInt64;
+typedef uint64                 TUInt64;
+typedef char                   TChar;
+typedef char16                 TChar16;
+typedef char32                 TChar32;
+typedef wchar                  TWChar;
+typedef float                  TFloat;
+typedef double                 TDouble;
+typedef long double            TLongDouble;
+typedef native                 TNative;
+typedef EHello                 TEHello;
+typedef interface_id           TInterfaceId;
+typedef string                 TString;
+typedef u8string               TU8String;
+typedef u16string              TU16String;
+typedef u32string              TU32String;
+typedef wstring                TWString;
+typedef string<10>             TFString;
+typedef u8string<10>           TFU8String;
+typedef u16string<10>          TFU16String;
+typedef u32string<10>          TFU32String;
+typedef wstring<10>            TFWString;
+typedef pointer<uint8>         TU8Pointer;
+typedef pointer<string>        TSPointer;
+typedef pointer<uint8, 20>     TU8FixPointer;
+typedef pointer<string, 5>     TSFixPointer;
+typedef sequence<uint8>        TU8Sequence;
+typedef sequence<string>       TSSequence;
+typedef sequence<uint8, 20>    TU8FixSequence;
+typedef sequence<string, 5>    TSFixSequence;
+typedef interface_t            TInterface;
+// Typedef of interfaces current not possible. BUG #399464
+//typedef IMultiplyValue         TMultiplyValue;
+typedef SSub                   TSSub;
+typedef Indirect::SIndirectSub TSIndirectSub;
+//typedef struct { int32 i; }    TStruct;   // Anonymous definitions are not allowed at root level
+
+/**
+ * @brief Mega struct with all possible data types.
+ */
+struct SMegaStruct
+{
+    boolean                 bVal;
+    short                   sVal;
+    unsigned short          usVal;
+    long                    lVal;
+    unsigned long           ulVal;
+    long long               llVal;
+    unsigned long long      ullVal;
+    int8                    i8Val;
+    uint8                   ui8Val;
+    int16                   i16Val;
+    uint16                  ui16Val;
+    int32                   i32Val;
+    uint32                  ui32Val;
+    int64                   i64Val;
+    uint64                  ui64Val;
+    char                    cVal;
+    char16                  c16Val;
+    char32                  c32Val;
+    wchar                   wcVal;
+    float                   fVal;
+    double                  dVal;
+    long double             ldVal;
+    native                  nVal;
+    EHello                  eHelloVal;
+    interface_id            idVal;
+    string                  ssVal;
+    u8string                ss8Val;
+    u16string               ss16Val;
+    u32string               ss32Val;
+    wstring                 wssVal;
+    string<10>              ssFixVal;
+    u8string<10>            ss8FixVal;
+    u16string<10>           ss16FixVal;
+    u32string<10>           ss32FixVal;
+    wstring<10>             wssFixVal;
+    pointer<uint8>          ptr8Val;
+    pointer<string>         ptrssVal;
+    pointer<uint8, 20>      ptr8FixVal;
+    pointer<string, 5>      ptrssFixVal;
+    sequence<uint8>         seq8Val;
+    sequence<string>        seqssVal;
+    sequence<uint8, 20>     seq8FixVal;
+    sequence<string, 5>     seqssFixVal;
+    interface_t             ifcVal;
+    IMultiplyValue          pMultiplyValue;
+    SSub                    sSubVal;
+    Indirect::SIndirectSub  sIndVal;
+    // Unnamed structs are not supported by IDL (since C++ doesn't support them either)
+    //struct { int32 i; }     sUnnamedVal;
+    // Anonymous structs are not supported (since C++ doesn't support them either)
+    //struct { int32 iAnonymous1; int32 iAnonymous2; };
+    // Anonymous union declarations and unnamed union definitions are supported if not at global scope. But only if they have
+    // variable based switch statements or a declaration.
+    union switch(int32) { case 0: int32 iCaseA0; default: int32 iCaseA1; } uUnnamedValA;
+    //union switch(int32) { case 0: int32 iCaseB0; default: int32 iCaseB1; };
+    int32                   iSwitchValCD;
+    union switch(iSwitchValCD) { case 0: int32 iCaseC0; default: int32 iCaseC1; } uUnnamedValC;
+    union switch(iSwitchValCD) { case 0: int32 iCaseD0; default: int32 iCaseD1; };
+
+    boolean                 rgbVal[2];
+    short                   rgsVal[2];
+    unsigned short          rgusVal[2];
+    long                    rglVal[2];
+    unsigned long           rgulVal[2];
+    long long               rgllVal[2];
+    unsigned long long      rgullVal[2];
+    int8                    rgi8Val[2];
+    uint8                   rgui8Val[2];
+    int16                   rgi16Val[2];
+    uint16                  rgui16Val[2];
+    int32                   rgi32Val[2];
+    uint32                  rgui32Val[2];
+    int64                   rgi64Val[2];
+    uint64                  rgui64Val[2];
+    char                    rgcVal[2];
+    char16                  rgc16Val[2];
+    char32                  rgc32Val[2];
+    wchar                   rgwcVal[2];
+    float                   rgfVal[2];
+    double                  rgdVal[2];
+    long double             rgldVal[2];
+    native                  rgnVal[2];
+    EHello                  rgeHelloVal[2];
+    interface_id            rgidVal[2];
+    string                  rgssVal[2];
+    u8string                rgss8Val[2];
+    u16string               rgss16Val[2];
+    u32string               rgss32Val[2];
+    wstring                 rgwssVal[2];
+    string<10>              rgssFixVal[2];
+    u8string<10>            rgss8FixVal[2];
+    u16string<10>           rgss16FixVal[2];
+    u32string<10>           rgss32FixVal[2];
+    wstring<10>             rgwssFixVal[2];
+    pointer<uint8>          rgptr8Val[2];
+    pointer<string>         rgptrssVal[2];
+    pointer<uint8, 20>      rgptr8FixVal[2];
+    pointer<string, 5>      rgptrssFixVal[2];
+    sequence<uint8>         rgseq8Val[2];
+    sequence<string>        rgseqssVal[2];
+    sequence<uint8, 20>     rgseq8FixVal[2];
+    sequence<string, 5>     rgseqssFixVal[2];
+    // Incompatible serdes generation: BUG #398509
+    //interface_t             rgifcVal[2];
+    SSub                    rgsSubVal[2];
+    // Incompatible serdes generation: BUG #398509
+    //Indirect::SIndirectSub  rgsIndVal[2];
+    // Unnamed struct with array is not yet supported due to incorret serdes code generation: BUG #398246
+    //struct { int32 i; }     rgsUnnamedVal[2];
+    // Unnamed unions (inline definition) are not supported yet: PBI #398209
+    //union switch(int32) { case 0: int32 i; default: int32 j; } rguUnnamedVal[2];
+    // Anonymous structs and unions (unnamed and no declaration) are not supported yet: PBI #397894
+    //struct { int32 iAnonymous1; int32 iAnonymous2; }[2];
+    //union switch(int32) { case 0: int32 iAnonymous1; default: int32 iAnonymous2; }[2];
+
+    TBoolean                tbVal;
+    TShort                  tsVal;
+    TUShort                 tusVal;
+    TLong                   tlVal;
+    TULong                  tulVal;
+    TLongLong               tllVal;
+    TULongLong              tullVal;
+    TInt8                   ti8Val;
+    TUInt8                  tui8Val;
+    TInt16                  ti16Val;
+    TUInt16                 tui16Val;
+    TInt32                  ti32Val;
+    TUInt32                 tui32Val;
+    TInt64                  ti64Val;
+    TUInt64                 tui64Val;
+    TChar                   tcVal;
+    TChar16                 tc16Val;
+    TChar32                 tc32Val;
+    TWChar                  twcVal;
+    TFloat                  tfVal;
+    TDouble                 tdVal;
+    TLongDouble             tldVal;
+    TNative                 tnVal;
+    TEHello                 teHelloVal;
+    TInterfaceId            tidVal;
+    TString                 tssVal;
+    TU8String               tss8Val;
+    TU16String              tss16Val;
+    TU32String              tss32Val;
+    TWString                twssVal;
+    TFString                tssFixVal;
+    TFU8String              tss8FixVal;
+    TFU16String             tss16FixVal;
+    TFU32String             tss32FixVal;
+    TFWString               twssFixVal;
+    // Using typedefs of template based types produced an error: BUG #398266
+    //TU8Pointer              tptr8Val;
+    //TSPointer               tptrssVal;
+    //TU8FixPointer           tptr8FixVal;
+    //TSFixPointer            tptrssFixVal;
+    //TU8Sequence             tseq8Val;
+    //TSSequence              tseqssVal;
+    //TU8FixSequence          tseq8FixVal;
+    //TSFixSequence           tseqssFixVal;
+    TInterface              tifcVal;
+    // Typedef of interfaces current not possible. BUG #399464
+    //TMultiplyValue          ptMultiplyValue;
+    TSSub                   tsSubVal;
+    TSIndirectSub           tsIndVal;
+    // Incompatible serdes generation: BUG #398509
+    //TStruct                 tsUnnamedVal;
+    // Anonymous structs and unions (unnamed and no declaration) are not allowed at root level.
+
+    // Unnamed unions (inline definition) are not supported yet: PBI #398209
+    //union switch(int32) { case 0: int32 i; default: int32 j; } uUnnamedVal;
+    // Anonymous structs and unions (unnamed and no declaration) are not allowed at root levelsupported yet: PBI #397894
+    //struct { int32 iAnonymous1; int32 iAnonymous2; };
+    //union switch(int32) { case 0: int32 iAnonymous1; default: int32 iAnonymous2; };
+};
+
+/**
+ * @brief Mega union with type based switch with all possible data types.
+ */
+union UMegaTypeBasedUnion switch (uint32)
+{
+    case 1: boolean                 bVal;
+    case 2: short                   sVal;
+    case 3: unsigned short          usVal;
+    case 4: long                    lVal;
+    case 5: unsigned long           ulVal;
+    case 6: long long               llVal;
+    case 7: unsigned long long      ullVal;
+    case 8: int8                    i8Val;
+    case 9: uint8                   ui8Val;
+    case 10: int16                  i16Val;
+    case 11: uint16                 ui16Val;
+    case 12: int32                  i32Val;
+    case 13: uint32                 ui32Val;
+    case 14: int64                  i64Val;
+    case 15: uint64                 ui64Val;
+    case 16: char                   cVal;
+    case 17: char16                 c16Val;
+    case 18: char32                 c32Val;
+    case 19: wchar                  wcVal;
+    case 20: float                  fVal;
+    case 21: double                 dVal;
+    case 22: long double            ldVal;
+    case 23: native                 nVal;
+    case 24: EHello                 eHelloVal;
+    case 25: interface_id           idVal;
+    case 26: string                 ssVal;
+    case 27: u8string               ss8Val;
+    case 28: u16string              ss16Val;
+    case 29: u32string              ss32Val;
+    case 30: wstring                wssVal;
+    case 31: string<10>             ssFixVal;
+    case 32: u8string<10>           ss8FixVal;
+    case 33: u16string<10>          ss16FixVal;
+    case 34: u32string<10>          ss32FixVal;
+    case 35: wstring<10>            wssFixVal;
+    case 36: pointer<uint8>         ptr8Val;
+    case 37: pointer<string>        ptrssVal;
+    case 38: pointer<uint8, 20>     ptr8FixVal;
+    case 39: pointer<string, 5>     ptrssFixVal;
+    case 40: sequence<uint8>        seq8Val;
+    case 41: sequence<string>       seqssVal;
+    case 42: sequence<uint8, 20>    seq8FixVal;
+    case 43: sequence<string, 5>    seqssFixVal;
+    case 44: interface_t            ifcVal;
+    case 45: IMultiplyValue         pMultiplyValue;
+    case 46: SSub                   sSubVal;
+    // Incompatible serdes generation: BUG #398509
+    //case 47: Indirect::SIndirectSub sIndVal;
+    // Unnamed struct inside unions are not supported yet: PBI #398230
+    //case 48: struct { int32 i; } sUnnamedVal;
+    // Unnamed unions are not supported yet: PBI #398209
+    //case 49: union switch(int32) { case 0: int32 i; default: int32 j; } uUnnamedVal;
+    // Anonymous structs and unions (unnamed and no declaration) are not supported yet: PBI #397894
+    //case 50: struct { int32 iAnonymous1; int32 iAnonymous2; };
+    //case 51: union switch(int32) { case 0: int32 iAnonymous1; default: int32 iAnonymous2; };
+
+    // Array based members are incorrectly supported: BUG #398246
+    //case 101: boolean                 rgbVal[2];
+    //case 102: short                   rgsVal[2];
+    //case 103: unsigned short          rgusVal[2];
+    //case 104: long                    rglVal[2];
+    //case 105: unsigned long           rgulVal[2];
+    //case 106: long long               rgllVal[2];
+    //case 107: unsigned long long      rgullVal[2];
+    //case 108: int8                    rgi8Val[2];
+    //case 109: uint8                   rgui8Val[2];
+    //case 110: int16                   rgi16Val[2];
+    //case 111: uint16                  rgui16Val[2];
+    //case 112: int32                   rgi32Val[2];
+    //case 113: uint32                  rgui32Val[2];
+    //case 114: int64                   rgi64Val[2];
+    //case 115: uint64                  rgui64Val[2];
+    //case 116: char                    rgcVal[2];
+    //case 117: char16                  rgc16Val[2];
+    //case 118: char32                  rgc32Val[2];
+    //case 119: wchar                   rgwcVal[2];
+    //case 120: float                   rgfVal[2];
+    //case 121: double                  rgdVal[2];
+    ////case 122: long double             rgldVal[2];
+    //case 123: native                  rgnVal[2];
+    //case 124: EHello                  rgeHelloVal[2];
+    //case 125: interface_id            rgidVal[2];
+    //case 126: string                  rgssVal[2];
+    //case 127: u8string                rgss8Val[2];
+    //case 128: u16string               rgss16Val[2];
+    //case 129: u32string               rgss32Val[2];
+    //case 130: wstring                 rgwssVal[2];
+    //case 131: string<10>              rgssFixVal[2];
+    //case 132: u8string<10>            rgss8FixVal[2];
+    //case 133: u16string<10>           rgss16FixVal[2];
+    //case 134: u32string<10>           rgss32FixVal[2];
+    //case 135: wstring<10>             rgwssFixVal[2];
+    //case 136: pointer<uint8, 20>      rgptr8Val[2];
+    //case 137: pointer<string, 5>      rgptrssVal[2];
+    //case 138: sequence<uint8, 20>     rgseq8Val[2];
+    //case 139: sequence<string, 5>     rgseqssVal[2];
+    //case 140: interface_t             rgifcVal[2];
+    //case 141: SSub                    rgsSubVal[2];
+    //case 142: Indirect::SIndirectSub  rgsIndVal[2];
+    //// Unnamed struct inside unions are not supported yet: PBI #398230
+    ////case 143: struct { int32 i; int32 j; } sUnnamedVal[2];
+    //// Unnamed unions are not supported yet: PBI #398209
+    ////case 144: union switch(int32) { case 0: int32 i; default: int32 j; } uUnnamedVal[2];
+    //// Anonymous structs and unions (unnamed and no declaration) are not supported yet: PBI #397894
+    ////case 145: struct { int32 iAnonymous1; int32 iAnonymous2; }[2];
+    ////case 146: union switch(int32) { case 0: int32 iAnonymous1; default: int32 iAnonymous2; }[2];
+
+    case 201: TBoolean                tbVal;
+    case 202: TShort                  tsVal;
+    case 203: TUShort                 tusVal;
+    case 204: TLong                   tlVal;
+    case 205: TULong                  tulVal;
+    case 206: TLongLong               tllVal;
+    case 207: TULongLong              tullVal;
+    case 208: TInt8                   ti8Val;
+    case 209: TUInt8                  tui8Val;
+    case 210: TInt16                  ti16Val;
+    case 211: TUInt16                 tui16Val;
+    case 212: TInt32                  ti32Val;
+    case 213: TUInt32                 tui32Val;
+    case 214: TInt64                  ti64Val;
+    case 215: TUInt64                 tui64Val;
+    case 216: TChar                   tcVal;
+    case 217: TChar16                 tc16Val;
+    case 218: TChar32                 tc32Val;
+    case 219: TWChar                  twcVal;
+    case 220: TFloat                  tfVal;
+    case 221: TDouble                 tdVal;
+    case 222: TLongDouble             tldVal;
+    case 223: TNative                 tnVal;
+    case 224: TEHello                 teHelloVal;
+    case 225: TInterfaceId            tidVal;
+    case 226: TString                 tssVal;
+    case 227: TU8String               tss8Val;
+    case 228: TU16String              tss16Val;
+    case 229: TU32String              tss32Val;
+    case 230: TWString                twssVal;
+    case 231: TFString                tssFixVal;
+    case 232: TFU8String              tss8FixVal;
+    case 233: TFU16String             tss16FixVal;
+    case 234: TFU32String             tss32FixVal;
+    case 235: TFWString               twssFixVal;
+    // Using typedefs of template based types produced an error: BUG #398266
+    //case 236: TU8Pointer              tptr8Val;
+    //case 237: TSPointer               tptrssVal;
+    //case 238: TU8FixPointer           tptr8FixVal;
+    //case 239: TSFixPointer            tptrssFixVal;
+    //case 240: TU8Sequence             tseq8Val;
+    //case 241: TSSequence              tseqssVal;
+    //case 242: TU8FixSequence          tseq8FixVal;
+    //case 243: TSFixSequence           tseqssFixVal;
+    case 244: TInterface              tifcVal;
+    // Typedef of interfaces current not possible. BUG #399464
+    //case 245: TMultiplyValue         ptMultiplyValue;
+    case 246: TSSub                   tsSubVal;
+    case 247: TSIndirectSub           tsIndVal;
+    // Incompatible serdes generation: BUG #398509
+    //case 248: struct { int32 i; } tsUnnamedVal;
+    // Unnamed unions are not supported yet: PBI #398209
+    //case 249: union switch(int32) { case 0: int32 i; default: int32 j; } tuUnnamedVal;
+    // Anonymous structs and unions (unnamed and no declaration) are not supported yet: PBI #397894
+    //case 250: struct { int32 iAnonymous1; int32 iAnonymous2; };
+    //case 251: union switch(int32) { case 0: int32 iAnonymous1; default: int32 iAnonymous2; };
+};
+
+/**
+ * @brief Mega union with var based switch with all possible data types.
+ */
+struct SMegaVarBasedUnion
+{
+    uint32 uiSwitchType;
+
+    union UUnion switch (uiSwitchType)
+    {
+        case 1: boolean                 bVal;
+        case 2: short                   sVal;
+        case 3: unsigned short          usVal;
+        case 4: long                    lVal;
+        case 5: unsigned long           ulVal;
+        case 6: long long               llVal;
+        case 7: unsigned long long      ullVal;
+        case 8: int8                    i8Val;
+        case 9: uint8                   ui8Val;
+        case 10: int16                  i16Val;
+        case 11: uint16                 ui16Val;
+        case 12: int32                  i32Val;
+        case 13: uint32                 ui32Val;
+        case 14: int64                  i64Val;
+        case 15: uint64                 ui64Val;
+        case 16: char                   cVal;
+        case 17: char16                 c16Val;
+        case 18: char32                 c32Val;
+        case 19: wchar                  wcVal;
+        case 20: float                  fVal;
+        case 21: double                 dVal;
+        case 22: long double            ldVal;
+        case 23: native                 nVal;
+        case 24: EHello                 eHelloVal;
+        case 25: interface_id           idVal;
+        case 26: string                 ssVal;
+        case 27: u8string               ss8Val;
+        case 28: u16string              ss16Val;
+        case 29: u32string              ss32Val;
+        case 30: wstring                wssVal;
+        case 31: string<10>             ssFixVal;
+        case 32: u8string<10>           ss8FixVal;
+        case 33: u16string<10>          ss16FixVal;
+        case 34: u32string<10>          ss32FixVal;
+        case 35: wstring<10>            wssFixVal;
+        case 36: pointer<uint8>         ptr8Val;
+        case 37: pointer<string>        ptrssVal;
+        case 38: pointer<uint8, 20>     ptr8FixVal;
+        case 39: pointer<string, 5>     ptrssFixVal;
+        case 40: sequence<uint8>        seq8Val;
+        case 41: sequence<string>       seqssVal;
+        case 42: sequence<uint8, 20>    seq8FixVal;
+        case 43: sequence<string, 5>    seqssFixVal;
+        case 44: interface_t            ifcVal;
+        case 45: IMultiplyValue         pMultiplyValue;
+        case 46: SSub                   sSubVal;
+        // Incompatible serdes generation: BUG #398509
+        //case 47: Indirect::SIndirectSub sIndVal;
+        // Unnamed struct inside unions are not supported yet: PBI #398230
+        //case 48: struct { int32 i; } sUnnamedVal;
+        // Unnamed unions are not supported yet: PBI #398209
+        //case 49: union switch(int32) { case 0: int32 i; default: int32 j; } uUnnamedVal;
+        // Anonymous structs and unions (unnamed and no declaration) are not supported yet: PBI #397894
+        //case 50: struct { int32 iAnonymous1; int32 iAnonymous2; };
+        //case 51: union switch(int32) { case 0: int32 iAnonymous1; default: int32 iAnonymous2; };
+
+        // Array based members are incorrectly supported: BUG #398246
+        //case 101: boolean                 rgbVal[2];
+        //case 102: short                   rgsVal[2];
+        //case 103: unsigned short          rgusVal[2];
+        //case 104: long                    rglVal[2];
+        //case 105: unsigned long           rgulVal[2];
+        //case 106: long long               rgllVal[2];
+        //case 107: unsigned long long      rgullVal[2];
+        //case 108: int8                    rgi8Val[2];
+        //case 109: uint8                   rgui8Val[2];
+        //case 110: int16                   rgi16Val[2];
+        //case 111: uint16                  rgui16Val[2];
+        //case 112: int32                   rgi32Val[2];
+        //case 113: uint32                  rgui32Val[2];
+        //case 114: int64                   rgi64Val[2];
+        //case 115: uint64                  rgui64Val[2];
+        //case 116: char                    rgcVal[2];
+        //case 117: char16                  rgc16Val[2];
+        //case 118: char32                  rgc32Val[2];
+        //case 119: wchar                   rgwcVal[2];
+        //case 120: float                   rgfVal[2];
+        //case 121: double                  rgdVal[2];
+        ////case 122: long double             rgldVal[2];
+        //case 123: native                  rgnVal[2];
+        //case 124: EHello                  rgeHelloVal[2];
+        //case 125: interface_id            rgidVal[2];
+        //case 126: string                  rgssVal[2];
+        //case 127: u8string                rgss8Val[2];
+        //case 128: u16string               rgss16Val[2];
+        //case 129: u32string               rgss32Val[2];
+        //case 130: wstring                 rgwssVal[2];
+        //case 131: string<10>              rgssFixVal[2];
+        //case 132: u8string<10>            rgss8FixVal[2];
+        //case 133: u16string<10>           rgss16FixVal[2];
+        //case 134: u32string<10>           rgss32FixVal[2];
+        //case 135: wstring<10>             rgwssFixVal[2];
+        //case 136: pointer<uint8, 20>      rgptr8Val[2];
+        //case 137: pointer<string, 5>      rgptrssVal[2];
+        //case 138: sequence<uint8, 20>     rgseq8Val[2];
+        //case 139: sequence<string, 5>     rgseqssVal[2];
+        //case 140: interface_t             rgifcVal[2];
+        //case 141: SSub                    rgsSubVal[2];
+        //case 142: Indirect::SIndirectSub  rgsIndVal[2];
+        //// Unnamed struct inside unions are not supported yet: PBI #398230
+        ////case 143: struct { int32 i; int32 j; } sUnnamedVal[2];
+        //// Unnamed unions are not supported yet: PBI #398209
+        ////case 144: union switch(int32) { case 0: int32 i; default: int32 j; } uUnnamedVal[2];
+        //// Anonymous structs and unions (unnamed and no declaration) are not supported yet: PBI #397894
+        ////case 145: struct { int32 iAnonymous1; int32 iAnonymous2; }[2];
+        ////case 146: union switch(int32) { case 0: int32 iAnonymous1; default: int32 iAnonymous2; }[2];
+
+        case 201: TBoolean                tbVal;
+        case 202: TShort                  tsVal;
+        case 203: TUShort                 tusVal;
+        case 204: TLong                   tlVal;
+        case 205: TULong                  tulVal;
+        case 206: TLongLong               tllVal;
+        case 207: TULongLong              tullVal;
+        case 208: TInt8                   ti8Val;
+        case 209: TUInt8                  tui8Val;
+        case 210: TInt16                  ti16Val;
+        case 211: TUInt16                 tui16Val;
+        case 212: TInt32                  ti32Val;
+        case 213: TUInt32                 tui32Val;
+        case 214: TInt64                  ti64Val;
+        case 215: TUInt64                 tui64Val;
+        case 216: TChar                   tcVal;
+        case 217: TChar16                 tc16Val;
+        case 218: TChar32                 tc32Val;
+        case 219: TWChar                  twcVal;
+        case 220: TFloat                  tfVal;
+        case 221: TDouble                 tdVal;
+        case 222: TLongDouble             tldVal;
+        case 223: TNative                 tnVal;
+        case 224: TEHello                 teHelloVal;
+        case 225: TInterfaceId            tidVal;
+        case 226: TString                 tssVal;
+        case 227: TU8String               tss8Val;
+        case 228: TU16String              tss16Val;
+        case 229: TU32String              tss32Val;
+        case 230: TWString                twssVal;
+        case 231: TFString                tssFixVal;
+        case 232: TFU8String              tss8FixVal;
+        case 233: TFU16String             tss16FixVal;
+        case 234: TFU32String             tss32FixVal;
+        case 235: TFWString               twssFixVal;
+        // Using typedefs of template based types produced an error: BUG #398266
+        //case 236: TU8Pointer              tptr8Val;
+        //case 237: TSPointer               tptrssVal;
+        //case 238: TU8FixPointer           tptr8FixVal;
+        //case 239: TSFixPointer            tptrssFixVal;
+        //case 240: TU8Sequence             tseq8Val;
+        //case 241: TSSequence              tseqssVal;
+        //case 242: TU8FixSequence          tseq8FixVal;
+        //case 243: TSFixSequence           tseqssFixVal;
+        case 244: TInterface              tifcVal;
+        // Typedef of interfaces current not possible. BUG #399464
+        //case 245: TMultiplyValue         ptMultiplyValue;
+        case 246: TSSub                   tsSubVal;
+        case 247: TSIndirectSub           tsIndVal;
+        // Incompatible serdes generation: BUG #398509
+        //case 248: struct { int32 i; } tsUnnamedVal;
+        // Unnamed unions are not supported yet: PBI #398209
+        //case 249: union switch(int32) { case 0: int32 i; default: int32 j; } tuUnnamedVal;
+        // Anonymous structs and unions (unnamed and no declaration) are not supported yet: PBI #397894
+        //case 250: struct { int32 iAnonymous1; int32 iAnonymous2; };
+        //case 251: union switch(int32) { case 0: int32 iAnonymous1; default: int32 iAnonymous2; };
+    } uVal;
+};
+
+/**
+ * @brief Mega struct and union test.
+ */
+interface IMegaTest
+{
+    /**
+     * @brief Update the mega struct. This will test marshalling and unmarshalling of the mega struct.
+     * @param[in, out] rsStruct Reference to the struct to update.
+     */
+    void ProcessMegaStruct(inout SMegaStruct rsStruct);
+
+    /**
+    * @brief Update the mega type based union. This will test marshalling and unmarshalling of the mega union.
+    * @param[in, out] ruUnion Reference to the union to update.
+    */
+    void ProcessMegaTypeBasedUnion(inout UMegaTypeBasedUnion ruUnion);
+
+    /**
+    * @brief Update the mega var based union. This will test marshalling and unmarshalling of the mega union.
+    * @param[in, out] ruUnion Reference to the union to update.
+    */
+    void ProcessMegaVarBasedUnion(inout SMegaVarBasedUnion ruUnion);
+};
+
+/**
+ * @brief Use this interface to return a friendly text.
+ */
+interface ISayHello
+{
+    /**
+     * @brief Say hello!
+     * @return The greeting text.
+     */
+    string Hello();
+};
+
+/**
+* @brief Get the hello interface.
+*/
+interface IRequestHello
+{
+    /**
+     * @brief Request the hello interface.
+     * @return pHello The hello interface.
+     */
+    ISayHello Request();
+};
+
+/**
+ * @brief Register the hello interface as a callback.
+ */
+interface IRegisterHelloCallback
+{
+    /**
+     * @brief Register the callback with the hello interface.
+     * @param[in] pHello The hello interface.
+     */
+    void Register(in ISayHello pHello);
+};

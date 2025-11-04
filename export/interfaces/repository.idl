@@ -1,0 +1,248 @@
+/**
+ *
+ * @file      repository.idl
+ * @brief     This file provides interfaces related to the repository service
+ * @version   0.1
+ * @date      2022.11.21
+ * @author    steffen.altmeier@zf.com
+ * @copyright Copyright ZF Friedrichshaven AG (c) 2022
+ *
+ */
+#include "core.idl"
+#include "module.idl"
+
+ /**
+  * @brief Software Defined Vehicle framework.
+  */
+module sdv
+{
+    /**
+     * @brief Core features.
+     */
+    module core
+    {
+
+        /**
+         * @brief Object ID.
+         */
+        typedef uint64 TObjectID;
+
+        /**
+         * @brief Interface used to access objects from other modules via the repository service
+         */
+        interface IObjectAccess
+        {
+            /**
+             * @brief Get the object instance previously created through the repository service.
+             * @param[in] ssObjectName The name of the requested object.
+             * @return Returns the IInterfaceAccess interface of the object instance if found and nullptr otherwise.
+             */
+            IInterfaceAccess GetObject(in u8string ssObjectName);
+
+            /**
+            * @brief Get the object instance previously created through the repository service.
+            * @attention Utilities cannot be returned by this function.
+            * @param[in] tObjectID The ID of the requested object.
+            * @return Returns the IInterfaceAccess interface of the object instance if found and nullptr otherwise.
+            */
+            IInterfaceAccess GetObjectByID(in TObjectID tObjectID);
+        };
+
+        /**
+         * @brief Object information flags.
+         */
+        enum EObjectInfoFlags : uint32
+        {
+            object_foreign = 0x00000100,        ///< The object is registered as a foreign object.
+            object_controlled = 0x00008000,     ///< The object is controlled by the Repository Service.
+            object_isolated = 0x00010000,       ///< The object is running in an isolated environment.
+        };
+
+        /**
+         * @brief Object information.
+         */
+        struct SObjectInfo
+        {
+            TObjectID       tObjectID;          ///< The object ID to identify the object.
+            TModuleID       tModuleID;          ///< The module ID that contains the object class. Might be zero with foreign
+                                                ///< objects.
+            SClassInfo      sClassInfo;         ///< The class information used during object creation.
+            u8string        ssObjectName;       ///< The object name. Might be empty for uncontrolled objects.
+            u8string        ssObjectConfig;     ///< The object configuration. Might be empty when no configuration was supplied.
+            uint32          uiFlags;            ///< Information flags - zero or more flags of EObjectInfoFlags.
+
+            // TODO... Proxy/Stub objects (tObjectID) and Process (tProcessID) information and host information.
+        };
+
+        /**
+         * @brief Get object information.
+         */
+        interface IRepositoryInfo
+        {
+            /**
+             * @brief Find the class information of an object with the supplied name.
+             * @param[in] ssClassName Object class name.
+             * @return The object class information.
+             */
+            SClassInfo FindClass(in u8string ssClassName) const;
+
+            /**
+             * @brief Get a list of all the instantiated objects.
+             * @return Sequence containing the object information structures.
+             */
+            sequence<SObjectInfo> GetObjectList() const;
+
+            /**
+             * @brief Get the object info for the requested object.
+             * @param[in] tObjectID The object ID to return the object information for.
+             * @return The object information structure if the object is available or an empty structure if not.
+             */
+            SObjectInfo GetObjectInfo(in TObjectID tObjectID) const;
+
+            /**
+             * @brief Find an object with the supplied name. Only object instances that are in the service list can be found with
+             * this function (devices, basic and complex services, and system objects).
+             * @param[in] ssObjectName Object name to search for.
+             * @return The object information structure if the object is available or an empty structure if not.
+             */
+            SObjectInfo FindObject(in u8string ssObjectName) const;
+        };
+
+        /**
+         * @brief Interface used to control object creation and destruction.
+         */
+        interface IRepositoryControl
+        {
+            /**
+             * @brief Create an object and all its objects it depends on.
+             * @details For standalone and essential applications, this function allows the creation of system, device and service
+             * objects if the module was loaded previously. For the main and isolated application, this function allows the
+             * creation of complex services only and only those that are in the installation. For the isolated application only one
+             * complex service can be created. External apps, utilities, and proxy and stub objects cannot be created at all using
+             * this function.
+             * Objects that the to be create object is depending on will be created as well. For the main application this is
+             * limited to complex services. Isolated applications cannot load other services; this is taken over by the main
+             * application.
+             * @param[in] ssClassName The name of the object class to be created. For the main application, the class string could
+             * be empty for the main application if the object was defined in the installation.
+             * @param[in] ssObjectName Name of the object, required to be unique. For standalone and essential applications, the
+             * name string can be empty, in which case the object might either provide a name proposal or the name is the same as
+             * the class name. Use the returned object ID to request the name of the object.
+             * @param[in] ssObjectConfig Optional configuration handed over to the object upon creation via IObjectControl. Only
+             * valid for standalone, essential and isolated applications.
+             * @return Returns the object ID when the object creation was successful or 0 when not. On success the object is
+             * available through the IObjectAccess interface. If the object already exists (class and object names are identical),
+             * the object ID of the existing object is returned.
+             */
+            TObjectID CreateObject(in u8string ssClassName, in u8string ssObjectName, in u8string ssObjectConfig);
+
+            /**
+             * @brief Create an object from a previously loaded module. Provide the module ID to explicitly define what module to
+             * use during object creation.
+             * @attention This function is not available for 'main' and 'isolated' applications.
+             * @param[in] tModuleID Module ID that contains the object class to create the object with.
+             * @param[in] ssClassName The name of the object class to be created.
+             * @param[in] ssObjectName Optional name of the object - required to be unique. If not supplied, the object might
+             * either provide a name proposal or the name is the same as the class name. Use the returned object ID to request
+             * the name of the object.
+             * @param[in] ssObjectConfig Optional configuration handed over to the object upon creation via IObjectControl.
+             * @return Returns the object ID when the object creation was successful or 0 when not. On success the object is
+             * available through the IObjectAccess interface. If the object already exists (class and object names are identical),
+             * the object ID of the existing object is returned.
+             */
+            TObjectID CreateObjectFromModule(in TModuleID tModuleID, in u8string ssClassName, in u8string ssObjectName,
+                in u8string ssObjectConfig);
+
+            /**
+             * @brief Destroy a previously created object with the supplied name.
+             * @details For standalone and essential applications previously created system, device and service objects can be
+             * destroyed. For the main and isolated applications, only the complex service can be destroyed. For isolated
+             * applications a destruction of the object will end the application.
+             * @param[in] ssObjectName The name of the object to destroy.
+             * @return Returns whether the object destruction was successful.
+             */
+            boolean DestroyObject(in u8string ssObjectName);
+        };
+
+        /**
+         * @brief Interface used to create utilities.
+         */
+        interface IRepositoryUtilityCreate
+        {
+            /**
+             * @brief Creates an utility object.
+             * @details The behavior of this function depends on the run-as mode the application is running in... For the core
+             * application running as 'main' the module will be loaded if not already done so (pre-condition, the module containing
+             * the object is installed) . If the object is
+             * a complex service, the object is created in an isolated space. For the isolated application, only complex services
+             * can be created running locally if the module is installed. For all other run-as modes (standalone, essential, etc.),
+             * the object is created if the module was loaded previously.
+             * @attention Utilities are standalone objects. Use IObjectDestroy to destroy the utility.
+             * @param[in] ssClassName The name of the object class to be created.
+             * @param[in] ssObjectConfig Optional configuration handed over to the object upon creation via IObjectControl.
+             * @return Returns the IInterfaceAccess interface of newly created utility.
+             */
+            IInterfaceAccess CreateUtility(in u8string ssClassName, in u8string ssObjectConfig);
+        };
+
+        /**
+         * @brief Interface used to create marshall objects. This interface is operated by the Communication Control service.
+         */
+        local interface IRepositoryMarshallCreate
+        {
+            /**
+             * @brief Create a proxy object for the interface with the supplied ID. If successful, this object is initialized, but
+             * not linked to any other object within the system.
+             * @details Create a proxy object with the name "proxy_<ifc id>". "ifc_id" is the decimal value of an interface ID.
+             * @param[in] id The interface ID to create the object for.
+             * @return Returns the interface to the proxy object. Destruction of the object can be achieved through IObjectDestroy.
+             */
+            IInterfaceAccess CreateProxyObject(in interface_id id);
+
+            /**
+             * @brief Create a stub object for the interface with the supplied ID. If successful, this object is initialized, but
+             * not linked to any other object within the system.
+             * @details Create a stub object with the name "stub_<ifc id>". "ifc_id" is the decimal value of an interface ID.
+             * @param[in] id The interface ID to create the object for.
+             * @return Returns the interface to the stub object. Destruction of the object can be achieved through IObjectDestroy.
+             */
+            IInterfaceAccess CreateStubObject(in interface_id id);
+        };
+
+        /**
+         * @brief Interface used to publish external objects to the SDV system.
+         * @attention Any objects supplied must not be destroyed before IRepositoryControl::Shutdown has been called
+         */
+        interface IRegisterForeignObject
+        {
+            /**
+             * @brief Register as foreign object and make it public to the system with the given name.
+             * @param[in] pObjectIfc The object to be registered
+             * @param[in] ssObjectName The name under which the object - required to be unique.
+             * @return Returns the object ID when the object creation was successful or 0 when not. On success the object is
+             * available through the IObjectAccess interface. If the object already exists (class and object names are identical),
+             * the object ID of the existing object is returned.
+             */
+            TObjectID RegisterObject(in IInterfaceAccess pObjectIfc, in u8string ssObjectName);
+        };
+
+        /**
+         * @brief Connect the core repository to the local repository to allow object access by the locally running components.
+         * @remarks This interface is available only for isolated and external applications.
+         */
+        interface ILinkCoreRepository
+        {
+            /**
+             * @brief Register the core repository.
+             * @param[in] pCoreRepository Pointer to the proxy interface of the core repository.
+             */
+            void LinkCoreRepository(in IInterfaceAccess pCoreRepository);
+
+            /**
+             * @brief Unlink a previously linked core repository.
+             */
+            void UnlinkCoreRepository();
+        };
+
+    }; // module core
+}; // module sdv

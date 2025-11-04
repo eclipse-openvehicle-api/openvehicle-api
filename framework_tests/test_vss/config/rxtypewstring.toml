@@ -1,0 +1,10 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "testcase4_vd_rxclassforwstring_rx.sdv"
+Class = "Vehicle.Chassis.Vehicle.WString_Device"
+
+[[Component]]
+Path = "testcase4_bs_rxclassforwstring_rx.sdv"
+Class = "Vehicle.Chassis.Vehicle.WString_Service"

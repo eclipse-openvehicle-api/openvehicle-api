@@ -1,0 +1,123 @@
+/**
+*
+* @file      dispatch.idl
+* @brief     This file provides interfaces related to the data dispatch service.
+* @version   1.0
+* @date      2024.01.12
+* @author    Erik Verhoeven
+* @copyright Copyright ZF Friedrichshaven AG (c) 2024
+*
+*/
+#include "core.idl"
+
+/**
+ * @brief Software Defined Vehicle framework.
+ */
+module sdv
+{
+    /**
+     * @brief TOML interface.
+     */
+    module toml
+    {
+        /**
+         * @brief TOML parse exception.
+         */
+        exception XTOMLParseException : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "TOML parse exception.";
+
+            u8string ssMessage;     ///< Message indicating the cause of the exception.
+        };
+
+        /**
+         * @brief Collection of possible data in parse tree node
+         */
+        enum ENodeType : uint8
+        {
+            node_table,	            //!< Table
+            node_array,	            //!< Array
+            node_integer,           //!< Integer
+            node_floating_point,    //!< Floating point
+            node_boolean,           //!< Boolean
+            node_string,            //!< String
+            node_invalid            //!< Invalid content
+        };
+
+        /**
+         * @brief Node information interface
+         */
+        interface INodeInfo
+        {
+            /**
+             * @brief Get the node name.
+             * @return String containing the name of the node.
+            */
+            u8string GetName() const;
+
+            /**
+             * @brief Get the node type.
+             * @return Type of the node.
+             */
+            ENodeType GetType() const;
+
+            /**
+             * @brief The node value.
+             * @return For boolean, integer, floating point and strings, the function returns a value. Otherwise the function
+             * returns empty.
+             */
+            any GetValue() const;
+
+            /**
+             * @brief Return the TOML string belonging to this node including all potential child nodes.
+             * @return The TOML string.
+             */
+            u8string GetTOML() const;
+        };
+
+        /**
+         * @brief Interface allowing access to table and array nodes.
+         */
+        interface INodeCollection
+        {
+            /**
+             * @brief Returns the amount of nodes.
+             * @return The amount of nodes.
+            */
+            uint32 GetCount() const;
+
+            /**
+             * @brief Get the node.
+             * @param[in] uiIndex Index of the node to get.
+             * @return Interface to the node object.
+             */
+            IInterfaceAccess GetNode(in uint32 uiIndex) const;
+
+            /**
+             * @brief Searches a node by its key in the parse tree
+             * @details Elements of tables can be accessed and traversed by using '.' to separated the parent name from child
+             * name. E.g. 'parent.child' would access the 'child' element of the 'parent' table. Elements of arrays can be
+             * accessed and traversed by using the index number in brackets. E.g. 'array[3]' would access the fourth element of
+             * the array 'array'. These access conventions can also be chained like 'table.array[2][1].subtable.integerElement'.
+             * @attention Array indexing starts with 0!
+             * @param[in] ssPath The path of the Node to searched for.
+             * @return Returns an interface the requested node if available.
+             */
+            IInterfaceAccess GetNodeDirect(in u8string ssPath) const;
+        };
+
+        /**
+         * @brief TOML parser interface.
+         */
+        interface ITOMLParser
+        {
+            /**
+             * @brief Process the configuration from the supplied content string.
+             * @param[in] ssContent Configuration string.
+             * @return Returns 'true' when the configuration could be read successfully, false when not.
+             */
+            boolean Process(in u8string ssContent) raises(XTOMLParseException);
+        };
+    };
+};

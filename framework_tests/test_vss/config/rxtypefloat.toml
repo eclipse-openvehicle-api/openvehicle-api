@@ -1,0 +1,10 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "testcase4_vd_rxclassforfloat_rx.sdv"
+Class = "Vehicle.Chassis.Vehicle.Float_Device"
+
+[[Component]]
+Path = "testcase4_bs_rxclassforfloat_rx.sdv"
+Class = "Vehicle.Chassis.Vehicle.Float_Service"

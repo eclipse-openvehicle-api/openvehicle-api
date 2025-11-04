@@ -1,0 +1,181 @@
+/**
+* @file      app.idl
+* @brief     This file provides the core interface definitions SDV framework administration.
+* @version   0.1
+* @date      2024.04.11
+* @author    erik.verhoeven@zf.com
+* @copyright Copyright ZF Friedrichshaven AG (c) 2023-2025
+*/
+
+#include "core.idl"
+#include "toml.idl"
+
+/**
+* @brief Software Defined Vehicle framework.
+*/
+module sdv
+{
+    /**
+    * @brief Core features.
+    */
+    module app
+    {
+
+        /**
+         * @brief The application operation state.
+         */
+        enum EAppOperationState
+        {
+            not_started = 0,            ///< The application hasn't been started yet.
+            starting = 1,               ///< The application is starting.
+            started = 2,                ///< The application has started.
+            initializing = 10,          ///< The application is initializing.
+            initialized = 12,           ///< The application has initialized.
+            configuring = 20,           ///< The application switched to configuration mode.
+            running = 30,               ///< The application is running/switched to running mode.
+            shutting_down = 90,         ///< The application is shutting down.
+        };
+
+        /**
+         * @brief Event structure. Dependable on the event, can be derived to provide additional information.
+         */
+        struct SAppEvent
+        {
+            uint32      uiEventID;  ///< The event ID of the event
+            uint32      uiInfo;     ///< Additional information that can be used during a call to the event and as answer from
+                                    ///< the implemented event handler. The information depends on the event that is triggered.
+        };
+
+        const uint32 EVENT_OPERATION_STATE_CHANGED = 1;     ///< Information about the application operation state. The information
+                                                            ///< section of the event structure contains the current operation mode
+                                                            ///< represented by the EAppOperationMode enum. This event is
+                                                            ///< informational only and will be called by the core library to
+                                                            ///< inform the application.
+
+        const uint32 EVENT_RUNNING_LOOP = 8;                ///< Triggered every 2ms to do idle operations during the running loop.
+
+        /**
+        * @brief Application event system. To be implemented by the application.
+        */
+        local interface IAppEvent
+        {
+            /**
+             * @brief Process the event.
+             * @param[inout] sEvent Event structure containing the information to process.
+             */
+            void ProcessEvent(inout SAppEvent sEvent);
+        };
+
+        /**
+        * @brief Application context types.
+        */
+        enum EAppContext : uint32
+        {
+            no_context = 0,     ///< The core hasn't started yet. No context available.
+            standalone = 10,    ///< Running as standalone application. No component isolation instantiated. Additional
+                                ///< configurations can be loaded.
+            external = 20,      ///< External application. Component isolation in client mode.
+            isolated = 30,      ///< Isolated application. Component isolation in client mode.
+            main = 100,         ///< Main application. Component isolation in server mode.
+            essential = 5,      ///< Bare minunum configuration. Local services loaded only. Additional configurations can be
+                                ///< loaded.
+            maintenance = 80,   ///< Maintenance application. Component isolation in client mode. Access to maintenance interfaces
+                                ///< only.
+        };
+
+        /**
+         * @brief Application context interface.
+         */
+        local interface IAppContext
+        {
+            /**
+             * @brief Return the application context.
+             * @return The context mode.
+             */
+            EAppContext GetContextType() const;
+
+            /**
+             * @brief Return the core instance ID.
+             * @return The instance ID.
+             */
+            uint32 GetInstanceID() const;
+
+            /**
+             * @brief Return the number of retries to establish a connection.
+             * @return Number of retries.
+             */            
+            uint32 GetRetries() const;
+        };
+
+        /**
+         * @brief Local application control.
+         */
+        local interface IAppControl
+        {
+            /**
+             * @brief Start the application.
+             * @details The core will prepare for an application start based on the provided configuration. Per default, the
+             * application will be in running mode after successful startup.
+             * @param[in] ssConfig String containing the configuration to be used by the core during startup. This configuration
+             * is optional. If not provided the application runs as standalone application without any RPC support.
+             * @param[in] pEventHandler Pointer to the event handler receiving application events. For the handler to receive
+             * events, the handler needs to expose the IAppEvent interface. This pointer is optionally and can be NULL.
+             * @return Returns 'true' on successful start-up and 'false' on failed startup.
+             */
+            boolean Startup(in u8string ssConfig, in IInterfaceAccess pEventHandler)
+                raises(XAccessDenied, toml::XTOMLParseException);
+
+            /**
+             * @brief Running loop until shutdown request is triggered.
+             */
+            void RunLoop() raises(XAccessDenied, XInvalidState);
+
+            /**
+             * @brief Initiate a shutdown of the application.
+             * @details The objects will be called to shutdown allowing them to clean up and gracefully shutdown. If, for some
+             * reason, the object cannot shut down (e.g. pointers are still in use or threads are not finalized), the object will
+             * be kept alive and the application state will stay in shutting-down-state. In that case the exception is called. A
+             * new call to the shutdown function using the force-flag might force a shutdown. Alternatively the application can
+             * wait until the application state changes to not-started.
+             * @remarks Application shutdown is only possible when all components are released.
+             * @param[in] bForce When set, forces an application shutdown. This might result in loss of data and should only be
+             * used as a last resort.
+             */
+            void Shutdown(in boolean bForce) raises(XAccessDenied, XInvalidState, XTimeout);
+        };
+
+        /**
+         * @brief Application operation control.
+         */
+        interface IAppOperation
+        {
+            /**
+             * @brief Get the current operation state. This information is also supplied through the event handler function.
+             * @return Returns the operation state of the application.
+             */
+            EAppOperationState GetOperationState() const;
+
+            /**
+             * @brief Switch from running mode to the configuration mode.
+             */
+            void SetConfigMode() raises(XAccessDenied, XInvalidState);
+
+            /**
+             * @brief Switch from the configuration mode to the running mode.
+             */
+            void SetRunningMode() raises(XAccessDenied, XInvalidState);
+        };
+
+        /**
+         * @brief Request a shutdown (only for server).
+         */
+        interface IAppShutdownRequest
+        {
+            /**
+             * @brief Request a shutdown. The function will only place the request to shut down.
+             */
+            void RequestShutdown() raises(XAccessDenied, XInvalidState);
+        };
+
+    }; // module app
+}; // module sdv

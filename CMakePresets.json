@@ -1,0 +1,277 @@
+﻿{
+  "version": 2,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "config_base",
+      "hidden": true,
+      "displayName": "Base configuration",
+      "description": "Default build",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "SDV_FRAMEWORK_RUNTIME": "${sourceDir}/build/${presetName}/bin",
+        "SDV_COMPONENT_INSTALL": "${sourceDir}/build/${presetName}/bin",
+        "SDV_FRAMEWORK_DEV_TOOLS": "${sourceDir}/build/${presetName}/bin",
+        "SDV_FRAMEWORK_DEV_INCLUDE": "${sourceDir}/export"
+      }
+    },
+    {
+      "name": "config_base_cppcheck",
+      "hidden": true,
+      "displayName": "Base configuration for CppCheck",
+      "description": "Default build with CppCheck static Code Analysis",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "environment": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      },
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/${presetName}",
+        "SDV_FRAMEWORK_RUNTIME": "${sourceDir}/build/${presetName}/bin",
+        "SDV_COMPONENT_INSTALL": "${sourceDir}/build/${presetName}/bin",
+        "SDV_FRAMEWORK_DEV_TOOLS": "${sourceDir}/build/${presetName}/bin",
+        "SDV_FRAMEWORK_DEV_INCLUDE": "${sourceDir}/export",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_STATIC_CODE_ANALYSIS": "1",
+        "CMAKE_ENABLE_CPPCHECK": "1"
+      }
+    },
+    {
+      "name": "msvc_x64_x64_ninja_debug",
+      "displayName": "msvc_x64_x64 (Ninja - Debug)",
+      "description": "MS Visual C++ Compiler - Ninja Generator - Debug Build",
+      "inherits": "config_base",
+      "generator": "Ninja",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl.exe",
+        "CMAKE_CXX_COMPILER": "cl.exe",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "msvc_x64_x64_ninja_release",
+      "displayName": "msvc_x64_x64 (Ninja - Release)",
+      "description": "MS Visual C++ Compiler - Ninja Generator - Release Build",
+      "inherits": "config_base",
+      "generator": "Ninja",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl.exe",
+        "CMAKE_CXX_COMPILER": "cl.exe",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "msvc_x64_x64_ninja_prefast",
+      "displayName": "Microsoft PREfast - Static Code Analysis",
+      "description": "Microsoft PREfast Static Code Analysis using Ninja",
+      "inherits": "config_base",
+      "generator": "Ninja",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "cl.exe",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_STATIC_CODE_ANALYSIS": "1",
+        "CMAKE_ENABLE_PREFAST": "1"
+      }
+    },
+    {
+      "name": "msvc_x64_x64_ninja_cppcheck",
+      "displayName": "MSVC with CppCheck - Static Code Analysis",
+      "description": "MSVC with CppCheck Static Code Analysis using Ninja",
+      "inherits": "config_base_cppcheck",
+      "generator": "Ninja",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "cl.exe"
+      }
+    },
+    {
+      "name": "gcc_ninja_debug",
+      "displayName": "GCC (Ninja - Debug)",
+      "description": "GCC Compiler - Ninja Generator - Debug Build",
+      "inherits": "config_base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "gcc_ninja_release",
+      "displayName": "GCC (Ninja - Release)",
+      "description": "GCC Compiler - Ninja Generator - Release Build",
+      "inherits": "config_base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "gcc_ninja_cppcheck",
+      "displayName": "GCC with CppCheck (Ninja) - Static Code Analysis",
+      "description": "GCC with CppCheck Static Code Analysis using Ninja",
+      "inherits": "config_base_cppcheck",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    },
+    {
+      "name": "gcc_mingw_debug",
+      "displayName": "GCC (MINGW Make - Debug)",
+      "description": "GCC Compiler - MINGW Make Generator - Debug Build",
+      "inherits": "config_base",
+      "generator": "MinGW Makefiles",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "gcc_mingw_release",
+      "displayName": "GCC (MINGW Make - Release)",
+      "description": "GCC Compiler - MINGW Make Generator - Release Build",
+      "inherits": "config_base",
+      "generator": "MinGW Makefiles",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "gcc_unix_debug",
+      "displayName": "GCC (UNIX Make - Debug)",
+      "description": "GCC Compiler - UNIX Make Generator - Debug Build",
+      "inherits": "config_base",
+      "generator": "Unix Makefiles",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "gcc_unix_release",
+      "displayName": "GCC (UNIX Make - Release)",
+      "description": "GCC Compiler - UNIX Make Generator - Release Build",
+      "inherits": "config_base",
+      "generator": "Unix Makefiles",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "gcc_unix_cppcheck",
+      "displayName": "GCC with CppCheck (UNIX) - Static Code Analysis",
+      "description": "GCC with CppCheck Static Code Analysis using UNIX Makefiles",
+      "inherits": "config_base_cppcheck",
+      "generator": "Unix Makefiles",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "g++"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "msvc_x64_x64_ninja_debug",
+      "displayName": "msvc_x64_x64 (Ninja - Debug)",
+      "description": "MS Visual C++ Compiler - Ninja Generator - Debug Build",
+      "configurePreset": "msvc_x64_x64_ninja_debug"
+    },
+    {
+      "name": "msvc_x64_x64_ninja_release",
+      "displayName": "msvc_x64_x64 (Ninja - Release)",
+      "description": "MS Visual C++ Compiler - Ninja Generator - Release Build",
+      "configurePreset": "msvc_x64_x64_ninja_release"
+    },
+    {
+      "name": "msvc_x64_x64_ninja_prefast",
+      "displayName": "Microsoft PREfast - Static Code Analysis",
+      "description": "Microsoft PREfast Static Code Analysis using Ninja",
+      "configurePreset": "msvc_x64_x64_ninja_prefast"
+    },
+    {
+      "name": "msvc_x64_x64_ninja_cppcheck",
+      "displayName": "MSVC with CppCheck - Static Code Analysis",
+      "description": "MSVC with CppCheck Static Code Analysis using Ninja",
+      "configurePreset": "msvc_x64_x64_ninja_cppcheck"
+    },
+    {
+      "name": "gcc_ninja_debug",
+      "displayName": "GCC (Ninja - Debug)",
+      "description": "GCC Compiler - Ninja Generator - Debug Build",
+      "configurePreset": "gcc_ninja_debug"
+    },
+    {
+      "name": "gcc_ninja_release",
+      "displayName": "GCC (Ninja - Release)",
+      "description": "GCC Compiler - Ninja Generator - Release Build",
+      "configurePreset": "gcc_ninja_release"
+    },
+    {
+      "name": "gcc_ninja_cppcheck",
+      "displayName": "GCC with CppCheck (Ninja) - Static Code Analysis",
+      "description": "GCC with CppCheck Static Code Analysis using Ninja",
+      "configurePreset": "gcc_ninja_cppcheck"
+    },
+    {
+      "name": "gcc_mingw_debug",
+      "displayName": "GCC (MINGW Make - Debug)",
+      "description": "GCC Compiler - MINGW Make Generator - Debug Build",
+      "configurePreset": "gcc_mingw_debug",
+      "jobs": 8
+    },
+    {
+      "name": "gcc_mingw_release",
+      "displayName": "GCC (MINGW Make - Release)",
+      "description": "GCC Compiler - MINGW Make Generator - Release Build",
+      "configurePreset": "gcc_mingw_release",
+      "jobs": 8
+    },
+    {
+      "name": "gcc_unix_debug",
+      "displayName": "GCC (UNIX Make - Debug)",
+      "description": "GCC Compiler - UNIX Make Generator - Debug Build",
+      "configurePreset": "gcc_unix_debug",
+      "jobs": 8
+    },
+    {
+      "name": "gcc_unix_release",
+      "displayName": "GCC (UNIX Make - Release)",
+      "description": "GCC Compiler - UNIX Make Generator - Release Build",
+      "configurePreset": "gcc_unix_release",
+      "jobs": 8
+    },
+    {
+      "name": "gcc_unix_cppcheck",
+      "displayName": "GCC with CppCheck (UNIX) - Static Code Analysis",
+      "description": "GCC with CppCheck Static Code Analysis using UNIX Makefiles",
+      "configurePreset": "gcc_unix_cppcheck"
+    }
+  ]
+}

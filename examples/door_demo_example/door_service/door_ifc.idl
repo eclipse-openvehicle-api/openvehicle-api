@@ -1,0 +1,17 @@
+/*******************************************************************************
+ * @file door_ifc.idl
+ * @details Door service interface definition.
+ */
+ 
+ /**
+ * @brief DoorService example service interface. The interface provides functions for the
+ * Doors example complex service.
+ */
+interface IDoorService
+{
+    /**
+     * @brief Status of all doors together whether they are locked or unlocked.
+     * @return true if all doors are locked, otherwise unlocked.
+     */
+    boolean GetDoorsStatus();
+};

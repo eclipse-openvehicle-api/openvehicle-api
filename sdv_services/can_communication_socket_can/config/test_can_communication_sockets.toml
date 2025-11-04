@@ -1,0 +1,19 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "task_timer.sdv"
+Class = "TaskTimerService"
+
+[[Component]]
+Path = "data_dispatch_service.sdv"
+Class = "DataDispatchService"
+
+[[Component]]
+Path = "can_com_sockets.sdv"
+Class = "CAN_Com_Sockets"
+canSockets=["llcecan0"]
+
+[[Component]]
+Path = "can_dl.sdv"
+Class = "CAN_data_link"

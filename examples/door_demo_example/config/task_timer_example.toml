@@ -1,0 +1,6 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "task_timer.sdv"
+Class = "TaskTimerService"

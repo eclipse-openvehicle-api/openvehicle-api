@@ -1,0 +1,10 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "testcase4_vd_rxclassforint16_rx.sdv"
+Class = "Vehicle.Chassis.Vehicle.Int16_Device"
+
+[[Component]]
+Path = "testcase4_bs_rxclassforint16_rx.sdv"
+Class = "Vehicle.Chassis.Vehicle.Int16_Service"

@@ -1,0 +1,18 @@
+﻿;Class name;Function name;Signal name;vss;Signal direction;type;DBC CAN name includes CAN message name
+;;;;;;;
+VD;SteeringWheel;SteeringWheelAngle_VD;angle_VD;Vehicle.ChassisVD.SteeringWheel.Angle;RX;float;CAN_Input.SteeringWheel
+VD;SteeringWheel;VehicleSpeed_VD;speed_VD;Vehicle.ChassisVD.SteeringWheel.Angle;RX;float;CAN_Input.Speed
+VD;SteeringWheel;VehicleDoor_VD;doorStatus_VD;Vehicle.ChassisVD.SteeringWheel.Angle;RX;uint8;CAN_Input.Door
+VD;SteeringWheel;VehicleWeight_VD;weight_VD;Vehicle.ChassisVD.SteeringWheel.Angle;RX;float;CAN_Input.Weight
+VD;VehicleChassisAxle;RearAxleAngle_VD;rearAngle_VD;Vehicle.ChassisVD.RearAxle.Row.Wheel;TX;float;CAN_Output.RearAngle
+VD;VehicleChassisAxle;ApplicationCounter_VD;liveCounter_VD;Vehicle.ChassisVD.RearAxle.Row.Wheel;TX;uint8;CAN_Output.IsActiveCounter
+VD;VehicleChassisAxle;VehicleFrontLight_VD;frontLightStatus_VD;Vehicle.ChassisVD.RearAxle.Row.Wheel;TX;boolean;CAN_Output.FrontLight
+VD;VehicleChassisAxle;VehicleBackLight_VD;backLightStatus_VD;Vehicle.ChassisVD.RearAxle.Row.Wheel;TX;boolean;CAN_Output.BackLight
+BS;SteeringWheel;SteeringWheelAngle_BS;angle_BS;Vehicle.ChassisBS.SteeringWheel.Angle;RX;float;Vehicle.ChassisVD.SteeringWheel.Angle
+BS;SteeringWheel;VehicleSpeed_BS;speed_BS;Vehicle.ChassisBS.SteeringWheel.Angle;RX;float;Vehicle.ChassisVD.SteeringWheel.Angle
+BS;SteeringWheel;VehicleDoor_BS;doorStatus_BS;Vehicle.ChassisBS.SteeringWheel.Angle;RX;uint8;Vehicle.ChassisVD.SteeringWheel.Angle
+BS;SteeringWheel;VehicleWeight_BS;weight_BS;Vehicle.ChassisBS.SteeringWheel.Angle;RX;float;Vehicle.ChassisVD.SteeringWheel.Angle
+BS;VehicleChassisAxle;RearAxleAngle_BS;rearAngle_BS;Vehicle.ChassisBS.RearAxle.Row.Wheel;TX;float;Vehicle.ChassisVD.RearAxle.Row.Wheel
+BS;VehicleChassisAxle;ApplicationCounter_BS;liveCounter_BS;Vehicle.ChassisBS.RearAxle.Row.Wheel;TX;uint8;Vehicle.ChassisVD.RearAxle.Row.Wheel
+BS;VehicleChassisAxle;VehicleFrontLight_BS;frontLightStatus_BS;Vehicle.ChassisBS.RearAxle.Row.Wheel;TX;boolean;Vehicle.ChassisVD.RearAxle.Row.Wheel
+BS;VehicleChassisAxle;VehicleBackLight_BS;backLightStatus_BS;Vehicle.ChassisBS.RearAxle.Row.Wheel;TX;boolean;Vehicle.ChassisVD.RearAxle.Row.Wheel

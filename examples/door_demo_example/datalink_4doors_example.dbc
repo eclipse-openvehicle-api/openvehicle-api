@@ -1,0 +1,147 @@
+VERSION "PrivateCAN"
+
+
+NS_ : 
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	VAL_
+	CAT_DEF_
+	CAT_
+	FILTER
+	BA_DEF_DEF_
+	EV_DATA_
+	ENVVAR_DATA_
+	SGTYPE_
+	SGTYPE_VAL_
+	BA_DEF_SGTYPE_
+	BA_SGTYPE_
+	SIG_TYPE_REF_
+	VAL_TABLE_
+	SIG_GROUP_
+	SIG_VALTYPE_
+	SIGTYPE_VALTYPE_
+	BO_TX_BU_
+	BA_DEF_REL_
+	BA_REL_
+	BA_DEF_DEF_REL_
+	BU_SG_REL_
+	BU_EV_REL_
+	BU_BO_REL_
+	SG_MUL_VAL_
+
+BS_:
+
+BU_: doors
+VAL_TABLE_ Fault_Codes 27 "UKWN" 26 "VEHSPDMAX_EXDD" 25 "STS_ALIVE" 24 "STEER_NOT_E2E_MODE" 23 "OTA_SPD" 22 "OTA_TIMER_DOWNLOAD_FAILED" 21 "OTA_MAX_TIME" 20 "CUBIXAD_STEERSTREQ_NOTACTV" 19 "CUBIXAD_DRVSTREQ_NOTACTV" 18 "SFTYDRV_INTV" 17 "LSDC_ALIVE" 16 "CUBIXAD_ALIVE" 15 "IBC_MAB_NO_PRIO" 14 "IBC_NOT_RDY" 13 "IBC_ALIVE" 12 "LSDC_GEAR" 11 "LSDC_SPD" 10 "LSDC_ACCL" 9 "IBC_NOT_MAB_MOD" 8 "GOLDBOX_ALIVE" 7 "CUBIXAD_GEAR" 6 "CUBIXAD_SPD_TESTTRACK" 5 "DRVREQCHG" 4 "RDY_TIMER" 3 "SFTY_CDN_FAILED" 2 "ACTVNCHK_SPD" 1 "ACTVNCHK_TIMR" 0 "NONE" ;
+VAL_TABLE_ TestMapID 6 "E_TESTMAPID_UNDEFINED" 5 "E_TESTMAPID_TEST_DRIVE" 4 "E_TESTMAPID_AD_AREA" 3 "E_TESTMAPID_STUTT_ARENA" 2 "E_TESTMAPID_ZF_LASTMILE" 1 "E_TESTMAPID_ZF_TESTTRACK_2" 0 "E_TESTMAPID_NONE" ;
+VAL_TABLE_ CtrlReqStates 7 "CtrlSts3b_RESERVED_4" 6 "CtrlSts3b_RESERVED_3" 5 "CtrlSts3b_RESERVED_2" 4 "CtrlSts3b_RESERVED_1" 3 "CtrlSts3b_ERROR" 2 "CtrlSts3b_CONTROL_REQUESTED" 1 "CtrlSts3b_CONTROL_NOT_REQUESTED" 0 "CtrlSts3b_INIT" ;
+VAL_TABLE_ SteerActrReSts 7 "Diag" 6 "Inactive" 5 "Ramping" 4 "Yellow" 3 "Red" 2 "Normal" 1 "Pending" 0 "Initialisation" ;
+VAL_TABLE_ SwtPark1 1 "SwtParkActv" 0 "SwtParkNotActv" ;
+VAL_TABLE_ PE_State 2 "ERROR" 1 "INIT" 0 "NO_ERROR" ;
+VAL_TABLE_ SSM_Req 7 "HMS_TAKEOVER" 6 "RESERVED" 5 "RELESE_VIA_RAMP" 4 "DRIVEOFF" 3 "HOLD_STANDBY" 2 "PARK" 1 "HOLD" 0 "NO_REQUEST" ;
+VAL_TABLE_ IBC_StandStillMode 12 "SSM_ERROR" 11 "SSM_INIT" 10 "SSM_DRIVEOFF_STANDBY_ACTIVE" 9 "SSM_HOLD_STANDBY_ACTIVE" 8 "SSM_HILL_SLIPPOFF_DETECTED" 7 "SSM_RELEASE_REQ_FROM_DRIVER" 6 "SSM_RELEASE_REQ_ACTIVE" 5 "SSM_DRIVEOFF_ACTIVE" 4 "SSM_PARK_RETAINED_ACTIVE" 3 "SSM_PARK_ACTIVE" 2 "SSM_PARK_REQUESTED" 1 "SSM_HOLD_ACTIVE" 0 "SSM_NO_ACTIVE_FUNCTION" ;
+VAL_TABLE_ AppTgtStDrv 3 "ACTIVE" 2 "READY" 1 "RESERVED" 0 "NOT_ACTIVE" ;
+VAL_TABLE_ IBC_Status 4 "IBC_MAB_ERR_COMM" 3 "IBC_MAB_NO_PRIO" 2 "IBC_IN_MAB_MODE" 1 "IBC_READY" 0 "IBC_NOT_READY_FAILED" ;
+VAL_TABLE_ GearLvrIndcn 7 "GearLvrIndcn2_Undefd" 6 "GearLvrIndcn2_Resd2" 5 "GearLvrIndcn2_Resd1" 4 "GearLvrIndcn2_ManModeIndcn" 3 "GearLvrIndcn2_DrvIndcn" 2 "GearLvrIndcn2_NeutIndcn" 1 "GearLvrIndcn2_RvsIndcn" 0 "GearLvrIndcn2_ParkIndcn" ;
+VAL_TABLE_ LvlgAdjReq 7 "LvlgAdjReq_Resd2" 6 "LvlgAdjReq_Resd1" 5 "LvlgAdjReq_Ll2" 4 "LvlgAdjReq_Ll1" 3 "LvlgAdjReq_Nrh" 2 "LvlgAdjReq_Hl1" 1 "LvlgAdjReq_Hl2" 0 "LvlgAdjReq_Ukwn" ;
+VAL_TABLE_ DrvModReq 15 "Err" 14 "Rock" 13 "Mud" 12 "Sand" 11 "Snow" 10 "Power" 9 "Hybrid" 8 "Pure_EV" 7 "Race" 6 "Adaptive" 5 "Offroad_CrossTerrain" 4 "Individual" 3 "Dynamic_Sport" 2 "Comfort_Normal" 1 "ECO" 0 "Undefd" ;
+VAL_TABLE_ MAB_Info_Message 4 "DRV_GEARLVR_TO_P" 3 "DRV_P_TO_D" 2 "LSDC_DI_NOT_PSBL" 1 "LSDC_ENA_NOT_POSSIBLE" 0 "NONE" ;
+VAL_TABLE_ MAB_OvrdTool_Sts 11 "HACKATHON" 10 "OTA" 9 "INIT" 8 "FINSHD" 7 "FLT" 6 "CUBIX_AD" 5 "SAVE_THE_SPOILER" 4 "LSDC" 3 "RDY" 2 "ACTVN_CHK" 1 "NO_MANIPULATION" 0 "NONE" ;
+VAL_TABLE_ HMI_Drvr_Req 9 "FCT_DEACTVN_REQ" 8 "FCT_ACTVN_OTA_CFMD" 7 "FCT_ACTVN_OTA_REQ" 6 "FCT_ACTVN_SAVETHESPOILER_CFMD" 5 "FCT_ACTVN_SAVETHESPOILER_REQ" 4 "FCT_ACTVN_LSDC_CFMD" 3 "FCT_ACTVN_LSDC_REQ" 2 "FCT_ACTVN_CUBIXAD_CFMD" 1 "FCT_ACTVN_CUBIXAD_REQ" 0 "FCT_ACTVN_NONE" ;
+VAL_TABLE_ Info_Message 4 "DRV_GEARLVR_TO_P" 3 "DRV_P_TO_D" 2 "LSDC_DI_NOT_PSBL" 1 "LSDC_ENA_NOT_POSSIBLE" 0 "NONE" ;
+VAL_TABLE_ HMI_Fct_Req 8 "FCT_DEACTVN_REQ" 7 "FCT_ACTVN_OTA_REQ" 6 "FCT_ACTVN_SAVETHESPOILER_CFMD" 5 "FCT_ACTVN_SAVETHESPOILER_REQ" 4 "FCT_ACTVN_LSDC_CFMD" 3 "FCT_ACTVN_LSDC_REQ" 2 "FCT_ACTVN_AI4MTN_CFMD" 1 "FCT_ACTVN_AI4MTN_REQ" 0 "FCT_ACTVN_NONE" ;
+VAL_TABLE_ SOVD_states 2 "SOVD_SHOWCASE_ACTIVE" 1 "SOVD_SHOWCASE_DEACTIVE" 0 "SOVD_NONE" ;
+VAL_TABLE_ OTA_states 7 "OTA_DOWNLOAD_FAILED" 6 "OTA_INSTALL_FAILED" 5 "OTA_INSTALL_FINISHED" 4 "OTA_INSTALL_START" 3 "OTA_DOWNLOAD_START" 2 "OTA_SCHEDULED" 1 "OTA_STANDBY" 0 "OTA_NONE" ;
+
+
+BO_ 4 CAN_Input_R2: 1 Vector__XXX
+ SG_ Door02RightIsOpen : 7|1@0+ (1,0) [0|1] ""  doors
+
+BO_ 3 CAN_Input_L2: 1 Vector__XXX
+ SG_ Door02LeftIsOpen : 5|1@0+ (1,0) [0|1] ""  doors
+
+BO_ 2 CAN_Input_R1: 1 Vector__XXX
+ SG_ Door01RightIsOpen : 3|1@0+ (1,0) [0|1] ""  doors
+
+BO_ 1 CAN_Input_L1: 1 Vector__XXX
+ SG_ Door01LeftIsOpen : 1|1@0+ (1,0) [0|1] ""  doors
+
+BO_ 5 CAN_Output: 1 doors
+ SG_ LockDoor02Right : 7|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ LockDoor02Left : 5|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ LockDoor01Right : 3|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ LockDoor01Left : 1|1@0+ (1,0) [0|1] "" Vector__XXX
+
+
+
+CM_ SG_ 4 Door02RightIsOpen "Open / Closed signal of rear right door";
+CM_ SG_ 3 Door02LeftIsOpen "Open / Closed signal of rear left door";
+CM_ SG_ 2 Door01RightIsOpen "Open / Closed signal of front right door";
+CM_ SG_ 1 Door01LeftIsOpen "Open / Closed signal of front left door";
+CM_ SG_ 5 LockDoor02Right "Lock / Unlock signal of rear right door";
+CM_ SG_ 5 LockDoor02Left "Lock / Unlock signal of frear left door";
+CM_ SG_ 5 LockDoor01Right "Lock / Unlock signal of front right door";
+CM_ SG_ 5 LockDoor01Left "Lock / Unlock signal of front left door";
+BA_DEF_  "Baudrate" INT 1000 1000000;
+BA_DEF_  "BusType" STRING ;
+BA_DEF_  "DBName" STRING ;
+BA_DEF_  "ProtocolType" STRING ;
+BA_DEF_ BU_  "NmAsrNode" ENUM  "No","Yes";
+BA_DEF_ BU_  "NmAsrNodeIdentifier" INT 0 255;
+BA_DEF_ BO_  "GenMsgCycleTime" INT 0 65536;
+BA_DEF_ BO_  "GenMsgCycleTimeFast" FLOAT 0 300000;
+BA_DEF_ BO_  "GenMsgDelayTime" INT 0 65536;
+BA_DEF_ BO_  "GenMsgNrOfRepetition" INT 0 100000;
+BA_DEF_ BO_  "GenMsgSendType" ENUM  "cyclic","spontaneous","not-used","not-used","not-used","cyclicAndSpontaneous","not-used","cyclicIfActive","NoMsgSendType";
+BA_DEF_ BO_  "GenMsgStartDelayTime" INT 0 65536;
+BA_DEF_ SG_  "GenSigSendType" ENUM  "Cyclic","OnWrite","OnWriteWithRepetition","OnChange","OnChangeWithRepetition","IfActive","IfActiveWithRepetition","NoSigSendType";
+BA_DEF_ SG_  "GenSigStartValue" HEX 0 80000000;
+BA_DEF_ BO_  "GenMsgILSupport" ENUM  "No","Yes";
+BA_DEF_ BO_  "NmAsrMessage" ENUM  "No","Yes";
+BA_DEF_  "NmAsrBaseAddress" HEX 0 536870911;
+BA_DEF_  "NmAsrMessageCount" INT 0 255;
+BA_DEF_ BU_  "NodeLayerModules" STRING ;
+BA_DEF_ BU_  "ILused" ENUM  "No","Yes";
+BA_DEF_ SG_  "GenSigFuncType" ENUM  "NoFunction","n/a","n/a","n/a","n/a","n/a","n/a","n/a","n/a","n/a","n/a","n/a","n/a","n/a","n/a","CHK","CNTR","n/a","n/a","n/a","CNTR_AR_01","CRC_AR_01_BOTH","CRC_AR_01_ALT","CRC_AR_01_LOW","CRC_AR_01_NIBBLE","CNTR_AR_04","CRC_AR_04A","CNTR_AR_05","CRC_AR_05";
+BA_DEF_ SG_  "GenSigDataID" STRING ;
+BA_DEF_ SG_  "SigGroup" STRING ;
+BA_DEF_DEF_  "Baudrate" 1000;
+BA_DEF_DEF_  "BusType" "";
+BA_DEF_DEF_  "DBName" "";
+BA_DEF_DEF_  "ProtocolType" "";
+BA_DEF_DEF_  "NmAsrNode" "No";
+BA_DEF_DEF_  "NmAsrNodeIdentifier" 0;
+BA_DEF_DEF_  "GenMsgCycleTime" 0;
+BA_DEF_DEF_  "GenMsgCycleTimeFast" 0;
+BA_DEF_DEF_  "GenMsgDelayTime" 0;
+BA_DEF_DEF_  "GenMsgNrOfRepetition" 0;
+BA_DEF_DEF_  "GenMsgSendType" "NoMsgSendType";
+BA_DEF_DEF_  "GenMsgStartDelayTime" 0;
+BA_DEF_DEF_  "GenSigSendType" "NoSigSendType";
+BA_DEF_DEF_  "GenSigStartValue" 0;
+BA_DEF_DEF_  "GenMsgILSupport" "Yes";
+BA_DEF_DEF_  "NmAsrMessage" "No";
+BA_DEF_DEF_  "NmAsrBaseAddress" 1280;
+BA_DEF_DEF_  "NmAsrMessageCount" 64;
+BA_DEF_DEF_  "NodeLayerModules" "CANoeILNLSPA.dll";
+BA_DEF_DEF_  "ILused" "Yes";
+BA_DEF_DEF_  "GenSigFuncType" "NoFunction";
+BA_DEF_DEF_  "GenSigDataID" "";
+BA_DEF_DEF_  "SigGroup" "";
+BA_ "ProtocolType" "CAN";
+BA_ "BusType" "CAN";
+BA_ "Baudrate" 500000;
+BA_ "DBName" "PrivateCAN";
+BA_ "GenMsgCycleTime" BO_ 4 10;
+BA_ "GenMsgSendType" BO_ 4 0;
+BA_ "GenMsgCycleTime" BO_ 3 10;
+BA_ "GenMsgSendType" BO_ 3 0;
+BA_ "GenMsgCycleTime" BO_ 2 10;
+BA_ "GenMsgSendType" BO_ 2 0;
+BA_ "GenMsgSendType" BO_ 1 0;
+BA_ "GenMsgCycleTime" BO_ 1 10;
+BA_ "GenMsgSendType" BO_ 5 0;
+BA_ "GenMsgCycleTime" BO_ 5 10;
+

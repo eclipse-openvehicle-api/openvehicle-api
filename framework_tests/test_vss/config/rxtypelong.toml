@@ -1,0 +1,10 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "testcase4_vd_rxclassforlong_rx.sdv"
+Class = "Vehicle.Chassis.Vehicle.Long_Device"
+
+[[Component]]
+Path = "testcase4_bs_rxclassforlong_rx.sdv"
+Class = "Vehicle.Chassis.Vehicle.Long_Service"

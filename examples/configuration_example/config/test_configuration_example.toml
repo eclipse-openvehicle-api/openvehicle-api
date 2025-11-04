@@ -1,0 +1,19 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "configuration_component_example.sdv"
+Class = "Configuration_Example"
+Message = "It's me"
+### the following is a valid JSON structure in a muliline string
+JSONConfig = """{
+         "Logging": {
+               "Sinks": [ { "Type": "Stdout", "Level": "Info" } ]
+                    },
+                }"""
+Id = 42
+Pi = 3.1415926
+Boolean = true
+Array = [ 1, 2, 3 , 5 , 7, 11, 13, 17 ]
+Table = { a = 77, b = 1.2, c = "this is a string" }
+

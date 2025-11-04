@@ -1,0 +1,64 @@
+
+/**
+ * @file vss_vehiclechassisdooraxle01right_bs_rx.idl
+ * @date 2025-07-11 11:03:55
+ * File is auto generated from VSS utility.
+ * VSS Version:1.0.0.1
+ */
+#include "interfaces/core.idl"
+#include "vss_vehiclechassisdooraxle01right_vd_rx.idl"
+
+module vss
+{
+    module Vehicle
+    {
+        module Chassis
+        {
+            module Door
+            {
+                module Axle01
+                {
+                    module RightService
+                    {
+                        /**
+                        * @brief IVSS_SetIsOpen event interface
+                        */            
+                        interface IVSS_SetIsOpen_Event
+                        {
+                            /**
+                            * @brief Set rightDoorIsOpen signal
+                            * @param[in] value rightDoorIsOpen
+                            */
+                            void SetIsOpenR1(in boolean value);
+                        };
+
+                        /**
+                        * @brief IVSS_GetIsOpen Service interface
+                        */
+                        interface IVSS_GetIsOpen
+                        {
+                            /**
+                            * @brief Get rightDoorIsOpen signal
+                            * @return Returns the rightDoorIsOpen
+                            */
+                            boolean GetIsOpen() const;
+
+                            /**
+                            * @brief Register Callback on signal change
+                            * @param[in] callback function
+                            */
+                            void RegisterOnSignalChangeOfRightDoorIsOpen01(in vss::Vehicle::Chassis::Door::Axle01::RightService::IVSS_SetIsOpen_Event callback);
+
+                            /**
+                            * @brief Unregister Callback
+                            * @param[in] callback function
+                            */
+                            void UnregisterOnSignalChangeOfRightDoorIsOpen01(in vss::Vehicle::Chassis::Door::Axle01::RightService::IVSS_SetIsOpen_Event callback);
+                        };
+                    };
+                };
+            };
+        };
+    };
+};
+

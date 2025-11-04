@@ -1,0 +1,29 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "task_timer.sdv"
+Class = "TaskTimerService"
+
+[[Component]]
+Path = "data_dispatch_service.sdv"
+Class = "DataDispatchService"
+
+[[Component]]
+Path = "can_com_silkit.sdv"
+Class = "CAN_Com_SilKit"
+DebugInfo = true
+SyncMode = true
+SilKitParticipantName = "CAN1"
+CanSilKitNetwork = "PrivateCAN"
+RegistryURI = "silkit://localhost:8500"
+SilKitConfig = """{
+         "Logging": {
+               "Sinks": [ { "Type": "Stdout", "Level": "Info" } ]
+                    },
+                }"""
+
+[[Component]]
+Path = "can_datalink.sdv"
+Class = "CAN_data_link"
+

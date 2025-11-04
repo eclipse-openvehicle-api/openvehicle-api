@@ -1,0 +1,28 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "can_dl_door.sdv"
+Class = "CAN_data_link"
+Name = "DataLink"
+[[Component]]
+Path = "doors_vd_frontdoorleft.sdv"
+Class = "Vehicle.Chassis.Door.Axle01.Left_Device"
+Name = "Vehicle.Chassis.Door.Axle01.Left_Device"
+
+[[Component]]
+Path = "doors_vd_frontdoorright.sdv"
+Class = "Vehicle.Chassis.Door.Axle01.Right_Device"
+Name = "Vehicle.Chassis.Door.Axle01.Right_Device"
+
+[[Component]]
+Path = "doors_vd_reardoorleft.sdv"
+Class = "Vehicle.Chassis.Door.Axle02.Left_Device"
+Name = "Vehicle.Chassis.Door.Axle02.Left_Device"
+
+[[Component]]
+Path = "doors_vd_reardoorright.sdv"
+Class = "Vehicle.Chassis.Door.Axle02.Right_Device"
+Name = "Vehicle.Chassis.Door.Axle02.Right_Device"
+
+

@@ -1,0 +1,10 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "autoheadlight_service.sdv"
+Class = "Auto Headlight Service"
+tunnel_start_lat = 47.6500
+tunnel_start_lon = 9.4700
+tunnel_end_lat = 47.6506
+tunnel_end_lon = 9.4706
