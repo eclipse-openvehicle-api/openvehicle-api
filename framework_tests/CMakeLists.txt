@@ -124,4 +124,4 @@ endif()
 add_subdirectory(dbc_util)
 add_subdirectory(vss_util)
 add_subdirectory(test_vss)
-
+add_subdirectory(test_vss_formula)

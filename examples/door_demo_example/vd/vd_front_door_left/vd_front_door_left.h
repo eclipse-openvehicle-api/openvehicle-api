@@ -90,12 +90,12 @@ private:
 	*/
 	void ExecuteAllCallBacksForLeftDoorIsOpen01(sdv::any_t value);
 
-	sdv::core::CSignal m_leftLatch01;
-	sdv::core::CSignal m_leftDoorIsOpen01Signal;                                                        ///< Signal of the vehicle device
-	mutable std::mutex m_leftDoorIsOpen01MutexCallbacks;                                                ///< Mutex protecting m_leftDoorIsOpen01Callbacks
+	sdv::core::CSignal m_leftLatch01;                                                          ///< Signal to lock/unlock the door
+	sdv::core::CSignal m_leftDoorIsOpen01Signal;                                               ///< Open/close signal of the vehicle device
+	mutable std::mutex m_leftDoorIsOpen01MutexCallbacks;                                       ///< Mutex protecting m_leftDoorIsOpen01Callbacks
 	std::set<vss::Vehicle::Chassis::Door::Axle01::LeftDevice::IVSS_WriteIsOpen_Event*> m_leftDoorIsOpen01Callbacks; ///< collection of events to be called
 
-	std::atomic<sdv::EObjectStatus> m_status = { sdv::EObjectStatus::initialization_pending };  ///< To update the object status when it changes.
+	std::atomic<sdv::EObjectStatus> m_status = { sdv::EObjectStatus::initialization_pending }; ///< To update the object status when it changes.
 };
 
 DEFINE_SDV_OBJECT(CVehicleDeviceFrontDoorLeft)

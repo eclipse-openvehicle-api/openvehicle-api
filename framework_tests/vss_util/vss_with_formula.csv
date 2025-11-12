@@ -1,0 +1,6 @@
+﻿;Class name;Function name;Signal name;vss;Signal direction;type;DBC CAN name includes CAN message name;Formula
+;;;;;;;;
+VD;RXClassForInt32;SignalTypeInt32;signalInt32;Vehicle.Chassis.Body.Int32;RX;int32;CAN_Input.int32;"int32_t signalInt32 = value.get<int32_t>();    signalInt32 *= 2;"
+VD;RXClassForString;SignalTypeString;signalString;Vehicle.Chassis.Body.String;RX;string;CAN_Input.string;"sdv::string signalString = value.get<sdv::string>();    signalString.append(""_string_added"");"
+BS;RXClassForInt32;SignalTypeInt32;signalInt32;Vehicle.Chassis.Body.Int32;RX;int32;Vehicle.Chassis.Body.Int32;
+BS;RXClassForString;SignalTypeString;signalString;Vehicle.Chassis.Body.String;RX;string;Vehicle.Chassis.Body.String;

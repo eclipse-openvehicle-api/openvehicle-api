@@ -274,8 +274,8 @@ void CConsole::UpdateData()
         PrintText(g_sDLSteeringWheel, "Data link signals are unavailable!");
 
     // Print basic service event values
-    PrintValue(g_sBSSteeringWheel, "Steering Angle", m_fSteeringWheelAngle * 57.296f , "deg");
-    PrintValue(g_sBSVehicleSpeed, "Vehicle Speed RX", m_fVehicleSpeed * 3.6f , "km/h");
+    PrintValue(g_sBSSteeringWheel, "Steering Angle", m_fSteeringWheelAngle, "deg");
+    PrintValue(g_sBSVehicleSpeed, "Vehicle Speed RX", m_fVehicleSpeed, "km/h");
 
     // Get complex service information
     if (m_pCounterSteeringSvc)

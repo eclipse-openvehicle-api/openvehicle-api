@@ -84,10 +84,10 @@ public:
 
 private:
 
-	bool m_leftDoorIsOpen02 { 0 };
-	mutable std::mutex m_leftDoorIsOpen02MutexCallbacks; ///< Mutex protecting m_leftDoorIsOpen02Callbacks
+	bool m_leftDoorIsOpen02 { 0 };                                                        ///< open&close state of the door
+	mutable std::mutex m_leftDoorIsOpen02MutexCallbacks;                                  ///< Mutex protecting m_leftDoorIsOpen02Callbacks
 	std::set<vss::Vehicle::Chassis::Door::Axle02::LeftService::IVSS_SetIsOpen_Event*> m_leftDoorIsOpen02Callbacks; ///< collection of events to be called
-	vss::Vehicle::Chassis::Door::Axle02::LeftDevice::IVSS_WriteLock* m_ptrLock = nullptr;
+	vss::Vehicle::Chassis::Door::Axle02::LeftDevice::IVSS_WriteLock* m_ptrLock = nullptr; ///< Interface pointer to lock/unlock the door
 };
 
 DEFINE_SDV_OBJECT(CBasicServiceRearDoorLeft)

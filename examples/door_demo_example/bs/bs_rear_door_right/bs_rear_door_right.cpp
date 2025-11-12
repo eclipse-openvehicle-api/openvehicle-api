@@ -8,7 +8,7 @@
 #include "bs_rear_door_right.h"
 
 /**
- * @brief ConstructorF
+ * @brief Constructor
  */
 CBasicServiceRearDoorRight::CBasicServiceRearDoorRight()
 {

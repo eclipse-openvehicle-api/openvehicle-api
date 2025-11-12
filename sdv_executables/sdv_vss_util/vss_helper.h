@@ -140,6 +140,7 @@ public:
         std::string functionName;                       ///< signal value set function name
         std::string signalName;                         ///< signal name
         std::string canSignalName;                      ///< can signal name (combination of signak messages and signal name)
+        std::string formula;                            ///< c++ code if the value has to be converted
     };
 
     /**

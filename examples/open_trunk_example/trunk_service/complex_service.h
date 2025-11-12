@@ -16,7 +16,10 @@
 
 
 /**
- * @brief Open trunk service: opens the trunk if vehicle is not moving
+ * @brief Open trunk example service
+ * @details This complex service checks the speed of the vehicle. in case the vehicle is oving, it prohibits the opening of the trunk.
+ * Input events from basic service: vehicle speed in km/h
+ * Output call for basic service:	opening the trunk
  */
 class CTrunkExampleService : public sdv::CSdvObject
     , public sdv::IObjectControl
@@ -75,12 +78,12 @@ public:
 
     /**
      * @brief Set vehicleSpeed signal
-     * @param[in] value vehicleSpeed
+     * @param[in] value vehicle speed in km/h
      */
     virtual void SetSpeed(float value) override;
 
     /**
-     * @brief Save call to open the trunk. Opening the trunk is onkly allowed when the vehicle is not moving
+     * @brief Save call to open the trunk. Opening the trunk is only allowed when the vehicle is not moving
      * @return Returns whether the trunk could be opened or not.
      */
     virtual bool PopTrunk() override;

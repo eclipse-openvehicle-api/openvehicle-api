@@ -32,13 +32,14 @@ void CCSVFileReader::Help()
     std::cout << "    [required] Column 'CAN name' must contain a character '.' (for vehicle device signal)." << std::endl;
     std::cout << "    [required] Last column: in case of vehicle device it is 'CAN name'." << std::endl;
     std::cout << "    [required] Last column: in case of basic service it is avss from vehicle device." << std::endl;
+    std::cout << "    [optional] additonal column: c++ code to recalulate the signal value in the vehicle device." << std::endl;
     std::cout << "    [recommended] Cells may be empty. In that case either a default string is created or previous entry is used." << std::endl;
     std::cout << "    [recommended] Column Class name should start with uppercase character." << std::endl;
     std::cout << "    [recommended] Column Function name should start with uppercase character." << std::endl;
     std::cout << "    [recommended] Column Signal name should start with lowercase character." << std::endl;
     std::cout << "Summary can be found in file 'summary.txt'." << std::endl;
     std::cout << "Columns:" << std::endl;
-    std::cout << "Device Type ';' Class name         ';' Function name   ';' Signal name  ';' Interface (vss)                             ';' Direction ';' Signal value type ';' 'CAN name' or Interface(vss)" << std::endl;
+    std::cout << "Device Type ';' Class name         ';' Function name   ';' Signal name  ';' Interface (vss)                             ';' Direction ';' Signal value type ';' 'CAN name' or Interface(vss); Formula (is optional, normally empty)" << std::endl;
     std::cout << std::endl;
     std::cout << "e.g." << std::endl;
     std::cout << "VD          ';' FrontWheel         ';' SetAverageAngle ';' averageAngle ';' Vehicle.Chassis.Axle.Row.Wheel.AverageAngle ';' RX        ';' float              ';' CANMsg.Angle" << std::endl;
@@ -82,7 +83,28 @@ void CCSVFileReader::ReadLine(const std::string& ssLine, const uint32_t index, s
     {
         item = Trim(item);
         auto cType = GetCTypeFromIDLType(item); // maybe its a IDL type
-        if (MustNotContainSpaces(item) || (cType.size() != 0))
+
+        if ((parts.size() == (vssVDColumns::column_vdFormula)) && !item.empty())
+        {
+            // we have the formula column, if not empty, collect everything
+            auto collectItem = item;
+            while (std::getline(ss, item, ';'))
+            {
+                collectItem.append(";");
+                collectItem.append(item);
+            }
+
+            // Remove " from front and end
+            if (!collectItem.empty() && collectItem.front() == '"' && collectItem.back() == '"') {
+                collectItem = collectItem.substr(1, collectItem.size() - 2);
+            }
+
+            // Replace all occurrences of "" with "
+            collectItem = std::regex_replace(collectItem, std::regex("\"\""), "\"");
+
+            parts.push_back(collectItem);
+        }
+        else if (MustNotContainSpaces(item) || (cType.size() != 0))
         {
             parts.push_back(item);
         }
@@ -93,6 +115,10 @@ void CCSVFileReader::ReadLine(const std::string& ssLine, const uint32_t index, s
                 std::cout << "Invalid, contains spaces: '" << item << "'" << std::endl;
             }
         }
+    }
+    if (parts.size() == (endColumn - 1))
+    {
+        parts.push_back("");
     }
     if (parts.size() >= endColumn)
     {
@@ -140,7 +166,7 @@ void CCSVFileReader::ParseColumns(const std::vector<std::string>& parts, const u
             signal.className = GenerateDefaultIfEmpty(parts[vssVDColumns::column_className], "ClassName", index);
 
             if (AddFunctionVDDefinition(signal, parts[vssVDColumns::column_functionName], parts[vssVDColumns::column_signalName],
-                parts[vssVDColumns::column_canSignalName], parts[vssVDColumns::column_signalCType], index))
+                parts[vssVDColumns::column_canSignalName], parts[vssVDColumns::column_signalCType], parts[vssVDColumns::column_vdFormula], index))
             {
                 ValidateVDCodeStyle(signal, m_verbose);
                 m_vdSignals.push_back(signal);
@@ -185,7 +211,7 @@ bool CCSVFileReader::AddToExistingVDSignal(std::vector <SSignalVDDefinition>& si
 
 
             AddFunctionVDDefinition(signal, parts[vssVDColumns::column_functionName], parts[vssVDColumns::column_signalName],
-                parts[vssVDColumns::column_canSignalName], parts[vssVDColumns::column_signalCType], index);
+                parts[vssVDColumns::column_canSignalName], parts[vssVDColumns::column_signalCType], parts[vssVDColumns::column_vdFormula], index);
             return true;
         }
     }
@@ -215,7 +241,7 @@ bool CCSVFileReader::AddToExistingBSSignal(std::vector <SSignalBSDefinition>& si
 }
 
 bool CCSVFileReader::AddFunctionVDDefinition(SSignalVDDefinition& signal, const std::string& functionName, const std::string& signalName, 
-    const std::string& canSignalName, const std::string& idlType, const uint32_t index)
+    const std::string& canSignalName, const std::string& idlType, const std::string& formula, const uint32_t index)
 {
     if (!MustContainDotOrIsEmpty(canSignalName, true)) // can signal must must not be empty
     {
@@ -238,6 +264,7 @@ bool CCSVFileReader::AddFunctionVDDefinition(SSignalVDDefinition& signal, const 
     func.signalName = GenerateDefaultIfEmpty(signalName, "variableName", index);
     func.canSignalName = canSignalName;
     func.idlType = idlType;
+    func.formula = formula;
 
     ValidateVDCodeStyle(func, m_verbose);
     signal.vecFunctions.push_back(func);

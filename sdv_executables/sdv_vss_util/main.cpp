@@ -79,7 +79,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
         rArgVerboseDef.AddSubOptionName("verbose");
         cmdln.DefineSubOption("prefix", ssPrefix, "prefix, used by cmake library and signal definition in signal_identifier.h file.");
         cmdln.DefineSubOption("enable_components", bEnableComponents, "Creates additionally to the idl files the code for the components.");
-        cmdln.DefineSubOption("version", ssVersion, "Optional: version information of the dbc file.");
+        cmdln.DefineSubOption("version", ssVersion, "Optional: version information for the created files.");
         cmdln.DefineOption("O", pathOutputDir, "Set output directory (required).");
         cmdln.DefineDefaultArgument(ssVSSFileName, "Excel file.");
         cmdln.Parse(static_cast<size_t>(iArgc), rgszArgv);

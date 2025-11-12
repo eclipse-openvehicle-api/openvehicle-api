@@ -1,114 +1,114 @@
-﻿;Class name;Function name;Signal name;vss;Signal direction;type;DBC CAN name includes CAN message name;;;;;
-;;;;;;;;;;;;
-VD;RXClassForBoolean;SignalTypeBoolean;signalBoolean;Vehicle.Chassis.Vehicle.Boolean;RX;boolean;CAN_Input.boolean;;;;;char
-VD;RXClassForFloat;SignalTypeFloat;signalFloat;Vehicle.Chassis.Vehicle.Float;RX;float;CAN_Input.float;;;;;char16
-VD;RXClassForDouble;SignalTypeDouble;signalDouble;Vehicle.Chassis.Vehicle.Double;RX;double;CAN_Input.double;;;;;char32
-VD;RXClassForLongDouble;SignalTypeLongDouble;signalLongDouble;Vehicle.Chassis.Vehicle.LongDouble;RX;long double;CAN_Input.long_double;;;;;wchar
-VD;RXClassForShort;SignalTypeShort;signalShort;Vehicle.Chassis.Vehicle.Short;RX;short;CAN_Input.short;;;;;u8string
-VD;RXClassForUnsignedShort;SignalTypeUnsignedShort;signalUnsignedShort;Vehicle.Chassis.Vehicle.UnsignedShort;RX;unsigned short;CAN_Input.unsigned_short;;;;;u16string
-VD;RXClassForLong;SignalTypeLong;signalLong;Vehicle.Chassis.Vehicle.Long;RX;long;CAN_Input.long;;;;;u32string
-VD;RXClassForUnsignedLong;SignalTypeUnsignedLong;signalUnsignedLong;Vehicle.Chassis.Vehicle.UnsignedLong;RX;unsigned long;CAN_Input.unsigned_long;;;;;native
-VD;RXClassForLongLong;SignalTypeLongLong;signalLongLong;Vehicle.Chassis.Vehicle.LongLong;RX;long long;CAN_Input.long_long;;;;;
-VD;RXClassForUnsignedLongLong;SignalTypeUnsignedLongLong;signalUnsignedLongLong;Vehicle.Chassis.Vehicle.UnsignedLongLong;RX;unsigned long long;CAN_Input.unsigned_long_long;;;;;
-VD;RXClassForInt8;SignalTypeInt8;signalInt8;Vehicle.Chassis.Vehicle.Int8;RX;int8;CAN_Input.int8;;;;;
-VD;RXClassForUint8;SignalTypeUint8;signalUint8;Vehicle.Chassis.Vehicle.Uint8;RX;uint8;CAN_Input.uint8;;;;;
-VD;RXClassForInt16;SignalTypeInt16;signalInt16;Vehicle.Chassis.Vehicle.Int16;RX;int16;CAN_Input.int16;;;;;
-VD;RXClassForUint16;SignalTypeUint16;signalUint16;Vehicle.Chassis.Vehicle.Uint16;RX;uint16;CAN_Input.uint16;;;;;
-VD;RXClassForInt32;SignalTypeInt32;signalInt32;Vehicle.Chassis.Vehicle.Int32;RX;int32;CAN_Input.int32;;;;;
-VD;RXClassForUint32;SignalTypeUint32;signalUint32;Vehicle.Chassis.Vehicle.Uint32;RX;uint32;CAN_Input.uint32;;;;;
-VD;RXClassForInt64;SignalTypeInt64;signalInt64;Vehicle.Chassis.Vehicle.Int64;RX;int64;CAN_Input.int64;;;;;
-VD;RXClassForUint64;SignalTypeUint64;signalUint64;Vehicle.Chassis.Vehicle.Uint64;RX;uint64;CAN_Input.uint64;;;;;
-VD;RXClassForString;SignalTypeString;signalString;Vehicle.Chassis.Vehicle.String;RX;string;CAN_Input.string;;;;;
-VD;RXClassForWString;SignalTypeWString;signalWString;Vehicle.Chassis.Vehicle.WString;RX;wstring;CAN_Input.WString;;;;;
-VD;RXClassForChar;SignalTypeChar;signalChar;Vehicle.Chassis.Vehicle.Char;RX;char;CAN_Input.char;;;;;
-VD;RXClassForChar16;SignalTypeChar16;signalChar16;Vehicle.Chassis.Vehicle.Char16;RX;char16;CAN_Input.char16;;;;;
-VD;RXClassForChar32;SignalTypeChar32;signalChar32;Vehicle.Chassis.Vehicle.Char32;RX;char32;CAN_Input.char32;;;;;
-VD;RXClassForWChar;SignalTypeWChar;signalWChar;Vehicle.Chassis.Vehicle.WChar;RX;wchar;CAN_Input.wchar;;;;;
-VD;RXClassForU8String;SignalTypeU8String;signalU8String;Vehicle.Chassis.Vehicle.U8String;RX;u8string;CAN_Input.u8string;;;;;
-VD;RXClassForU16String;SignalTypeU16String;signalU16String;Vehicle.Chassis.Vehicle.U16String;RX;u16string;CAN_Input.u16string;;;;;
-VD;RXClassForU32String;SignalTypeU32String;signalU32String;Vehicle.Chassis.Vehicle.U32String;RX;u32string;CAN_Input.u32string;;;;;
-VD;RXClassForNative;SignalTypeNative;signalNative;Vehicle.Chassis.Vehicle.Native;RX;native;CAN_Input.native;;;;;
-VD;TXClassForBoolean;SignalTypeBoolean;signalBoolean;Vehicle.Chassis.Vehicle.Boolean;TX;boolean;CAN_Output.boolean;;;;;
-VD;TXClassForFloat;SignalTypeFloat;signalFloat;Vehicle.Chassis.Vehicle.Float;TX;float;CAN_Output.float;;;;;
-VD;TXClassForDouble;SignalTypeDouble;signalDouble;Vehicle.Chassis.Vehicle.Double;TX;double;CAN_Output.double;;;;;
-VD;TXClassForLongDouble;SignalTypeLongDouble;signalLongDouble;Vehicle.Chassis.Vehicle.LongDouble;TX;long double;CAN_Output.long_double;;;;;
-VD;TXClassForShort;SignalTypeShort;signalShort;Vehicle.Chassis.Vehicle.Short;TX;short;CAN_Output.short;;;;;
-VD;TXClassForUnsignedShort;SignalTypeUnsignedShort;signalUnsignedShort;Vehicle.Chassis.Vehicle.UnsignedShort;TX;unsigned short;CAN_Output.unsigned_short;;;;;
-VD;TXClassForLong;SignalTypeLong;signalLong;Vehicle.Chassis.Vehicle.Long;TX;long;CAN_Output.long;;;;;
-VD;TXClassForUnsignedLong;SignalTypeUnsignedLong;signalUnsignedLong;Vehicle.Chassis.Vehicle.UnsignedLong;TX;unsigned long;CAN_Output.unsigned_long;;;;;
-VD;TXClassForLongLong;SignalTypeLongLong;signalLongLong;Vehicle.Chassis.Vehicle.LongLong;TX;long long;CAN_Output.long_long;;;;;
-VD;TXClassForUnsignedLongLong;SignalTypeUnsignedLongLong;signalUnsignedLongLong;Vehicle.Chassis.Vehicle.UnsignedLongLong;TX;unsigned long long;CAN_Output.unsigned_long_long;;;;;
-VD;TXClassForInt8;SignalTypeInt8;signalInt8;Vehicle.Chassis.Vehicle.Int8;TX;int8;CAN_Output.int8;;;;;
-VD;TXClassForUint8;SignalTypeUint8;signalUint8;Vehicle.Chassis.Vehicle.Uint8;TX;uint8;CAN_Output.uint8;;;;;
-VD;TXClassForInt16;SignalTypeInt16;signalInt16;Vehicle.Chassis.Vehicle.Int16;TX;int16;CAN_Output.int16;;;;;
-VD;TXClassForUint16;SignalTypeUint16;signalUint16;Vehicle.Chassis.Vehicle.Uint16;TX;uint16;CAN_Output.uint16;;;;;
-VD;TXClassForInt32;SignalTypeInt32;signalInt32;Vehicle.Chassis.Vehicle.Int32;TX;int32;CAN_Output.int32;;;;;
-VD;TXClassForUint32;SignalTypeUint32;signalUint32;Vehicle.Chassis.Vehicle.Uint32;TX;uint32;CAN_Output.uint32;;;;;
-VD;TXClassForInt64;SignalTypeInt64;signalInt64;Vehicle.Chassis.Vehicle.Int64;TX;int64;CAN_Output.int64;;;;;
-VD;TXClassForUint64;SignalTypeUint64;signalUint64;Vehicle.Chassis.Vehicle.Uint64;TX;uint64;CAN_Output.uint64;;;;;
-VD;TXClassForString;SignalTypeString;signalString;Vehicle.Chassis.Vehicle.String;TX;string;CAN_Output.string;;;;;
-VD;TXClassForWString;SignalTypeWString;signalWString;Vehicle.Chassis.Vehicle.WString;TX;wstring;CAN_Output.WString;;;;;
-VD;TXClassForChar;SignalTypeChar;signalChar;Vehicle.Chassis.Vehicle.Char;TX;char;CAN_Output.char;;;;;
-VD;TXClassForChar16;SignalTypeChar16;signalChar16;Vehicle.Chassis.Vehicle.Char16;TX;char16;CAN_Output.char16;;;;;
-VD;TXClassForChar32;SignalTypeChar32;signalChar32;Vehicle.Chassis.Vehicle.Char32;TX;char32;CAN_Output.char32;;;;;
-VD;TXClassForWChar;SignalTypeWChar;signalWChar;Vehicle.Chassis.Vehicle.WChar;TX;wchar;CAN_Output.wchar;;;;;
-VD;TXClassForU8String;SignalTypeU8String;signalU8String;Vehicle.Chassis.Vehicle.U8String;TX;u8string;CAN_Output.u8string;;;;;
-VD;TXClassForU16String;SignalTypeU16String;signalU16String;Vehicle.Chassis.Vehicle.U16String;TX;u16string;CAN_Output.u16string;;;;;
-VD;TXClassForU32String;SignalTypeU32String;signalU32String;Vehicle.Chassis.Vehicle.U32String;TX;u32string;CAN_Output.u32string;;;;;
-VD;TXClassForNative;SignalTypeNative;signalNative;Vehicle.Chassis.Vehicle.Native;TX;native;CAN_Output.native;;;;;
-BS;RXClassForBoolean;SignalTypeBoolean;signalBoolean;Vehicle.Chassis.Vehicle.Boolean;RX;boolean;Vehicle.Chassis.Vehicle.Boolean;;;;;
-BS;RXClassForFloat;SignalTypeFloat;signalFloat;Vehicle.Chassis.Vehicle.Float;RX;float;Vehicle.Chassis.Vehicle.Float;;;;;
-BS;RXClassForDouble;SignalTypeDouble;signalDouble;Vehicle.Chassis.Vehicle.Double;RX;double;Vehicle.Chassis.Vehicle.Double;;;;;
-BS;RXClassForLongDouble;SignalTypeLongDouble;signalLongDouble;Vehicle.Chassis.Vehicle.LongDouble;RX;long double;Vehicle.Chassis.Vehicle.LongDouble;;;;;
-BS;RXClassForShort;SignalTypeShort;signalShort;Vehicle.Chassis.Vehicle.Short;RX;short;Vehicle.Chassis.Vehicle.Short;;;;;
-BS;RXClassForUnsignedShort;SignalTypeUnsignedShort;signalUnsignedShort;Vehicle.Chassis.Vehicle.UnsignedShort;RX;unsigned short;Vehicle.Chassis.Vehicle.UnsignedShort;;;;;
-BS;RXClassForLong;SignalTypeLong;signalLong;Vehicle.Chassis.Vehicle.Long;RX;long;Vehicle.Chassis.Vehicle.Long;;;;;
-BS;RXClassForUnsignedLong;SignalTypeUnsignedLong;signalUnsignedLong;Vehicle.Chassis.Vehicle.UnsignedLong;RX;unsigned long;Vehicle.Chassis.Vehicle.UnsignedLong;;;;;
-BS;RXClassForLongLong;SignalTypeLongLong;signalLongLong;Vehicle.Chassis.Vehicle.LongLong;RX;long long;Vehicle.Chassis.Vehicle.LongLong;;;;;
-BS;RXClassForUnsignedLongLong;SignalTypeUnsignedLongLong;signalUnsignedLongLong;Vehicle.Chassis.Vehicle.UnsignedLongLong;RX;unsigned long long;Vehicle.Chassis.Vehicle.UnsignedLongLong;;;;;
-BS;RXClassForInt8;SignalTypeInt8;signalInt8;Vehicle.Chassis.Vehicle.Int8;RX;int8;Vehicle.Chassis.Vehicle.Int8;;;;;
-BS;RXClassForUint8;SignalTypeUint8;signalUint8;Vehicle.Chassis.Vehicle.Uint8;RX;uint8;Vehicle.Chassis.Vehicle.Uint8;;;;;
-BS;RXClassForInt16;SignalTypeInt16;signalInt16;Vehicle.Chassis.Vehicle.Int16;RX;int16;Vehicle.Chassis.Vehicle.Int16;;;;;
-BS;RXClassForUint16;SignalTypeUint16;signalUint16;Vehicle.Chassis.Vehicle.Uint16;RX;uint16;Vehicle.Chassis.Vehicle.Uint16;;;;;
-BS;RXClassForInt32;SignalTypeInt32;signalInt32;Vehicle.Chassis.Vehicle.Int32;RX;int32;Vehicle.Chassis.Vehicle.Int32;;;;;
-BS;RXClassForUint32;SignalTypeUint32;signalUint32;Vehicle.Chassis.Vehicle.Uint32;RX;uint32;Vehicle.Chassis.Vehicle.Uint32;;;;;
-BS;RXClassForInt64;SignalTypeInt64;signalInt64;Vehicle.Chassis.Vehicle.Int64;RX;int64;Vehicle.Chassis.Vehicle.Int64;;;;;
-BS;RXClassForUint64;SignalTypeUint64;signalUint64;Vehicle.Chassis.Vehicle.Uint64;RX;uint64;Vehicle.Chassis.Vehicle.Uint64;;;;;
-BS;RXClassForString;SignalTypeString;signalString;Vehicle.Chassis.Vehicle.String;RX;string;Vehicle.Chassis.Vehicle.String;;;;;
-BS;RXClassForWString;SignalTypeWString;signalWString;Vehicle.Chassis.Vehicle.WString;RX;wstring;Vehicle.Chassis.Vehicle.WString;;;;;
-BS;RXClassForChar;SignalTypeChar;signalChar;Vehicle.Chassis.Vehicle.Char;RX;char;Vehicle.Chassis.Vehicle.Char;;;;;
-BS;RXClassForChar16;SignalTypeChar16;signalChar16;Vehicle.Chassis.Vehicle.Char16;RX;char16;Vehicle.Chassis.Vehicle.Char16;;;;;
-BS;RXClassForChar32;SignalTypeChar32;signalChar32;Vehicle.Chassis.Vehicle.Char32;RX;char32;Vehicle.Chassis.Vehicle.Char32;;;;;
-BS;RXClassForWChar;SignalTypeWChar;signalWChar;Vehicle.Chassis.Vehicle.WChar;RX;wchar;Vehicle.Chassis.Vehicle.WChar;;;;;
-BS;RXClassForU8String;SignalTypeU8String;signalU8String;Vehicle.Chassis.Vehicle.U8String;RX;u8string;Vehicle.Chassis.Vehicle.U8String;;;;;
-BS;RXClassForU16String;SignalTypeU16String;signalU16String;Vehicle.Chassis.Vehicle.U16String;RX;u16string;Vehicle.Chassis.Vehicle.U16String;;;;;
-BS;RXClassForU32String;SignalTypeU32String;signalU32String;Vehicle.Chassis.Vehicle.U32String;RX;u32string;Vehicle.Chassis.Vehicle.U32String;;;;;
-BS;RXClassForNative;SignalTypeNative;signalNative;Vehicle.Chassis.Vehicle.Native;RX;native;Vehicle.Chassis.Vehicle.Native;;;;;
-BS;TXClassForBoolean;SignalTypeBoolean;signalBoolean;Vehicle.Chassis.Vehicle.Boolean;TX;boolean;Vehicle.Chassis.Vehicle.Boolean;;;;;
-BS;TXClassForFloat;SignalTypeFloat;signalFloat;Vehicle.Chassis.Vehicle.Float;TX;float;Vehicle.Chassis.Vehicle.Float;;;;;
-BS;TXClassForDouble;SignalTypeDouble;signalDouble;Vehicle.Chassis.Vehicle.Double;TX;double;Vehicle.Chassis.Vehicle.Double;;;;;
-BS;TXClassForLongDouble;SignalTypeLongDouble;signalLongDouble;Vehicle.Chassis.Vehicle.LongDouble;TX;long double;Vehicle.Chassis.Vehicle.LongDouble;;;;;
-BS;TXClassForShort;SignalTypeShort;signalShort;Vehicle.Chassis.Vehicle.Short;TX;short;Vehicle.Chassis.Vehicle.Short;;;;;
-BS;TXClassForUnsignedShort;SignalTypeUnsignedShort;signalUnsignedShort;Vehicle.Chassis.Vehicle.UnsignedShort;TX;unsigned short;Vehicle.Chassis.Vehicle.UnsignedShort;;;;;
-BS;TXClassForLong;SignalTypeLong;signalLong;Vehicle.Chassis.Vehicle.Long;TX;long;Vehicle.Chassis.Vehicle.Long;;;;;
-BS;TXClassForUnsignedLong;SignalTypeUnsignedLong;signalUnsignedLong;Vehicle.Chassis.Vehicle.UnsignedLong;TX;unsigned long;Vehicle.Chassis.Vehicle.UnsignedLong;;;;;
-BS;TXClassForLongLong;SignalTypeLongLong;signalLongLong;Vehicle.Chassis.Vehicle.LongLong;TX;long long;Vehicle.Chassis.Vehicle.LongLong;;;;;
-BS;TXClassForUnsignedLongLong;SignalTypeUnsignedLongLong;signalUnsignedLongLong;Vehicle.Chassis.Vehicle.UnsignedLongLong;TX;unsigned long long;Vehicle.Chassis.Vehicle.UnsignedLongLong;;;;;
-BS;TXClassForInt8;SignalTypeInt8;signalInt8;Vehicle.Chassis.Vehicle.Int8;TX;int8;Vehicle.Chassis.Vehicle.Int8;;;;;
-BS;TXClassForUint8;SignalTypeUint8;signalUint8;Vehicle.Chassis.Vehicle.Uint8;TX;uint8;Vehicle.Chassis.Vehicle.Uint8;;;;;
-BS;TXClassForInt16;SignalTypeInt16;signalInt16;Vehicle.Chassis.Vehicle.Int16;TX;int16;Vehicle.Chassis.Vehicle.Int16;;;;;
-BS;TXClassForUint16;SignalTypeUint16;signalUint16;Vehicle.Chassis.Vehicle.Uint16;TX;uint16;Vehicle.Chassis.Vehicle.Uint16;;;;;
-BS;TXClassForInt32;SignalTypeInt32;signalInt32;Vehicle.Chassis.Vehicle.Int32;TX;int32;Vehicle.Chassis.Vehicle.Int32;;;;;
-BS;TXClassForUint32;SignalTypeUint32;signalUint32;Vehicle.Chassis.Vehicle.Uint32;TX;uint32;Vehicle.Chassis.Vehicle.Uint32;;;;;
-BS;TXClassForInt64;SignalTypeInt64;signalInt64;Vehicle.Chassis.Vehicle.Int64;TX;int64;Vehicle.Chassis.Vehicle.Int64;;;;;
-BS;TXClassForUint64;SignalTypeUint64;signalUint64;Vehicle.Chassis.Vehicle.Uint64;TX;uint64;Vehicle.Chassis.Vehicle.Uint64;;;;;
-BS;TXClassForString;SignalTypeString;signalString;Vehicle.Chassis.Vehicle.String;TX;string;Vehicle.Chassis.Vehicle.String;;;;;
-BS;TXClassForWString;SignalTypeWString;signalWString;Vehicle.Chassis.Vehicle.WString;TX;wstring;Vehicle.Chassis.Vehicle.WString;;;;;
-BS;TXClassForChar;SignalTypeChar;signalChar;Vehicle.Chassis.Vehicle.Char;TX;char;Vehicle.Chassis.Vehicle.Char;;;;;
-BS;TXClassForChar16;SignalTypeChar16;signalChar16;Vehicle.Chassis.Vehicle.Char16;TX;char16;Vehicle.Chassis.Vehicle.Char16;;;;;
-BS;TXClassForChar32;SignalTypeChar32;signalChar32;Vehicle.Chassis.Vehicle.Char32;TX;char32;Vehicle.Chassis.Vehicle.Char32;;;;;
-BS;TXClassForWChar;SignalTypeWChar;signalWChar;Vehicle.Chassis.Vehicle.WChar;TX;wchar;Vehicle.Chassis.Vehicle.WChar;;;;;
-BS;TXClassForU8String;SignalTypeU8String;signalU8String;Vehicle.Chassis.Vehicle.U8String;TX;u8string;Vehicle.Chassis.Vehicle.U8String;;;;;
-BS;TXClassForU16String;SignalTypeU16String;signalU16String;Vehicle.Chassis.Vehicle.U16String;TX;u16string;Vehicle.Chassis.Vehicle.U16String;;;;;
-BS;TXClassForU32String;SignalTypeU32String;signalU32String;Vehicle.Chassis.Vehicle.U32String;TX;u32string;Vehicle.Chassis.Vehicle.U32String;;;;;
-BS;TXClassForNative;SignalTypeNative;signalNative;Vehicle.Chassis.Vehicle.Native;TX;native;Vehicle.Chassis.Vehicle.Native;;;;;
+﻿;Class name;Function name;Signal name;vss;Signal direction;type;DBC CAN name includes CAN message name
+;;;;;;;
+VD;RXClassForBoolean;SignalTypeBoolean;signalBoolean;Vehicle.Chassis.Vehicle.Boolean;RX;boolean;CAN_Input.boolean
+VD;RXClassForFloat;SignalTypeFloat;signalFloat;Vehicle.Chassis.Vehicle.Float;RX;float;CAN_Input.float
+VD;RXClassForDouble;SignalTypeDouble;signalDouble;Vehicle.Chassis.Vehicle.Double;RX;double;CAN_Input.double
+VD;RXClassForLongDouble;SignalTypeLongDouble;signalLongDouble;Vehicle.Chassis.Vehicle.LongDouble;RX;long double;CAN_Input.long_double
+VD;RXClassForShort;SignalTypeShort;signalShort;Vehicle.Chassis.Vehicle.Short;RX;short;CAN_Input.short
+VD;RXClassForUnsignedShort;SignalTypeUnsignedShort;signalUnsignedShort;Vehicle.Chassis.Vehicle.UnsignedShort;RX;unsigned short;CAN_Input.unsigned_short
+VD;RXClassForLong;SignalTypeLong;signalLong;Vehicle.Chassis.Vehicle.Long;RX;long;CAN_Input.long
+VD;RXClassForUnsignedLong;SignalTypeUnsignedLong;signalUnsignedLong;Vehicle.Chassis.Vehicle.UnsignedLong;RX;unsigned long;CAN_Input.unsigned_long
+VD;RXClassForLongLong;SignalTypeLongLong;signalLongLong;Vehicle.Chassis.Vehicle.LongLong;RX;long long;CAN_Input.long_long
+VD;RXClassForUnsignedLongLong;SignalTypeUnsignedLongLong;signalUnsignedLongLong;Vehicle.Chassis.Vehicle.UnsignedLongLong;RX;unsigned long long;CAN_Input.unsigned_long_long
+VD;RXClassForInt8;SignalTypeInt8;signalInt8;Vehicle.Chassis.Vehicle.Int8;RX;int8;CAN_Input.int8
+VD;RXClassForUint8;SignalTypeUint8;signalUint8;Vehicle.Chassis.Vehicle.Uint8;RX;uint8;CAN_Input.uint8
+VD;RXClassForInt16;SignalTypeInt16;signalInt16;Vehicle.Chassis.Vehicle.Int16;RX;int16;CAN_Input.int16
+VD;RXClassForUint16;SignalTypeUint16;signalUint16;Vehicle.Chassis.Vehicle.Uint16;RX;uint16;CAN_Input.uint16
+VD;RXClassForInt32;SignalTypeInt32;signalInt32;Vehicle.Chassis.Vehicle.Int32;RX;int32;CAN_Input.int32
+VD;RXClassForUint32;SignalTypeUint32;signalUint32;Vehicle.Chassis.Vehicle.Uint32;RX;uint32;CAN_Input.uint32
+VD;RXClassForInt64;SignalTypeInt64;signalInt64;Vehicle.Chassis.Vehicle.Int64;RX;int64;CAN_Input.int64
+VD;RXClassForUint64;SignalTypeUint64;signalUint64;Vehicle.Chassis.Vehicle.Uint64;RX;uint64;CAN_Input.uint64
+VD;RXClassForString;SignalTypeString;signalString;Vehicle.Chassis.Vehicle.String;RX;string;CAN_Input.string
+VD;RXClassForWString;SignalTypeWString;signalWString;Vehicle.Chassis.Vehicle.WString;RX;wstring;CAN_Input.WString
+VD;RXClassForChar;SignalTypeChar;signalChar;Vehicle.Chassis.Vehicle.Char;RX;char;CAN_Input.char
+VD;RXClassForChar16;SignalTypeChar16;signalChar16;Vehicle.Chassis.Vehicle.Char16;RX;char16;CAN_Input.char16
+VD;RXClassForChar32;SignalTypeChar32;signalChar32;Vehicle.Chassis.Vehicle.Char32;RX;char32;CAN_Input.char32
+VD;RXClassForWChar;SignalTypeWChar;signalWChar;Vehicle.Chassis.Vehicle.WChar;RX;wchar;CAN_Input.wchar
+VD;RXClassForU8String;SignalTypeU8String;signalU8String;Vehicle.Chassis.Vehicle.U8String;RX;u8string;CAN_Input.u8string
+VD;RXClassForU16String;SignalTypeU16String;signalU16String;Vehicle.Chassis.Vehicle.U16String;RX;u16string;CAN_Input.u16string
+VD;RXClassForU32String;SignalTypeU32String;signalU32String;Vehicle.Chassis.Vehicle.U32String;RX;u32string;CAN_Input.u32string
+VD;RXClassForNative;SignalTypeNative;signalNative;Vehicle.Chassis.Vehicle.Native;RX;native;CAN_Input.native
+VD;TXClassForBoolean;SignalTypeBoolean;signalBoolean;Vehicle.Chassis.Vehicle.Boolean;TX;boolean;CAN_Output.boolean
+VD;TXClassForFloat;SignalTypeFloat;signalFloat;Vehicle.Chassis.Vehicle.Float;TX;float;CAN_Output.float
+VD;TXClassForDouble;SignalTypeDouble;signalDouble;Vehicle.Chassis.Vehicle.Double;TX;double;CAN_Output.double
+VD;TXClassForLongDouble;SignalTypeLongDouble;signalLongDouble;Vehicle.Chassis.Vehicle.LongDouble;TX;long double;CAN_Output.long_double
+VD;TXClassForShort;SignalTypeShort;signalShort;Vehicle.Chassis.Vehicle.Short;TX;short;CAN_Output.short
+VD;TXClassForUnsignedShort;SignalTypeUnsignedShort;signalUnsignedShort;Vehicle.Chassis.Vehicle.UnsignedShort;TX;unsigned short;CAN_Output.unsigned_short
+VD;TXClassForLong;SignalTypeLong;signalLong;Vehicle.Chassis.Vehicle.Long;TX;long;CAN_Output.long
+VD;TXClassForUnsignedLong;SignalTypeUnsignedLong;signalUnsignedLong;Vehicle.Chassis.Vehicle.UnsignedLong;TX;unsigned long;CAN_Output.unsigned_long
+VD;TXClassForLongLong;SignalTypeLongLong;signalLongLong;Vehicle.Chassis.Vehicle.LongLong;TX;long long;CAN_Output.long_long
+VD;TXClassForUnsignedLongLong;SignalTypeUnsignedLongLong;signalUnsignedLongLong;Vehicle.Chassis.Vehicle.UnsignedLongLong;TX;unsigned long long;CAN_Output.unsigned_long_long
+VD;TXClassForInt8;SignalTypeInt8;signalInt8;Vehicle.Chassis.Vehicle.Int8;TX;int8;CAN_Output.int8
+VD;TXClassForUint8;SignalTypeUint8;signalUint8;Vehicle.Chassis.Vehicle.Uint8;TX;uint8;CAN_Output.uint8
+VD;TXClassForInt16;SignalTypeInt16;signalInt16;Vehicle.Chassis.Vehicle.Int16;TX;int16;CAN_Output.int16
+VD;TXClassForUint16;SignalTypeUint16;signalUint16;Vehicle.Chassis.Vehicle.Uint16;TX;uint16;CAN_Output.uint16
+VD;TXClassForInt32;SignalTypeInt32;signalInt32;Vehicle.Chassis.Vehicle.Int32;TX;int32;CAN_Output.int32
+VD;TXClassForUint32;SignalTypeUint32;signalUint32;Vehicle.Chassis.Vehicle.Uint32;TX;uint32;CAN_Output.uint32
+VD;TXClassForInt64;SignalTypeInt64;signalInt64;Vehicle.Chassis.Vehicle.Int64;TX;int64;CAN_Output.int64
+VD;TXClassForUint64;SignalTypeUint64;signalUint64;Vehicle.Chassis.Vehicle.Uint64;TX;uint64;CAN_Output.uint64
+VD;TXClassForString;SignalTypeString;signalString;Vehicle.Chassis.Vehicle.String;TX;string;CAN_Output.string
+VD;TXClassForWString;SignalTypeWString;signalWString;Vehicle.Chassis.Vehicle.WString;TX;wstring;CAN_Output.WString
+VD;TXClassForChar;SignalTypeChar;signalChar;Vehicle.Chassis.Vehicle.Char;TX;char;CAN_Output.char
+VD;TXClassForChar16;SignalTypeChar16;signalChar16;Vehicle.Chassis.Vehicle.Char16;TX;char16;CAN_Output.char16
+VD;TXClassForChar32;SignalTypeChar32;signalChar32;Vehicle.Chassis.Vehicle.Char32;TX;char32;CAN_Output.char32
+VD;TXClassForWChar;SignalTypeWChar;signalWChar;Vehicle.Chassis.Vehicle.WChar;TX;wchar;CAN_Output.wchar
+VD;TXClassForU8String;SignalTypeU8String;signalU8String;Vehicle.Chassis.Vehicle.U8String;TX;u8string;CAN_Output.u8string
+VD;TXClassForU16String;SignalTypeU16String;signalU16String;Vehicle.Chassis.Vehicle.U16String;TX;u16string;CAN_Output.u16string
+VD;TXClassForU32String;SignalTypeU32String;signalU32String;Vehicle.Chassis.Vehicle.U32String;TX;u32string;CAN_Output.u32string
+VD;TXClassForNative;SignalTypeNative;signalNative;Vehicle.Chassis.Vehicle.Native;TX;native;CAN_Output.native
+BS;RXClassForBoolean;SignalTypeBoolean;signalBoolean;Vehicle.Chassis.Vehicle.Boolean;RX;boolean;Vehicle.Chassis.Vehicle.Boolean
+BS;RXClassForFloat;SignalTypeFloat;signalFloat;Vehicle.Chassis.Vehicle.Float;RX;float;Vehicle.Chassis.Vehicle.Float
+BS;RXClassForDouble;SignalTypeDouble;signalDouble;Vehicle.Chassis.Vehicle.Double;RX;double;Vehicle.Chassis.Vehicle.Double
+BS;RXClassForLongDouble;SignalTypeLongDouble;signalLongDouble;Vehicle.Chassis.Vehicle.LongDouble;RX;long double;Vehicle.Chassis.Vehicle.LongDouble
+BS;RXClassForShort;SignalTypeShort;signalShort;Vehicle.Chassis.Vehicle.Short;RX;short;Vehicle.Chassis.Vehicle.Short
+BS;RXClassForUnsignedShort;SignalTypeUnsignedShort;signalUnsignedShort;Vehicle.Chassis.Vehicle.UnsignedShort;RX;unsigned short;Vehicle.Chassis.Vehicle.UnsignedShort
+BS;RXClassForLong;SignalTypeLong;signalLong;Vehicle.Chassis.Vehicle.Long;RX;long;Vehicle.Chassis.Vehicle.Long
+BS;RXClassForUnsignedLong;SignalTypeUnsignedLong;signalUnsignedLong;Vehicle.Chassis.Vehicle.UnsignedLong;RX;unsigned long;Vehicle.Chassis.Vehicle.UnsignedLong
+BS;RXClassForLongLong;SignalTypeLongLong;signalLongLong;Vehicle.Chassis.Vehicle.LongLong;RX;long long;Vehicle.Chassis.Vehicle.LongLong
+BS;RXClassForUnsignedLongLong;SignalTypeUnsignedLongLong;signalUnsignedLongLong;Vehicle.Chassis.Vehicle.UnsignedLongLong;RX;unsigned long long;Vehicle.Chassis.Vehicle.UnsignedLongLong
+BS;RXClassForInt8;SignalTypeInt8;signalInt8;Vehicle.Chassis.Vehicle.Int8;RX;int8;Vehicle.Chassis.Vehicle.Int8
+BS;RXClassForUint8;SignalTypeUint8;signalUint8;Vehicle.Chassis.Vehicle.Uint8;RX;uint8;Vehicle.Chassis.Vehicle.Uint8
+BS;RXClassForInt16;SignalTypeInt16;signalInt16;Vehicle.Chassis.Vehicle.Int16;RX;int16;Vehicle.Chassis.Vehicle.Int16
+BS;RXClassForUint16;SignalTypeUint16;signalUint16;Vehicle.Chassis.Vehicle.Uint16;RX;uint16;Vehicle.Chassis.Vehicle.Uint16
+BS;RXClassForInt32;SignalTypeInt32;signalInt32;Vehicle.Chassis.Vehicle.Int32;RX;int32;Vehicle.Chassis.Vehicle.Int32
+BS;RXClassForUint32;SignalTypeUint32;signalUint32;Vehicle.Chassis.Vehicle.Uint32;RX;uint32;Vehicle.Chassis.Vehicle.Uint32
+BS;RXClassForInt64;SignalTypeInt64;signalInt64;Vehicle.Chassis.Vehicle.Int64;RX;int64;Vehicle.Chassis.Vehicle.Int64
+BS;RXClassForUint64;SignalTypeUint64;signalUint64;Vehicle.Chassis.Vehicle.Uint64;RX;uint64;Vehicle.Chassis.Vehicle.Uint64
+BS;RXClassForString;SignalTypeString;signalString;Vehicle.Chassis.Vehicle.String;RX;string;Vehicle.Chassis.Vehicle.String
+BS;RXClassForWString;SignalTypeWString;signalWString;Vehicle.Chassis.Vehicle.WString;RX;wstring;Vehicle.Chassis.Vehicle.WString
+BS;RXClassForChar;SignalTypeChar;signalChar;Vehicle.Chassis.Vehicle.Char;RX;char;Vehicle.Chassis.Vehicle.Char
+BS;RXClassForChar16;SignalTypeChar16;signalChar16;Vehicle.Chassis.Vehicle.Char16;RX;char16;Vehicle.Chassis.Vehicle.Char16
+BS;RXClassForChar32;SignalTypeChar32;signalChar32;Vehicle.Chassis.Vehicle.Char32;RX;char32;Vehicle.Chassis.Vehicle.Char32
+BS;RXClassForWChar;SignalTypeWChar;signalWChar;Vehicle.Chassis.Vehicle.WChar;RX;wchar;Vehicle.Chassis.Vehicle.WChar
+BS;RXClassForU8String;SignalTypeU8String;signalU8String;Vehicle.Chassis.Vehicle.U8String;RX;u8string;Vehicle.Chassis.Vehicle.U8String
+BS;RXClassForU16String;SignalTypeU16String;signalU16String;Vehicle.Chassis.Vehicle.U16String;RX;u16string;Vehicle.Chassis.Vehicle.U16String
+BS;RXClassForU32String;SignalTypeU32String;signalU32String;Vehicle.Chassis.Vehicle.U32String;RX;u32string;Vehicle.Chassis.Vehicle.U32String
+BS;RXClassForNative;SignalTypeNative;signalNative;Vehicle.Chassis.Vehicle.Native;RX;native;Vehicle.Chassis.Vehicle.Native
+BS;TXClassForBoolean;SignalTypeBoolean;signalBoolean;Vehicle.Chassis.Vehicle.Boolean;TX;boolean;Vehicle.Chassis.Vehicle.Boolean
+BS;TXClassForFloat;SignalTypeFloat;signalFloat;Vehicle.Chassis.Vehicle.Float;TX;float;Vehicle.Chassis.Vehicle.Float
+BS;TXClassForDouble;SignalTypeDouble;signalDouble;Vehicle.Chassis.Vehicle.Double;TX;double;Vehicle.Chassis.Vehicle.Double
+BS;TXClassForLongDouble;SignalTypeLongDouble;signalLongDouble;Vehicle.Chassis.Vehicle.LongDouble;TX;long double;Vehicle.Chassis.Vehicle.LongDouble
+BS;TXClassForShort;SignalTypeShort;signalShort;Vehicle.Chassis.Vehicle.Short;TX;short;Vehicle.Chassis.Vehicle.Short
+BS;TXClassForUnsignedShort;SignalTypeUnsignedShort;signalUnsignedShort;Vehicle.Chassis.Vehicle.UnsignedShort;TX;unsigned short;Vehicle.Chassis.Vehicle.UnsignedShort
+BS;TXClassForLong;SignalTypeLong;signalLong;Vehicle.Chassis.Vehicle.Long;TX;long;Vehicle.Chassis.Vehicle.Long
+BS;TXClassForUnsignedLong;SignalTypeUnsignedLong;signalUnsignedLong;Vehicle.Chassis.Vehicle.UnsignedLong;TX;unsigned long;Vehicle.Chassis.Vehicle.UnsignedLong
+BS;TXClassForLongLong;SignalTypeLongLong;signalLongLong;Vehicle.Chassis.Vehicle.LongLong;TX;long long;Vehicle.Chassis.Vehicle.LongLong
+BS;TXClassForUnsignedLongLong;SignalTypeUnsignedLongLong;signalUnsignedLongLong;Vehicle.Chassis.Vehicle.UnsignedLongLong;TX;unsigned long long;Vehicle.Chassis.Vehicle.UnsignedLongLong
+BS;TXClassForInt8;SignalTypeInt8;signalInt8;Vehicle.Chassis.Vehicle.Int8;TX;int8;Vehicle.Chassis.Vehicle.Int8
+BS;TXClassForUint8;SignalTypeUint8;signalUint8;Vehicle.Chassis.Vehicle.Uint8;TX;uint8;Vehicle.Chassis.Vehicle.Uint8
+BS;TXClassForInt16;SignalTypeInt16;signalInt16;Vehicle.Chassis.Vehicle.Int16;TX;int16;Vehicle.Chassis.Vehicle.Int16
+BS;TXClassForUint16;SignalTypeUint16;signalUint16;Vehicle.Chassis.Vehicle.Uint16;TX;uint16;Vehicle.Chassis.Vehicle.Uint16
+BS;TXClassForInt32;SignalTypeInt32;signalInt32;Vehicle.Chassis.Vehicle.Int32;TX;int32;Vehicle.Chassis.Vehicle.Int32
+BS;TXClassForUint32;SignalTypeUint32;signalUint32;Vehicle.Chassis.Vehicle.Uint32;TX;uint32;Vehicle.Chassis.Vehicle.Uint32
+BS;TXClassForInt64;SignalTypeInt64;signalInt64;Vehicle.Chassis.Vehicle.Int64;TX;int64;Vehicle.Chassis.Vehicle.Int64
+BS;TXClassForUint64;SignalTypeUint64;signalUint64;Vehicle.Chassis.Vehicle.Uint64;TX;uint64;Vehicle.Chassis.Vehicle.Uint64
+BS;TXClassForString;SignalTypeString;signalString;Vehicle.Chassis.Vehicle.String;TX;string;Vehicle.Chassis.Vehicle.String
+BS;TXClassForWString;SignalTypeWString;signalWString;Vehicle.Chassis.Vehicle.WString;TX;wstring;Vehicle.Chassis.Vehicle.WString
+BS;TXClassForChar;SignalTypeChar;signalChar;Vehicle.Chassis.Vehicle.Char;TX;char;Vehicle.Chassis.Vehicle.Char
+BS;TXClassForChar16;SignalTypeChar16;signalChar16;Vehicle.Chassis.Vehicle.Char16;TX;char16;Vehicle.Chassis.Vehicle.Char16
+BS;TXClassForChar32;SignalTypeChar32;signalChar32;Vehicle.Chassis.Vehicle.Char32;TX;char32;Vehicle.Chassis.Vehicle.Char32
+BS;TXClassForWChar;SignalTypeWChar;signalWChar;Vehicle.Chassis.Vehicle.WChar;TX;wchar;Vehicle.Chassis.Vehicle.WChar
+BS;TXClassForU8String;SignalTypeU8String;signalU8String;Vehicle.Chassis.Vehicle.U8String;TX;u8string;Vehicle.Chassis.Vehicle.U8String
+BS;TXClassForU16String;SignalTypeU16String;signalU16String;Vehicle.Chassis.Vehicle.U16String;TX;u16string;Vehicle.Chassis.Vehicle.U16String
+BS;TXClassForU32String;SignalTypeU32String;signalU32String;Vehicle.Chassis.Vehicle.U32String;TX;u32string;Vehicle.Chassis.Vehicle.U32String
+BS;TXClassForNative;SignalTypeNative;signalNative;Vehicle.Chassis.Vehicle.Native;TX;native;Vehicle.Chassis.Vehicle.Native
