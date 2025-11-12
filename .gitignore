@@ -57,7 +57,6 @@ doc/_vapi_code
 doc/DoxygenWarning.txt
 
 # Conan intermediate files and folders
-
 cmake_install.cmake
 conan.lock
 conanbuildinfo.cmake
@@ -65,9 +64,13 @@ conanbuildinfo.txt
 conan_imports_manifest.txt
 conaninfo.txt
 graph_info.json
+# Conan general
+conan_tools.txt
+conanbuild.yml
+conanfile_mingw.py
+conanfile_unix.py
 
 # Byte-compiled / optimized / DLL files
-
 __pycache__/
 *.py[cod]
 *$py.class
@@ -100,3 +103,7 @@ sdv_services/can_communication_silkit/sil-kit;*
 
 # CppCheck directories
 analysis-cppcheck-build-dir/
+
+#azure & git
+azure-pipelines.yml
+refresh_git_branch_list.cmd

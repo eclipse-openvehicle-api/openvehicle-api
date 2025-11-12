@@ -1,6 +1,6 @@
 ﻿;Class name;Function name;Signal name;vss;Signal direction;type;DBC CAN name includes CAN message name
 ;;;;;;;
-VD;VehicleSpeed;Speed;vehicleSpeed;Vehicle.Speed;RX;float;CAN_Input.Speed
+VD;VehicleSpeed;Speed;vehicleSpeed;Vehicle.Speed;RX;float;CAN_Input.Speed;"float vehicleSpeed = value.get<float>() * 3.6f;"
 VD;VehicleTrunk;Open;trunk;Vehicle.Body.Trunk;TX;boolean;CAN_Output.OpenTrunk
 BS;VehicleSpeed;Speed;vehicleSpeed;Vehicle.Speed;RX;float;Vehicle.Speed
 BS;VehicleTrunk;Open;trunk;Vehicle.Body.Trunk;TX;boolean;Vehicle.Body.Trunk

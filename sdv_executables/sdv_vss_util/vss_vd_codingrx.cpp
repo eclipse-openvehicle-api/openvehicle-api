@@ -418,6 +418,27 @@ std::string CVSSVDCodingRX::Code_VD_RXRegister( const std::string& class_name, c
     mapKeywords["signal_name"] = function.signalName;
     mapKeywords["value_ctype"] = GetCTypeFromIDLType(function.idlType);
     mapKeywords["class_name_lowercase"] = class_name_lowercase;
+    if (!function.formula.empty())
+    {
+        auto formula = "    " + function.formula;
+        std::string target = ";";
+        std::string replacement = ";\n";
+
+        size_t pos = 0;
+        while ((pos = formula.find(target, pos)) != std::string::npos) 
+        {
+            formula.replace(pos, target.length(), replacement);
+            pos += replacement.length(); 
+        }
+
+        mapKeywords["convertFormula"] = formula;
+    }
+    else
+    {
+        std::stringstream formula;
+        formula << Code_VD_RXFormular(function);
+        mapKeywords["convertFormula"] = formula.str();
+    }
 
     return ReplaceKeywords(R"code(
 /**
@@ -452,18 +473,27 @@ void CVehicleDevice%class_name%::Unregister%function_name%Event(vss::%vssWithCol
 */
 void CVehicleDevice%class_name%::ExecuteAllCallBacksFor%start_with_uppercase%(sdv::any_t value)
 {
-	%value_ctype% %signal_name% = value.get<%value_ctype%>();
-
-    //
-    // TODO:
-    // Convert vehicle specific value to abstract unit/range
-    //
-
+%convertFormula%
 	std::lock_guard<std::mutex> lock(m_%signal_name%MutexCallbacks);
 	for (const auto& callback : m_%signal_name%Callbacks)
 	{
 		callback->Write%function_name%(%signal_name%);
 	}
 }
+)code", mapKeywords);
+}
+
+std::string CVSSVDCodingRX::Code_VD_RXFormular(const SFunctionVDDefinition& function) const
+{
+    CKeywordMap mapKeywords;
+    mapKeywords["signal_name"] = function.signalName;
+    mapKeywords["value_ctype"] = GetCTypeFromIDLType(function.idlType);
+
+    return ReplaceKeywords(R"code(    %value_ctype% %signal_name% = value.get<%value_ctype%>();
+
+    //
+    // TODO:    
+    // Convert vehicle specific value to abstract unit/range
+    //
 )code", mapKeywords);
 }

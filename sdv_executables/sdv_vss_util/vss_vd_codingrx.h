@@ -143,6 +143,13 @@ protected:
     std::string Code_VD_RXRegister(const std::string& class_name, const SFunctionVDDefinition& function, 
         const std::string& vssWithColons) const;
 
+    /**
+    * @brief create code to get the value or use use user defined c++ code
+    * @param[in] function function definition structure
+    * @return default code to get the value
+    */
+    std::string Code_VD_RXFormular(const SFunctionVDDefinition& function) const;
+
     std::string m_ssPrefix; ///< prefix, used by cmake library and signal definition in signal_identifier.h file.
 };
 

@@ -40,6 +40,17 @@ if(VSS_CONFIGURATION_FAILED)
     message(FATAL_ERROR "Configuration failed due to missing folders.")
 endif()
 
+# Execute vss_with_formula to create IDL files testcase with vehcile device has a convertion formula 
+message("Create interface code for 'vss_with_formula.csv'.")
+execute_process(COMMAND "${SDV_VSS_UTIL}" "${CMAKE_CURRENT_LIST_DIR}/vss_with_formula.csv" "-O${CMAKE_CURRENT_LIST_DIR}/generated/with_formula/" --prefixtestcase5 --version1.0.0.1 --enable_components)
+set(MULTIPLE_NAMES_FOLDER "${CMAKE_CURRENT_LIST_DIR}/generated/with_formula/")
+if(EXISTS "${WITH_FORMULA_FOLDER}")
+    message(STATUS "(OK) Folder exists: ${WITH_FORMULA_FOLDER}")
+else()
+    message(WARNING "(Fail) Folder does NOT exist: ${WITH_FORMULA_FOLDER}")
+    set(VSS_CONFIGURATION_FAILED TRUE)
+endif()
+
 
 # Execute idl_compiler to create interface code for 'vss_unique_names.csv'.
 message("vss_unique_names.csv: compile all 8 idl files")
@@ -203,6 +214,13 @@ execute_process(COMMAND "${SDV_IDL_COMPILER}" "${CMAKE_CURRENT_LIST_DIR}/generat
 execute_process(COMMAND "${SDV_IDL_COMPILER}" "${CMAKE_CURRENT_LIST_DIR}/generated/all_types/vss_files/vss_vehiclechassisvehiclewchar_vd_rx.idl" "-O${CMAKE_CURRENT_LIST_DIR}/generated/all_types/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
 execute_process(COMMAND "${SDV_IDL_COMPILER}" "${CMAKE_CURRENT_LIST_DIR}/generated/all_types/vss_files/vss_vehiclechassisvehiclewchar_vd_tx.idl" "-O${CMAKE_CURRENT_LIST_DIR}/generated/all_types/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
 
+# Execute idl_compiler to create interface code for 'vss_with_formula.csv'.
+message("vss_with_formula.csv: compile all 4 idl files")
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${CMAKE_CURRENT_LIST_DIR}/generated/with_formula/vss_files/vss_vehiclechassisbodyint32_vd_rx.idl" "-O${CMAKE_CURRENT_LIST_DIR}/generated/with_formula/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${CMAKE_CURRENT_LIST_DIR}/generated/with_formula/vss_files/vss_vehiclechassisbodystring_vd_rx.idl" "-O${CMAKE_CURRENT_LIST_DIR}/generated/with_formula/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${CMAKE_CURRENT_LIST_DIR}/generated/with_formula/vss_files/vss_vehiclechassisbodyint32_bs_rx.idl" "-O${CMAKE_CURRENT_LIST_DIR}/generated/with_formula/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${CMAKE_CURRENT_LIST_DIR}/generated/with_formula/vss_files/vss_vehiclechassisbodystring_bs_rx.idl" "-O${CMAKE_CURRENT_LIST_DIR}/generated/with_formula/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
+
 # Compile all components from  'vss_all_types.csv'.
 message("vss_all_types.csv: compile 112 components")
 add_subdirectory(generated/all_types/vss_files/vd_rxclassforboolean)
@@ -321,5 +339,9 @@ add_subdirectory(generated/all_types/vss_files/bs_txclassforunsignedlong)
 add_subdirectory(generated/all_types/vss_files/bs_txclassforunsignedlonglong)
 add_subdirectory(generated/all_types/vss_files/bs_txclassforunsignedshort)
 
-
-               
+# Compile all components from  'vss_with_formula.csv'.
+message("vss_all_types.csv: compile 4 components")
+add_subdirectory(generated/with_formula/vss_files/vd_rxclassforint32)
+add_subdirectory(generated/with_formula/vss_files/vd_rxclassforstring)
+add_subdirectory(generated/with_formula/vss_files/bs_rxclassforint32)
+add_subdirectory(generated/with_formula/vss_files/bs_rxclassforstring)

@@ -221,7 +221,7 @@ void CConsole::WriteSpeed(float value)
     if (m_SpeedVD != value)
     {
         m_SpeedVD = value;
-        PrintValue(g_sVehicleDeviceSpeed, "Vehicle Speed RX", m_SpeedVD, "m/s");
+        PrintValue(g_sVehicleDeviceSpeed, "Vehicle Speed RX", m_SpeedVD, "km/h");
     }
 }
 
@@ -230,7 +230,7 @@ void CConsole::SetSpeed(float value)
     if (m_SpeedBS != value)
     {
         m_SpeedBS = value;
-        PrintValue(g_sBasicServiceSpeed, "Vehicle Speed RX", m_SpeedBS * 3.6f, "km/h");
+        PrintValue(g_sBasicServiceSpeed, "Vehicle Speed RX", m_SpeedBS, "km/h");
     }
 }
 

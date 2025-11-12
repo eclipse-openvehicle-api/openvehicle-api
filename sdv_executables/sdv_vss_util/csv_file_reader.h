@@ -2,6 +2,7 @@
 #define CSV_FILE_READER_H
 
 #include <fstream>
+#include <regex>
 #include "vss_helper.h"
 
 
@@ -54,6 +55,7 @@ private:
         column_signalCType,
         column_canSignalName,
         column_vdDefinition = column_canSignalName,
+        column_vdFormula,
         column_end
     } vssVDColumns;
 
@@ -116,11 +118,12 @@ private:
     * @param[in] signalName signal name
     * @param[in] canSignalName  can signal name
     * @param[in] idlType idl type
+    * @param[in] formula code to convert signal value in vehicle device
     * @param[in] index line number
     * @return True if function definition was added, otherwise false
     */
-    bool AddFunctionVDDefinition(SSignalVDDefinition& signal, const std::string& functionName,
-        const std::string& signalName, const std::string& canSignalName, const std::string& idlType, const uint32_t index);
+    bool AddFunctionVDDefinition(SSignalVDDefinition& signal, const std::string& functionName, const std::string& signalName, 
+        const std::string& canSignalName, const std::string& idlType, const std::string& formula, const uint32_t index);
 
     /**
     * @brief add function definition to the container of an existing signal (basic service)

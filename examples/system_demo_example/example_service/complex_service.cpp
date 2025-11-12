@@ -1,7 +1,7 @@
 #include <iostream>
 #include "complex_service.h"
 
-const float g_fSpeedThreshold = 30.0f / 3.6f;
+const float g_fSpeedThreshold = 30.0f;
 
 CCounterSteeringExampleService::CCounterSteeringExampleService()
 {
@@ -141,8 +141,8 @@ void CCounterSteeringExampleService::UpdateRearAxleAngle()
     if (CounterSteeringActive())
     {
         // Get steering wheel angle percentage
-        // The steering wheel can have values from -16...16 rad.
-        float fSteeringWheelPercent = m_fSteeringWheel / 16.0f;
+        // The steering wheel can have values from -916.736 to 916.736 degrees.
+        float fSteeringWheelPercent = m_fSteeringWheel / 916.736f;
         if (fSteeringWheelPercent > 1.0) fSteeringWheelPercent = 1.0;
         if (fSteeringWheelPercent < -1.0) fSteeringWheelPercent = -1.0;
 
