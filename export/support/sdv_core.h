@@ -95,98 +95,78 @@ namespace sdv
                 {
                     if (m_bInit) return;    // Prevent trying to load again.
                     m_bInit = true;
+                    bool bRelocFileError = false;
+                    std::string ssRelocFileInfo = "";
+                    std::string ssEnvironmentInfo = "";
 
                     // Check for the executable directory
                     std::filesystem::path pathCoreLib;
                     if (std::filesystem::exists(GetExecDirectory() / "core_services.sdv"))
                         pathCoreLib = GetExecDirectory() / "core_services.sdv";
-                    // Check for the local config file
-                    if (pathCoreLib.empty() && std::filesystem::exists(GetExecDirectory() / "sdv_core_reloc.toml"))
-                    {
-                        std::ifstream fstream(GetExecDirectory() / "sdv_core_reloc.toml");
-                        std::string ssLine;
-                        while (std::getline(fstream, ssLine))
-                        {
-                            size_t nPos = 0;
-                            auto fnSkipWhitespace = [&]() { while (std::isspace(ssLine[nPos])) nPos++; };
-                            fnSkipWhitespace();
-                            if (ssLine[nPos] == '#') continue;  // Rest of the line is comments
-                            if (ssLine.substr(nPos, 9) != "directory") continue;    // not the keq of interest: skip line
-                            nPos += 9;
-                            fnSkipWhitespace();
-                            if (ssLine[nPos] != '=')
-                            {
-                                std::cout << "Error in \"sdv_core_reloc.toml\": expecting assignment character '=' following"
-                                    " keyword 'directory'." << std::endl;
-                                break;
-                            }
-                            nPos++;
-                            fnSkipWhitespace();
-                            if (ssLine[nPos] != '\"')
-                            {
-                                std::cout << "Error in \"sdv_core_reloc.toml\": expecting double quote character '\"' indicating"
-                                    " a string begin'." << std::endl;
-                                break;
-                            }
-                            nPos++;
-                            size_t nStart = nPos;
-                            while (nPos < ssLine.length() && ssLine[nPos] != '\"')
-                            {
-                                // Check for escape character
-                                if (ssLine[nPos] == '\\') nPos++;
 
-                                // Skip character
-                                nPos++;
-                            }
-                            if (nPos >= ssLine.length() || ssLine[nPos] != '\"')
+                    if (pathCoreLib.empty())
+                    {
+                        if (std::filesystem::exists(GetExecDirectory() / "sdv_core_reloc.toml"))
+                        {
+                            // Check for the library in the relocation directory
+                            auto relocFolder = GetRelocationPath();
+                            if (!relocFolder.empty())
                             {
-                                std::cout << "Error in \"sdv_core_reloc.toml\": expecting double quote character '\"' indicating"
-                                    " a string end'." << std::endl;
-                                break;
+                                auto coreLibFolder = std::filesystem::path(relocFolder) / "core_services.sdv";
+                                if (coreLibFolder.is_relative())
+                                     coreLibFolder = (GetExecDirectory() / coreLibFolder).lexically_normal();
+
+                                if (std::filesystem::exists(coreLibFolder))
+                                    pathCoreLib = coreLibFolder;                                
                             }
-                            std::string ssDirectory = ssLine.substr(nStart, nPos - nStart);
-                            while (ssDirectory.empty())
+                            if (pathCoreLib.empty())
                             {
-                                std::cout << "Error in \"sdv_core_reloc.toml\": expecting a valid value following the assignment"
-                                    " of the 'directory' key." << std::endl;
-                                break;
+                                bRelocFileError = true;  // we found the file but not the core library, we must run into an error
+                                ssRelocFileInfo = "Error: Invalid \"sdv_core_reloc.toml\" file found (but no core library), it contains: " + relocFolder;
                             }
-                            pathCoreLib = std::filesystem::path(ssDirectory) / "core_services.sdv";
-                            if (pathCoreLib.is_relative())
-                                pathCoreLib = (GetExecDirectory() / pathCoreLib).lexically_normal();
-                            break;
                         }
                     }
-                    // Check for the environment variable
+
+                    if (pathCoreLib.empty())
+                    {
 #ifdef _WIN32
-                    std::wstring ssPathCoreTemp(32768, '\0');
-                    GetEnvironmentVariable(L"SDV_FRAMEWORK_RUNTIME", ssPathCoreTemp.data(), static_cast<DWORD>(ssPathCoreTemp.size()));
-                    ssPathCoreTemp.resize(wcsnlen(ssPathCoreTemp.c_str(), ssPathCoreTemp.size()));
-                    if (pathCoreLib.empty() && !ssPathCoreTemp.empty())
-                    {
-                        pathCoreLib = std::filesystem::path(ssPathCoreTemp) / "core_services.sdv";
+                        std::wstring ssPathCoreTemp(32768, '\0');
+                        GetEnvironmentVariable(L"SDV_FRAMEWORK_RUNTIME", ssPathCoreTemp.data(), static_cast<DWORD>(ssPathCoreTemp.size()));
+                        ssPathCoreTemp.resize(wcsnlen(ssPathCoreTemp.c_str(), ssPathCoreTemp.size()));
+                        if (!ssPathCoreTemp.empty())
+                        {
+                            pathCoreLib = std::filesystem::path(ssPathCoreTemp) / "core_services.sdv";
 #else
-                    if (pathCoreLib.empty() && getenv("SDV_FRAMEWORK_RUNTIME"))
-                    {
-                        pathCoreLib = std::filesystem::path(getenv("SDV_FRAMEWORK_RUNTIME")) / "core_services.sdv";
+                        std::string ssPathCoreTemp = std::getenv("SDV_FRAMEWORK_RUNTIME") ? std::getenv("SDV_FRAMEWORK_RUNTIME") : "";
+                        if (!ssPathCoreTemp.empty())
+                        {
+                            pathCoreLib = std::filesystem::path(ssPathCoreTemp) / "core_services.sdv";
 #endif
-                        if (pathCoreLib.is_relative())
-                            pathCoreLib = (GetExecDirectory() / pathCoreLib).lexically_normal();
+                            if (pathCoreLib.is_relative())
+                                pathCoreLib = (GetExecDirectory() / pathCoreLib).lexically_normal();
+
+                            if (!pathCoreLib.empty())
+                                ssEnvironmentInfo = "System environment path: " + pathCoreLib.generic_string();
+                        }
                     }
 
                     // Depend on system path to find the library
                     if (pathCoreLib.empty())
                         pathCoreLib = "core_services.sdv";
 
-                    // Open the library
+                    // Open the library only if there is no or a valid 'sdv_core_reloc.toml' file
+                    if (!bRelocFileError)
+                    {
 #ifdef _WIN32
-                    SetErrorMode(SEM_FAILCRITICALERRORS);
-                    m_tModule = reinterpret_cast<core::TModuleID>(LoadLibraryW(pathCoreLib.native().c_str()));
+                        SetErrorMode(SEM_FAILCRITICALERRORS);
+                        m_tModule = reinterpret_cast<core::TModuleID>(LoadLibraryW(pathCoreLib.native().c_str()));
 #elif defined __unix__
-                    m_tModule = reinterpret_cast<core::TModuleID>(dlopen(pathCoreLib.native().c_str(), RTLD_LAZY));
+                        m_tModule = reinterpret_cast<core::TModuleID>(dlopen(pathCoreLib.native().c_str(), RTLD_LAZY));
 #else
 #error OS is not supported!
 #endif
+                    }
+
                     if (!m_tModule)
                     {
                         std::string ssError;
@@ -201,6 +181,13 @@ namespace sdv
 #else
 #error OS is not supported!
 #endif
+                        if (ssRelocFileInfo.empty() && ssEnvironmentInfo.empty())
+                            std::cerr << "No environment variable set and no realocation file found." << std::endl;
+                        if (!ssRelocFileInfo.empty())
+                            std::cerr << ssRelocFileInfo << std::endl;
+                        if (!ssEnvironmentInfo.empty())
+                            std::cerr << ssEnvironmentInfo << std::endl;
+
                         std::cerr << "Could not load \"core_services.sdv\" library";
                         if (!ssError.empty()) std::cerr << ": " << ssError;
                         std::cerr << std::endl;
@@ -262,6 +249,69 @@ namespace sdv
 #error OS is not supported!
 #endif
                     return std::filesystem::path{ssPath.c_str()}.parent_path() / ""; // To finish the folder path with (back)slash
+                }
+
+                /**
+                 * @brief Get the folder path in the file 'sdv_core_reloc.toml'.
+                 * @return Path content, empty string if not found.
+                 */
+                static std::string GetRelocationPath()
+                {
+                    if (std::filesystem::exists(GetExecDirectory() / "sdv_core_reloc.toml"))
+                    {
+                        std::ifstream fstream(GetExecDirectory() / "sdv_core_reloc.toml");
+                        std::string ssLine;
+                        while (std::getline(fstream, ssLine))
+                        {
+                            size_t nPos = 0;
+                            auto fnSkipWhitespace = [&]() { while (std::isspace(ssLine[nPos])) nPos++; };
+                            fnSkipWhitespace();
+                            if (ssLine[nPos] == '#') continue;  // Rest of the line is comments
+                            if (ssLine.substr(nPos, 9) != "directory") continue;    // not the keq of interest: skip line
+                            nPos += 9;
+                            fnSkipWhitespace();
+                            if (ssLine[nPos] != '=')
+                            {
+                                std::cout << "Error in \"sdv_core_reloc.toml\": expecting assignment character '=' following"
+                                    " keyword 'directory'." << std::endl;
+                                break;
+                            }
+                            nPos++;
+                            fnSkipWhitespace();
+                            if (ssLine[nPos] != '\"')
+                            {
+                                std::cout << "Error in \"sdv_core_reloc.toml\": expecting double quote character '\"' indicating"
+                                    " a string begin'." << std::endl;
+                                break;
+                            }
+                            nPos++;
+                            size_t nStart = nPos;
+                            while (nPos < ssLine.length() && ssLine[nPos] != '\"')
+                            {
+                                // Check for escape character
+                                if (ssLine[nPos] == '\\') nPos++;
+
+                                // Skip character
+                                nPos++;
+                            }
+                            if (nPos >= ssLine.length() || ssLine[nPos] != '\"')
+                            {
+                                std::cout << "Error in \"sdv_core_reloc.toml\": expecting double quote character '\"' indicating"
+                                    " a string end'." << std::endl;
+                                break;
+                            }
+                            std::string ssDirectory = ssLine.substr(nStart, nPos - nStart);
+                            while (ssDirectory.empty())
+                            {
+                                std::cout << "Error in \"sdv_core_reloc.toml\": expecting a valid value following the assignment"
+                                    " of the 'directory' key." << std::endl;
+                                break;
+                            }
+
+                            return ssDirectory;
+                        }
+                    }
+                    return "";
                 }
 
                 bool                m_bInit = false;        ///< Is the loader initialized?

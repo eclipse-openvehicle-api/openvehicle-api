@@ -134,7 +134,7 @@ bool CConsole::PrepareDataConsumers()
         basicService->RegisterOnSignalChangeOfVehicleSpeed(dynamic_cast<vss::Vehicle::SpeedService::IVSS_SetSpeed_Event*> (this));
     }
 
-    // Request the basic service for opening the drunk.
+    // Request the basic service for opening the trunk.
     m_pTrunkSvc = sdv::core::GetObject("Vehicle.Body.Trunk_Service").GetInterface<vss::Vehicle::Body::TrunkService::IVSS_SetOpen>();
     if (m_pTrunkSvc)
         PrintText(g_sComplexServcie1, "Basic Service available");

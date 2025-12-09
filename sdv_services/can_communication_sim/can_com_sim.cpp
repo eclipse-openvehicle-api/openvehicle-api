@@ -72,6 +72,16 @@ void CCANSimulation::Initialize(const sdv::u8string& rssObjectConfig)
         m_eStatus = sdv::EObjectStatus::initialization_failure;
         return;
     }
+    if (!m_pathSource.empty() && !m_reader.GetMessageCount())
+    {
+        SDV_LOG(sdv::core::ELogSeverity::error,
+            "No messages in ASC file '" + m_pathSource.generic_u8string() + "' found. File must contain 'Begin TriggerBlock' and 'End TriggerBlock' line.");
+        m_eStatus = sdv::EObjectStatus::initialization_failure;
+        return;
+    }
+    if (!m_pathSource.empty())
+        SDV_LOG(sdv::core::ELogSeverity::info,
+            "CAN simulator ASC file '" + m_pathSource.generic_u8string() + "' contains ", m_reader.GetMessageCount(), " messages.");
 
     // Update the status
     m_eStatus = sdv::EObjectStatus::initialized;
