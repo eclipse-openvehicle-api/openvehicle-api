@@ -199,9 +199,6 @@ void CVSSBSGenerator::CreateBasicServiceFilesForTXSignal(const SSignalBSDefiniti
     }
     codingTX.GetKeyWordMap(signal, signalVD, mapKeywords);
 
-    mapKeywords["basic_service_h"] = pathBSHeader.filename().generic_u8string();
-    mapKeywords["basic_service_cpp"] = pathBSClass.filename().generic_u8string();
-
     fstreamBSHeader << ReplaceKeywords(szTXBasicServiceHeaderTemplate, mapKeywords);
     fstreamBSClass << ReplaceKeywords(szTXBasicServiceClassTemplate, mapKeywords);
     fstreamBSHeader.close();

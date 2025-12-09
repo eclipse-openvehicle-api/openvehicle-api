@@ -57,6 +57,12 @@ namespace asc
         std::pair<SCanMessage, bool> Get() const;
 
         /**
+         * @brief Get the number of messages in the asc file
+         * @return Number of messages which count be read from the asc file.
+         */        
+        uint32_t GetMessageCount() const;
+
+        /**
          * @brief Get the number of loops the data set was sent
          * @return Number of loops the data set was sent including the current loop
          */        

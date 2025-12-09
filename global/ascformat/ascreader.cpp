@@ -43,7 +43,7 @@ namespace asc
             switch (eState)
             {
             case EState::header:
-                if (ssLine.compare(0, 18, "Begin Triggerblock") == 0)
+                if (ssLine.compare(0, 18, "Begin TriggerBlock") == 0)
                     eState = EState::body;
                 break;
             case EState::body:
@@ -70,6 +70,11 @@ namespace asc
             return std::make_pair(SCanMessage(), false);
         else
             return std::make_pair(*m_itCurrent, true);
+    }
+
+    uint32_t CAscReader::GetMessageCount() const
+    {
+        return m_lstMessages.size();
     }
 
     uint32_t CAscReader::GetLoopCount() const

@@ -237,9 +237,6 @@ void CVSSVDGenerator::CreateVehicleDeviceFilesForTXSignal(const SSignalVDDefinit
     CVSSVDCodingTX codingTX(m_ssPrefix);
     codingTX.GetKeyWordMap(signal, mapKeywords);
 
-    mapKeywords["abstract_device_h"] = pathVDHeader.filename().generic_u8string();
-    mapKeywords["abstract_device_cpp"] = pathVDClass.filename().generic_u8string();
-
     fstreamVDHeader << ReplaceKeywords(szTXVehicleDeviceHeaderTemplate, mapKeywords);
     fstreamVDClass << ReplaceKeywords(szTXVehicleDeviceClassTemplate, mapKeywords);
     fstreamVDHeader.close();

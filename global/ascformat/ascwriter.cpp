@@ -53,7 +53,7 @@ namespace asc
         fstream << "base hex  timestamps absolute" << std::endl;
 
         // Stream trigger block
-        fstream << "Begin Triggerblock " << std::put_time(std::localtime(&tmSystemTime), "%c") << std::endl;
+        fstream << "Begin TriggerBlock " << std::put_time(std::localtime(&tmSystemTime), "%c") << std::endl;
         fstream << "   0.000000 Start of measurement" << std::endl;
         for (const SCanMessage& rsSample : m_lstMessages)
         {
