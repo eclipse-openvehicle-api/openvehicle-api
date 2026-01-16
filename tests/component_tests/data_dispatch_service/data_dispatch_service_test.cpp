@@ -929,13 +929,13 @@ TEST(DataDispatchServiceTest, DirectRxTxSignalConcurrency)
             while (!bShutdown)
             {
                 signalPubA.Write(std::rand());
-                std::this_thread::sleep_for(std::chrono::milliseconds(rand() % 10));
+                std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 10));
                 signalPubB.Write(std::rand());
-                std::this_thread::sleep_for(std::chrono::milliseconds(rand() % 10));
+                std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 10));
                 signalPubC.Write(std::rand());
-                std::this_thread::sleep_for(std::chrono::milliseconds(rand() % 10));
+                std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 10));
                 signalPubD.Write(std::rand());
-                std::this_thread::sleep_for(std::chrono::milliseconds(rand() % 10));
+                std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 10));
             }
         }
         catch (...)

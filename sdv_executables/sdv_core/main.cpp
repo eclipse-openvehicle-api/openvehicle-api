@@ -1,4 +1,5 @@
 #include <support/sdv_core.h>
+#include <atomic>
 #include "../../global/cmdlnparser/cmdlnparser.cpp"
 #include "../../global/exec_dir_helper.h"
 #include <support/app_control.h>
@@ -22,7 +23,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     // See: https://stackoverflow.com/questions/51209268/using-stdthread-in-a-library-loaded-with-dlopen-leads-to-a-sigsev
     // NOTE EVE 27.05.2025: in release builds, starting and ending the thread right after each other causes incorrect behavior and
     // leads in some cases to create a deadlock in the join-function. The solution is to add delays in the thread processing.
-    bool bThreadStarted = false;
+    std::atomic_bool bThreadStarted = false;
     std::thread thread = std::thread([&]()
         {
             std::this_thread::sleep_for(std::chrono::seconds(1));

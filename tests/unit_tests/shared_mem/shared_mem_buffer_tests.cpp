@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <fstream>
+#include <atomic>
 #include "gtest/gtest.h"
 #include "pattern_gen.h"
 #include "../../../sdv_services/ipc_shared_mem/shared_mem_buffer_posix.h"
@@ -28,10 +29,14 @@ TEST(SharedMemoryBufferTest, CreateBuffer)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CSharedMemBufferTx sender;
-    EXPECT_TRUE(sender.IsValid());
+    if (!sender.IsValid())
+        std::cout << "ERROR sender: " << sender.GetError() << std::endl;
+    ASSERT_TRUE(sender.IsValid());
 
     CSharedMemBufferRx receiver(sender.GetConnectionString());
-    EXPECT_TRUE(receiver.IsValid());
+    if (!receiver.IsValid())
+        std::cout << "ERROR receiver: " << receiver.GetError() << std::endl;
+    ASSERT_TRUE(receiver.IsValid());
 
     appcontrol.Shutdown();
 }
@@ -42,12 +47,16 @@ TEST(SharedMemoryBufferTest, TriggerTestRx)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CSharedMemBufferTx sender;
-    EXPECT_TRUE(sender.IsValid());
+    if (!sender.IsValid())
+        std::cout << "ERROR sender: " << sender.GetError() << std::endl;
+    ASSERT_TRUE(sender.IsValid());
 
     CSharedMemBufferRx receiver(sender.GetConnectionString());
-    EXPECT_TRUE(receiver.IsValid());
+    if (!receiver.IsValid())
+        std::cout << "ERROR receiver: " << receiver.GetError() << std::endl;
+    ASSERT_TRUE(receiver.IsValid());
 
-    bool bShutdown = false;
+    std::atomic_bool bShutdown = false;
     size_t nCorrectCnt = 0;
     std::condition_variable cvStart;
     std::mutex mtxStart;
@@ -91,12 +100,16 @@ TEST(SharedMemoryBufferTest, TriggerTestTx)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CSharedMemBufferTx sender;
-    EXPECT_TRUE(sender.IsValid());
+    if (!sender.IsValid())
+        std::cout << "ERROR sender: " << sender.GetError() << std::endl;
+    ASSERT_TRUE(sender.IsValid());
 
     CSharedMemBufferRx receiver(sender.GetConnectionString());
-    EXPECT_TRUE(receiver.IsValid());
+    if (!receiver.IsValid())
+        std::cout << "ERROR receiver: " << receiver.GetError() << std::endl;
+    ASSERT_TRUE(receiver.IsValid());
 
-    bool bShutdown = false;
+    std::atomic_bool bShutdown = false;
     size_t nCorrectCnt = 0;
     std::condition_variable cvStart;
     std::mutex mtxStart;
@@ -140,16 +153,21 @@ TEST(SharedMemoryBufferTest, TriggerTestRxTx)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CSharedMemBufferTx sender;
-    EXPECT_TRUE(sender.IsValid());
+    if (!sender.IsValid())
+        std::cout << "ERROR sender: " << sender.GetError() << std::endl;
+    ASSERT_TRUE(sender.IsValid());
 
     CSharedMemBufferRx receiver(sender.GetConnectionString());
-    EXPECT_TRUE(receiver.IsValid());
+    if (!receiver.IsValid())
+        std::cout << "ERROR receiver: " << receiver.GetError() << std::endl;
+    ASSERT_TRUE(receiver.IsValid());
 
-    bool bShutdown = false;
+    std::atomic_bool bShutdown = false;
     size_t nCorrectCnt = 0;
     std::condition_variable cvSenderStart, cvReceiverStart;
     std::mutex mtxReceiverStart;
     std::mutex mtxSenderStart;
+
     auto fnWaitForTriggerReceiver = [&]()
     {
         std::unique_lock<std::mutex> lockReceiver(mtxReceiverStart);
@@ -166,9 +184,6 @@ TEST(SharedMemoryBufferTest, TriggerTestRxTx)
         std::unique_lock<std::mutex> lockSender(mtxSenderStart);
         lockSender.unlock();
         cvSenderStart.notify_all();
-        std::unique_lock<std::mutex> lockReceiver(mtxReceiverStart);
-        cvReceiverStart.wait(lockReceiver);
-        lockReceiver.unlock();
         while (!bShutdown)
         {
             bool bResult = sender.WaitForFreeSpace(200);
@@ -179,14 +194,15 @@ TEST(SharedMemoryBufferTest, TriggerTestRxTx)
     };
 
     std::unique_lock<std::mutex> lockStartSender(mtxSenderStart);
+    std::unique_lock<std::mutex> lockStartReceiver(mtxReceiverStart);
     std::thread threadSender(fnWaitForTriggerSender);
+    std::thread threadReceiver(fnWaitForTriggerReceiver);
     cvSenderStart.wait(lockStartSender);
     lockStartSender.unlock();
-    std::unique_lock<std::mutex> lockStartReceiver(mtxReceiverStart);
-    std::thread threadReceiver(fnWaitForTriggerReceiver);
+    //CHECKPOINT();
     cvReceiverStart.wait(lockStartReceiver);
     lockStartReceiver.unlock();
-    std::this_thread::sleep_for(std::chrono::milliseconds(25));  // Needed for the threads to enter their loop.
+    std::this_thread::sleep_for(std::chrono::milliseconds(25)); // Needed for the threads to enter their loop.
     for (size_t n = 0; n < 200; n++)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
@@ -210,10 +226,14 @@ TEST(SharedMemoryBufferTest, SimpleSynchronousWriteRead)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CSharedMemBufferTx sender;
-    EXPECT_TRUE(sender.IsValid());
+    if (!sender.IsValid())
+        std::cout << "ERROR sender: " << sender.GetError() << std::endl;
+    ASSERT_TRUE(sender.IsValid());
 
     CSharedMemBufferRx receiver(sender.GetConnectionString());
-    EXPECT_TRUE(receiver.IsValid());
+    if (!receiver.IsValid())
+        std::cout << "ERROR receiver: " << receiver.GetError() << std::endl;
+    ASSERT_TRUE(receiver.IsValid());
 
     EXPECT_TRUE(sender.TryWrite("HELLO", 6));
     auto optPacket = receiver.TryRead();
@@ -229,10 +249,14 @@ TEST(SharedMemoryBufferTest, ReadWithoutSending)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CSharedMemBufferTx sender;
-    EXPECT_TRUE(sender.IsValid());
+    if (!sender.IsValid())
+        std::cout << "ERROR sender: " << sender.GetError() << std::endl;
+    ASSERT_TRUE(sender.IsValid());
 
     CSharedMemBufferRx receiver(sender.GetConnectionString());
-    EXPECT_TRUE(receiver.IsValid());
+    if (!receiver.IsValid())
+        std::cout << "ERROR receiver: " << receiver.GetError() << std::endl;
+    ASSERT_TRUE(receiver.IsValid());
 
     auto optPacket = receiver.TryRead();
     EXPECT_FALSE(optPacket);
@@ -246,10 +270,14 @@ TEST(SharedMemoryBufferTest, RequestReadPacketSize)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CSharedMemBufferTx sender;
-    EXPECT_TRUE(sender.IsValid());
+    if (!sender.IsValid())
+        std::cout << "ERROR sender: " << sender.GetError() << std::endl;
+    ASSERT_TRUE(sender.IsValid());
 
     CSharedMemBufferRx receiver(sender.GetConnectionString());
-    EXPECT_TRUE(receiver.IsValid());
+    if (!receiver.IsValid())
+        std::cout << "ERROR receiver: " << receiver.GetError() << std::endl;
+    ASSERT_TRUE(receiver.IsValid());
 
     EXPECT_TRUE(sender.TryWrite("HELLO", 5));
 
@@ -266,10 +294,14 @@ TEST(SharedMemoryBufferTest, FragmentRead)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CSharedMemBufferTx sender;
-    EXPECT_TRUE(sender.IsValid());
+    if (!sender.IsValid())
+        std::cout << "ERROR sender: " << sender.GetError() << std::endl;
+    ASSERT_TRUE(sender.IsValid());
 
     CSharedMemBufferRx receiver(sender.GetConnectionString());
-    EXPECT_TRUE(receiver.IsValid());
+    if (!receiver.IsValid())
+        std::cout << "ERROR receiver: " << receiver.GetError() << std::endl;
+    ASSERT_TRUE(receiver.IsValid());
 
     EXPECT_TRUE(sender.TryWrite("HELLO", 6));
     EXPECT_TRUE(sender.TryWrite("HELLO2", 7));
@@ -296,10 +328,14 @@ TEST(SharedMemoryBufferTest, BufferBoundary)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CSharedMemBufferTx sender(256);
-    EXPECT_TRUE(sender.IsValid());
+    if (!sender.IsValid())
+        std::cout << "ERROR sender: " << sender.GetError() << std::endl;
+    ASSERT_TRUE(sender.IsValid());
 
     CSharedMemBufferRx receiver(sender.GetConnectionString());
-    EXPECT_TRUE(receiver.IsValid());
+    if (!receiver.IsValid())
+        std::cout << "ERROR receiver: " << receiver.GetError() << std::endl;
+    ASSERT_TRUE(receiver.IsValid());
 
     // The buffer header has 16 bytes
     // Each allocation is 8 bytes header, 6 bytes data and 2 bytes alignment
@@ -353,10 +389,14 @@ TEST(SharedMemoryBufferTest, ReserveCommitAccessReleaseNonChronologicalOrder)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CSharedMemBufferTx sender(256);
-    EXPECT_TRUE(sender.IsValid());
+    if (!sender.IsValid())
+        std::cout << "ERROR sender: " << sender.GetError() << std::endl;
+    ASSERT_TRUE(sender.IsValid());
 
     CSharedMemBufferRx receiver(sender.GetConnectionString());
-    EXPECT_TRUE(receiver.IsValid());
+    if (!receiver.IsValid())
+        std::cout << "ERROR receiver: " << receiver.GetError() << std::endl;
+    ASSERT_TRUE(receiver.IsValid());
 
     // Reserve buffers for strings
     // The buffer header has 16 bytes
@@ -464,10 +504,14 @@ TEST(SharedMemoryBufferTest, SendReceivePattern)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CSharedMemBufferTx sender;
-    EXPECT_TRUE(sender.IsValid());
+    if (!sender.IsValid())
+        std::cout << "ERROR sender: " << sender.GetError() << std::endl;
+    ASSERT_TRUE(sender.IsValid());
 
     CSharedMemBufferRx receiver(sender.GetConnectionString());
-    EXPECT_TRUE(receiver.IsValid());
+    if (!receiver.IsValid())
+        std::cout << "ERROR receiver: " << receiver.GetError() << std::endl;
+    ASSERT_TRUE(receiver.IsValid());
 
     CPatternReceiver pattern_inspector(receiver);
     CPatternSender pattern_generator(sender);
@@ -501,10 +545,14 @@ TEST(SharedMemoryBufferTest, DelayedSendReceivePattern)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CSharedMemBufferTx sender;
-    EXPECT_TRUE(sender.IsValid());
+    if (!sender.IsValid())
+        std::cout << "ERROR sender: " << sender.GetError() << std::endl;
+    ASSERT_TRUE(sender.IsValid());
 
     CSharedMemBufferRx receiver(sender.GetConnectionString());
-    EXPECT_TRUE(receiver.IsValid());
+    if (!receiver.IsValid())
+        std::cout << "ERROR receiver: " << receiver.GetError() << std::endl;
+    ASSERT_TRUE(receiver.IsValid());
 
     CPatternReceiver pattern_inspector(receiver);
     CPatternSender	 pattern_generator(sender, 10);
@@ -538,10 +586,14 @@ TEST(SharedMemoryBufferTest, SendDelayedReceivePattern)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CSharedMemBufferTx sender;
-    EXPECT_TRUE(sender.IsValid());
+    if (!sender.IsValid())
+        std::cout << "ERROR sender: " << sender.GetError() << std::endl;
+    ASSERT_TRUE(sender.IsValid());
 
     CSharedMemBufferRx receiver(sender.GetConnectionString());
-    EXPECT_TRUE(receiver.IsValid());
+    if (!receiver.IsValid())
+        std::cout << "ERROR receiver: " << receiver.GetError() << std::endl;
+    ASSERT_TRUE(receiver.IsValid());
 
     CPatternReceiver pattern_inspector(receiver, 10);
     CPatternSender	 pattern_generator(sender);
@@ -575,9 +627,13 @@ TEST(SharedMemoryBufferTest, SendRepeatReceivePattern)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CSharedMemBufferTx bufferTX;
-    EXPECT_TRUE(bufferTX.IsValid());
+    if (!bufferTX.IsValid())
+        std::cout << "ERROR TX: " << bufferTX.GetError() << std::endl;
+    ASSERT_TRUE(bufferTX.IsValid());
     CSharedMemBufferRx bufferRX;
-    EXPECT_TRUE(bufferRX.IsValid());
+    if (!bufferTX.IsValid())
+        std::cout << "ERROR RX: " << bufferTX.GetError() << std::endl;
+    ASSERT_TRUE(bufferRX.IsValid());
 
     // The connection string containing the RX and TX strings for the repeater
     std::string ssConnectionString = bufferTX.GetConnectionString() + "\n" + bufferRX.GetConnectionString();
@@ -630,9 +686,13 @@ Mode = "Essential")code"));
     LoadSupportServices();
 
     CSharedMemBufferTx bufferTX;
-    EXPECT_TRUE(bufferTX.IsValid());
+    if (!bufferTX.IsValid())
+        std::cout << "ERROR TX: " << bufferTX.GetError() << std::endl;
+    ASSERT_TRUE(bufferTX.IsValid());
     CSharedMemBufferRx bufferRX;
-    EXPECT_TRUE(bufferRX.IsValid());
+    if (!bufferTX.IsValid())
+        std::cout << "ERROR RX: " << bufferTX.GetError() << std::endl;
+    ASSERT_TRUE(bufferRX.IsValid());
 
     // Start process
     sdv::process::IProcessControl* pProcessControl = sdv::core::GetObject<sdv::process::IProcessControl>("ProcessControlService");

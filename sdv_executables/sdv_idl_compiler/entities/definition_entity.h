@@ -110,7 +110,7 @@ public:
     void CreateInheritanceValueChildNodes();
 
     /**
-     * \brief Does the entity have an Unnamed definition. Overload of IDefinitionEntity::Unnamed.
+     * @brief Does the entity have an Unnamed definition. Overload of IDefinitionEntity::Unnamed.
      * @return Returns 'true' when the definition supports unnamed definition; 'false' otherwise.
      */
     virtual bool IsUnnamed() const override { return m_bAnonymousDefinition; };

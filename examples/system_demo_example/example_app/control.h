@@ -2,6 +2,7 @@
 #define EXMAPLE_UTILITY_H
 
 #include <string>
+#include <atomic>
 #include <support/app_control.h>
 #include <support/signal_support.h>
 
@@ -155,7 +156,7 @@ private:
     bool                    m_bInitialized = false;             ///< Set when initialized.
     bool                    m_bCmdLnError = false;              ///< Command line error occurred.
     bool                    m_bCmdLnHelp = false;               ///< Command line help provided.
-    bool                    m_bRunning = false;                 ///< When set, the application is running.
+    std::atomic_bool        m_bRunning = false;                 ///< When set, the application is running.
     ERunAs                  m_eRunAs = ERunAs::standalone;      ///< Application operation.
     EAppControlReporting    m_eReporting = EAppControlReporting::silent; ///< Application control reporting.
     uint32_t                m_uiInstance = 1000u;               ///< Server instance to connect to.

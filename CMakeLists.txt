@@ -84,7 +84,8 @@ endif()
 # Default C++ settings
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     message("Use MSVC compiler...")
-    add_compile_options(/W4 /WX /wd4996 /wd4127 /permissive- /Zc:rvalueCast)
+    add_compile_options(/W4 /WX /wd4996 /wd4127 /permissive- /Zc:rvalueCast /Zi)
+    add_link_options(/DEBUG)
 
     if (CMAKE_ENABLE_PREFAST)
         message("Microsoft PREfast static code analysis enabled...")

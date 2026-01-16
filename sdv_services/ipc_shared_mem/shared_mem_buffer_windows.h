@@ -53,7 +53,7 @@ public:
     CSharedMemBuffer(CSharedMemBuffer&&) = delete;
 
     /**
-     * \brief Default destructor
+     * @brief Default destructor
      */
     ~CSharedMemBuffer();
 

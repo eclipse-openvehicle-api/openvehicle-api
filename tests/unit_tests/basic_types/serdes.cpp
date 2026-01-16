@@ -80,10 +80,10 @@ TEST_F(CSerdesTest, DeserializeSimpleEndianSwap)
 
 TEST_F(CSerdesTest, SerializeArray)
 {
-    srand((unsigned int)time(0));
+    std::srand((unsigned int)time(0));
     int16_t rguiBuffer[4096];
     for (size_t nIndex = 0; nIndex < 4096; nIndex++)
-        rguiBuffer[nIndex] = static_cast<int16_t>(rand());
+        rguiBuffer[nIndex] = static_cast<int16_t>(std::rand());
 
     sdv::serializer serializer;
     serializer << rguiBuffer;
@@ -95,10 +95,10 @@ TEST_F(CSerdesTest, SerializeArray)
 
 TEST_F(CSerdesTest, DeserializeArray)
 {
-    srand((unsigned int)time(0));
+    std::srand((unsigned int)time(0));
     int16_t rguiBuffer[4096];
     for (size_t nIndex = 0; nIndex < 4096; nIndex++)
-        rguiBuffer[nIndex] = static_cast<int16_t>(rand());
+        rguiBuffer[nIndex] = static_cast<int16_t>(std::rand());
 
     sdv::serializer serializer;
     serializer << rguiBuffer;
@@ -113,10 +113,10 @@ TEST_F(CSerdesTest, DeserializeArray)
 
 TEST_F(CSerdesTest, SerializeArrayEndianSwap)
 {
-    srand((unsigned int)time(0));
+    std::srand((unsigned int)time(0));
     int16_t rguiBuffer[4096];
     for (size_t nIndex = 0; nIndex < 4096; nIndex++)
-        rguiBuffer[nIndex] = static_cast<int16_t>(rand());
+        rguiBuffer[nIndex] = static_cast<int16_t>(std::rand());
 
     static constexpr sdv::EEndian eEndian =
         sdv::GetPlatformEndianess() == sdv::EEndian::little_endian ? sdv::EEndian::big_endian : sdv::EEndian::little_endian;
@@ -139,10 +139,10 @@ TEST_F(CSerdesTest, SerializeArrayEndianSwap)
 
 TEST_F(CSerdesTest, DeserializeArrayEndianSwap)
 {
-    srand((unsigned int)time(0));
+    std::srand((unsigned int)time(0));
     int16_t rguiBuffer[4096];
     for (size_t nIndex = 0; nIndex < 4096; nIndex++)
-        rguiBuffer[nIndex] = static_cast<int16_t>(rand());
+        rguiBuffer[nIndex] = static_cast<int16_t>(std::rand());
 
     static constexpr sdv::EEndian eEndian =
         sdv::GetPlatformEndianess() == sdv::EEndian::little_endian ? sdv::EEndian::big_endian : sdv::EEndian::little_endian;

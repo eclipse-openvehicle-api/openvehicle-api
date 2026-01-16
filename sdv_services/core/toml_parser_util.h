@@ -25,7 +25,7 @@ public:
     DECLARE_OBJECT_CLASS_NAME("TOMLParserUtility")
 
 private:
-    CParserTOML m_parser;       ///< Configuration parser
+    toml_parser::CParser m_parser;       ///< Configuration parser
 };
 
 DEFINE_SDV_OBJECT_NO_EXPORT(CTOMLParserUtility)

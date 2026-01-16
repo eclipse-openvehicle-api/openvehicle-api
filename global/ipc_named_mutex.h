@@ -125,7 +125,9 @@ namespace ipc
         else
         {
             std::srand(static_cast<unsigned>(std::time(nullptr))); // Use current time as seed for random generator
-            m_ssName = std::string("NAMED_MUTEX_") + std::to_string(std::rand());
+            uint32_t uiRand = 0;
+            while (!uiRand) uiRand = std::rand();
+            m_ssName = std::string("NAMED_MUTEX_") + std::to_string(uiRand);
         }
         m_handle = CreateMutexA(nullptr, FALSE, (std::string("Global\\") + m_ssName).c_str());
     }
@@ -191,7 +193,9 @@ namespace ipc
         else
         {
             std::srand(static_cast<unsigned>(std::time(nullptr))); // Use current time as seed for random generator
-            m_ssName = std::string("NAMED_MUTEX_") + std::to_string(std::rand());
+            uint32_t uiRand = 0;
+            while (!uiRand) uiRand = std::rand();
+            m_ssName = std::string("NAMED_MUTEX_") + std::to_string(uiRand);
         }
         m_handle = sem_open(m_ssName.c_str(), O_CREAT, 0777 /*O_RDWR*/, 1);
     }

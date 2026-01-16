@@ -5,33 +5,33 @@
 #include <support/interface_ptr.h>
 
 /**
-* \brief Test class for instantiation tests.
+* @brief Test class for instantiation tests.
 */
 class CCommandLineParserTest : public testing::Test
 {
 public:
     /**
-    * \brief Constructor
+    * @brief Constructor
     */
     CCommandLineParserTest() = default;
 
     /**
-    * \brief Set up the test suite.
+    * @brief Set up the test suite.
     */
     static void SetUpTestCase();
 
     /**
-    * \brief Tear down the test suite.
+    * @brief Tear down the test suite.
     */
     static void TearDownTestCase();
 
     /**
-    * \brief Test setup.
+    * @brief Test setup.
     */
     void SetUp() override;
 
     /**
-    * \brief Test teardown.
+    * @brief Test teardown.
     */
     void TearDown() override;
 };

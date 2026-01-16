@@ -5,6 +5,7 @@
 #include <functional>
 #include <filesystem>
 #include <thread>
+#include <atomic>
 
 namespace asc
 {
@@ -159,8 +160,8 @@ namespace asc
         std::list<SCanMessage>              m_lstMessages;                  ///< Vector with messages
         std::list<SCanMessage>::iterator    m_itCurrent;                    ///< Current iterator position
         std::thread                         m_threadPlayback;               ///< Playback thread.
-        bool                                m_bPlaybackThread = false;      ///< Set when running playback thread
-        bool                                m_bPlayback = false;            ///< Set when running playback
+        std::atomic_bool                    m_bPlaybackThread = false;      ///< Set when running playback thread
+        std::atomic_bool                    m_bPlayback = false;            ///< Set when running playback
         std::atomic<uint32_t>               m_uiLoopCount{ 0 };             ///< Counter how often the data set was sent
     };
 }

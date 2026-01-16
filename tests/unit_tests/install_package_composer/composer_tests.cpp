@@ -2108,7 +2108,7 @@ TEST_F(CInstallPackageComposerTest, DetectPackageCorruptionContent)
     for (size_t n = 0; n < 25; n++)
     {
         // Corrupt the package at the content (from 100 until the size minus 32)
-        size_t nPos = static_cast<size_t>(rand()) * (ptrPackage.size() - 132) / RAND_MAX + 100;
+        size_t nPos = static_cast<size_t>(std::rand()) * (ptrPackage.size() - 132) / RAND_MAX + 100;
         uint8_t uiStoredByte = ptrPackage.get()[nPos];
         ptrPackage.get()[nPos] = ~uiStoredByte;
 
@@ -2337,7 +2337,7 @@ TEST_F(CInstallPackageComposerTest, VerifyIntegrityCorruptionContent)
     for (size_t n = 0; n < 25; n++)
     {
         // Corrupt the package at the content (from 100 until the size minus 32)
-        size_t nPos = static_cast<size_t>(rand()) * (ptrPackage.size() - 132) / RAND_MAX + 100;
+        size_t nPos = static_cast<size_t>(std::rand()) * (ptrPackage.size() - 132) / RAND_MAX + 100;
         uint8_t uiStoredByte = ptrPackage.get()[nPos];
         ptrPackage.get()[nPos] = ~uiStoredByte;
 

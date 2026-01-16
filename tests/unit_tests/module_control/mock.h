@@ -11,13 +11,7 @@
 class CMock
 {
 public:
-    CMock() : m_root("root")
-    {
-        auto ptrElement = std::make_shared<CNormalTable>("Install");
-        m_root.AddElement(ptrElement);
-        auto ptrValue = std::make_shared<CStringNode>("Directory", "install/test");
-        ptrElement->AddElement(ptrValue);
-    }
+    CMock() {}
     void DestroyModuleObjects(sdv::core::TModuleID) {}
     bool IsStandaloneApplication() { return true; }
     bool IsEssentialApplication() { return false; }
@@ -40,9 +34,8 @@ public:
     sdv::core::TModuleID ContextLoad(const std::filesystem::path&, const sdv::u8string&)  { return 0; }
     bool ContextUnload(sdv::core::TModuleID, bool) { return false; }
 
-    CNormalTable    m_root;
-    bool            m_bIsMain = false;
-    bool            m_bIsIsolated = false;
+    bool                        m_bIsMain = false;
+    bool                        m_bIsIsolated = false;
 };
 
 inline CMock& GetMock()

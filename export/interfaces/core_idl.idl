@@ -305,7 +305,7 @@ module sdv
         interface IEntityComments
         {
             /**
-            * \brief Comment mask
+            * @brief Comment mask
             */
             enum ECommentMask : uint32
             {
@@ -342,7 +342,7 @@ module sdv
         interface IDefinitionEntity
         {
             /**
-            * \brief Does the entity have an unnamed definition.
+            * @brief Does the entity have an unnamed definition.
             * @return Returns 'true' when the entity has an unnamed definition; otherwise returns 'false'.
             */
             boolean IsUnnamed() const;

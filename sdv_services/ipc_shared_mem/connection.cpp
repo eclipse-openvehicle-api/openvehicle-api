@@ -342,7 +342,8 @@ bool CConnection::AsyncConnect(sdv::IInterfaceAccess* pReceiver)
     if (m_eStatus != sdv::ipc::EConnectStatus::uninitialized)
     {
         for (auto& rprEventCallback : m_lstEventCallbacks)
-            if (rprEventCallback.pCallback) rprEventCallback.pCallback->SetStatus(sdv::ipc::EConnectStatus::connection_error);
+            if (rprEventCallback.pCallback && rprEventCallback.uiCookie)
+                rprEventCallback.pCallback->SetStatus(sdv::ipc::EConnectStatus::connection_error);
         return false;
     }
 
@@ -456,6 +457,8 @@ uint64_t CConnection::RegisterStatusEventCallback(/*in*/ sdv::IInterfaceAccess* 
     sdv::ipc::IConnectEventCallback* pCallback = pEventCallback->GetInterface<sdv::ipc::IConnectEventCallback>();
     if (!pCallback) return 0;
     uint64_t uiCookie = rand();
+    while (!uiCookie)
+        uiCookie = rand();
     std::unique_lock<std::shared_mutex> lock(m_mtxEventCallbacks);
     m_lstEventCallbacks.emplace(m_lstEventCallbacks.begin(), std::move(SEventCallback{ uiCookie, pCallback }));
     return uiCookie;
@@ -490,7 +493,10 @@ void CConnection::DestroyObject()
     // Clear all events callbacks (if not done so already)
     std::shared_lock<std::shared_mutex> lock(m_mtxEventCallbacks);
     for (auto& rprEventCallback : m_lstEventCallbacks)
+    {
+        rprEventCallback.uiCookie = 0;
         rprEventCallback.pCallback = nullptr;
+    }
     lock.unlock();
 
     // Just in case... so no calls are made into the destructed class any more.
@@ -519,7 +525,10 @@ void CConnection::SetStatus(sdv::ipc::EConnectStatus eStatus)
         m_eStatus = eStatus;
     std::shared_lock<std::shared_mutex> lock(m_mtxEventCallbacks);
     for (auto& rprEventCallback : m_lstEventCallbacks)
-        if (rprEventCallback.pCallback) rprEventCallback.pCallback->SetStatus(eStatus);
+    {
+        if (rprEventCallback.pCallback && rprEventCallback.uiCookie)
+            rprEventCallback.pCallback->SetStatus(eStatus);
+    }
 
     // If disconnected by force update the disconnect status.
     if (m_eStatus == sdv::ipc::EConnectStatus::disconnected_forced)
@@ -554,12 +563,13 @@ void CConnection::ReceiveMessages()
     {
         SetStatus(sdv::ipc::EConnectStatus::communication_error);
         SDV_LOG_ERROR("No valid shared memory for receiving.");
+        lock.unlock();
         m_cvStartConnect.notify_all();
         return;
     }
 
-    m_cvStartConnect.notify_all();
     lock.unlock();
+    m_cvStartConnect.notify_all();
 
     // Read processing
     auto tpStart = std::chrono::high_resolution_clock::time_point();
@@ -623,8 +633,24 @@ void CConnection::ReceiveMessages()
         case EMsgType::data_fragment:
         case EMsgType::data:
             break;
+        case EMsgType::sync_request:
+            TRACE("Receive sync-request message of of ", message.GetSize(), " bytes");
+            break;
+        case EMsgType::sync_answer:
+            TRACE("Receive sync-answer message of of ", message.GetSize(), " bytes");
+            break;
+        case EMsgType::connect_request:
+            TRACE("Receive connect-request message of of ", message.GetSize(), " bytes");
+            break;
+        case EMsgType::connect_answer:
+            TRACE("Receive connect-answer message of of ", message.GetSize(), " bytes");
+            break;
+        case EMsgType::connect_term:
+            TRACE("Receive connect-termination message of of ", message.GetSize(), " bytes");
+            break;
         default:
-            TRACE("Receive raw data 0x", (void*) &message.GetMsgHdr(), " of ", message.GetSize(), " bytes");
+            TRACE("Received unknown message of type ", (uint32_t) message.GetMsgHdr().eType, " of ", message.GetSize(), " bytes");
+            break;
         }
 #endif
 
@@ -1011,7 +1037,7 @@ void CConnection::ReceiveDataFragementMessage(CMessage& rMessage, SDataContext& 
     if (!rMessage.GetFragmentedHdr().uiOffset)
     {
 #if ENABLE_REPORTING >= 1
-        TRACE("Start receive fragmented data message of ", rsDataCtxt.uiTotalSize, " bytes");
+        TRACE("Start receive fragmented data message of ", rsDataCtxt.uiTotalSize, " bytes (following the header)");
 #endif
         // Read the data directory table...
         // Note: it is assumed that the table fits in the first message completely.
@@ -1029,7 +1055,7 @@ void CConnection::ReceiveDataFragementMessage(CMessage& rMessage, SDataContext& 
             if (!sstream.str().empty()) sstream << ", ";
             sstream << rptrData.size();
         }
-        TRACE("Fragmented message has ", rsDataCtxt.seqDataChunks.size(), " of {", sstream.str(), "} bytes");
+        TRACE("Fragmented message has ", rsDataCtxt.seqDataChunks.size(), " chunk of ", sstream.str(), " bytes");
 #endif
     }
 

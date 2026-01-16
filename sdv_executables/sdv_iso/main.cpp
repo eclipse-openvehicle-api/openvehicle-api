@@ -1,3 +1,4 @@
+#include <atomic>
 #include <interfaces/ipc.h>
 #include <support/sdv_core.h>
 #include "../../global/cmdlnparser/cmdlnparser.cpp"
@@ -69,7 +70,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     // See: https://stackoverflow.com/questions/51209268/using-stdthread-in-a-library-loaded-with-dlopen-leads-to-a-sigsev
     // NOTE EVE 27.05.2025: in release builds, starting and ending the thread right after each other causes incorrect behavior and
     // leads in some cases to create a deadlock in the join-function. The solution is to add delays in the thread processing.
-    bool bThreadStarted = false;
+    std::atomic_bool bThreadStarted = false;
     std::thread thread = std::thread([&]()
         {
             std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -223,12 +224,13 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
         return APP_CONTROL_INVALID_ISOLATION_CONFIG;
     }
     SConnectEventCallbackWrapper sConnectEventWrapper;
-    pConnect->RegisterStatusEventCallback(&sConnectEventWrapper);
+    uint64_t uiCookie = pConnect->RegisterStatusEventCallback(&sConnectEventWrapper);
 
     // Connect to the core repository
     sdv::com::IConnectionControl* pConnectionControl = sdv::core::GetObject<sdv::com::IConnectionControl>("CommunicationControl");
     if (!pConnectionControl)
     {
+        pConnect->UnregisterStatusEventCallback(uiCookie);
         if (!bSilent)
             std::cerr << "ERROR: " << COMMUNICATION_CONTROL_SERVICE_ACCESS_ERROR_MSG << std::endl;
         return COMMUNICATION_CONTROL_SERVICE_ACCESS_ERROR;
@@ -237,6 +239,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     sdv::com::TConnectionID tConnection = pConnectionControl->AssignClientEndpoint(ptrChannelEndpoint, 3000, pCoreRepo);
     if (!tConnection.uiControl || !pCoreRepo)
     {
+        pConnect->UnregisterStatusEventCallback(uiCookie);
         if (!bSilent)
             std::cerr << "ERROR: " << CONNECT_SDV_SERVER_ERROR_MSG << std::endl;
         return CONNECT_SDV_SERVER_ERROR;
@@ -246,6 +249,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     sdv::core::ILinkCoreRepository* pLinkCoreRepo = sdv::core::GetObject<sdv::core::ILinkCoreRepository>("RepositoryService");
     if (!pLinkCoreRepo)
     {
+        pConnect->UnregisterStatusEventCallback(uiCookie);
         if (!bSilent)
             std::cerr << "ERROR: " << LINK_REPO_SERVICE_ERROR_MSG << std::endl;
         return LINK_REPO_SERVICE_ERROR;
@@ -264,6 +268,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     sdv::core::IRepositoryUtilityCreate* pCreateUtility = sdv::core::GetObject<sdv::core::IRepositoryUtilityCreate>("RepositoryService");
     if (!pRepositoryInfo || !pRepositoryControl || !pObjectAccess || !pCreateUtility)
     {
+        pConnect->UnregisterStatusEventCallback(uiCookie);
         if (!bSilent)
             std::cerr << "ERROR: " << REPOSITORY_SERVICE_ACCESS_ERROR_MSG << std::endl;
         return REPOSITORY_SERVICE_ACCESS_ERROR;
@@ -337,6 +342,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     }
 
     // Shutdwown
+    pConnect->UnregisterStatusEventCallback(uiCookie);
     parser.Clear();
     pLinkCoreRepo->UnlinkCoreRepository();
     appcontrol.Shutdown();

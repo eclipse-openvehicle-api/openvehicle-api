@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <list>
+#include <atomic>
 #include "../flags.h"
 
 /**
@@ -112,8 +113,8 @@ private:
         void ThreadFunc();
 
         std::thread             m_thread;               ///< The thread that executes the tasks.
-        bool                    m_bShutdown = false;    ///< Set when the thread should terminate.
-        bool                    m_bStarted = false;     ///< Set when the thread has started.
+        std::atomic_bool        m_bShutdown = false;    ///< Set when the thread should terminate.
+        std::atomic_bool        m_bStarted = false;     ///< Set when the thread has started.
         std::function<void()>   m_fnTask;               ///< The task to execute (will be updated with new tasks before execution).
         std::mutex              m_mtxSyncStart;         ///< The startup synchronization mutex.
         std::condition_variable m_cvStarted;            ///< Triggered by the thread to indicate that it has started.

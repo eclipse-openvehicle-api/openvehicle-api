@@ -22,7 +22,7 @@
 /// When put to 1, decoupling of receive data is activated (default is not activated).
 #define ENABLE_DECOUPLING 0
 
-#if ENABLE_REPORTING > 0
+#if ENABLE_REPORTING > 0 && !defined(ENABLE_TRACE)
 /// Enable tracing
 #define ENABLE_TRACE 1
 #endif

@@ -17,6 +17,7 @@
 #include <map>
 #include <set>
 #include <condition_variable>
+#include <atomic>
 
 /**
  * @brief Process control service class
@@ -135,41 +136,40 @@ public:
     void MonitorThread();
 
     sdv::EObjectStatus      m_eObjectStatus = sdv::EObjectStatus::initialization_pending;       ///< Object status.
-
-      std::mutex            m_mtxProcessThreadShutdown;                                         ///< Synchronize access
+    std::mutex              m_mtxProcessThreadShutdown;                                         ///< Synchronize access
 #ifdef _WIN32
     std::map<sdv::process::TProcessID, std::pair<HANDLE,HANDLE>>    m_mapProcessThreadShutdown; ///< Map with process IDs and event handles
 #elif __unix__
-      std::set<sdv::process::TProcessID>    m_setProcessThreadShutdown;                         ///< Set with process IDs
+    std::set<sdv::process::TProcessID>    m_setProcessThreadShutdown;                           ///< Set with process IDs
 #else
 #error OS is not supported!
 #endif
 
-      /**
-       * @brief Process helper structure
-       */
-      struct SProcessHelper
-      {
-          sdv::process::TProcessID  tProcessID = 0;             ///< Process ID
+    /**
+     * @brief Process helper structure
+     */
+    struct SProcessHelper
+    {
+        sdv::process::TProcessID  tProcessID = 0;             ///< Process ID
 #ifdef _WIN32
-          HANDLE                    hProcess = 0;               ///< process handle
+        HANDLE                    hProcess = 0;               ///< process handle
 #elif defined __unix__
-          bool                      bNotAChild = false;         ///< When set, the process is not a child of the monitor process.
+        bool                      bNotAChild = false;         ///< When set, the process is not a child of the monitor process.
 #else
 #error OS is not supported!
 #endif
-          bool                      bRunning = true;            ///< Set when the process is running and not terminated yet.
-          int64_t                   iRetVal = 0;                ///< Process return value.
-          std::map<uint32_t, sdv::process::IProcessLifetimeCallback*> mapAssociatedMonitors;    ///< Map with associated monitors.
-          std::mutex                mtxProcess;                 ///< Mutex for process access.
-          std::condition_variable   cvWaitForProcess;           ///< Condition variable to wait for process termination.
-      };
-      mutable std::mutex            m_mtxProcesses;             ///< Access control for monitor map.
-      std::map<sdv::process::TProcessID, std::shared_ptr<SProcessHelper>> m_mapProcesses;   ///< Monitor map
-      uint32_t                      m_uiNextMonCookie = 1;      ///< Next monitor cookie
-      std::map<uint32_t, std::shared_ptr<SProcessHelper>> m_mapMonitors;    ///< Map with monitors.
-      bool                          m_bShutdown = false;        ///< Set to shutdown the monitor thread.
-      std::thread                   m_threadMonitor;            ///< Monitor thread.
+        std::atomic_bool          bRunning = true;            ///< Set when the process is running and not terminated yet.
+        int64_t                   iRetVal = 0;                ///< Process return value.
+        std::map<uint32_t, sdv::process::IProcessLifetimeCallback*> mapAssociatedMonitors;    ///< Map with associated monitors.
+        std::mutex                mtxProcess;                 ///< Mutex for process access.
+        std::condition_variable   cvWaitForProcess;           ///< Condition variable to wait for process termination.
+    };
+    mutable std::mutex            m_mtxProcesses;             ///< Access control for monitor map.
+    std::map<sdv::process::TProcessID, std::shared_ptr<SProcessHelper>> m_mapProcesses;   ///< Monitor map
+    uint32_t                      m_uiNextMonCookie = 1;      ///< Next monitor cookie
+    std::map<uint32_t, std::shared_ptr<SProcessHelper>> m_mapMonitors;    ///< Map with monitors.
+    std::atomic_bool              m_bShutdown = false;        ///< Set to shutdown the monitor thread.
+    std::thread                   m_threadMonitor;            ///< Monitor thread.
 };
 DEFINE_SDV_OBJECT(CProcessControl)
 

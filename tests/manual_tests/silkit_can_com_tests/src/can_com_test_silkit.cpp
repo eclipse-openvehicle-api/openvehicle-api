@@ -4,6 +4,7 @@
 #include <thread>
 #include <atomic>
 #include <vector>
+#include <atomic>
 #include <condition_variable>
 #include <gtest/gtest.h>
 #include <interfaces/can.h>
@@ -121,7 +122,7 @@ public:
     bool m_messageSent = false;
 
 private:
-    bool m_StopThread = false;
+    std::atomic_bool                m_StopThread = false;
     std::thread                     m_thSend2DatalinkThread;
     mutable std::mutex              m_mtxReceivers;
     std::set<sdv::can::IReceive*>   m_setReceivers;

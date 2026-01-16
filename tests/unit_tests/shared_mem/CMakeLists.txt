@@ -53,16 +53,11 @@ endif()
 # Add the communication unittest
 add_test(NAME UnitTest_InprocMemTests COMMAND UnitTest_InprocMemTests)
 
-#TODO Shared memory tests during complete rebuild fail on Windows when compiling with MINGW. This is due to race conditions occuring
-# only when the system is under heavy load (like during a complete rebuild). The tests have been disabled for the moment and a
-# bug report is filed here: https://dev.azure.com/SW4ZF/AZP-074_DivDI_SofDCarResearch/_workitems/edit/608134
-if ((NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (NOT WIN32))
 # Execute the test
 add_custom_command(TARGET UnitTest_InprocMemTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env TEST_EXECUTION_MODE=CMake "$<TARGET_FILE:UnitTest_InprocMemTests>" --gtest_output=xml:${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/UnitTest_InprocMemTests.xml
     VERBATIM
 )
-endif()
 
 # Shared mem buffer test
 add_executable(UnitTest_SharedMemBufferTests
@@ -85,16 +80,11 @@ endif()
 # Add the communication unittest
 add_test(NAME UnitTest_SharedMemBufferTests COMMAND UnitTest_SharedMemBufferTests)
 
-#TODO Shared memory tests during complete rebuild fail on Windows when compiling with MINGW. This is due to race conditions occuring
-# only when the system is under heavy load (like during a complete rebuild). The tests have been disabled for the moment and a
-# bug report is filed here: https://dev.azure.com/SW4ZF/AZP-074_DivDI_SofDCarResearch/_workitems/edit/608134
-if ((NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (NOT WIN32))
 # Execute the test
 add_custom_command(TARGET UnitTest_SharedMemBufferTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env TEST_EXECUTION_MODE=CMake "$<TARGET_FILE:UnitTest_SharedMemBufferTests>" --gtest_output=xml:${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/UnitTest_SharedMemBufferTests.xml
     VERBATIM
 )
-endif()
 
 # Shared mem connection test
 add_executable(UnitTest_SharedMemConnectTests
@@ -115,16 +105,11 @@ endif()
 # Add the communication unittest
 add_test(NAME UnitTest_SharedMemConnectTests COMMAND UnitTest_SharedMemConnectTests)
 
-#TODO Shared memory tests during complete rebuild fail on Windows when compiling with MINGW. This is due to race conditions occuring
-# only when the system is under heavy load (like during a complete rebuild). The tests have been disabled for the moment and a
-# bug report is filed here: https://dev.azure.com/SW4ZF/AZP-074_DivDI_SofDCarResearch/_workitems/edit/608134
-if ((NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (NOT WIN32))
 # Execute the test
 add_custom_command(TARGET UnitTest_SharedMemConnectTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env TEST_EXECUTION_MODE=CMake "$<TARGET_FILE:UnitTest_SharedMemConnectTests>" --gtest_output=xml:${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/UnitTest_SharedMemConnectTests.xml
     VERBATIM
 )
-endif()
 
 
 # Shared mem large data test
@@ -146,16 +131,11 @@ endif()
 # Add the communication unittest
 add_test(NAME UnitTest_SharedMemLargeDataTests COMMAND UnitTest_SharedMemLargeDataTests)
 
-#TODO Shared memory tests during complete rebuild fail on Windows when compiling with MINGW. This is due to race conditions occuring
-# only when the system is under heavy load (like during a complete rebuild). The tests have been disabled for the moment and a
-# bug report is filed here: https://dev.azure.com/SW4ZF/AZP-074_DivDI_SofDCarResearch/_workitems/edit/608134
-if ((NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (NOT WIN32))
 # Execute the test
 add_custom_command(TARGET UnitTest_SharedMemLargeDataTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env TEST_EXECUTION_MODE=CMake "$<TARGET_FILE:UnitTest_SharedMemLargeDataTests>" --gtest_output=xml:${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/UnitTest_SharedMemLargeDataTests.xml
     VERBATIM
 )
-endif()
 
 # Build dependencies
 add_dependencies(UnitTest_SharedMemTests_App_Repeater core_services)

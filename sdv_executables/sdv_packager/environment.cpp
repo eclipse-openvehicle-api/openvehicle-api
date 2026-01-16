@@ -929,7 +929,7 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
             }
             else
             {
-                // Check whether preceeded by at least one command
+                // Check whether preceded by at least one command
                 if (!(m_uiShowFlags & 0x00ff))
                 {
                     m_nError     = CMDLN_MISSING_SHOW_COMMAND;

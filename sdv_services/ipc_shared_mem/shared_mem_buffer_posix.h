@@ -43,7 +43,7 @@ public:
     CSharedMemBuffer(CSharedMemBuffer&&) = delete;
 
     /**
-     * \brief Default destructor
+     * @brief Default destructor
      */
     ~CSharedMemBuffer();
 
@@ -364,10 +364,15 @@ CSharedMemBuffer<TAccessor>::~CSharedMemBuffer()
         munmap(m_pBuffer, m_uiSize);
     if (m_bServer && !m_ssName.empty())
         shm_unlink((std::string("/") + m_ssName).c_str());
+    if (m_iFileDescr >= 0) close(m_iFileDescr);
     if (m_bServer && m_pSemaphoreTx)
         sem_unlink(m_ssSyncTx.c_str());
+    if (m_pSemaphoreTx)
+        sem_close(m_pSemaphoreTx);
     if (m_bServer && m_pSemaphoreRx)
         sem_unlink(m_ssSyncRx.c_str());
+    if (m_pSemaphoreRx)
+        sem_close(m_pSemaphoreRx);
 }
 
 template <class TAccessor>

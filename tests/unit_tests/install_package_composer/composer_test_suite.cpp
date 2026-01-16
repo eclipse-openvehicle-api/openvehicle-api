@@ -9,8 +9,10 @@
 #include "../../../sdv_services/core/installation_composer.cpp"
 #include "../../../sdv_services/core/toml_parser/parser_toml.cpp"
 #include "../../../sdv_services/core/toml_parser/lexer_toml.cpp"
+#include "../../../sdv_services/core/toml_parser/lexer_toml_token.cpp"
 #include "../../../sdv_services/core/toml_parser/parser_node_toml.cpp"
 #include "../../../sdv_services/core/toml_parser/character_reader_utf_8.cpp"
+#include "../../../sdv_services/core/toml_parser/miscellaneous.cpp"
 #include <support/app_control.h>
 
 #if defined(_WIN32) && defined(_UNICODE)

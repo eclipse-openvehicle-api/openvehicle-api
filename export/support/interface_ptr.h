@@ -58,7 +58,8 @@ namespace sdv
             }
 
             /**
-             * Select the section that is supported now.
+             * @brief Select the section that is supported now.
+             * @param[in] uiSection The section number that should be considered.
              */
             void Select(int uiSection)
             {

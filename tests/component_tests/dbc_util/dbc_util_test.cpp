@@ -12,7 +12,7 @@
 #include <interfaces/dispatch.h>
 #include <support/app_control.h>
 #include <support/timer.h>
-#include <support/sdv_test_macro.h>
+#include "../../include/sdv_test_macro.h"
 #include "../../../global/process_watchdog.h"
 #include "../global/ascformat/ascreader.cpp"
 #include "../global/ascformat/ascwriter.cpp"
@@ -2713,38 +2713,38 @@ TEST(DbcUtilCanDLTest, CyclicTransmit)
     if (iCnt < 4)
     {
         if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-            SDV_TIMING_EXPECT_GE(iCnt, 4, sdv::TEST::WarningLevel::WARNING_REDUCED);
+            SDV_EXPECT_GE_WARN(iCnt, 4, sdv_test::WARNING_REDUCED);
         else
-            SDV_TIMING_EXPECT_GE(iCnt, 4, sdv::TEST::WarningLevel::WARNING_ENABLED);
+            SDV_EXPECT_GE_WARN(iCnt, 4, sdv_test::WARNING_ENABLED);
     }
 
     for (n = 0; n < 5; n++)
     {
         if (n != 0)
         {
-            if (vecStat[n] > 6)       // In the unlucky case, 6 triggers might have occurred (during startup, there might be many more...).
+            if (vecStat[n] > 6u)       // In the unlucky case, 6 triggers might have occurred (during startup, there might be many more...).
             {
                 if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                    SDV_TIMING_EXPECT_LE(vecStat[n], 6, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                    SDV_EXPECT_LE_WARN(vecStat[n], 6u, sdv_test::WARNING_REDUCED);
                 else
-                    SDV_TIMING_EXPECT_LE(vecStat[n], 6, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                    SDV_EXPECT_LE_WARN(vecStat[n], 6u, sdv_test::WARNING_ENABLED);
             }
             double dPeriod = std::round((vecTime[n] - vecTime[n - 1]) * 1000.0) / 1000.0;
             if (dPeriod > 0.051)   // Max 51ms
             {
                 if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                    SDV_TIMING_EXPECT_LE(dPeriod, 0.051, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                    SDV_EXPECT_LE_WARN(dPeriod, 0.051, sdv_test::WARNING_REDUCED);
                 else
-                    SDV_TIMING_EXPECT_LE(dPeriod, 0.051, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                    SDV_EXPECT_LE_WARN(dPeriod, 0.051, sdv_test::WARNING_ENABLED);
             }
             if (n == 4)
             {
                 if (dPeriod < 0.019)   // Min 19ms
                 {
                     if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.019, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.019, sdv_test::WARNING_REDUCED);
                     else
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.019, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.019, sdv_test::WARNING_ENABLED);
                 }
             }
             else
@@ -2752,18 +2752,18 @@ TEST(DbcUtilCanDLTest, CyclicTransmit)
                 if (dPeriod < 0.039)   // Min 39ms
                 {
                     if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.039, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.039, sdv_test::WARNING_REDUCED);
                     else
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.039, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.039, sdv_test::WARNING_ENABLED);
                 }
             }
         }
         if (vecStat[n] < 4u)  // At least 4 triggers.
         {
             if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                SDV_TIMING_EXPECT_GE(vecStat[n], 4, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                SDV_EXPECT_GE_WARN(vecStat[n], 4u, sdv_test::WARNING_REDUCED);
             else
-                SDV_TIMING_EXPECT_GE(vecStat[n], 4, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                SDV_EXPECT_GE_WARN(vecStat[n], 4u, sdv_test::WARNING_ENABLED);
         }
     }
 }
@@ -2857,9 +2857,9 @@ TEST(DbcUtilCanDLTest, CyclicIfActiveTransmit)
             if (iCnt != 0 && iCnt != 2)
             {
                 if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                    SDV_TIMING_EXPECT_EQ(iCnt, 0, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                    SDV_EXPECT_EQ_WARN(iCnt, 0, sdv_test::WARNING_REDUCED);
                 else
-                    SDV_TIMING_EXPECT_EQ(iCnt, 0, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                    SDV_EXPECT_EQ_WARN(iCnt, 0, sdv_test::WARNING_ENABLED);
             }
 
             bInit = true;
@@ -2874,9 +2874,9 @@ TEST(DbcUtilCanDLTest, CyclicIfActiveTransmit)
     if (iCnt < 4)
     {
         if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-            SDV_TIMING_EXPECT_GE(iCnt, 4, sdv::TEST::WarningLevel::WARNING_REDUCED);
+            SDV_EXPECT_GE_WARN(iCnt, 4, sdv_test::WARNING_REDUCED);
         else
-            SDV_TIMING_EXPECT_GE(iCnt, 4, sdv::TEST::WarningLevel::WARNING_ENABLED);
+            SDV_EXPECT_GE_WARN(iCnt, 4, sdv_test::WARNING_ENABLED);
     }
 
     for (n = 0; n < 5; n++)
@@ -2885,40 +2885,40 @@ TEST(DbcUtilCanDLTest, CyclicIfActiveTransmit)
         {
             if (n == 2)
             {
-                if (vecStat[n] != 1)       // One trigger should have occurred due to default value
+                if (vecStat[n] != 1u)       // One trigger should have occurred due to default value
                 {
                     if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                        SDV_TIMING_EXPECT_EQ(vecStat[n], 1, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                        SDV_EXPECT_EQ_WARN(vecStat[n], 1u, sdv_test::WARNING_REDUCED);
                     else
-                        SDV_TIMING_EXPECT_EQ(vecStat[n], 1, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                        SDV_EXPECT_EQ_WARN(vecStat[n], 1u, sdv_test::WARNING_ENABLED);
                 }
             }
             else
             {
-                if (vecStat[n] > 6)       // In the unlucky case, 6 triggers might have occurred (during startup, there might be many more...).
+                if (vecStat[n] > 6u)       // In the unlucky case, 6 triggers might have occurred (during startup, there might be many more...).
                 {
                     if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                        SDV_TIMING_EXPECT_LE(vecStat[n], 6, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                        SDV_EXPECT_LE_WARN(vecStat[n], 6u, sdv_test::WARNING_REDUCED);
                     else
-                        SDV_TIMING_EXPECT_LE(vecStat[n], 6, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                        SDV_EXPECT_LE_WARN(vecStat[n], 6u, sdv_test::WARNING_ENABLED);
                 }
             }
             double dPeriod = std::round((vecTime[n] - vecTime[n - 1]) * 1000.0) / 1000.0;
             if (dPeriod > 0.051)   // Max 51ms
             {
                 if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                    SDV_TIMING_EXPECT_LE(dPeriod, 0.051, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                    SDV_EXPECT_LE_WARN(dPeriod, 0.051, sdv_test::WARNING_REDUCED);
                 else
-                    SDV_TIMING_EXPECT_LE(dPeriod, 0.051, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                    SDV_EXPECT_LE_WARN(dPeriod, 0.051, sdv_test::WARNING_ENABLED);
             }
             if (n == 4)
             {
                 if (dPeriod < 0.019)   // Min 19ms
                 {
                     if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.019, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.019, sdv_test::WARNING_REDUCED);
                     else
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.019, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.019, sdv_test::WARNING_ENABLED);
                 }
             }
             else
@@ -2926,9 +2926,9 @@ TEST(DbcUtilCanDLTest, CyclicIfActiveTransmit)
                 if (dPeriod < 0.039)   // Min 39ms
                 {
                     if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.039, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.039, sdv_test::WARNING_REDUCED);
                     else
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.039, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.039, sdv_test::WARNING_ENABLED);
                 }
             }
         }
@@ -3028,38 +3028,38 @@ TEST(DbcUtilCanDLTest, CyclicAndSpontaneousTransmit)
     if (iCnt < 4)
     {
         if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-            SDV_TIMING_EXPECT_GE(iCnt, 4, sdv::TEST::WarningLevel::WARNING_REDUCED);
+            SDV_EXPECT_GE_WARN(iCnt, 4, sdv_test::WARNING_REDUCED);
         else
-            SDV_TIMING_EXPECT_GE(iCnt, 4, sdv::TEST::WarningLevel::WARNING_ENABLED);
+            SDV_EXPECT_GE_WARN(iCnt, 4, sdv_test::WARNING_ENABLED);
     }
 
     for (n = 0; n < 5; n++)
     {
         if (n != 0)
         {
-            if (vecStat[n] != 2)       // One trigger and one cycle.
+            if (vecStat[n] != 2u)       // One trigger and one cycle.
             {
                 if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                    SDV_TIMING_EXPECT_EQ(vecStat[n], 2, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                    SDV_EXPECT_EQ_WARN(vecStat[n], 2u, sdv_test::WARNING_REDUCED);
                 else
-                    SDV_TIMING_EXPECT_EQ(vecStat[n], 2, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                    SDV_EXPECT_EQ_WARN(vecStat[n], 2u, sdv_test::WARNING_ENABLED);
             }
             double dPeriod = std::round((vecTime[n] - vecTime[n - 1]) * 1000.0) / 1000.0;
             if (dPeriod > 0.051)   // Max 51ms
             {
                 if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                    SDV_TIMING_EXPECT_LE(dPeriod, 0.051, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                    SDV_EXPECT_LE_WARN(dPeriod, 0.051, sdv_test::WARNING_REDUCED);
                 else
-                    SDV_TIMING_EXPECT_LE(dPeriod, 0.051, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                    SDV_EXPECT_LE_WARN(dPeriod, 0.051, sdv_test::WARNING_ENABLED);
             }
             if (n == 4)
             {
                 if (dPeriod < 0.019)   // Min 19ms
                 {
                     if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.019, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.019, sdv_test::WARNING_REDUCED);
                     else
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.019, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.019, sdv_test::WARNING_ENABLED);
                 }
             }
             else
@@ -3067,9 +3067,9 @@ TEST(DbcUtilCanDLTest, CyclicAndSpontaneousTransmit)
                 if (dPeriod < 0.039)   // Min 39ms
                 {
                     if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.039, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.039, sdv_test::WARNING_REDUCED);
                     else
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.039, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.039, sdv_test::WARNING_ENABLED);
                 }
             }
         }
@@ -3172,43 +3172,43 @@ TEST(DbcUtilCanDLTest, SpontaneousDelayTransmit)
     if (iCnt < 4)
     {
         if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-            SDV_TIMING_EXPECT_GE(iCnt, 4, sdv::TEST::WarningLevel::WARNING_REDUCED);
+            SDV_EXPECT_GE_WARN(iCnt, 4, sdv_test::WARNING_REDUCED);
         else
-            SDV_TIMING_EXPECT_GE(iCnt, 4, sdv::TEST::WarningLevel::WARNING_ENABLED);
+            SDV_EXPECT_GE_WARN(iCnt, 4, sdv_test::WARNING_ENABLED);
     }
 
     for (n = 0; n < 5; n++)
     {
         if (n != 0)
         {
-            if (vecStat[n] > 4)       // Max 4 times
+            if (vecStat[n] > 4u)       // Max 4 times
             {
                 if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                    SDV_TIMING_EXPECT_LE(vecStat[n], 4, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                    SDV_EXPECT_LE_WARN(vecStat[n], 4u, sdv_test::WARNING_REDUCED);
                 else
-                    SDV_TIMING_EXPECT_LE(vecStat[n], 4, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                    SDV_EXPECT_LE_WARN(vecStat[n], 4u, sdv_test::WARNING_ENABLED);
             }
-            if (vecStat[n] < 3)       // Min 3 times
+            if (vecStat[n] < 3u)       // Min 3 times
             {
                 if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                    SDV_TIMING_EXPECT_GE(vecStat[n], 3, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                    SDV_EXPECT_GE_WARN(vecStat[n], 3u, sdv_test::WARNING_REDUCED);
                 else
-                    SDV_TIMING_EXPECT_GE(vecStat[n], 3, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                    SDV_EXPECT_GE_WARN(vecStat[n], 3u, sdv_test::WARNING_ENABLED);
             }
             double dPeriod = std::round((vecLastTime[n] - vecFirstTime[n]) * 1000.0) / 1000.0;
             if (dPeriod > 0.061)   // Max 61ms
             {
                 if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                    SDV_TIMING_EXPECT_LE(dPeriod, 0.061, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                    SDV_EXPECT_LE_WARN(dPeriod, 0.061, sdv_test::WARNING_REDUCED);
                 else
-                    SDV_TIMING_EXPECT_LE(dPeriod, 0.061, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                    SDV_EXPECT_LE_WARN(dPeriod, 0.061, sdv_test::WARNING_ENABLED);
             }
             if (dPeriod < 0.039)   // Min 39ms
             {
                 if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                    SDV_TIMING_EXPECT_GE(dPeriod, 0.039, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                    SDV_EXPECT_GE_WARN(dPeriod, 0.039, sdv_test::WARNING_REDUCED);
                 else
-                    SDV_TIMING_EXPECT_GE(dPeriod, 0.039, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                    SDV_EXPECT_GE_WARN(dPeriod, 0.039, sdv_test::WARNING_ENABLED);
             }
         }
     }
@@ -3310,38 +3310,38 @@ TEST(DbcUtilCanDLTest, CyclicAndSpontaneousDelayTransmit)
     if (iCnt < 4)
         {
             if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                SDV_TIMING_EXPECT_GE(iCnt, 4, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                SDV_EXPECT_GE_WARN(iCnt, 4, sdv_test::WARNING_REDUCED);
             else
-                SDV_TIMING_EXPECT_GE(iCnt, 4, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                SDV_EXPECT_GE_WARN(iCnt, 4, sdv_test::WARNING_ENABLED);
         }
 
     for (n = 0; n < 5; n++)
     {
         if (n != 0)
         {
-            if (vecStat[n] != 2)       // Two trigger and/or cycle.
+            if (vecStat[n] != 2u)       // Two trigger and/or cycle.
             {
                 if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                    SDV_TIMING_EXPECT_EQ(vecStat[n], 2, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                    SDV_EXPECT_EQ_WARN(vecStat[n], 2u, sdv_test::WARNING_REDUCED);
                 else
-                    SDV_TIMING_EXPECT_EQ(vecStat[n], 2, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                    SDV_EXPECT_EQ_WARN(vecStat[n], 2u, sdv_test::WARNING_ENABLED);
             }
             double dPeriod = std::round((vecTime[n] - vecTime[n - 1]) * 1000.0) / 1000.0;
             if (dPeriod > 0.051)   // Max 51ms
             {
                 if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                     SDV_TIMING_EXPECT_LE(dPeriod, 0.051, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                     SDV_EXPECT_LE_WARN(dPeriod, 0.051, sdv_test::WARNING_REDUCED);
                 else
-                     SDV_TIMING_EXPECT_LE(dPeriod, 0.051, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                     SDV_EXPECT_LE_WARN(dPeriod, 0.051, sdv_test::WARNING_ENABLED);
             }
             if (n == 4)
             {
                 if (dPeriod < 0.019)   // Min 19ms
                 {
                     if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.019, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.019, sdv_test::WARNING_REDUCED);
                     else
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.019, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.019, sdv_test::WARNING_ENABLED);
                 }
             }
             else
@@ -3349,9 +3349,9 @@ TEST(DbcUtilCanDLTest, CyclicAndSpontaneousDelayTransmit)
                 if (dPeriod < 0.049)   // Min 49ms
                 {
                     if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.049, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.049, sdv_test::WARNING_REDUCED);
                     else
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.049, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.049, sdv_test::WARNING_ENABLED);
                 }
             }
         }
@@ -3446,9 +3446,9 @@ TEST(DbcUtilCanDLTest, CyclicIfActiveAndSpontaneousTransmit)
             if (iCnt != 0 && iCnt != 2)
             {
                 if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                    SDV_TIMING_EXPECT_EQ(iCnt, 0, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                    SDV_EXPECT_EQ_WARN(iCnt, 0, sdv_test::WARNING_REDUCED);
                 else
-                    SDV_TIMING_EXPECT_EQ(iCnt, 0, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                    SDV_EXPECT_EQ_WARN(iCnt, 0, sdv_test::WARNING_ENABLED);
             }
 
             bInit = true;
@@ -3463,9 +3463,9 @@ TEST(DbcUtilCanDLTest, CyclicIfActiveAndSpontaneousTransmit)
     if (iCnt < 4)
     {
         if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-            SDV_TIMING_EXPECT_GE(iCnt, 4, sdv::TEST::WarningLevel::WARNING_REDUCED);
+            SDV_EXPECT_GE_WARN(iCnt, 4, sdv_test::WARNING_REDUCED);
         else
-            SDV_TIMING_EXPECT_GE(iCnt, 4, sdv::TEST::WarningLevel::WARNING_ENABLED);
+            SDV_EXPECT_GE_WARN(iCnt, 4, sdv_test::WARNING_ENABLED);
     }
     for (n = 0; n < 5; n++)
     {
@@ -3473,40 +3473,40 @@ TEST(DbcUtilCanDLTest, CyclicIfActiveAndSpontaneousTransmit)
         {
             if (n == 2)
             {
-                if (vecStat[n] != 1)       // One trigger no cycle.
+                if (vecStat[n] != 1u)       // One trigger no cycle.
                 {
                     if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                        SDV_TIMING_EXPECT_EQ(vecStat[n], 1, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                        SDV_EXPECT_EQ_WARN(vecStat[n], 1u, sdv_test::WARNING_REDUCED);
                     else
-                        SDV_TIMING_EXPECT_EQ(vecStat[n], 1, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                        SDV_EXPECT_EQ_WARN(vecStat[n], 1u, sdv_test::WARNING_ENABLED);
                 }
             }
             else
             {
-                if (vecStat[n] != 2)       // One trigger and one cycle.
+                if (vecStat[n] != 2u)       // One trigger and one cycle.
                 {
                     if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                        SDV_TIMING_EXPECT_EQ(vecStat[n], 2, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                        SDV_EXPECT_EQ_WARN(vecStat[n], 2u, sdv_test::WARNING_REDUCED);
                     else
-                        SDV_TIMING_EXPECT_EQ(vecStat[n], 2, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                        SDV_EXPECT_EQ_WARN(vecStat[n], 2u, sdv_test::WARNING_ENABLED);
                 }
             }
             double dPeriod = std::round((vecTime[n] - vecTime[n - 1]) * 1000.0) / 1000.0;
             if (dPeriod > 0.051)   // Max 51ms
             {
                 if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                    SDV_TIMING_EXPECT_LE(dPeriod, 0.051, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                    SDV_EXPECT_LE_WARN(dPeriod, 0.051, sdv_test::WARNING_REDUCED);
                 else
-                    SDV_TIMING_EXPECT_LE(dPeriod, 0.051, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                    SDV_EXPECT_LE_WARN(dPeriod, 0.051, sdv_test::WARNING_ENABLED);
             }
             if (n == 4)
             {
                 if (dPeriod < 0.019)   // Min 19ms
                 {
                     if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.019, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.019, sdv_test::WARNING_REDUCED);
                     else
-                        SDV_TIMING_EXPECT_GE(dPeriod, 0.019, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                        SDV_EXPECT_GE_WARN(dPeriod, 0.019, sdv_test::WARNING_ENABLED);
                 }
             }
             else
@@ -3514,9 +3514,9 @@ TEST(DbcUtilCanDLTest, CyclicIfActiveAndSpontaneousTransmit)
                 if (dPeriod < 0.039)   // Min 39ms
                 {
                     if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                         SDV_TIMING_EXPECT_GE(dPeriod, 0.039, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                         SDV_EXPECT_GE_WARN(dPeriod, 0.039, sdv_test::WARNING_REDUCED);
                     else
-                         SDV_TIMING_EXPECT_GE(dPeriod, 0.039, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                         SDV_EXPECT_GE_WARN(dPeriod, 0.039, sdv_test::WARNING_ENABLED);
                 }
             }
         }

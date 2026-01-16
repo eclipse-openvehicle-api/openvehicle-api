@@ -312,11 +312,11 @@ sdv::core::TModuleID CModuleControl::ContextLoad(const std::filesystem::path& rp
     {
         size_t nIndex = 0;
         size_t nUnsupportedObjectCount = 0;
-        CParserTOML parser(rssManifest);
+        toml_parser::CParser parser(rssManifest);
         do
         {
-            std::shared_ptr<CNode> ptrComponentType =
-                parser.GetRoot().GetDirect(std::string("Component[") + std::to_string(nIndex++) + "].Type");
+            std::shared_ptr<toml_parser::CNode> ptrComponentType =
+                parser.Root().Direct(std::string("Component[") + std::to_string(nIndex++) + "].Type");
             if (!ptrComponentType) break;
             std::string ssType = static_cast<std::string>(ptrComponentType->GetValue());
             if (ssType == "Device") continue; // Okay

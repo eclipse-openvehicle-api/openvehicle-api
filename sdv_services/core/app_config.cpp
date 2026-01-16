@@ -61,10 +61,10 @@ sdv::core::EConfigProcessResult CAppConfig::ProcessConfig(/*in*/ const sdv::u8st
     // Reset the current baseline
     ResetConfigBaseline();
 
-    CParserTOML parser(ssContent);
+    toml_parser::CParser parser(ssContent);
 
     // Check for config file compatibility
-    auto ptrConfigVersion = parser.GetRoot().GetDirect("Configuration.Version");
+    auto ptrConfigVersion = parser.Root().Direct("Configuration.Version");
     if (!ptrConfigVersion)
     {
         SDV_LOG_ERROR("Configuration version must be present in the configuration file.");
@@ -84,17 +84,17 @@ sdv::core::EConfigProcessResult CAppConfig::ProcessConfig(/*in*/ const sdv::u8st
         !GetAppControl().IsMaintenanceApplication())
     {
         // Load all modules in the component section
-        auto ptrComponents = parser.GetRoot().GetDirect("Component");
-        if (ptrComponents && ptrComponents->GetArray())
+        auto ptrComponents = parser.Root().Direct("Component");
+        if (ptrComponents && ptrComponents->Cast<toml_parser::CArray>())
         {
-            for (uint32_t uiIndex = 0; uiIndex < ptrComponents->GetArray()->GetCount(); uiIndex++)
+            for (uint32_t uiIndex = 0; uiIndex < ptrComponents->Cast<toml_parser::CArray>()->GetCount(); uiIndex++)
             {
-                auto ptrComponent = ptrComponents->GetArray()->Get(uiIndex);
+                auto ptrComponent = ptrComponents->Cast<toml_parser::CArray>()->Get(uiIndex);
                 if (ptrComponent)
                 {
                     // Get the information from the component.
                     std::filesystem::path pathModule;
-                    auto ptrModule = ptrComponent->GetDirect("Path");
+                    auto ptrModule = ptrComponent->Direct("Path");
                     if (ptrModule) pathModule = static_cast<std::string>(ptrModule->GetValue());
 
                     // If there is no path, this is allowed... skip this module
@@ -118,17 +118,17 @@ sdv::core::EConfigProcessResult CAppConfig::ProcessConfig(/*in*/ const sdv::u8st
         }
 
         // Load all modules from the module section.
-        auto ptrModules = parser.GetRoot().GetDirect("Module");
-        if (ptrModules && ptrModules->GetArray())
+        auto ptrModules = parser.Root().Direct("Module");
+        if (ptrModules && ptrModules->Cast<toml_parser::CArray>())
         {
-            for (uint32_t uiIndex = 0; uiIndex < ptrModules->GetArray()->GetCount(); uiIndex++)
+            for (uint32_t uiIndex = 0; uiIndex < ptrModules->Cast<toml_parser::CArray>()->GetCount(); uiIndex++)
             {
-                auto ptrModule = ptrModules->GetArray()->Get(uiIndex);
+                auto ptrModule = ptrModules->Cast<toml_parser::CArray>()->Get(uiIndex);
                 if (ptrModule)
                 {
                     // Get the information from the component.
                     std::filesystem::path pathModule;
-                    auto ptrModulePath = ptrModule->GetDirect("Path");
+                    auto ptrModulePath = ptrModule->Direct("Path");
                     if (ptrModulePath) pathModule = static_cast<std::string>(ptrModulePath->GetValue());
 
                     if (pathModule.empty())
@@ -158,23 +158,23 @@ sdv::core::EConfigProcessResult CAppConfig::ProcessConfig(/*in*/ const sdv::u8st
 
     // Start all components from the component section
     std::filesystem::path pathLastModule;
-    auto ptrComponents = parser.GetRoot().GetDirect("Component");
-    if (ptrComponents && ptrComponents->GetArray())
+    auto ptrComponents = parser.Root().Direct("Component");
+    if (ptrComponents && ptrComponents->Cast<toml_parser::CArray>())
     {
-        for (uint32_t uiIndex = 0; uiIndex < ptrComponents->GetArray()->GetCount(); uiIndex++)
+        for (uint32_t uiIndex = 0; uiIndex < ptrComponents->Cast<toml_parser::CArray>()->GetCount(); uiIndex++)
         {
-            auto ptrComponent = ptrComponents->GetArray()->Get(uiIndex);
+            auto ptrComponent = ptrComponents->Cast<toml_parser::CArray>()->Get(uiIndex);
             if (ptrComponent)
             {
                 // Get the information from the component.
                 std::filesystem::path pathModule;
-                auto ptrModule = ptrComponent->GetDirect("Path");
+                auto ptrModule = ptrComponent->Direct("Path");
                 if (ptrModule) pathModule = static_cast<std::string>(ptrModule->GetValue());
                 std::string ssClass;
-                auto ptrClass = ptrComponent->GetDirect("Class");
+                auto ptrClass = ptrComponent->Direct("Class");
                 if (ptrClass) ssClass = static_cast<std::string>(ptrClass->GetValue());
                 std::string ssName;
-                auto ptrName = ptrComponent->GetDirect("Name");
+                auto ptrName = ptrComponent->Direct("Name");
                 if (ptrName) ssName = static_cast<std::string>(ptrName->GetValue());
 
                 // If there is a path, store it. If there is none, take the last stored
@@ -204,10 +204,10 @@ sdv::core::EConfigProcessResult CAppConfig::ProcessConfig(/*in*/ const sdv::u8st
                 {
                     auto itModule = mapModules.find(pathModule);
                     if (itModule == mapModules.end()) continue; // Module was not loaded before...
-                    tObjectID = GetRepository().CreateObjectFromModule(itModule->second, ssClass, ssName, ptrComponent->CreateTOMLText());
+                    tObjectID = GetRepository().CreateObjectFromModule(itModule->second, ssClass, ssName, ptrComponent->GenerateTOML());
                 }
                 else
-                    tObjectID = GetRepository().CreateObject2(ssClass, ssName, ptrComponent->CreateTOMLText());
+                    tObjectID = GetRepository().CreateObject2(ssClass, ssName, ptrComponent->GenerateTOML());
 
                 if (!tObjectID)
                 {

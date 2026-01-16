@@ -3,6 +3,7 @@
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <atomic>
 #include "pattern_gen.h"
 #include "../../../sdv_services/ipc_shared_mem/mem_buffer_accessor.h"
 
