@@ -114,10 +114,19 @@ private:
      */
     struct SCallEntry
     {
-        sdv::sequence<sdv::pointer<uint8_t>>    seqResult;          ///< The result data.
-        std::mutex                              mtxWaitForResult;   ///< Mutex to protect result processing.
-        std::condition_variable                 cvWaitForResult;    ///< Condition variable to trigger result processing.
-        bool                                    bCancel = false;    ///< Cancel processing when set.
+        /**
+         * @brief Call entry state.
+         */
+        enum EState
+        {
+            initialized,
+            processing,
+            processed,
+            canceled,
+        }                                       eState = EState::initialized;   ///< Data processing state.
+        sdv::sequence<sdv::pointer<uint8_t>>    seqResult;                      ///< The result data.
+        std::mutex                              mtxWaitForResult;               ///< Mutex to protect result processing.
+        std::condition_variable                 cvWaitForResult;                ///< Condition variable to trigger result processing.
     };
 
     CCommunicationControl&              m_rcontrol;                     ///< Reference to the communication control class.

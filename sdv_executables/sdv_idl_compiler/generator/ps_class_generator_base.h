@@ -99,8 +99,10 @@ protected:
         std::string                             ssName;                 ///< Parameter name
         std::string                             ssDefaultValue;         ///< Parameter default value (or empty for void return value)
         std::string                             ssSize;                 ///< Parameter size
-        enum class EDirection { in, out, inout, ret, ignored } eDirection = EDirection::ignored;   ///< Parameter direction or return value
-        enum class EAllocType { direct, indirect, ifc}         eAllocType = EAllocType::direct;    ///< Parameter allocation type
+        enum class EDirection                                           ///< Parameter direction or return value
+        { in, out, inout, ret, ignored } eDirection = EDirection::ignored;   ///< Parameter direction or return value
+        enum class EAllocType                                           ///< Parameter allocation type
+        { direct, indirect, ifc}         eAllocType = EAllocType::direct;    ///< Parameter allocation type
     };
 
     /**

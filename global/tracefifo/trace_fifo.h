@@ -6,6 +6,7 @@
 #include <string>
 #include <sstream>
 #include <map>
+#include <atomic>
 
 /**
  * @brief trace fifo open flags
@@ -460,14 +461,14 @@ private:
      */
     void DispatchThreadFunc();
 
-    const size_t nReadIndex = 0;                    ///< The read index of the pipe descriptor.
-    const size_t nWriteIndex = 1;                   ///< The write index of the pipe descriptor.
-    bool        m_bShutdown = false;                ///< Shutdown flag for the pipe reader thread.
-    int         m_rgPipeStdOut[2] = { -1, -1 };     ///< StdOut pipe with read and write descriptors.
-    int         m_rgPipeStdErr[2] = { -1, -1 };     ///< StdErr pipe with read and write descriptors.
-    int         m_iOldStdOut = -1;                  ///< Old descriptor for the StdOut
-    int         m_iOldStdErr = -1;                  ///< Old descriptor for the StdErr
-    std::thread m_threadDispatch;                   ///< Dispatch thread
+    const size_t        nReadIndex = 0;                    ///< The read index of the pipe descriptor.
+    const size_t        nWriteIndex = 1;                   ///< The write index of the pipe descriptor.
+    std::atomic_bool    m_bShutdown = false;                ///< Shutdown flag for the pipe reader thread.
+    int                 m_rgPipeStdOut[2] = { -1, -1 };     ///< StdOut pipe with read and write descriptors.
+    int                 m_rgPipeStdErr[2] = { -1, -1 };     ///< StdErr pipe with read and write descriptors.
+    int                 m_iOldStdOut = -1;                  ///< Old descriptor for the StdOut
+    int                 m_iOldStdErr = -1;                  ///< Old descriptor for the StdErr
+    std::thread         m_threadDispatch;                   ///< Dispatch thread
 };
 
 #endif // !defined TRACE_FIFO_H

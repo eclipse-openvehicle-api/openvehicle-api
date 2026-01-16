@@ -12,7 +12,8 @@ CChannelConnector::CChannelConnector(CCommunicationControl& rcontrol, uint32_t u
     m_pDataSend(m_ptrChannelEndpoint.GetInterface<sdv::ipc::IDataSend>())
 {
     m_tConnectionID.uiIdent = uiIndex;
-    m_tConnectionID.uiControl = static_cast<uint32_t>(rand());
+    while (!m_tConnectionID.uiControl)
+        m_tConnectionID.uiControl = static_cast<uint32_t>(rand());
 }
 
 CChannelConnector::~CChannelConnector()
@@ -29,7 +30,7 @@ CChannelConnector::~CChannelConnector()
         lock.unlock();
 
         // Cancel the processing
-        rsEntry.bCancel = true;
+        rsEntry.eState = SCallEntry::EState::canceled;
         rsEntry.cvWaitForResult.notify_all();
 
         // Handle next call.
@@ -44,6 +45,10 @@ CChannelConnector::~CChannelConnector()
         if (m_uiConnectionStatusCookie) pConnection->UnregisterStatusEventCallback(m_uiConnectionStatusCookie);
         pConnection->Disconnect();
     }
+
+    // There are several dependencies on this channel connector, which should be availble during the processing of the asynchronous
+    // disconnect function. Wait for a quarter second to allow the processing to complete.
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
 }
 
 bool CChannelConnector::ServerConnect(sdv::IInterfaceAccess* pObject, bool bAllowReconnect)
@@ -230,20 +235,25 @@ void CChannelConnector::DecoupledReceiveData(/*inout*/ sdv::sequence<sdv::pointe
 
         // Send the result back
         m_pDataSend->SendData(seqResult);
-    } else
+    }
+    else
     {
         // Look for the call entry
         std::unique_lock<std::mutex> lockCallMap(m_mtxCalls);
         auto itCall = m_mapCalls.find(sAddress.uiCallIndex);
-        if (itCall == m_mapCalls.end()) return;
+        if (itCall == m_mapCalls.end())
+            return;
         SCallEntry& rsCallEntry = itCall->second;
         m_mapCalls.erase(itCall);
         lockCallMap.unlock();
+        if (rsCallEntry.eState != SCallEntry::EState::processing)
+            return;
 
         // Update the result
         std::unique_lock<std::mutex> lockCall(rsCallEntry.mtxWaitForResult);
         rsCallEntry.seqResult = seqData;
         lockCall.unlock();
+        rsCallEntry.eState = SCallEntry::EState::processed;
         rsCallEntry.cvWaitForResult.notify_all();
     }
 }
@@ -271,12 +281,14 @@ sdv::sequence<sdv::pointer<uint8_t>> CChannelConnector::MakeCall(sdv::ps::TMarsh
     std::unique_lock<std::mutex> lock(m_mtxCalls);
     SCallEntry sResult;
     m_mapCalls.try_emplace(sAddress.uiCallIndex, sResult);
+    sResult.eState = SCallEntry::EState::processing;
     lock.unlock();
 
     // Store the channel context (used to marshall interfaces over the same connector)
     m_rcontrol.SetConnectorContext(this);
 
     // Send the data
+    std::unique_lock<std::mutex> lockResult(sResult.mtxWaitForResult);
     try
     {
         if (!m_pDataSend->SendData(rseqInputData)) throw sdv::ps::XMarshallExcept();
@@ -291,10 +303,13 @@ sdv::sequence<sdv::pointer<uint8_t>> CChannelConnector::MakeCall(sdv::ps::TMarsh
     }
 
     // Wait for the result
-    if (sResult.bCancel) throw sdv::ps::XMarshallTimeout();
-    std::unique_lock<std::mutex> lockResult(sResult.mtxWaitForResult);
-    sResult.cvWaitForResult.wait(lockResult);
-    if (sResult.bCancel) throw sdv::ps::XMarshallTimeout();
+    // NOTE: Sinde the conditional variable doesn't keep its state, it might happen, that the variable is set before the wait
+    // function has been entered (race condition). This would cause the function to wait forever.
+    while (sResult.eState == SCallEntry::EState::processing)
+        sResult.cvWaitForResult.wait_for(lockResult, std::chrono::milliseconds(1));
+
+    if (sResult.eState == SCallEntry::EState::canceled)
+            throw sdv::ps::XMarshallTimeout();
 
     return sResult.seqResult;
 }

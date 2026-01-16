@@ -32,7 +32,7 @@
  *    extension ending with "n" match.
  *  - "subdir?_*" - all files from a directory starting with the name "subdir" followed by a single digit or character, followed
  *    with a "_" and zero or more characters.
- *  - "**\/file*.bin" - all files starting with the name "file" followed by zero or more characters and the extension ".bin" in this
+ *  - "**\\/file*.bin" - all files starting with the name "file" followed by zero or more characters and the extension ".bin" in this
  *    and any subdirectory.
  * @param[in] rpathRel Reference to the relative path to check for a match.
  * @param[in] rssPattern Reference to the string containing the pattern to match.

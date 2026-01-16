@@ -206,10 +206,10 @@ bool CModuleInst::Load(const std::filesystem::path& rpathModule) noexcept
 
     try
     {
-        CParserTOML parser(ssManifest);
+        toml_parser::CParser parser(ssManifest);
 
         // Check for the interface version - currently must be equal.
-        auto ptrVersion = parser.GetRoot().GetDirect("Interface.Version");
+        auto ptrVersion = parser.Root().Direct("Interface.Version");
         if (ptrVersion) m_uiIfcVersion = ptrVersion->GetValue();
         if (!ptrVersion || m_uiIfcVersion != SDVFrameworkInterfaceVersion)
         {
@@ -230,26 +230,26 @@ bool CModuleInst::Load(const std::filesystem::path& rpathModule) noexcept
         }
 
         // Get available classes
-        auto ptrComponents = parser.GetRoot().GetDirect("Component");
-        if (!ptrComponents || !ptrComponents->GetArray())
+        auto ptrComponents = parser.Root().Direct("Component");
+        if (!ptrComponents || !ptrComponents->Cast<toml_parser::CArray>())
         {
             SDV_LOG_ERROR("Error opening SDV module: ", rpathModule.generic_u8string(), " error: no components available");
             Unload(true);
             return false;
         }
-        for (std::uint32_t uiIndex = 0; uiIndex < ptrComponents->GetArray()->GetCount(); uiIndex++)
+        for (std::uint32_t uiIndex = 0; uiIndex < ptrComponents->Cast<toml_parser::CArray>()->GetCount(); uiIndex++)
         {
             // Fill in the class info.
             sdv::SClassInfo sInfo{};
-            auto ptrComponent = ptrComponents->GetArray()->Get(uiIndex);
+            auto ptrComponent = ptrComponents->Cast<toml_parser::CArray>()->Get(uiIndex);
             if (!ptrComponent) continue;
-            auto ptrClassName = ptrComponent->GetDirect("Class");
+            auto ptrClassName = ptrComponent->Direct("Class");
             if (!ptrClassName) continue;
             sInfo.ssClassName = static_cast<std::string>(ptrClassName->GetValue());
-            auto ptrAliases = ptrComponent->GetDirect("Aliases");
+            auto ptrAliases = ptrComponent->Direct("Aliases");
             if (ptrAliases)
             {
-                auto ptrAliasesArray = ptrAliases->GetArray();
+                auto ptrAliasesArray = ptrAliases->Cast<toml_parser::CArray>();
                 for (uint32_t uiAliasIndex = 0; ptrAliasesArray && uiAliasIndex < ptrAliasesArray->GetCount(); uiAliasIndex++)
                 {
                     auto ptrClassAlias = ptrAliasesArray->Get(uiAliasIndex);
@@ -257,10 +257,10 @@ bool CModuleInst::Load(const std::filesystem::path& rpathModule) noexcept
                         sInfo.seqClassAliases.push_back(static_cast<sdv::u8string>(ptrClassAlias->GetValue()));
                 }
             }
-            auto ptrDefaultName = ptrComponent->GetDirect("DefaultName");
+            auto ptrDefaultName = ptrComponent->Direct("DefaultName");
             if (ptrDefaultName) sInfo.ssDefaultObjectName = static_cast<std::string>(ptrDefaultName->GetValue());
             else sInfo.ssDefaultObjectName = sInfo.ssClassName;
-            auto ptrType = ptrComponent->GetDirect("Type");
+            auto ptrType = ptrComponent->Direct("Type");
             if (!ptrType) continue;
             std::string ssType = static_cast<std::string>(ptrType->GetValue());
             if (ssType == "System") sInfo.eType = sdv::EObjectType::SystemObject;
@@ -272,13 +272,13 @@ bool CModuleInst::Load(const std::filesystem::path& rpathModule) noexcept
             else if (ssType == "Stub") sInfo.eType = sdv::EObjectType::Stub;
             else if (ssType == "Utility") sInfo.eType = sdv::EObjectType::Utility;
             else continue;
-            auto ptrSingleton = ptrComponent->GetDirect("Singleton");
+            auto ptrSingleton = ptrComponent->Direct("Singleton");
             if (ptrSingleton && static_cast<bool>(ptrSingleton->GetValue()))
                 sInfo.uiFlags = static_cast<uint32_t>(sdv::EObjectFlags::singleton);
-            auto ptrDependencies = ptrComponent->GetDirect("Dependencies");
+            auto ptrDependencies = ptrComponent->Direct("Dependencies");
             if (ptrDependencies)
             {
-                auto ptrDependencyArray = ptrDependencies->GetArray();
+                auto ptrDependencyArray = ptrDependencies->Cast<toml_parser::CArray>();
                 for (uint32_t uiDependencyIndex = 0; ptrDependencyArray && uiDependencyIndex < ptrDependencyArray->GetCount();
                     uiDependencyIndex++)
                 {

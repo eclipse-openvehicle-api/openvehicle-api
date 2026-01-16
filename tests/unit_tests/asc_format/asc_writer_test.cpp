@@ -3,7 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include "../../../global/exec_dir_helper.h"
-#include <support/sdv_test_macro.h>
+#include "../../include/sdv_test_macro.h"
 
 TEST(CAscWriterTest, AddSamplesDirect)
 {
@@ -108,16 +108,16 @@ TEST(CAscWriterTest, AddTimedSamples)
         if (dDeltaTSGenerated < dDeltaTSGroundThruth - 0.002)
         {
             if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                SDV_TIMING_EXPECT_GE(dDeltaTSGenerated, dDeltaTSGroundThruth - 0.002, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                SDV_EXPECT_GE_WARN(dDeltaTSGenerated, dDeltaTSGroundThruth - 0.002, sdv_test::WARNING_REDUCED);
             else
-                SDV_TIMING_EXPECT_GE(dDeltaTSGenerated, dDeltaTSGroundThruth - 0.002, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                SDV_EXPECT_GE_WARN(dDeltaTSGenerated, dDeltaTSGroundThruth - 0.002, sdv_test::WARNING_ENABLED);
         }
         if (dDeltaTSGenerated > dDeltaTSGroundThruth + 0.002)
         {
             if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-                SDV_TIMING_EXPECT_LE(dDeltaTSGenerated, dDeltaTSGroundThruth + 0.002, sdv::TEST::WarningLevel::WARNING_REDUCED);
+                SDV_EXPECT_LE_WARN(dDeltaTSGenerated, dDeltaTSGroundThruth + 0.002, sdv_test::WARNING_REDUCED);
             else
-                SDV_TIMING_EXPECT_LE(dDeltaTSGenerated, dDeltaTSGroundThruth + 0.002, sdv::TEST::WarningLevel::WARNING_ENABLED);
+                SDV_EXPECT_LE_WARN(dDeltaTSGenerated, dDeltaTSGroundThruth + 0.002, sdv_test::WARNING_ENABLED);
         }
             std::cout << "TIMING: Expected generated timestamp <= ground truth + 2ms (generated=" << dDeltaTSGenerated << "ms, ground truth=" << dDeltaTSGroundThruth << ")..." << std::endl;
         EXPECT_EQ(prSampleGroundTruth.first.uiChannel, prSampleGenerated.first.uiChannel);
@@ -136,7 +136,7 @@ TEST(CAscWriterTest, AddTimedSamples)
 TEST(CAscWriterTest, ExtendedID)
 {
     asc::CAscReader readerGroundThruth;
-    SDV_EXPECT_TRUE(readerGroundThruth.Read(GetExecDirectory() / "asc_reader_ext_id_test.asc"), sdv::TEST::WarningLevel::WARNING_REDUCED);
+    SDV_EXPECT_TRUE(readerGroundThruth.Read(GetExecDirectory() / "asc_reader_ext_id_test.asc"), sdv_test::WARNING_REDUCED);
 
     // Add all samples
     asc::CAscWriter writer;

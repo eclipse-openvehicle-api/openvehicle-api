@@ -32,7 +32,9 @@ sdv::interface_t CMarshallObject::InitializeAsProxy(uint32_t uiProxyIndex, sdv::
     m_eType = EType::proxy;
 
     // Create marshall ID from index and a random number.
-    sdv::ps::TMarshallID tMarshallID = { 0, GetProcessID(), uiProxyIndex, static_cast<uint32_t>(rand()) };
+    sdv::ps::TMarshallID tMarshallID = { 0, GetProcessID(), uiProxyIndex, 0 };
+    while (!tMarshallID.uiControl)
+        tMarshallID.uiControl = static_cast<uint32_t>(rand());
 
     // Get the stub creation interface from the repository
     sdv::core::IRepositoryMarshallCreate* pMarshallCreate =
@@ -99,6 +101,8 @@ bool CMarshallObject::InitializeAsStub(uint32_t uiStubIndex, sdv::interface_t if
 
     // Create marshall ID from index and a random number.
     sdv::ps::TMarshallID tMarshallID = { 0, GetProcessID(), uiStubIndex, static_cast<uint32_t>(rand()) };
+    while (!tMarshallID.uiControl)
+        tMarshallID.uiControl = static_cast<uint32_t>(rand());
 
     // Get the stub creation interface from the repository
     sdv::core::IRepositoryMarshallCreate* pMarshallCreate =

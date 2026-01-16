@@ -5,6 +5,9 @@
 #include <ctime>
 #include <sstream>
 #include <iomanip>
+#ifdef _MSC_VER
+#include <process.h>
+#endif
 #ifdef __GNUC__
 #include <unistd.h>
 #endif
@@ -29,7 +32,15 @@ inline std::string GetTimestamp()
     const auto current_milliseconds {std::chrono::duration_cast<std::chrono::milliseconds> (current_time_since_epoch).count() % 1000};
 
     std::ostringstream stream;
-    stream << "PID#" << std::dec << getpid() << " " << std::put_time(&current_localtime, "%H:%M:%S") << "." << std::setw(3) << std::setfill('0') << current_milliseconds << ": ";
+#ifdef _MSC_VER
+    stream << "PID#" << std::dec << _getpid() << " " << std::put_time(&current_localtime, "%H:%M:%S") << "." << std::setw(3) <<
+        std::setfill('0') << current_milliseconds << ": ";
+#elif defined __GNUC__
+    stream << "PID#" << std::dec << getpid() << " " << std::put_time(&current_localtime, "%H:%M:%S") << "." << std::setw(3) <<
+        std::setfill('0') << current_milliseconds << ": ";
+#else
+#error The current OS is not supported!
+#endif
     return stream.str();
 }
 
@@ -66,7 +77,8 @@ inline void Trace(TArgs... tArgs)
 }
 
 #else // ENABLE_TRACE == 0
-inline void Trace()
+template <typename... TArgs>
+inline void Trace(TArgs...)
 {}
 
 #ifdef __GNUC__

@@ -183,46 +183,108 @@ TEST(UTF8_CharacterReader, InputValidation)
 	for (const auto& inv : GetInvalidUTF8Bytes())
 	{
 		std::string ssUTF8InputInvalid = "Invalid input: " + inv + " test";
-		EXPECT_THROW(CCharacterReaderUTF8 reader(ssUTF8InputInvalid), sdv::toml::XTOMLParseException);
+		EXPECT_THROW(toml_parser::CCharacterReaderUTF8 reader(ssUTF8InputInvalid), sdv::toml::XTOMLParseException);
 	}
 	// Test for a variety of invalid sequences
 	for (const auto& inv : GetInvalidUTF8Sequences())
 	{
 		std::string UTF8InputInvalid = "Invalid input: " + inv + "test";
-		EXPECT_THROW(CCharacterReaderUTF8 reader(UTF8InputInvalid), sdv::toml::XTOMLParseException);
+		EXPECT_THROW(toml_parser::CCharacterReaderUTF8 reader(UTF8InputInvalid), sdv::toml::XTOMLParseException);
 	}
 	// Test for a sample of ASCII, 2-Byte-, 3-Byte- and 4-Byte-Sequences that they will be accepted as valid input
-	EXPECT_NO_THROW(CCharacterReaderUTF8 reader(UTF8InputValid));
+	EXPECT_NO_THROW(toml_parser::CCharacterReaderUTF8 reader(UTF8InputValid));
 
-	EXPECT_NO_THROW(CCharacterReaderUTF8 reader(TestInputUTF8));
+	EXPECT_NO_THROW(toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8));
 }
 
 TEST(UTF8_CharacterReader, PeekAndConsume_ReadCharacters)
 {
-	// Peek() and Consume() read the next character
+    // Peek() and Consume() read the next character
+    {
+        toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
+        for (int i = 0; i < 12; ++i)
+        {
+            EXPECT_EQ(TestInputUTF8_CharacterIndexMap[i], reader.Peek());
+            EXPECT_EQ(TestInputUTF8_CharacterIndexMap[i], reader.Consume());
+        }
+    }
+
+	// Read all characters and the an empty string must be read
+    {
+        toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
+        std::size_t nSize = TestInputUTF8.size();
+		size_t nCnt = 0;
+        while (nCnt < nSize)
+        {
+            EXPECT_FALSE(reader.Peek().empty());
+            std::string ssCharacters = reader.Consume();
+			size_t nCharCnt = ssCharacters.size();
+            EXPECT_NE(nCharCnt, 0);
+            if (!nCharCnt) break;
+            nCnt += nCharCnt;
+        }
+        EXPECT_EQ(nCnt, nSize);
+        EXPECT_TRUE(reader.Peek().empty());
+        EXPECT_TRUE(reader.Consume().empty());
+    }
+}
+
+TEST(UTF8_CharacterReader, PeekAndConsume_ReadCharactersSkip)
+{
+    // Peek(n) and Consume(n) read with skip of every two characters
 	{
-		CCharacterReaderUTF8 reader(TestInputUTF8);
-		for (int i = 0; i < 12; ++i)
+		toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
+		for (int i = 1; i < 12; i += 2)
 		{
-			EXPECT_EQ(TestInputUTF8_CharacterIndexMap[i], reader.Peek());
-			EXPECT_EQ(TestInputUTF8_CharacterIndexMap[i], reader.Consume());
+
+			EXPECT_EQ(TestInputUTF8_CharacterIndexMap[i], reader.Peek(1));
+			EXPECT_EQ(TestInputUTF8_CharacterIndexMap[i], reader.Consume(1));
 		}
 	}
-	// Peek(n) and Consume(n) read the next n-th character
-	{
-		for (int i = 0; i < 12; ++i)
-		{
-			CCharacterReaderUTF8 reader(TestInputUTF8);
-			EXPECT_EQ(TestInputUTF8_CharacterIndexMap[i], reader.Peek(i + 1));
-			EXPECT_EQ(TestInputUTF8_CharacterIndexMap[i], reader.Consume(i + 1));
-		}
-	}
-	// PeekUntil(a) and ConsumeUntil(a) read until a given character
+
+	// Peek(0)/Consume(0) will return the first character in the string and Peek(n)/Consume(n) return empty string if they read out
+    // of bounds
+    {
+        toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
+        EXPECT_EQ(TestInputUTF8_CharacterIndexMap[0], reader.Peek(0));
+        EXPECT_EQ(TestInputUTF8_CharacterIndexMap[0], reader.Consume(0));
+        std::size_t biggerIndex = TestInputUTF8.size(); // Assure this is bigger than the number of characters in TestInputUTF8
+        EXPECT_EQ("", reader.Peek(biggerIndex));
+        EXPECT_EQ("", reader.Consume(biggerIndex));
+    }
+}
+
+TEST(UTF8_CharacterReader, PeekAndConsume_ReadCharactersMulti)
+{
+    // Peek() and Consume() read the next character
+    {
+        toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
+        for (int i = 0; i < 12; i += 2)
+        {
+            EXPECT_EQ(TestInputUTF8_CharacterIndexMap[i] + TestInputUTF8_CharacterIndexMap[i + 1], reader.Peek(0, 2));
+            EXPECT_EQ(TestInputUTF8_CharacterIndexMap[i] + TestInputUTF8_CharacterIndexMap[i + 1], reader.Consume(0, 2));
+        }
+    }
+
+    // Peek() and Consume() skip one and then read two read the next character
+    {
+        toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
+        for (int i = 0; i < 12; i += 3)
+        {
+            EXPECT_EQ(TestInputUTF8_CharacterIndexMap[i + 1] + TestInputUTF8_CharacterIndexMap[i + 2], reader.Peek(1, 2));
+            EXPECT_EQ(TestInputUTF8_CharacterIndexMap[i + 1] + TestInputUTF8_CharacterIndexMap[i + 2], reader.Consume(1, 2));
+        }
+    }
+}
+
+TEST(UTF8_CharacterReader, PeekAndConsume_ReadCharactersUntil)
+{
+    // PeekUntil(a) and ConsumeUntil(a) read until a given character
 	{
 		std::size_t byteIndex = 0;
 		for (int i = 0; i < 12; ++i)
 		{
-			CCharacterReaderUTF8		 reader(TestInputUTF8);
+			toml_parser::CCharacterReaderUTF8		 reader(TestInputUTF8);
 			std::vector<std::string> Codepoints;
 			Codepoints.push_back(TestInputUTF8_CharacterIndexMap[i]);
 			std::string wantedSubstring = TestInputUTF8.substr(0, byteIndex);
@@ -233,20 +295,11 @@ TEST(UTF8_CharacterReader, PeekAndConsume_ReadCharacters)
 	}
 	// PeekUntil(a) and ConsumeUntil(a) read only  until EOF if they don't find a matching character
 	{
-		CCharacterReaderUTF8 reader(TestInputUTF8);
+		toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
 		std::string			notInTestString = "g";
 		EXPECT_EQ(std::string::npos, TestInputUTF8.find(notInTestString));
 		EXPECT_EQ(TestInputUTF8, reader.PeekUntil({notInTestString}));
 		EXPECT_EQ(TestInputUTF8, reader.ConsumeUntil({notInTestString}));
-	}
-	// Peek(0)/Peek(n) and Consume(0)/Consume(n) return empty string if they would read out of bounds
-	{
-		CCharacterReaderUTF8 reader(TestInputUTF8);
-		EXPECT_EQ("", reader.Peek(0));
-		EXPECT_EQ("", reader.Consume(0));
-		std::size_t biggerIndex = TestInputUTF8.size(); // Assure this is bigger than the number of characters in TestInputUTF8
-		EXPECT_EQ("", reader.Peek(biggerIndex));
-		EXPECT_EQ("", reader.Consume(biggerIndex));
 	}
 }
 
@@ -254,7 +307,7 @@ TEST(UTF8_CharacterReader, Peek_NoAdvance)
 {
 	ASSERT_NE(TestInputUTF8_CharacterIndexMap[0], TestInputUTF8_CharacterIndexMap[1]);
 	ASSERT_NE(TestInputUTF8_CharacterIndexMap[1], TestInputUTF8_CharacterIndexMap[2]);
-	CCharacterReaderUTF8 reader(TestInputUTF8);
+	toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
 	// Peek() does not advance the read location
 	{
 		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[0], reader.Peek());
@@ -263,10 +316,10 @@ TEST(UTF8_CharacterReader, Peek_NoAdvance)
 	}
 	// Peek(n) does not advance the read location
 	{
-		EXPECT_EQ("", reader.Peek(0));
-		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[0], reader.Peek(1));
-		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[1], reader.Peek(2));
-		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[2], reader.Peek(3));
+        EXPECT_EQ(TestInputUTF8_CharacterIndexMap[0], reader.Peek(0));		// Read pos 0
+		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[1], reader.Peek(1));		// Read pos 1
+		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[2], reader.Peek(2));		// Read pos 2
+		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[3], reader.Peek(3));		// Read pos 3
 	}
 	// PeekUntil(a) does not advance the read location
 	{
@@ -286,22 +339,22 @@ TEST(UTF8_CharacterReader, Consume_Advance)
 	ASSERT_NE(TestInputUTF8_CharacterIndexMap[3], TestInputUTF8_CharacterIndexMap[4]);
 	// Consume() does advance the read location to the next character
 	{
-		CCharacterReaderUTF8 reader(TestInputUTF8);
+		toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
 		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[0], reader.Consume());
 		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[1], reader.Consume());
 		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[2], reader.Consume());
 	}
 	// Consume(n) does advance the read location to the next n-th character
 	{
-		CCharacterReaderUTF8 reader(TestInputUTF8);
-		EXPECT_EQ("", reader.Consume(0));
-		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[0], reader.Consume(1));
-		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[2], reader.Consume(2));
-		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[5], reader.Consume(3));
+		toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
+        EXPECT_EQ(TestInputUTF8_CharacterIndexMap[0], reader.Consume(0));	// Read pos 0; advance to pos 1
+		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[2], reader.Consume(1));	// Read pos 2; advance to pos 3
+		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[5], reader.Consume(2));	// Read pos 5; advance to pos 6
+		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[9], reader.Consume(3));	// Read pos 9; advance to pos 10
 	}
 	// ConsumeUntil(a) does advance the read location
 	{
-		CCharacterReaderUTF8 reader(TestInputUTF8);
+		toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
 		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[0], reader.ConsumeUntil({TestInputUTF8_CharacterIndexMap[1]}));
 		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[1], reader.ConsumeUntil({TestInputUTF8_CharacterIndexMap[2]}));
 		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[2], reader.ConsumeUntil({TestInputUTF8_CharacterIndexMap[3]}));
@@ -312,7 +365,7 @@ TEST(UTF8_CharacterReader, PeekUntilConsumeUntil_FindAny)
 {
 	// PeekUntil(a) works for a collection of characters
 	{
-		CCharacterReaderUTF8 reader(TestInputUTF8);
+		toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
 		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[0],
 				  reader.PeekUntil({TestInputUTF8_CharacterIndexMap[2], TestInputUTF8_CharacterIndexMap[1]}));
 		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[0] + TestInputUTF8_CharacterIndexMap[1] + TestInputUTF8_CharacterIndexMap[2],
@@ -320,7 +373,7 @@ TEST(UTF8_CharacterReader, PeekUntilConsumeUntil_FindAny)
 	}
 	// ConsumeUntil(a) works for a collection of characters
 	{
-		CCharacterReaderUTF8 reader(TestInputUTF8);
+		toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
 		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[0],
 				  reader.ConsumeUntil({TestInputUTF8_CharacterIndexMap[2], TestInputUTF8_CharacterIndexMap[1]}));
 		EXPECT_EQ(TestInputUTF8_CharacterIndexMap[1] + TestInputUTF8_CharacterIndexMap[2],
@@ -331,7 +384,7 @@ TEST(UTF8_CharacterReader, PeekUntilConsumeUntil_FindAny)
 TEST(UTF8_CharacterReader, PeekAndConsume_SameOutput)
 {
 	{
-		CCharacterReaderUTF8 reader(TestInputUTF8);
+		toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
 		for (int i = 0; i < 12; ++i)
 		{
 			std::string p = reader.Peek();
@@ -342,7 +395,7 @@ TEST(UTF8_CharacterReader, PeekAndConsume_SameOutput)
 	{
 		for (int i = 1; i < 13; ++i)
 		{
-			CCharacterReaderUTF8 reader(TestInputUTF8);
+			toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
 			std::string			p = reader.Peek(i);
 			std::string			c = reader.Consume(i);
 			EXPECT_EQ(p, c);
@@ -351,7 +404,7 @@ TEST(UTF8_CharacterReader, PeekAndConsume_SameOutput)
 	{
 		for (int i = 1; i < 13; ++i)
 		{
-			CCharacterReaderUTF8		 reader(TestInputUTF8);
+			toml_parser::CCharacterReaderUTF8		 reader(TestInputUTF8);
 			std::vector<std::string> CodePoints;
 			CodePoints.push_back(reader.Peek(i));
 			std::string p = reader.PeekUntil(CodePoints);
@@ -365,7 +418,7 @@ TEST(UTF8_CharacterReader, EOFTests)
 {
 	// Check all calls that are not to trigger EOF
 	{
-		CCharacterReaderUTF8 reader(TestInputUTF8);
+		toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
 		EXPECT_FALSE(reader.IsEOF());
 		reader.Peek();
 		reader.Peek(1);
@@ -379,20 +432,20 @@ TEST(UTF8_CharacterReader, EOFTests)
 	}
 	// Check that reading the last character with Consume(n) triggers EOF
 	{
-		CCharacterReaderUTF8 reader(TestInputUTF8);
+		toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
 		EXPECT_FALSE(reader.IsEOF());
 		reader.Consume(TestInputUTF8_CharacterIndexMap.size()); // Last Character
 		EXPECT_TRUE(reader.IsEOF());
 	}
 	// Check that reading out of bounds with Consume(n) triggers EOF
 	{
-		CCharacterReaderUTF8 reader(TestInputUTF8);
+		toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
 		EXPECT_FALSE(reader.IsEOF());
 		reader.Consume(TestInputUTF8_CharacterIndexMap.size() + 1); // Out of bounds
 		EXPECT_TRUE(reader.IsEOF());
 	}
 	{
-		CCharacterReaderUTF8 reader(TestInputUTF8);
+		toml_parser::CCharacterReaderUTF8 reader(TestInputUTF8);
 		EXPECT_FALSE(reader.IsEOF());
 		reader.ConsumeUntil({TestInputUTF8_CharacterIndexMap[11]}); // Second last character
 		EXPECT_FALSE(reader.IsEOF());
@@ -400,7 +453,7 @@ TEST(UTF8_CharacterReader, EOFTests)
 		EXPECT_TRUE(reader.IsEOF());
 	}
 	{
-		CCharacterReaderUTF8 reader("");
+		toml_parser::CCharacterReaderUTF8 reader("");
 		EXPECT_TRUE(reader.IsEOF());
 	}
 }

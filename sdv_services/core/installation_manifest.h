@@ -299,7 +299,7 @@ private:
 /**
  * @brief Interpret a version number as string.
  * @details A version string is composed of: major.minor.patch (numbers only; characters and whitespace are ignored).
- * @param rssVersion Reference to the version string.
+ * @param[in] rssVersion Reference to the version string.
  * @return The interpreted version.
  */
 inline sdv::installation::SPackageVersion InterpretVersionString(const std::string& rssVersion)

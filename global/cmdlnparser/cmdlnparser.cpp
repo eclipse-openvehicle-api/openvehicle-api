@@ -58,7 +58,8 @@ bool CArgumentDefBase::CompareNameAndAssign(CArgumentIterator& rargit, const std
         while (nPos < rssArgument.size())
         {
             char c = rssArgument[nPos];
-            if (!std::isalnum(c) && c != '_' && c != '?')
+            // Protect against multi-byte characters (UTF-8).
+            if (static_cast<uint8_t>(c) > 127u || (!std::isalnum(c) && c != '_' && c != '?'))
                 break;
             ssArgNameCS += c;
             ssArgNameCI += static_cast<char>(std::tolower(c));

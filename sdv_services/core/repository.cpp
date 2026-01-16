@@ -983,11 +983,11 @@ sdv::core::TObjectID CRepository::CreateIsolatedObject(const sdv::SClassInfo& rs
     sstreamConfig << "Object = \"" << rssObjectName << "\"" << std::endl << std::endl;
     if (!rssObjectConfig.empty())
     {
-        CParserTOML parserConfig(rssObjectConfig);
-        sstreamConfig << parserConfig.CreateTOMLText("Isolation.Config");
+        toml_parser::CParser parserConfig(rssObjectConfig);
+        sstreamConfig << parserConfig.GenerateTOML("Isolation.Config");
     }
-    CParserTOML parserConnection(ssConnectionString);
-    sstreamConfig << parserConnection.CreateTOMLText("Isolation.Connection");
+    toml_parser::CParser parserConnection(ssConnectionString);
+    sstreamConfig << parserConnection.GenerateTOML("Isolation.Connection");
 
     // Create command line arguments
     sdv::sequence<sdv::u8string> seqArguments;
@@ -1177,8 +1177,9 @@ sdv::core::TObjectID CRepository::CreateObjectID()
     static sdv::core::TObjectID tCurrent = 0;
     if (!tCurrent)
     {
-        srand(static_cast<unsigned int>(time(0)));
-        tCurrent = rand();
+        std::srand(static_cast<unsigned int>(time(0)));
+        tCurrent = 0;
+        while (!tCurrent) tCurrent = std::rand();
     }
     return ++tCurrent;
 }

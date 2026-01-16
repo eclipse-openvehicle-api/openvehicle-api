@@ -344,7 +344,7 @@ protected:
 
     /**
     * @brief add to the type a cast, for example for 'std::string' it adds "const std::string&'
-    * @param[in]ssSignalType the string representing the type
+    * @param[in] ssSignalType the string representing the type
     * @return Returns either original string or 'const' and '&' added.
     */
     std::string CastValueType(const std::string& ssSignalType) const;

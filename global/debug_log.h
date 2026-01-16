@@ -8,12 +8,28 @@
 #include <filesystem>
 #include <string>
 #include <sstream>
+#include <thread>
+#include <queue>
+#include <chrono>
+#include <atomic>
 #include "exec_dir_helper.h"
 
+#ifndef ENABLE_DEBUG_LOG
 /**
- * @brief Enable debug log by defining it and assigning it the value 1.
+ * @brief Enable debug log by defining the ENABLE_DEBUG_LOG to a value other than zero.
  */
 #define ENABLE_DEBUG_LOG 1
+#endif
+
+#ifndef DECOUPLED_DEBUG_LOG
+/**
+ * @brief When DECOUPLED is set to a value not zero, the logging is decoupled from the writing.
+ * @attention Decoupling the logging from the writing might improve the accuracy of the logging, and reduce influencing the program
+ * to an absolute minimum. It does, however, cause messages to be written delayed, which might lead to missing the clue when a
+ * crash occurs. To log messages synchronously with the program code, set DECOUPLED_DEBUG_LOG to the value zero.
+ */
+#define DECOUPLED_DEBUG_LOG 1
+#endif
 
 /**
  * @brief Debug namespace
@@ -33,14 +49,6 @@ namespace debug
         CLogger()
         {
             m_pathLogFile = GetExecDirectory() / GetExecFilename().replace_extension(".log");
-            std::unique_lock<std::mutex> lock(m_mtxLogger);
-            std::ofstream fstream(m_pathLogFile, std::ios_base::out | std::ios_base::trunc);
-            if (fstream.is_open())
-            {
-                fstream << "Starting log of " << GetExecFilename().generic_u8string() << std::endl;
-                fstream.close();
-            }
-            std::clog << "Starting log of " << GetExecFilename().generic_u8string() << std::flush << std::endl;
         }
 
         /**
@@ -48,14 +56,18 @@ namespace debug
          */
         ~CLogger()
         {
-            std::unique_lock<std::mutex> lock(m_mtxLogger);
-            std::ofstream fstream(m_pathLogFile, std::ios_base::out | std::ios_base::app);
-            if (fstream.is_open())
+#if DECOUPLED_DEBUG_LOG != 0
+            // Shut down the logger thread
+            if (m_threadLogger.joinable())
             {
-                fstream << "End of log..." << std::endl;
-                fstream.close();
+                m_bShutdown = true;
+                m_threadLogger.join();
             }
-            std::clog << "End of log..." << std::flush << std::endl;
+
+            // Prevent the logger mutex to be still in use.
+            std::unique_lock<std::mutex> lock(m_mtxLogger);
+            lock.unlock();
+#endif
         }
 
         /**
@@ -64,16 +76,28 @@ namespace debug
          */
         void Log(const std::string& rss)
         {
+            // Create the message structure
+            SLogMsg sMsg{std::this_thread::get_id(), DepthPerThreadOperation(EDepthOperation::report_only), rss};
+
+#if DECOUPLED_DEBUG_LOG != 0
             std::unique_lock<std::mutex> lock(m_mtxLogger);
-            std::ofstream fstream(m_pathLogFile, std::ios_base::out | std::ios_base::app);
-            std::string ssIndent(m_nDepth, '>');
-            if (!ssIndent.empty()) ssIndent += ' ';
-            if (fstream.is_open())
+            
+            // First log entry starts logging
+            if (!m_threadLogger.joinable())
             {
-                fstream << ssIndent << rss << std::endl;
-                fstream.close();
+                m_threadLogger = std::thread(&CLogger::LogToFileThreadFunc, this);
+                while (!m_threadLogger.joinable())
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
-            std::clog << ssIndent << rss << std::flush << std::endl;
+            std::cout << rss << std::endl;
+
+            // Add message to the log queue
+            m_queueLogger.push(sMsg);
+#else
+            std::ofstream fstream;
+            fstream.open(m_pathLogFile, std::ios_base::out | std::ios_base::app);
+            LogMsg(fstream, sMsg);
+#endif
         }
 
         /**
@@ -81,7 +105,7 @@ namespace debug
          */
         void IncrDepth()
         {
-            m_nDepth++;
+            DepthPerThreadOperation(EDepthOperation::increase);
         }
 
         /**
@@ -89,13 +113,141 @@ namespace debug
          */
         void DecrDepth()
         {
-            if (m_nDepth)
-                m_nDepth--;
+            DepthPerThreadOperation(EDepthOperation::decrease);
         }
     private:
-        std::filesystem::path   m_pathLogFile;  ///< Path to the log file.
-        std::mutex              m_mtxLogger;    ///< Protect against multiple log entries at the same time.
-        size_t                  m_nDepth;       ///< Depth level for indentation.
+        /**
+         * @brief Start the logging
+         */
+        void StartLog()
+        {
+            std::ofstream fstream;
+            fstream.open(m_pathLogFile, std::ios_base::out | std::ios_base::trunc);
+            if (fstream.is_open())
+            {
+                fstream << "Starting log of " << GetExecFilename().generic_u8string() << std::endl;
+                fstream.close();
+            }
+            std::cout << "Starting log of " << GetExecFilename().generic_u8string() << std::endl << std::flush;
+        }
+
+        /**
+         * @brief Finish the logging
+         */
+        void FinishLog()
+        {
+            // Finish logging
+            std::ofstream fstream;
+            fstream.open(m_pathLogFile, std::ios_base::out | std::ios_base::app);
+            if (fstream.is_open())
+            {
+                fstream << "End log of " << GetExecFilename().generic_u8string() << std::endl;
+                fstream.close();
+            }
+            std::cout << "End log of " << GetExecFilename().generic_u8string() << std::endl << std::flush;
+        }
+
+        /**
+         * @brief Log structure containing thread and log information.
+         */
+        struct SLogMsg
+        {
+            std::thread::id id; ///< Thread ID
+            size_t nDepth;      ///< Depth within the calls
+            std::string ssMsg;  ///< Message to log
+        };
+
+        /**
+         * @brief Log a message.
+         * @param[in] rfstream Reference to the stream to log to.
+         * @param[in9 rsMsg Reference to the message to log.
+         */
+        void LogMsg(std::ofstream& rfstream, const SLogMsg& rsMsg)
+        {
+            std::string ssIndent(rsMsg.nDepth, '>');
+            if (!ssIndent.empty())
+                ssIndent += ' ';
+            if (rfstream.is_open())
+            {
+                rfstream << rsMsg.id << ": " << ssIndent << rsMsg.ssMsg << std::endl;
+                rfstream.close();
+            }
+
+            std::cout << rsMsg.id << ": " << ssIndent << rsMsg.ssMsg << std::endl << std::flush;
+        }
+
+#if DECOUPLED_DEBUG_LOG != 0
+        /**
+         * @brief Log to file thread function.
+         */
+        void LogToFileThreadFunc()
+        {
+            // Start logging
+            StartLog();
+
+            // Log until shutdown
+            while (!m_bShutdown)
+            {
+                std::unique_lock<std::mutex> lock(m_mtxLogger);
+
+                // Are there any message. If not, pause for 100 ms
+                if (m_queueLogger.empty())
+                {
+                    lock.unlock();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    continue;
+                }
+                std::queue<SLogMsg> queueLocal = std::move(m_queueLogger);
+                lock.unlock();
+
+                // Open the file and log all messages that are in the queue
+                std::ofstream fstream;
+                fstream.open(m_pathLogFile, std::ios_base::out | std::ios_base::app);
+                while (!queueLocal.empty())
+                {
+                    auto sMsg = std::move(queueLocal.front());
+                    queueLocal.pop();
+                    LogMsg(fstream, sMsg);
+                }
+            }
+
+            // Finish logging
+            FinishLog();
+        }
+#endif
+
+        /**
+         * @brief Depth operation selection.
+         */
+        enum class EDepthOperation
+        {
+            increase,
+            decrease,
+            report_only,
+        };
+
+        /**
+         * @brief Do a per thread function depth operation (increase, decrease or report).
+         * @param[in] eOperation The operation to do.
+         * @return The current function call depth.
+         */
+        size_t DepthPerThreadOperation(EDepthOperation eOperation)
+        {
+            thread_local static size_t nDepth = 0;   ///< Depth level for indentation.
+            if (eOperation == EDepthOperation::increase)
+                nDepth++;
+            else if (eOperation == EDepthOperation::decrease && nDepth)
+                nDepth--;
+            return nDepth;
+        }
+
+        std::filesystem::path m_pathLogFile;                ///< Path to the log file.
+#if DECOUPLED_DEBUG_LOG != 0
+        std::mutex m_mtxLogger;                             ///< Protect against multiple log entries at the same time.
+        std::thread                 m_threadLogger;         ///< Logger thread
+        std::atomic_bool            m_bShutdown = false;    ///< When set, terminate the logging thread
+        std::queue<SLogMsg>         m_queueLogger;          ///< Queue with messages to log.
+#endif
     };
 
     /**

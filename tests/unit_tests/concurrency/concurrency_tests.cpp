@@ -98,7 +98,7 @@ struct SMakeNoice
             rthread.join();
     }
 
-    bool                bShutdown = false;      ///< Run threads until shutdown is set.
+    std::atomic_bool    bShutdown = false;      ///< Run threads until shutdown is set.
     std::atomic_size_t  nStarted = 0;           ///< Amount of threads that were started. This is to wait for all threads to start.
     std::thread         rgThreads[nAmount];     ///< The noise generating threads.
 };
@@ -383,7 +383,7 @@ TEST(ConcurrencyTest, ConditionVarWaitForPrediction_SeparateMutexForEachThread_I
     std::atomic_size_t nCnt = 0;
     std::atomic_size_t nThreadCnt = 0;
     std::atomic_size_t nViolationCnt = 0;
-    bool b1 = false, b2 = false, b3 = false, b4 = false;
+    std::atomic_bool b1 = false, b2 = false, b3 = false, b4 = false;
     SMakeNoice noice;
     std::thread thread1([&]()
         {

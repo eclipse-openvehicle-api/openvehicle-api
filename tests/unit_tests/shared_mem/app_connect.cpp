@@ -4,7 +4,7 @@
 
 #define TIME_TRACKING
 #include "../../../sdv_services/ipc_shared_mem/channel_mgnt.cpp"
-#include "../../../sdv_services/ipc_shared_mem/connection.cpp"
+#include "../../../sdv_services/ipc_shared_mem/connection.cpp"          // Tracing is enabled/disabled in the connection.h file
 #include "../../../sdv_services/ipc_shared_mem/watchdog.cpp"
 #include "../../../sdv_services/ipc_shared_mem/mem_buffer_accessor.cpp"
 #include <sstream>
@@ -12,6 +12,7 @@
 #include <iostream>
 #include <fstream>
 #include <queue>
+#include <atomic>
 
 #ifdef __GNUC__
 #include <unistd.h>
@@ -67,6 +68,8 @@ public:
     {
         // Send the same data back again (if needed).
         std::unique_lock<std::mutex> lock(m_mtxData);
+        m_nReceiveCallCnt++;
+        m_nPackageReceiveCnt += seqData.size();
         m_queueSendData.push(seqData);
         lock.unlock();
 
@@ -93,7 +96,10 @@ public:
 
             // Send the data back to the sender
             if (m_pSend)
+            {
                 m_pSend->SendData(seqData);
+                m_nSendCallCnt++;
+            }
         }
     }
 
@@ -184,6 +190,33 @@ public:
             m_threadSender.join();
     }
 
+    /**
+     * @brief Get the receive call count.
+     * @return The amount of receive calls that has been made.
+     */
+    size_t GetReceiveCallCount() const
+    {
+        return m_nReceiveCallCnt;
+    }
+
+    /**
+     * @brief Get the package call count.
+     * @return The amount of packages that have been received.
+     */
+    size_t GetPackageReceiveCount() const
+    {
+        return m_nPackageReceiveCnt;
+    }
+
+    /**
+     * @brief Get the send call count.
+     * @return The amount of send calls that has been made.
+     */
+    size_t GetSendCallCount() const
+    {
+        return m_nSendCallCnt;
+    }
+
 private:
     sdv::ipc::IDataSend*                                m_pSend = nullptr;              ///< Send interface to implement repeating function.
     mutable std::mutex                                  m_mtxData;                      ///< Protect data access.
@@ -191,9 +224,12 @@ private:
     std::condition_variable                             m_cvDisconnect;                 ///< Disconnect event.
     std::condition_variable                             m_cvReceived;                   ///< Receive event.
     std::thread                                         m_threadSender;                 ///< Thread to send data.
-    bool                                                m_bConnected = false;           ///< Set when connected was triggered.
-    bool                                                m_bDisconnect = false;          ///< Set when shutdown was triggered.
-    bool                                                m_bShutdown = false;            ///< Set when shutdown is processed.
+    std::atomic_bool                                    m_bConnected = false;           ///< Set when connected was triggered.
+    std::atomic_bool                                    m_bDisconnect = false;          ///< Set when shutdown was triggered.
+    std::atomic_bool                                    m_bShutdown = false;            ///< Set when shutdown is processed.
+    std::atomic_size_t                                  m_nReceiveCallCnt = 0;          ///< Receive call counter.
+    std::atomic_size_t                                  m_nPackageReceiveCnt = 0;       ///< Package receive counter.
+    std::atomic_size_t                                  m_nSendCallCnt = 0;             ///< Send call counter.
 };
 
 
@@ -280,15 +316,18 @@ extern "C" int main(int argc, char* argv[])
 
     // Open the control channel endpoint
     sdv::TObjectPtr ptrControlConnection;
+    sdv::ipc::IConnect* pControlConnect = nullptr;
     CReceiver receiverControl;
+    uint64_t uiControlEventCookie = 0;
     if (!ssControlConnectString.empty())
     {
         TRACE(bServer ? "Server" : "Client", ": Start of control channel connection...");
         ptrControlConnection = mgntControlMgntChannel.Access(ssControlConnectString);
         if (!ptrControlConnection) return -12;
-        sdv::ipc::IConnect* pControlConnect = ptrControlConnection.GetInterface<sdv::ipc::IConnect>();
+        pControlConnect = ptrControlConnection.GetInterface<sdv::ipc::IConnect>();
         if (!pControlConnect) return -13;
-        if (!pControlConnect->RegisterStatusEventCallback(&receiverControl)) return -20;
+        uiControlEventCookie = pControlConnect->RegisterStatusEventCallback(&receiverControl);
+        if (!uiControlEventCookie) return -20;
         if (!pControlConnect->AsyncConnect(&receiverControl)) return -14;
         if (!pControlConnect->WaitForConnection(250)) return -5;  // Note: Connection should be possible within 250ms.
         if (pControlConnect->GetStatus() != sdv::ipc::EConnectStatus::connected) return -15;
@@ -339,8 +378,10 @@ Size = 1024000
 
     // Establish the connection
     sdv::ipc::IConnect* pDataConnect = ptrDataConnection.GetInterface<sdv::ipc::IConnect>();
+    uint64_t uiDataEventCookie = 0;
     if (!pDataConnect) return -3;
-    if (!pDataConnect->RegisterStatusEventCallback(&receiverData)) return -21;
+    uiDataEventCookie = pDataConnect->RegisterStatusEventCallback(&receiverData);
+    if (!uiDataEventCookie) return -21;
     if (!pDataConnect->AsyncConnect(&receiverData)) return -4;
     if (!pDataConnect->WaitForConnection(10000)) return -5;  // Note: Connection should be possible within 10000ms.
     if (pDataConnect->GetStatus() != sdv::ipc::EConnectStatus::connected) return -5;
@@ -358,12 +399,17 @@ Size = 1024000
         // Repeat data until disconnect occurrs (differentiate between forced and not forced to allow two apps to start at the
         // same time).
         receiverData.WaitUntilDisconnect(bForceTerminate ? 800 : 1600);
-        std::cout << "App " << (bServer ? "server" : "client") << " connect process disconnecting..." << std::endl;
+        TRACE("App ", bServer ? "server" : "client", " connect process disconnecting...");
     }
+
+    // Statistics
+    TRACE("Receive was called ", receiverData.GetReceiveCallCount(), " times (", receiverData.GetPackageReceiveCount(),
+        " packages).");
+    TRACE("Send was called ", receiverData.GetSendCallCount(), " times.");
 
     if (bForceTerminate)
     {
-        std::cout << "Forced termination of app " << (bServer ? "server" : "client") << " connect process..." << std::endl;
+        TRACE("Forced termination of app ", bServer ? "server" : "client", " connect process...");
 #ifdef _MSC_VER
         _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
 #endif
@@ -371,9 +417,11 @@ Size = 1024000
     }
 
     // Initiate shutdown
+    if (pDataConnect && uiDataEventCookie) pDataConnect->UnregisterStatusEventCallback(uiDataEventCookie);
     ptrDataConnection.Clear();
     mgntDataMgntChannel.Shutdown();
     if (mgntDataMgntChannel.GetStatus() != sdv::EObjectStatus::destruction_pending) return -6;
+    if (pControlConnect && uiControlEventCookie) pControlConnect->UnregisterStatusEventCallback(uiControlEventCookie);
     ptrControlConnection.Clear();
     mgntControlMgntChannel.Shutdown();
     if (mgntControlMgntChannel.GetStatus() != sdv::EObjectStatus::destruction_pending) return -16;

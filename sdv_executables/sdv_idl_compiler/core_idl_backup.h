@@ -957,7 +957,7 @@ namespace sdv
             static constexpr ::sdv::interface_id _id = 0xEE1AD4FC2B9217BB;
 
             /**
-            * \brief Comment mask
+            * @brief Comment mask
             */
             enum class ECommentMask : uint32_t
             {
@@ -1024,7 +1024,7 @@ namespace sdv
             static constexpr ::sdv::interface_id _id = 0xC7BB02340D82D7AE;
 
             /**
-            * \brief Does the entity have an unnamed definition.
+            * @brief Does the entity have an unnamed definition.
             * @return Returns 'true' when the entity has an unnamed definition; otherwise returns 'false'.
             */
             virtual bool IsUnnamed() const = 0;

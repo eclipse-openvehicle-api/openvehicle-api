@@ -7,10 +7,11 @@
 #include <../global/base64.h>
 #include <support/sdv_core.h>
 #include <support/app_control.h>
-#include <support/sdv_test_macro.h>
+#include "../../include/sdv_test_macro.h"
 #include <interfaces/ipc.h>
 #include <algorithm>
 #include <queue>
+#include <atomic>
 
 /**
 * @brief Load support modules to publish the needed services.
@@ -27,8 +28,7 @@ public:
     * @brief Constructor
     * @param[in] bEnableEvent When set, enable the connection event callback interface.
     */
-    CLargeDataReceiver(bool bEnableEvent = false) : m_bEnableEvent(bEnableEvent),
-        m_threadDecoupledSend(&CLargeDataReceiver::DecoupledSendThread, this)
+    CLargeDataReceiver(bool bEnableEvent = false) : m_bEnableEvent(bEnableEvent)
     {}
 
     /**
@@ -37,6 +37,8 @@ public:
     ~CLargeDataReceiver()
     {
         m_bShutdown = true;
+        std::unique_lock<std::mutex> lock(m_mtxData);
+        lock.unlock();
         if (m_threadDecoupledSend.joinable())
             m_threadDecoupledSend.join();
     }
@@ -73,6 +75,10 @@ public:
         for (const sdv::pointer<uint8_t>& rptrData : seqData)
             m_queueDataCopy.push(rptrData);
 
+        // Start the processing thread if needed
+        if (!m_threadDecoupledSend.joinable())
+            m_threadDecoupledSend = std::thread(&CLargeDataReceiver::DecoupledSendThread, this);
+
         // Store data into the queue for sending.
         m_queueDecoupledSend.push(std::move(seqData));
         m_cvDecoupledSend.notify_all();
@@ -87,7 +93,7 @@ public:
     /**
      * @brief Wait until the caller hasn't sent anything anymore for 1 second.
      */
-    void WaitForNoActivity(sdv::IInterfaceAccess* pSender, size_t nCount = 1, uint32_t uiTimeoutMs = 20000)
+    void WaitForNoActivity(sdv::IInterfaceAccess* pSender, [[maybe_unused]] size_t nCount = 1, uint32_t uiTimeoutMs = 1000)
     {
         CConnection* pConnection = dynamic_cast<CConnection*>(pSender);
         double dTimeout = static_cast<double>(uiTimeoutMs) / 1000.0;
@@ -237,16 +243,16 @@ private:
     sdv::ipc::IDataSend*                    m_pSend = nullptr;              ///< Send interface to implement repeating function.
     mutable std::mutex                      m_mtxData;                      ///< Protect data access.
     std::queue<sdv::pointer<uint8_t>>       m_queueDataCopy;                ///< Copy of the data.
-    sdv::ipc::EConnectStatus                m_eStatus = sdv::ipc::EConnectStatus::uninitialized; ///< Current received status.
+    std::atomic<sdv::ipc::EConnectStatus>   m_eStatus = sdv::ipc::EConnectStatus::uninitialized; ///< Current received status.
     bool                                    m_bConnectError = false;        ///< Connection error ocurred.
     bool                                    m_bCommError = false;           ///< Communication error occurred.
     bool                                    m_bForcedDisconnect = false;    ///< Force disconnect.
-    size_t                                  m_nCount = 0;                   ///< Receive counter.
+    std::atomic_size_t                      m_nCount = 0;                   ///< Receive counter.
     std::condition_variable                 m_cvReceived;                   ///< Receive event.
     std::thread                             m_threadDecoupledSend;          ///< Decoupled send thread.
     std::queue<sdv::sequence<sdv::pointer<uint8_t>>> m_queueDecoupledSend;  ///< Data queue for sending.
     std::condition_variable                 m_cvDecoupledSend;              ///< Trigger decoupled sending.
-    bool                                    m_bShutdown = false;            ///< Shutdown send thread.
+    std::atomic_bool                        m_bShutdown = false;            ///< Shutdown send thread.
 };
 
 TEST(SharedMemChannelService, CommunicateOneLargeBlock)
@@ -341,6 +347,7 @@ Size = 1024000
     EXPECT_NO_THROW(ptrServerConnection.Clear());
 
     EXPECT_NO_THROW(mgntServer.Shutdown());
+
     EXPECT_NO_THROW(mgntClient.Shutdown());
 
     EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::destruction_pending);
@@ -371,6 +378,7 @@ Size = 1024000
     EXPECT_NE(sChannelEndpoint.pConnection, nullptr);
     EXPECT_FALSE(sChannelEndpoint.ssConnectString.empty());
 
+    
     sdv::TObjectPtr ptrServerConnection(sChannelEndpoint.pConnection);
     sdv::TObjectPtr ptrClientConnection = mgntClient.Access(sChannelEndpoint.ssConnectString);
     EXPECT_TRUE(ptrServerConnection);
@@ -439,7 +447,7 @@ Size = 1024000
     }
     EXPECT_EQ(nCnt, 30);
 
-    nCnt = 0;
+    nCnt     = 0;
     bCorrect = true;
     EXPECT_EQ(receiverClient.GetReceiveCount(), 30u);
     while (bCorrect)
@@ -467,6 +475,7 @@ Size = 1024000
     EXPECT_NO_THROW(ptrServerConnection.Clear());
 
     EXPECT_NO_THROW(mgntServer.Shutdown());
+
     EXPECT_NO_THROW(mgntClient.Shutdown());
 
     EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::destruction_pending);
@@ -582,6 +591,7 @@ Size = 1024000
     EXPECT_NO_THROW(ptrServerConnection.Clear());
 
     EXPECT_NO_THROW(mgntServer.Shutdown());
+
     EXPECT_NO_THROW(mgntClient.Shutdown());
 
     EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::destruction_pending);
@@ -650,6 +660,7 @@ Size = 1024000
     // Try send; should succeed, since connected
     EXPECT_TRUE(pServerSend->SendData(seqPattern));
     receiverServer.WaitForNoActivity(ptrServerConnection);
+    EXPECT_EQ(receiverServer.GetReceiveCount(), 1u);
     auto ptrServerPattern = receiverServer.GetData();
     ASSERT_EQ(ptrServerPattern.size(), nCount * sizeof(uint32_t));
     pData = reinterpret_cast<uint32_t*>(ptrServerPattern.get());
@@ -730,13 +741,15 @@ Size = 1024000
     TRACE("Connection estabished...");
     appcontrol.SetRunningMode();
 
+    EXPECT_EQ(receiverServer.GetReceiveCount(), 0u);
+
     // Try send; should succeed, since connected
     for (size_t nCnt = 0; nCnt < 30; nCnt++)
     {
         if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-            SDV_TIMING_EXPECT_EQ(pServerSend->SendData(seqPattern), true, sdv::TEST::WARNING_REDUCED);
+            SDV_EXPECT_EQ_WARN(pServerSend->SendData(seqPattern), true, sdv_test::WARNING_REDUCED);
         else
-            SDV_TIMING_EXPECT_EQ(pServerSend->SendData(seqPattern), true, sdv::TEST::WARNING_ENABLED);
+            SDV_EXPECT_EQ_WARN(pServerSend->SendData(seqPattern), true, sdv_test::WARNING_ENABLED);
     }
     receiverServer.WaitForNoActivity(ptrServerConnection, 30);
 
@@ -744,9 +757,9 @@ Size = 1024000
     size_t nCnt = 0;
     bool bCorrect = true;
     if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-        SDV_TIMING_EXPECT_EQ(receiverServer.GetReceiveCount(), 30u, sdv::TEST::WARNING_REDUCED);
+        SDV_EXPECT_EQ_WARN(receiverServer.GetReceiveCount(), 30u, sdv_test::WARNING_REDUCED);
     else
-        SDV_TIMING_EXPECT_EQ(receiverServer.GetReceiveCount(), 30u, sdv::TEST::WARNING_ENABLED);
+        SDV_EXPECT_EQ_WARN(receiverServer.GetReceiveCount(), 30u, sdv_test::WARNING_ENABLED);
     while (bCorrect)
     {
         auto ptrServerPattern = receiverServer.GetData();
@@ -765,9 +778,9 @@ Size = 1024000
         }
     }
     if(SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-        SDV_TIMING_EXPECT_EQ(nCnt, 30, sdv::TEST::WARNING_REDUCED);
+        SDV_EXPECT_EQ_WARN(nCnt, 30u, sdv_test::WARNING_REDUCED);
     else
-        SDV_TIMING_EXPECT_EQ(nCnt, 30, sdv::TEST::WARNING_ENABLED);
+        SDV_EXPECT_EQ_WARN(nCnt, 30u, sdv_test::WARNING_ENABLED);
 
     appcontrol.SetConfigMode();
 

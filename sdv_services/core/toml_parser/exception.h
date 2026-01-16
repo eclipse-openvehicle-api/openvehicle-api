@@ -3,18 +3,31 @@
 
 #include <interfaces/toml.h>
 
-except XTOMLParseException : public sdv::toml::XTOMLParseException
+/// The TOML parser namespace
+namespace toml_parser
 {
     /**
-     * @brief Constructor
+     * @brief Extended exception for the TOML parser.
      */
-    XTOMLParseException(const std::string& rss) { ssMessage = rss; };
+    except XTOMLParseException : public sdv::toml::XTOMLParseException
+    {
+        /**
+         * @brief Constructor
+         */
+        XTOMLParseException(const std::string& rss)
+        {
+            ssMessage = rss;
+        };
 
-    /**
-     * @brief Return the explanatory string.
-     * @return The descriptive string.
-     */
-    virtual const char* what() const noexcept override { return ssMessage.c_str(); }
-};
+        /**
+         * @brief Return the explanatory string.
+         * @return The descriptive string.
+         */
+        virtual const char* what() const noexcept override
+        {
+            return ssMessage.c_str();
+        }
+    };
+} // namespace toml_parser
 
 #endif // !defined CONFIG_EXCEPTION_H

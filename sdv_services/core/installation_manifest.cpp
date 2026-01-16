@@ -164,22 +164,22 @@ bool CInstallManifest::Read(const std::string& rssManifest, bool bBlockSystemObj
     m_bBlockSystemObjects = bBlockSystemObjects;
 
     // Parse the manifest
-    CParserTOML parser(rssManifest);
+    toml_parser::CParser parser(rssManifest);
 
     // Get the installation version - must be identical to the interface version
-    auto ptrInstallVersionNode = parser.GetRoot().GetDirect("Installation.Version");
+    auto ptrInstallVersionNode = parser.Root().Direct("Installation.Version");
     if (!ptrInstallVersionNode || ptrInstallVersionNode->GetValue() != SDVFrameworkInterfaceVersion) return false;
 
     // Get the installation name
-    auto ptrInstallNameNode = parser.GetRoot().GetDirect("Installation.Name");
+    auto ptrInstallNameNode = parser.Root().Direct("Installation.Name");
     if (!ptrInstallNameNode) return false;
     m_ssInstallName = static_cast<std::string>(ptrInstallNameNode->GetValue());
     if (m_ssInstallName.empty()) return false;
 
     // Get installation properties. The properties are optional
-    auto ptrProperties = parser.GetRoot().GetDirect("Properties");
-    std::shared_ptr<CTable> ptrPropertyTable;
-    if (ptrProperties) ptrPropertyTable = ptrProperties->GetTable();
+    auto ptrProperties = parser.Root().Direct("Properties");
+    std::shared_ptr<toml_parser::CTable> ptrPropertyTable;
+    if (ptrProperties) ptrPropertyTable = ptrProperties->Cast<toml_parser::CTable>();
     if (ptrPropertyTable)
     {
         for (uint32_t uiIndex = 0; uiIndex < ptrPropertyTable->GetCount(); uiIndex++)
@@ -191,9 +191,9 @@ bool CInstallManifest::Read(const std::string& rssManifest, bool bBlockSystemObj
     }
 
     // Build the module list
-    auto ptrModulesNode = parser.GetRoot().GetDirect("Module");
+    auto ptrModulesNode = parser.Root().Direct("Module");
     if (!ptrModulesNode) return true;   // No modules in the manifest
-    auto ptrModuleArrayNode = ptrModulesNode->GetArray();
+    auto ptrModuleArrayNode = ptrModulesNode->Cast<toml_parser::CArray>();
     if (!ptrModuleArrayNode) return false;  // Must be array
     for (uint32_t uiModuleIndex = 0; uiModuleIndex < ptrModuleArrayNode->GetCount(); uiModuleIndex++)
     {
@@ -202,19 +202,19 @@ bool CInstallManifest::Read(const std::string& rssManifest, bool bBlockSystemObj
         if (!ptrModule) continue;
 
         // Get the module path
-        auto ptrModulePath = ptrModule->GetDirect("Path");
+        auto ptrModulePath = ptrModule->Direct("Path");
         if (!ptrModulePath) continue;
         std::filesystem::path pathModule = static_cast<std::string>(ptrModulePath->GetValue());
         std::string ssModuleManifest;
 
         // Get the component list (if available)
-        auto ptrModuleComponents = ptrModule->GetDirect("Component");
+        auto ptrModuleComponents = ptrModule->Direct("Component");
         if (ptrModuleComponents)
         {
             // The module manifest contains the TOML text of the component array
-            auto ptrModuleComponentArray = ptrModuleComponents->GetArray();
+            auto ptrModuleComponentArray = ptrModuleComponents->Cast<toml_parser::CArray>();
             if (ptrModuleComponentArray)
-                ssModuleManifest = ptrModuleComponents->CreateTOMLText();
+                ssModuleManifest = ptrModuleComponents->GenerateTOML();
         }
 
         // Add the module
@@ -256,10 +256,10 @@ std::string CInstallManifest::Write() const
         sstream << "[[Module]]" << std::endl << "Path=\"" << rsEntry.pathRelModule.generic_u8string() << "\"" << std::endl;
 
         // Read the module manifest
-        CParserTOML parser(rsEntry.ssManifest);
+        toml_parser::CParser parser(rsEntry.ssManifest);
 
         // Add the module manifest as part of the installation manifest.
-        sstream << parser.CreateTOMLText("Module") << std::endl;
+        sstream << parser.GenerateTOML("Module") << std::endl;
     }
 
     return sstream.str();
@@ -286,14 +286,14 @@ bool CInstallManifest::AddModule(const std::filesystem::path& rpathModulePath,
     if (!ssManifest.empty())
     {
         // Check the interface version for compatibility
-        CParserTOML parser(ssManifest);
-        auto ptrInterfaceNode = parser.GetRoot().GetDirect("Interface.Version");
+        toml_parser::CParser parser(ssManifest);
+        auto ptrInterfaceNode = parser.Root().Direct("Interface.Version");
         if (!ptrInterfaceNode) return false;
         if (ptrInterfaceNode->GetValue() != SDVFrameworkInterfaceVersion) return false;
-        auto ptrComponentsNode = parser.GetRoot().GetDirect("Component");
+        auto ptrComponentsNode = parser.Root().Direct("Component");
         if (!ptrComponentsNode) return true;    // No component available in the manifest
-        if (!ptrComponentsNode->GetArray()) return false;
-        ssComponentsManifest = ptrComponentsNode->CreateTOMLText();
+        if (!ptrComponentsNode->Cast<toml_parser::CArray>()) return false;
+        ssComponentsManifest = ptrComponentsNode->GenerateTOML();
     }
 
     // Store path and component
@@ -398,7 +398,7 @@ bool CInstallManifest::NeedQuotedName(const std::string& rssName)
 {
     for (char c : rssName)
     {
-        if (!std::isalnum(c) && c != '_' && c != '-')
+        if (static_cast<uint8_t>(c) > 127u || (!std::isalnum(c) && c != '_' && c != '-'))
             return true;
     }
     return false;
@@ -408,10 +408,10 @@ CInstallManifest::SModule::SModule(const std::filesystem::path& rpathRelModule, 
     bool bBlockSystemObjects) : pathRelModule(rpathRelModule), ssManifest(rssManifest)
 {
     // Parse the manifest and extract information from them...
-    CParserTOML parser(rssManifest);
-    auto ptrComponents = parser.GetRoot().GetDirect("Component");
+    toml_parser::CParser parser(rssManifest);
+    auto ptrComponents = parser.Root().Direct("Component");
     if (!ptrComponents) return; // No objects...
-    auto ptrComponentArray = ptrComponents->GetArray();
+    auto ptrComponentArray = ptrComponents->Cast<toml_parser::CArray>();
     if (!ptrComponentArray) return; // No objects...
     for (uint32_t uiIndex = 0; uiIndex < ptrComponentArray->GetCount(); uiIndex++)
     {
@@ -422,14 +422,14 @@ CInstallManifest::SModule::SModule(const std::filesystem::path& rpathRelModule, 
         SComponent sComponent{};
         //sComponent.pathModule = rpathModule;
         sComponent.pathRelModule = rpathRelModule;
-        sComponent.ssManifest = ptrComponent->CreateTOMLText("Component");
-        auto ptrClassName = ptrComponent->GetDirect("Class");
+        sComponent.ssManifest = ptrComponent->GenerateTOML(toml_parser::CGenContext("Component"));
+        auto ptrClassName = ptrComponent->Direct("Class");
         if (!ptrClassName) continue;
         sComponent.ssClassName = static_cast<std::string>(ptrClassName->GetValue());
-        auto ptrAliases = ptrComponent->GetDirect("Aliases");
+        auto ptrAliases = ptrComponent->Direct("Aliases");
         if (ptrAliases)
         {
-            auto ptrAliasesArray = ptrAliases->GetArray();
+            auto ptrAliasesArray = ptrAliases->Cast<toml_parser::CArray>();
             for (uint32_t uiAliasIndex = 0; ptrAliasesArray && uiAliasIndex < ptrAliasesArray->GetCount(); uiAliasIndex++)
             {
                 auto ptrClassAlias = ptrAliasesArray->Get(uiAliasIndex);
@@ -437,10 +437,10 @@ CInstallManifest::SModule::SModule(const std::filesystem::path& rpathRelModule, 
                     sComponent.seqAliases.push_back(static_cast<sdv::u8string>(ptrClassAlias->GetValue()));
             }
         }
-        auto ptrDefaultName = ptrComponent->GetDirect("DefaultName");
+        auto ptrDefaultName = ptrComponent->Direct("DefaultName");
         if (ptrDefaultName) sComponent.ssDefaultObjectName = static_cast<std::string>(ptrDefaultName->GetValue());
         else sComponent.ssDefaultObjectName = sComponent.ssClassName;
-        auto ptrType = ptrComponent->GetDirect("Type");
+        auto ptrType = ptrComponent->Direct("Type");
         if (!ptrType) continue;
         std::string ssType = static_cast<std::string>(ptrType->GetValue());
         if (ssType == "System") sComponent.eType = sdv::EObjectType::SystemObject;
@@ -453,13 +453,13 @@ CInstallManifest::SModule::SModule(const std::filesystem::path& rpathRelModule, 
         else if (ssType == "Utility") sComponent.eType = sdv::EObjectType::Utility;
         else continue;
         if (bBlockSystemObjects && sComponent.eType == sdv::EObjectType::SystemObject) continue;
-        auto ptrSingleton = ptrComponent->GetDirect("Singleton");
+        auto ptrSingleton = ptrComponent->Direct("Singleton");
         if (ptrSingleton && static_cast<bool>(ptrSingleton->GetValue()))
             sComponent.uiFlags = static_cast<uint32_t>(sdv::EObjectFlags::singleton);
-        auto ptrDependencies = ptrComponent->GetDirect("Dependencies");
+        auto ptrDependencies = ptrComponent->Direct("Dependencies");
         if (ptrDependencies)
         {
-            auto ptrDependencyArray = ptrDependencies->GetArray();
+            auto ptrDependencyArray = ptrDependencies->Cast<toml_parser::CArray>();
             for (uint32_t uiDependencyIndex = 0; ptrDependencyArray && uiDependencyIndex < ptrDependencyArray->GetCount();
                 uiDependencyIndex++)
             {

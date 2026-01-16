@@ -28,6 +28,7 @@
 #include <thread>
 #include <queue>
 #include <condition_variable>
+#include <atomic>
 
 // Forward declaration
 class CConnection;
@@ -114,7 +115,7 @@ private:
                                                                             ///< connection is scheduled for destruction.
     std::queue<std::shared_ptr<CConnection>> m_queueScheduledConnectionDestructions;     ///< Scheduled connection for destruction.
     std::thread                 m_threadScheduledConnectionDestructions;    ///< Thread processing the scheduled destructions.
-    bool                        m_bShutdown = false;                        ///< Set when shutting down the watchdog
+    std::atomic_bool            m_bShutdown = false;                        ///< Set when shutting down the watchdog
 };
 
 #endif // !defined WATCH_DOG_H

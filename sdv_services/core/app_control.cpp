@@ -723,7 +723,7 @@ void CAppControl::BroadcastOperationState(sdv::app::EAppOperationState eState)
 
 bool CAppControl::ProcessAppConfig(const sdv::u8string& rssConfig)
 {
-    CParserTOML parserConfig;
+    toml_parser::CParser parserConfig;
     std::string ssError;
     try
     {
@@ -736,7 +736,7 @@ bool CAppControl::ProcessAppConfig(const sdv::u8string& rssConfig)
     }
 
     // Get the reporting settings (if this succeeded at all...)
-    auto ptrReport = parserConfig.GetRoot().GetDirect("Console.Report");
+    auto ptrReport = parserConfig.Root().Direct("Console.Report");
     if (ptrReport && ptrReport->GetValue() == "Silent") m_bSilent = true;
     if (ptrReport && ptrReport->GetValue() == "Verbose") m_bVerbose = true;
 
@@ -751,8 +751,8 @@ bool CAppControl::ProcessAppConfig(const sdv::u8string& rssConfig)
     // Allow a custom logger to be defined
     std::filesystem::path pathLoggerModule;
     std::string ssLoggerClass;
-    std::shared_ptr<CNode> ptrLogHandlerPath = parserConfig.GetRoot().GetDirect("LogHandler.Path");
-    std::shared_ptr<CNode> ptrLogHandlerClass = parserConfig.GetRoot().GetDirect("LogHandler.Class");
+    std::shared_ptr<toml_parser::CNode> ptrLogHandlerPath = parserConfig.Root().Direct("LogHandler.Path");
+    std::shared_ptr<toml_parser::CNode> ptrLogHandlerClass = parserConfig.Root().Direct("LogHandler.Class");
     if (ptrLogHandlerPath && !ptrLogHandlerClass)
     {
         if (!m_bSilent)
@@ -778,12 +778,12 @@ bool CAppControl::ProcessAppConfig(const sdv::u8string& rssConfig)
     }
 
     // Get an optional program tag for the logger
-    std::shared_ptr<CNode> ptrLogPogramTag = parserConfig.GetRoot().GetDirect("LogHandler.Tag");
+    std::shared_ptr<toml_parser::CNode> ptrLogPogramTag = parserConfig.Root().Direct("LogHandler.Tag");
     if (ptrLogPogramTag) m_ssProgramTag = static_cast<std::string>(ptrLogPogramTag->GetValue());
 
     // Get the application-mode
     std::string ssApplication = "Standalone";
-    std::shared_ptr<CNode> ptrApplication = parserConfig.GetRoot().GetDirect("Application.Mode");
+    std::shared_ptr<toml_parser::CNode> ptrApplication = parserConfig.Root().Direct("Application.Mode");
     if (ptrApplication) ssApplication = static_cast<std::string>(ptrApplication->GetValue());
     if (ssApplication == "Standalone") m_eContextMode = sdv::app::EAppContext::standalone;
     else if (ssApplication == "External") m_eContextMode = sdv::app::EAppContext::external;
@@ -820,21 +820,21 @@ bool CAppControl::ProcessAppConfig(const sdv::u8string& rssConfig)
     sdv::core::ELogSeverity eLogDefaultViewSeverityFilter = sdv::core::ELogSeverity::error;
     if (IsMainApplication() || IsIsolatedApplication())
         eLogDefaultViewSeverityFilter = sdv::core::ELogSeverity::info;
-    std::shared_ptr<CNode> ptrLogSeverityFilter = parserConfig.GetRoot().GetDirect("LogHandler.Filter");
+    std::shared_ptr<toml_parser::CNode> ptrLogSeverityFilter = parserConfig.Root().Direct("LogHandler.Filter");
     m_eSeverityFilter = fnTranslateSevFilter(ptrLogSeverityFilter ? ptrLogSeverityFilter->GetValue() : "",
         sdv::core::ELogSeverity::info);
-    ptrLogSeverityFilter = parserConfig.GetRoot().GetDirect("LogHandler.ViewFilter");
+    ptrLogSeverityFilter = parserConfig.Root().Direct("LogHandler.ViewFilter");
     m_eSeverityViewFilter = fnTranslateSevFilter(ptrLogSeverityFilter ? ptrLogSeverityFilter->GetValue() : "",
         eLogDefaultViewSeverityFilter);
 
     // Get the optional instance ID.
-    std::shared_ptr<CNode> ptrInstance = parserConfig.GetRoot().GetDirect("Application.Instance");
+    std::shared_ptr<toml_parser::CNode> ptrInstance = parserConfig.Root().Direct("Application.Instance");
     if (ptrInstance)
         m_uiInstanceID = ptrInstance->GetValue();
     else
         m_uiInstanceID = 1000u;
     // Number of attempts to establish a connection to a running instance.
-    std::shared_ptr<CNode> ptrRetries = parserConfig.GetRoot().GetDirect("Application.Retries");
+    std::shared_ptr<toml_parser::CNode> ptrRetries = parserConfig.Root().Direct("Application.Retries");
     if (ptrRetries)
     {
         m_uiRetries = ptrRetries->GetValue();
@@ -848,7 +848,7 @@ bool CAppControl::ProcessAppConfig(const sdv::u8string& rssConfig)
     if (IsMainApplication() || IsIsolatedApplication())
     {
         // Get the optional installation directory.
-        std::shared_ptr<CNode> ptrInstallDir = parserConfig.GetRoot().GetDirect("Application.InstallDir");
+        std::shared_ptr<toml_parser::CNode> ptrInstallDir = parserConfig.Root().Direct("Application.InstallDir");
         if (ptrInstallDir)
         {
             m_pathRootDir = ptrInstallDir->GetValue();
@@ -877,7 +877,7 @@ bool CAppControl::ProcessAppConfig(const sdv::u8string& rssConfig)
     // not auto-updateable.
     if (!IsMaintenanceApplication() && !IsIsolatedApplication())
     {
-        auto ptrConfigFile = parserConfig.GetRoot().GetDirect("Application.Config");
+        auto ptrConfigFile = parserConfig.Root().Direct("Application.Config");
         if (ptrConfigFile)
             m_pathAppConfig = ptrConfigFile->GetValue();
     }
@@ -905,10 +905,10 @@ bool CAppControl::ProcessAppConfig(const sdv::u8string& rssConfig)
             try
             {
                 // Read the configuration
-                CParserTOML parserSettings(ssContent);
+                toml_parser::CParser parserSettings(ssContent);
 
                 // Check for the version
-                auto ptrVersion = parserSettings.GetRoot().GetDirect("Settings.Version");
+                auto ptrVersion = parserSettings.Root().Direct("Settings.Version");
                 if (!ptrVersion)
                 {
                     if (!m_bSilent)
@@ -925,12 +925,12 @@ bool CAppControl::ProcessAppConfig(const sdv::u8string& rssConfig)
                 }
 
                 // Read the system configurations
-                auto ptrSystemConfigs = parserSettings.GetRoot().GetDirect("Settings.SystemConfig");
-                if (ptrSystemConfigs && ptrSystemConfigs->GetArray())
+                auto ptrSystemConfigs = parserSettings.Root().Direct("Settings.SystemConfig");
+                if (ptrSystemConfigs && ptrSystemConfigs->Cast<toml_parser::CArray>())
                 {
-                    for (uint32_t uiIndex = 0; uiIndex < ptrSystemConfigs->GetArray()->GetCount(); uiIndex++)
+                    for (uint32_t uiIndex = 0; uiIndex < ptrSystemConfigs->Cast<toml_parser::CArray>()->GetCount(); uiIndex++)
                     {
-                        auto ptrSystemConfig = ptrSystemConfigs->GetArray()->Get(uiIndex);
+                        auto ptrSystemConfig = ptrSystemConfigs->Cast<toml_parser::CArray>()->Get(uiIndex);
                         if (!ptrSystemConfig) continue;
                         m_vecSysConfigs.push_back(static_cast<std::string>(ptrSystemConfig->GetValue()));
                     }
@@ -939,7 +939,7 @@ bool CAppControl::ProcessAppConfig(const sdv::u8string& rssConfig)
                 // Get the application config - but only when not specified over the app-control-config.
                 if (m_pathAppConfig.empty())
                 {
-                    auto ptrAppConfig = parserSettings.GetRoot().GetDirect("Settings.AppConfig");
+                    auto ptrAppConfig = parserSettings.Root().Direct("Settings.AppConfig");
                     if (ptrAppConfig)
                     {
                         // Path available. Enable auto-update.

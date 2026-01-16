@@ -11,7 +11,7 @@ or
 
 # SDV TEST MACRO
 ## Overview
-There is set of macros in "export/support/sdv_test_macro.h" which are designed to extend the Google Test (GTEST) framework by incorporating a warning level mechanism. These macros allow developers to specify a warning level for each test assertion, providing more control over test outcomes and enabling better handling of test result conditions based on their warning level.
+There is set of macros in "tests/include/sdv_test_macro.h" which are designed to extend the Google Test (GTEST) framework by incorporating a warning level mechanism. These macros allow developers to specify a warning level for each test assertion, providing more control over test outcomes and enabling better handling of test result conditions based on their warning level.
 
 ## Purpose
 The primary purpose of these macros is to enhance the flexibility and robustness of test assertions in the GTEST framework. By integrating a warning level, developers can decide whether to report failed tests as warning or error and handle them accordingly. This is particularly useful in where different test failures may have varying impacts on the overall build system.
@@ -62,19 +62,19 @@ The WarningLevel enum defines three levels of warnings:
 Additionally SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD is implemented to check if tests are running with CMake build or any other way. It returns true if they are running with CMake build.
 
 ## Usage
-To use these macros, include the header file '#include <support/sdv_test_macro.h>" in your test files. When writing test cases, use the SDV macros instead of the standard GTEST macros, and specify the appropriate warning level for each assertion.
+To use these macros, include the header file '#include "tests/include/sdv_test_macro.h"' in your test files. When writing test cases, use the SDV macros instead of the standard GTEST macros, and specify the appropriate warning level for each assertion.
 
 ```cpp
-#include <support/sdv_test_macro.h>
+#include "tests/include/sdv_test_macro.h"
 
 TEST(SDVTestMacros, TestExpectEq)
 {
     int val1 = 5;
     int val2 = 5;
     if (SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD)
-        SDV_EXPECT_EQ(val1, val2, sdv::TEST::WARNING_REDUCED);
+        SDV_EXPECT_EQ(val1, val2, sdv_test::WARNING_REDUCED);
     else
-        SDV_EXPECT_EQ(val1, val2, sdv::TEST::WARNING_ENABLED);
+        SDV_EXPECT_EQ(val1, val2, sdv_test::WARNING_ENABLED);
 }
 
 TEST(SDVTestMacros, TestExpectStreq)
@@ -82,9 +82,9 @@ TEST(SDVTestMacros, TestExpectStreq)
     std::string str1 = "test";
     std::string str2 = "test";
     if (SDV_IS_RUNNING_TESTS_WITH_CMAKE_BUILD) 
-        SDV_EXPECT_STREQ(str1, str2, sdv::TEST::WARNING_REDUCED);
+        SDV_EXPECT_STREQ(str1, str2, sdv_test::WARNING_REDUCED);
     else
-        SDV_EXPECT_STREQ(str1, str2, sdv::TEST::WARNING_ENABLED);
+        SDV_EXPECT_STREQ(str1, str2, sdv_test::WARNING_ENABLED);
 }
 ```
 In this example, the SDV_EXPECT_EQ macro checks if val1 and val2 are equal, while the SDV_EXPECT_STREQ macro checks if str1 and str2 are equal. In both test cases, it is checked whether it is running

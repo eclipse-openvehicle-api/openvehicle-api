@@ -1,5 +1,6 @@
 #include "../../../../global/process_watchdog.h"
 #include "../include/can_com_test_helper.h"
+#include <atomic>
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
@@ -201,7 +202,7 @@ void ShutDownCanComObject(CTestCANSocket& canComObj, MockCANReceiver& mockRcv)
     ASSERT_NO_THROW(canComObj.Shutdown());
 }
 
-void SendThread(bool& stop, CTestCANSocket& canComObj, sdv::can::SMessage& testData)
+void SendThread(std::atomic_bool& stop, CTestCANSocket& canComObj, sdv::can::SMessage& testData)
 {
     while (!stop)
     {
@@ -465,7 +466,7 @@ TEST_F(CANSocketTest, StressTestWith3Objects)
     auto testData2 = testHelper.CreateTestData(20, 7); // Testdata to send to vcan3, size = 7
     auto testData3 = testHelper.CreateTestData(30, 8); // Testdata to send to vcan1, size = 8
 
-	bool stopSendThread = false;
+	std::atomic_bool stopSendThread = false;
     std::cout << "Start thread sending messages..." << std::endl;
 	std::thread thSendThread1(SendThread, std::ref(stopSendThread), std::ref(canComObj1), std::ref(testData1));
     std::this_thread::sleep_for(std::chrono::milliseconds(500));

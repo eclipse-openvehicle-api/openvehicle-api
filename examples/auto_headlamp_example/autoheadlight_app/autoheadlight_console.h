@@ -8,6 +8,7 @@
 #include <support/app_control.h>
 #include <support/component_impl.h>
 #include <support/timer.h>
+#include <atomic>
 #include "signal_names.h"
 #include <fcntl.h>
 #include "vss_vehiclepositioncurrentlatitude_vd_rx.h"
@@ -192,7 +193,7 @@ private:
     mutable std::mutex  m_mtxPrintToConsole;                ///< Mutex to print complete message
     std::thread         m_threadReadTxSignals;              ///< Simulation datalink thread.
     bool                m_bThreadStarted = false;           ///< Set when initialized.
-    bool                m_bRunning = false;                 ///< When set, the application is running.
+    std::atomic_bool    m_bRunning = false;                 ///< When set, the application is running.
     mutable std::mutex  m_mPrintToConsole;                  ///< Mutex to print complete message
 
     sdv::core::CSignal  m_signalCurrentLatitude;            ///< Signal Current latitude  

@@ -3,6 +3,7 @@
 #include "../../../global/ipc_named_mutex.h"
 #include <chrono>
 #include <thread>
+#include <atomic>
 
 #if defined(_WIN32) && defined(_UNICODE)
 extern "C" int wmain(int argc, wchar_t* argv[])
@@ -28,19 +29,19 @@ TEST(NamedMutexTest, CritSectSyncManualLock)
     // The checking is manipulated by the bEnable flag. When disabled, no sync will be done and the check will fail. When enabled,
     // sync will be done and the check will succeed.
     int32_t iCnt = 0;
-    bool bSuccess = true;
-    bool bEnable = false;
+    std::atomic_bool bSuccess = true;
+    std::atomic_bool bEnable = false;
     auto fn = [&]()
     {
         ipc::named_mutex mtx("HELLO");
 
         if (bEnable)
             mtx.lock();
-        bSuccess &= (iCnt == 0);
+        bSuccess = bSuccess && (iCnt == 0);
         iCnt++;
         std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 100));
         iCnt--;
-        bSuccess &= (iCnt == 0);
+        bSuccess = bSuccess && (iCnt == 0);
         if (bEnable)
             mtx.unlock();
     };
@@ -69,17 +70,17 @@ TEST(NamedMutexTest, CritSectSyncAutoLock)
 {
     // Counter function check for correct counter value.
     int32_t iCnt = 0;
-    bool bSuccess = true;
+    std::atomic_bool bSuccess = true;
     auto fn = [&]()
     {
         ipc::named_mutex mtx("HELLO");
 
         std::unique_lock<ipc::named_mutex> lock(mtx);
-        bSuccess &= (iCnt == 0);
+        bSuccess = bSuccess && (iCnt == 0);
         iCnt++;
         std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 100));
         iCnt--;
-        bSuccess &= (iCnt == 0);
+        bSuccess = bSuccess && (iCnt == 0);
     };
 
     // Test sync
@@ -94,7 +95,7 @@ TEST(NamedMutexTest, CritSectSyncAutoLock)
 
 TEST(NamedMutexTest, TryLock)
 {
-    bool bRunning = false;
+    std::atomic_bool bRunning = false;
     auto fn = [&]()
     {
         ipc::named_mutex mtx("HELLO");

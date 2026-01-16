@@ -2,6 +2,7 @@
 #define PATTERN_GEN_H
 
 #include <thread>
+#include <atomic>
 #include "../../../sdv_services/ipc_shared_mem/mem_buffer_accessor.h"
 
 /**
@@ -43,8 +44,8 @@ public:
 private:
 	CMemBufferAccessorTx& m_raccessorOut;		 //!< Reference to the output accessor
 	std::thread			  m_thread;				 //!< Processing thread
-    bool				  m_bStarted	= false; //!< Set by the thread when started.
-    bool				  m_bShutdown	= false; //!< When set, shutdown the thread.
+    std::atomic_bool      m_bStarted	= false; //!< Set by the thread when started.
+    std::atomic_bool      m_bShutdown	= false; //!< When set, shutdown the thread.
 	uint32_t			  m_uiDelayMs	= 0u;	 //!< Delay (in ms) to insert while processing.
 	uint32_t			  m_uiCycleCnt	= 0u;	 //!< Amount of packets
 	uint32_t			  m_uiPacketCnt = 0u;	 //!< Amount of packets

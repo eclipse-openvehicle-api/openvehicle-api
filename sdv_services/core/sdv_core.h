@@ -22,7 +22,7 @@ public:
     CSDVCore();
 
     /**
-    * \brief Destructor
+    * @brief Destructor
     */
     ~CSDVCore();
 

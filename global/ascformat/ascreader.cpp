@@ -40,14 +40,24 @@ namespace asc
         enum class EState {header, body, footer} eState = EState::header;
         while (std::getline(fstream, ssLine))
         {
+            // Compare two characters and two strings case insensitive
+            auto ichar_equals = [](char a, char b)
+            {
+                return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
+            };
+            auto iequals = [&](const std::string& a, const std::string& b)
+            {
+                return std::equal(a.begin(), a.end(), b.begin(), b.end(), ichar_equals);
+            };
+
             switch (eState)
             {
             case EState::header:
-                if (ssLine.compare(0, 18, "Begin TriggerBlock") == 0)
+                if (iequals(ssLine.substr(0, 18), "Begin TriggerBlock"))
                     eState = EState::body;
                 break;
             case EState::body:
-                if (ssLine.compare(0, 16, "End TriggerBlock") == 0)
+                if (iequals(ssLine.substr(0, 16), "End TriggerBlock"))
                     eState = EState::footer;
                 else
                     ProcessSample(ssLine);
@@ -74,7 +84,7 @@ namespace asc
 
     uint32_t CAscReader::GetMessageCount() const
     {
-        return m_lstMessages.size();
+        return static_cast<uint32_t>(m_lstMessages.size());
     }
 
     uint32_t CAscReader::GetLoopCount() const

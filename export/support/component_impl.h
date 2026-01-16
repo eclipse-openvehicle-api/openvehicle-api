@@ -308,7 +308,6 @@ namespace sdv
     protected:
         /**
          * @brief Build the module manifest.
-         * @return Returns the pointer to a zero terminated string containing the module manifest or NULL when there is no string.
          */
         void BuildManifest()
         {
@@ -860,7 +859,7 @@ Version = )code" << SDVFrameworkInterfaceVersion
 
 /**
  * @brief Declare the object class type. To be placed in the SDV object class derived from CSdvObject.
- * \param class_type The type of the object (EObjectType).
+ * @param class_type The type of the object (EObjectType).
  */
 #define DECLARE_OBJECT_CLASS_TYPE(class_type)                                                                                      \
     /**                                                                                                                            \

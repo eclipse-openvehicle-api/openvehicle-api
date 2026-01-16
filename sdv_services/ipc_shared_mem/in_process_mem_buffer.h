@@ -29,7 +29,7 @@ public:
     CInProcMemBuffer(const std::string& rssConnectionString);
 
     /**
-     * \brief Default destructor
+     * @brief Default destructor
      */
     ~CInProcMemBuffer() = default;
 

@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <condition_variable>
 #include <queue>
+#include <atomic>
 
 /**
  * @brief Receiver helper class.
@@ -21,8 +22,7 @@ public:
      * @brief Constructor
      * @param[in] bEnableEvent When set, enable the connection event callback interface.
      */
-    CConnectReceiver(bool bEnableEvent = false) : m_bEnableEvent(bEnableEvent),
-        m_threadDecoupledSend(&CConnectReceiver::DecoupledSendThread, this)
+    CConnectReceiver(bool bEnableEvent = false) : m_bEnableEvent(bEnableEvent)
     {}
 
     /**
@@ -31,6 +31,8 @@ public:
     ~CConnectReceiver()
     {
         m_bShutdown = true;
+        std::unique_lock<std::mutex> lock(m_mtxData);
+        lock.unlock();
         if (m_threadDecoupledSend.joinable())
             m_threadDecoupledSend.join();
     }
@@ -63,6 +65,10 @@ public:
 
         // Copy the data
         m_seqDataCopy = seqData;
+
+        // Start the processing thread if needed
+        if (!m_threadDecoupledSend.joinable()) m_threadDecoupledSend =
+                std::thread(&CConnectReceiver::DecoupledSendThread, this);
 
         // Store data into the queue for sending.
         m_queueDecoupledSend.push(std::move(seqData));
@@ -170,7 +176,7 @@ private:
     std::thread                             m_threadDecoupledSend;                  ///< Decoupled send thread.
     std::queue<sdv::sequence<sdv::pointer<uint8_t>>> m_queueDecoupledSend;          ///< Data queue for sending.
     std::condition_variable                 m_cvDecoupledSend;                      ///< Trigger decoupled sending.
-    bool                                    m_bShutdown = false;                    ///< Shutdown send thread.
+    std::atomic_bool                        m_bShutdown = false;                    ///< Shutdown send thread.
 };
 
 /**

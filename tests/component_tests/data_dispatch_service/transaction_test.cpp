@@ -1446,7 +1446,7 @@ TEST(DataDispatchServiceTest, TransactionalRxTxSignalConcurrency)
 
     std::atomic_uint64_t uiValueCnt = 1000;
 
-    bool bShutdown = false;
+    bool bShutdownPublisher = false, bShutdownConsumer = false;
     std::srand(static_cast<unsigned>(std::time(0)));
 
     // Thread sync
@@ -1471,18 +1471,18 @@ TEST(DataDispatchServiceTest, TransactionalRxTxSignalConcurrency)
             uiInitCnt++;
             std::shared_lock<std::shared_mutex> lock(mtxStart);
 
-            while (!bShutdown)
+            while (!bShutdownPublisher)
             {
                 sdv::core::CTransaction transaction = dispatch.CreateTransaction();
                 uint64_t uiValue = std::rand();
                 signalPubA.Write(uiValue, transaction);
-                std::this_thread::sleep_for(std::chrono::milliseconds(rand() % 10));
+                std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 10));
                 signalPubB.Write(uiValue + 10, transaction);
-                std::this_thread::sleep_for(std::chrono::milliseconds(rand() % 10));
+                std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 10));
                 signalPubC.Write(uiValue + 20, transaction);
-                std::this_thread::sleep_for(std::chrono::milliseconds(rand() % 10));
+                std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 10));
                 signalPubD.Write(uiValue + 30, transaction);
-                std::this_thread::sleep_for(std::chrono::milliseconds(rand() % 10));
+                std::this_thread::sleep_for(std::chrono::milliseconds(std::rand() % 10));
                 transaction.Finish();
             }
         }
@@ -1513,7 +1513,7 @@ TEST(DataDispatchServiceTest, TransactionalRxTxSignalConcurrency)
             uiInitCnt++;
             std::shared_lock<std::shared_mutex> lock(mtxStart);
 
-            while (!bShutdown)
+            while (!bShutdownConsumer)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
@@ -1616,9 +1616,11 @@ TEST(DataDispatchServiceTest, TransactionalRxTxSignalConcurrency)
 
     // Wait for all threads to finalize
     appcontrol.SetConfigMode();
-    bShutdown = true;
+    bShutdownPublisher = true;
     for (std::thread& rThread : rgPublishThreads)
         if (rThread.joinable()) rThread.join();
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    bShutdownConsumer = true;
     for (std::thread& rThread : rgConsumeThreads)
         if (rThread.joinable()) rThread.join();
 

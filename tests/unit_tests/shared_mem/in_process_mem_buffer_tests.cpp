@@ -2,6 +2,7 @@
 #include "../../../sdv_services/ipc_shared_mem/in_process_mem_buffer.h"
 #include <support/app_control.h>
 #include "pattern_gen.h"
+#include <atomic>
 
 TEST(InProcessMemoryBufferTest, Instantiate)
 {
@@ -26,7 +27,7 @@ TEST(InProcessMemoryBufferTest, TriggerTestRx)
     CInProcMemBufferRx receiver(sender.GetConnectionString());
     EXPECT_TRUE(receiver.IsValid());
 
-    bool bShutdown = false;
+    std::atomic_bool bShutdown = false;
     size_t nCorrectCnt = 0;
     std::condition_variable cvStart;
     std::mutex mtxStart;
@@ -75,7 +76,7 @@ TEST(InProcessMemoryBufferTest, TriggerTestTx)
     CInProcMemBufferRx receiver(sender.GetConnectionString());
     EXPECT_TRUE(receiver.IsValid());
 
-    bool bShutdown = false;
+    std::atomic_bool bShutdown = false;
     size_t nCorrectCnt = 0;
     std::condition_variable cvStart;
     std::mutex mtxStart;
@@ -124,7 +125,7 @@ TEST(InProcessMemoryBufferTest, TriggerTestRxTx)
     CInProcMemBufferRx receiver(sender.GetConnectionString());
     EXPECT_TRUE(receiver.IsValid());
 
-    bool bShutdown = false;
+    std::atomic_bool bShutdown = false;
     size_t nCorrectCnt = 0;
     std::condition_variable cvSenderStart, cvReceiverStart;
     std::mutex mtxReceiverStart;

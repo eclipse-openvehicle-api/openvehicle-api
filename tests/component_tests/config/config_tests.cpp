@@ -163,11 +163,11 @@ ViewFilter = "Fatal"
 
     auto table1 = config.GetDirect("newTableArray[0]");
     EXPECT_EQ(table1.GetType(), sdv::toml::ENodeType::node_table);
-    EXPECT_TRUE(table1.GetName().empty());
+    EXPECT_EQ(table1.GetName(), "newTableArray");
 
     auto table2 = config.GetDirect("newTableArray[1]");
     EXPECT_EQ(table2.GetType(), sdv::toml::ENodeType::node_table);
-    EXPECT_TRUE(table2.GetName().empty());
+    EXPECT_EQ(table2.GetName(), "newTableArray");
 
     config.Clear();
     appcontrol.Shutdown();
@@ -768,6 +768,11 @@ ViewFilter = "Fatal"
     EXPECT_FALSE(sdv::toml::CTOMLParser(u8R"(
             [ j . "ʞ" . 'l' ]
             [j."ʞ".'l']
+            )"));
+
+    EXPECT_FALSE(sdv::toml::CTOMLParser(u8R"(
+            [ j . "ʞ" . 'l' ]
+            ["j".'ʞ'."l"]
             )"));
 
     EXPECT_FALSE(sdv::toml::CTOMLParser(R"(

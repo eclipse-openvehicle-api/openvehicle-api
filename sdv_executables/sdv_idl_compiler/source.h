@@ -107,7 +107,7 @@ private:
     void PotentialSwapBuffer(TChar* szBuffer, size_t nSize, bool bIsSourceBigEndian);
 
     /**
-     * \brief Convert a UTF16 string to UTF-8.
+     * @brief Convert a UTF16 string to UTF-8.
      * @param[in] szBuffer The source string.
      * @param[in] nSize The length of the string (or zero terminating string when supplied as 0).
      * @return Returns the string as UTF8 std::string object.
@@ -115,7 +115,7 @@ private:
     static std::string ConvertToUTF8(const char16_t* szBuffer, size_t nSize);
 
     /**
-     * \brief Convert a UTF32 string to UTF-8.
+     * @brief Convert a UTF32 string to UTF-8.
      * @param[in] szBuffer The source string.
      * @param[in] nSize The length of the string (or zero terminating string when supplied as 0).
      * @return Returns the string as UTF8 std::string object.

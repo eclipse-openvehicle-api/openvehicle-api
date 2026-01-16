@@ -4,6 +4,7 @@
 #include <vector>
 #include <list>
 #include <deque>
+#include <atomic>
 
 TEST(TraceFifoTest, Connect_Disconnect)
 {
@@ -190,7 +191,7 @@ TEST(TraceFifoTest, Simple_Publish_Monitor)
     EXPECT_TRUE(fifoReader.IsOpened());
 
     std::vector<std::string> vecSent, vecReceived;
-    bool bShutdown = false;
+    std::atomic_bool bShutdown = false;
 
     // Start receiving thread until shutdown flag is set.
     std::thread thread([&]()
@@ -238,7 +239,7 @@ TEST(TraceFifoTest, Simple_Publish_Monitor_Multi)
     EXPECT_TRUE(fifoReader2.IsOpened());
 
     std::vector<std::string> vecSent, vecReceived1, vecReceived2;
-    bool bShutdown = false;
+    std::atomic_bool bShutdown = false;
 
     // Start receiving thread until shutdown flag is set.
     std::thread thread1([&]()
@@ -297,7 +298,7 @@ TEST(TraceFifoTest, Simple_Publish_Beyond_Buffer_With_Reading)
     EXPECT_TRUE(fifoReader.IsOpened());
 
     std::vector<std::string> vecSent, vecReceived;
-    bool bShutdown = false;
+    std::atomic_bool bShutdown = false;
 
     // Start receiving thread until shutdown flag is set.
     std::thread thread([&]()

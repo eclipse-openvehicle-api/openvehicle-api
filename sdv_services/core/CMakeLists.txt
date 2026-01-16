@@ -42,7 +42,7 @@ add_library(core_services SHARED
     "installation_composer.h"
     "installation_composer.cpp"
 
-    )
+     "toml_parser/lexer_toml_token.h" "toml_parser/lexer_toml_token.cpp" "toml_parser/miscellaneous.h" "toml_parser/miscellaneous.cpp")
 
 # Link target
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

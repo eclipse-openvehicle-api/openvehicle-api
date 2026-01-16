@@ -11,7 +11,7 @@
 #include <support/interface_ptr.h>
 
 /**
- * \brief Local memory manager class allowing the use of the SDV support classes without having to start the framework.
+ * @brief Local memory manager class allowing the use of the SDV support classes without having to start the framework.
  * \attention Do not use the local memory manager together with the framework's memory manager.
  */
 class CLocalMemMgr : public sdv::core::IMemoryAlloc, public sdv::IInterfaceAccess,
@@ -19,13 +19,13 @@ class CLocalMemMgr : public sdv::core::IMemoryAlloc, public sdv::IInterfaceAcces
 {
 public:
     /**
-     * \brief Constructor assigning this class to the local services.
+     * @brief Constructor assigning this class to the local services.
      */
     CLocalMemMgr()
     {}
 
     /**
-     * \brief Destructor removing this class from the local services.
+     * @brief Destructor removing this class from the local services.
      */
     ~CLocalMemMgr()
     {}

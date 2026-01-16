@@ -11,6 +11,7 @@
 #include <support/timer.h>
 #include "signal_names.h"
 #include <fcntl.h>
+#include <atomic>
 #include "../interfaces/vss_vehiclechassisdooraxle01left_vd_rx.h"
 #include "../interfaces/vss_vehiclechassisdooraxle01left_bs_rx.h"
 #include "../interfaces/vss_vehiclechassisdooraxle01right_bs_rx.h"
@@ -205,7 +206,7 @@ private:
 
     mutable std::mutex  m_mtxPrintToConsole;                ///< Mutex to print complete message
     bool                m_bThreadStarted = false;           ///< Set when initialized.
-    bool                m_bRunning = false;                 ///< When set, the application is running.
+    std::atomic_bool    m_bRunning = false;                 ///< When set, the application is running.
     bool                m_isExternalApp = false;            ///< True when we have an external application
     mutable std::mutex  m_mPrintToConsole;                  ///< Mutex to print complete message
     

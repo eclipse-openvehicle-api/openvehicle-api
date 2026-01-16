@@ -50,6 +50,14 @@ namespace sdv::toml
         sdv::u8string GetName();
 
         /**
+         * @brief Retrurn the node qualified path including the parent path.
+         * @details The qualified path is a path composed through all parent nodes containing quoted names where needed. The path
+         * to the node can be used to directly access the node.
+         * @return String containing the qualified path to the node.
+         */
+        sdv::u8string GetQualifiedPath();
+
+        /**
          * @brief Get the node type.
          * @return The node type.
          */
@@ -245,6 +253,11 @@ namespace sdv::toml
     inline sdv::u8string CNode::GetName()
     {
         return m_pNodeInfo ? m_pNodeInfo->GetName() : sdv::u8string();
+    }
+
+    inline sdv::u8string CNode::GetQualifiedPath()
+    {
+        return m_pNodeInfo ? m_pNodeInfo->GetPath(true) : sdv::u8string();
     }
 
     inline ENodeType CNode::GetType()

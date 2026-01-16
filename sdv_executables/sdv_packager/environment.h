@@ -33,6 +33,9 @@ inline bool iequals(const std::string& rssLeft, const std::string& rssRight)
     return std::equal(rssLeft.begin(), rssLeft.end(), rssRight.begin(), rssRight.end(), ichar_equals);
 }
 
+/**
+ * @brief Environment access class.
+ */
 class CSdvPackagerEnvironment
 {
 public:

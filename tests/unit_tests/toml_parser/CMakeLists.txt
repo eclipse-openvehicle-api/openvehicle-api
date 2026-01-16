@@ -4,7 +4,10 @@ add_executable(UnitTest_TOMLParser
     "lexer_tests.cpp"
     "parser_tests.cpp"
     "main.cpp"
-    "generate_toml_tests.cpp")
+    "generate_toml_tests.cpp"
+    "content_modifications.cpp"
+    "statement_boundary_detection.cpp"
+    "miscellaneous_tests.cpp")
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_libraries(UnitTest_TOMLParser GTest::GTest ${CMAKE_THREAD_LIBS_INIT})
     if (WIN32)

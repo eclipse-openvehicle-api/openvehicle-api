@@ -4,6 +4,7 @@
 #include <thread>
 #include <cstdint>
 #include <iostream>
+#include <atomic>
 #ifdef _WIN32
 // Prevent reassignment of "interface"
 #pragma push_macro("interface")
@@ -96,8 +97,8 @@ private:
         }
     }
 
-    bool            m_bTerminateWatchdog = false;       ///< When set, allows the thread to terminate.
-    std::thread     m_threadWatchdog;                   ///< The watchdog thread.
+    std::atomic_bool    m_bTerminateWatchdog = false;       ///< When set, allows the thread to terminate.
+    std::thread         m_threadWatchdog;                   ///< The watchdog thread.
 };
 
 #endif // !defined TEST_WATCHDOG_H

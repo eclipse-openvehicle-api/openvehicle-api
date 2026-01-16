@@ -1389,7 +1389,7 @@ public:
      * @param[in] rtArgument Reference to the argument.
      * @param[in] rssValue Reference to the string containing the value to be assigned.
      */
-    void Parse(TVar& /*rtArgument*/, const std::string& /*rssValue*/) {}
+    void Parse([[maybe_unused]] TVar& rtArgument, [[maybe_unused]] const std::string& rssValue) {}
 
     /**
      * @brief Get the markup string for the argument type. Overload in derived class.

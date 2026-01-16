@@ -87,7 +87,7 @@ module sdv
         };
 
         /**
-         * \brief Interface for managing IPC connection.
+         * @brief Interface for managing IPC connection.
          */
         interface IConnect
         {
