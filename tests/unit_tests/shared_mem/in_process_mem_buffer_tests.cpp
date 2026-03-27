@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "gtest/gtest.h"
 #include "../../../sdv_services/ipc_shared_mem/in_process_mem_buffer.h"
 #include <support/app_control.h>
@@ -146,9 +159,6 @@ TEST(InProcessMemoryBufferTest, TriggerTestRxTx)
         std::unique_lock<std::mutex> lockSender(mtxSenderStart);
         lockSender.unlock();
         cvSenderStart.notify_all();
-        std::unique_lock<std::mutex> lockReceiver(mtxReceiverStart);
-        cvReceiverStart.wait(lockReceiver);
-        lockReceiver.unlock();
         while (!bShutdown)
         {
             bool bResult = sender.WaitForFreeSpace(200);
@@ -159,11 +169,11 @@ TEST(InProcessMemoryBufferTest, TriggerTestRxTx)
     };
 
     std::unique_lock<std::mutex> lockStartSender(mtxSenderStart);
+    std::unique_lock<std::mutex> lockStartReceiver(mtxReceiverStart);
     std::thread threadSender(fnWaitForTriggerSender);
+    std::thread threadReceiver(fnWaitForTriggerReceiver);
     cvSenderStart.wait(lockStartSender);
     lockStartSender.unlock();
-    std::unique_lock<std::mutex> lockStartReceiver(mtxReceiverStart);
-    std::thread threadReceiver(fnWaitForTriggerReceiver);
     cvReceiverStart.wait(lockStartReceiver);
     lockStartReceiver.unlock();
     std::this_thread::sleep_for(std::chrono::milliseconds(25));  // Needed for the threads to enter their loop.

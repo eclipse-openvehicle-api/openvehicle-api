@@ -38,7 +38,7 @@ public:
         SDV_INTERFACE_ENTRY(vss::Device::ITransferSignalBrakeForce)
     END_SDV_INTERFACE_MAP()
 
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::vehicle_bus)
     DECLARE_OBJECT_CLASS_NAME("VehicleDevice_Component")
 
     ~CVehicleDevice()

@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "gtest/gtest.h"
 #define TIME_TRACKING
 #include "../../../sdv_services/ipc_shared_mem/channel_mgnt.h"
@@ -268,13 +281,13 @@ Report = "Silent"
 
     // Create an endpoint.
     EXPECT_NO_THROW(mgntServer.Initialize(""));
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     mgntServer.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::running);
     EXPECT_NO_THROW(mgntClient.Initialize("service = \"client\""));
-    EXPECT_EQ(mgntClient.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::initialized);
     mgntClient.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(mgntClient.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::running);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint(R"code(
 [IpcChannel]
 Size = 1024000
@@ -350,8 +363,8 @@ Size = 1024000
 
     EXPECT_NO_THROW(mgntClient.Shutdown());
 
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::destruction_pending);
-    EXPECT_EQ(mgntClient.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::destruction_pending);
+    EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST(SharedMemChannelService, CommunicateMultiLargeBlock)
@@ -364,13 +377,13 @@ TEST(SharedMemChannelService, CommunicateMultiLargeBlock)
 
     // Create an endpoint.
     EXPECT_NO_THROW(mgntServer.Initialize(""));
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     mgntServer.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::running);
     EXPECT_NO_THROW(mgntClient.Initialize("service = \"client\""));
-    EXPECT_EQ(mgntClient.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::initialized);
     mgntClient.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(mgntClient.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::running);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint(R"code(
 [IpcChannel]
 Size = 1024000
@@ -478,8 +491,8 @@ Size = 1024000
 
     EXPECT_NO_THROW(mgntClient.Shutdown());
 
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::destruction_pending);
-    EXPECT_EQ(mgntClient.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::destruction_pending);
+    EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST(SharedMemChannelService, CommunicateFragmentedLargeBlock)
@@ -492,13 +505,13 @@ TEST(SharedMemChannelService, CommunicateFragmentedLargeBlock)
 
     // Create an endpoint.
     EXPECT_NO_THROW(mgntServer.Initialize(""));
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     mgntServer.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::running);
     EXPECT_NO_THROW(mgntClient.Initialize("service = \"client\""));
-    EXPECT_EQ(mgntClient.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::initialized);
     mgntClient.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(mgntClient.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::running);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint(R"code(
 [IpcChannel]
 Size = 1024000
@@ -594,8 +607,8 @@ Size = 1024000
 
     EXPECT_NO_THROW(mgntClient.Shutdown());
 
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::destruction_pending);
-    EXPECT_EQ(mgntClient.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::destruction_pending);
+    EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST(SharedMemChannelService, AppCommunicateOneLargeBlock)
@@ -611,9 +624,9 @@ Mode="Essential")code"));
 
     // Create an endpoint.
     EXPECT_NO_THROW(mgntServer.Initialize(""));
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     mgntServer.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::running);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint(R"code(
 [IpcChannel]
 Size = 1024000
@@ -676,7 +689,7 @@ Size = 1024000
 
     EXPECT_NO_THROW(mgntServer.Shutdown());
 
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     // Wait for process termination
     pProcessLifetime->WaitForTerminate(tProcessID, 0xffffffff);
@@ -695,9 +708,9 @@ Mode="Essential")code"));
 
     // Create an endpoint.
     EXPECT_NO_THROW(mgntServer.Initialize(""));
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     mgntServer.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::running);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint(R"code(
 [IpcChannel]
 Size = 1024000
@@ -788,7 +801,7 @@ Size = 1024000
 
     EXPECT_NO_THROW(mgntServer.Shutdown());
 
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     // Wait for process termination
     pProcessLifetime->WaitForTerminate(tProcessID, 0xffffffff);

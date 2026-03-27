@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include <gtest/gtest.h>
 #include <iostream>
 #include <ostream>
@@ -93,11 +106,11 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitBigEndian)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -125,7 +138,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitBigEndian)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalBE1.Reset();
     signalBE2.Reset();
@@ -203,11 +216,11 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmit64BitBigEndian)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -226,7 +239,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmit64BitBigEndian)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalInt64BE.Reset();
     signalUint64BE.Reset();
@@ -347,11 +360,11 @@ TEST(DbcUtilCanDLTest, ReceiveBigEndian)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -384,7 +397,7 @@ TEST(DbcUtilCanDLTest, ReceiveBigEndian)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalBE1.Reset();
     signalBE2.Reset();
@@ -465,11 +478,11 @@ TEST(DbcUtilCanDLTest, Receive64BitBigEndian)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -493,7 +506,7 @@ TEST(DbcUtilCanDLTest, Receive64BitBigEndian)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalInt64BE.Reset();
     signalUint64BE.Reset();
@@ -525,11 +538,11 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitLittleEndian)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -557,7 +570,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitLittleEndian)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalLE1.Reset();
     signalLE2.Reset();
@@ -635,11 +648,11 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmit64BitLittleEndian)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -658,7 +671,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmit64BitLittleEndian)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalInt64LE.Reset();
     signalUint64LE.Reset();
@@ -779,11 +792,11 @@ TEST(DbcUtilCanDLTest, ReceiveLittleEndian)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -816,7 +829,7 @@ TEST(DbcUtilCanDLTest, ReceiveLittleEndian)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalLE1.Reset();
     signalLE2.Reset();
@@ -897,11 +910,11 @@ TEST(DbcUtilCanDLTest, Receive64BitLittleEndian)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -925,7 +938,7 @@ TEST(DbcUtilCanDLTest, Receive64BitLittleEndian)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalInt64LE.Reset();
     signalUint64LE.Reset();
@@ -957,11 +970,11 @@ TEST(DbcUtilCanDLTest, SpontaneousTransactionalTransmitBigEndian)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -992,7 +1005,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransactionalTransmitBigEndian)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalBE1.Reset();
     signalBE2.Reset();
@@ -1050,11 +1063,11 @@ TEST(DbcUtilCanDLTest, SpontaneousTransactionalTransmitLittleEndian)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -1085,7 +1098,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransactionalTransmitLittleEndian)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalLE1.Reset();
     signalLE2.Reset();
@@ -1143,11 +1156,11 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitBigEndianAllDataTypes)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to integer based signals
     sdv::core::CDispatchService dispatch;
@@ -1222,7 +1235,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitBigEndianAllDataTypes)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalIntBE1.Reset();
     signalIntBE2.Reset();
@@ -1429,11 +1442,11 @@ TEST(DbcUtilCanDLTest, ReceiveBigEndianAllDataTypes)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -1568,7 +1581,7 @@ TEST(DbcUtilCanDLTest, ReceiveBigEndianAllDataTypes)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalIntBE1.Reset();
     signalIntBE2.Reset();
@@ -1615,11 +1628,11 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitLittleEndianAllDataTypes)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to integer based signals
     sdv::core::CDispatchService dispatch;
@@ -1694,7 +1707,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitLittleEndianAllDataTypes)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalIntLE1.Reset();
     signalIntLE2.Reset();
@@ -1901,11 +1914,11 @@ TEST(DbcUtilCanDLTest, ReceiveLittleEndianAllDataTypes)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -2040,7 +2053,7 @@ TEST(DbcUtilCanDLTest, ReceiveLittleEndianAllDataTypes)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalIntLE1.Reset();
     signalIntLE2.Reset();
@@ -2087,11 +2100,11 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitBigEndianScaledDataTypes)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to integer based signals
     sdv::core::CDispatchService dispatch;
@@ -2127,7 +2140,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitBigEndianScaledDataTypes)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalUintBE1.Reset();
     signalUintBE2.Reset();
@@ -2257,11 +2270,11 @@ TEST(DbcUtilCanDLTest, ReceiveBigEndianScaledDataType)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -2328,7 +2341,7 @@ TEST(DbcUtilCanDLTest, ReceiveBigEndianScaledDataType)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalUintBE1.Reset();
     signalUintBE2.Reset();
@@ -2364,11 +2377,11 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitLittleEndianScaledDataTypes)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to integer based signals
     sdv::core::CDispatchService dispatch;
@@ -2404,7 +2417,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitLittleEndianScaledDataTypes)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalUintLE1.Reset();
     signalUintLE2.Reset();
@@ -2534,11 +2547,11 @@ TEST(DbcUtilCanDLTest, ReceiveLittleEndianScaledDataType)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -2605,7 +2618,7 @@ TEST(DbcUtilCanDLTest, ReceiveLittleEndianScaledDataType)
     // Shutdown
     appcontrol.SetConfigMode();
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalUintLE1.Reset();
     signalUintLE2.Reset();
@@ -2641,11 +2654,11 @@ TEST(DbcUtilCanDLTest, CyclicTransmit)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -2665,14 +2678,14 @@ TEST(DbcUtilCanDLTest, CyclicTransmit)
         });
     appcontrol.SetRunningMode();
     std::unique_lock<std::mutex> lock(mtx);
-    cv.wait(lock);
+    cv.wait_for(lock, std::chrono::milliseconds(1000));
     timer.Reset();
     lock.unlock();
     appcontrol.SetConfigMode();
 
     // Shutdown
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalCounter.Reset();
 
@@ -2790,11 +2803,11 @@ TEST(DbcUtilCanDLTest, CyclicIfActiveTransmit)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -2815,13 +2828,13 @@ TEST(DbcUtilCanDLTest, CyclicIfActiveTransmit)
         });
     appcontrol.SetRunningMode();
     std::unique_lock<std::mutex> lock(mtx);
-    cv.wait(lock);
+    cv.wait_for(lock, std::chrono::milliseconds(1000));
     appcontrol.SetConfigMode();
     timer.Reset();
 
     // Shutdown
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalCounter.Reset();
 
@@ -2957,11 +2970,11 @@ TEST(DbcUtilCanDLTest, CyclicAndSpontaneousTransmit)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -2981,13 +2994,13 @@ TEST(DbcUtilCanDLTest, CyclicAndSpontaneousTransmit)
         });
     appcontrol.SetRunningMode();
     std::unique_lock<std::mutex> lock(mtx);
-    cv.wait(lock);
+    cv.wait_for(lock, std::chrono::milliseconds(1000));
     appcontrol.SetConfigMode();
     timer.Reset();
 
     // Shutdown
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalCounter.Reset();
 
@@ -3098,11 +3111,11 @@ TEST(DbcUtilCanDLTest, SpontaneousDelayTransmit)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -3126,13 +3139,13 @@ TEST(DbcUtilCanDLTest, SpontaneousDelayTransmit)
         });
     appcontrol.SetRunningMode();
     std::unique_lock<std::mutex> lock(mtx);
-    cv.wait(lock);
+    cv.wait_for(lock, std::chrono::milliseconds(1000));
     appcontrol.SetConfigMode();
     timer.Reset();
 
     // Shutdown
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalCounter.Reset();
 
@@ -3236,11 +3249,11 @@ TEST(DbcUtilCanDLTest, CyclicAndSpontaneousDelayTransmit)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -3263,13 +3276,13 @@ TEST(DbcUtilCanDLTest, CyclicAndSpontaneousDelayTransmit)
         });
     appcontrol.SetRunningMode();
     std::unique_lock<std::mutex> lock(mtx);
-    cv.wait(lock);
+    cv.wait_for(lock, std::chrono::milliseconds(5000));
     appcontrol.SetConfigMode();
     timer.Reset();
 
     // Shutdown
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalCounter.Reset();
 
@@ -3380,11 +3393,11 @@ TEST(DbcUtilCanDLTest, CyclicIfActiveAndSpontaneousTransmit)
 
     // Start the data link
     CDbcStructDataLink dl;
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
     dl.Initialize("");
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::running);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
 
     // Subscribe to several signals
     sdv::core::CDispatchService dispatch;
@@ -3404,13 +3417,13 @@ TEST(DbcUtilCanDLTest, CyclicIfActiveAndSpontaneousTransmit)
         });
     appcontrol.SetRunningMode();
     std::unique_lock<std::mutex> lock(mtx);
-    cv.wait(lock);
+    cv.wait_for(lock, std::chrono::milliseconds(1000));
     appcontrol.SetConfigMode();
     timer.Reset();
 
     // Shutdown
     dl.Shutdown();
-    EXPECT_EQ(dl.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     signalCounter.Reset();
 

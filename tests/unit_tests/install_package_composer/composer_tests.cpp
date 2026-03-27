@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "composer_test_suite.h"
 #include "../../../sdv_services/core/installation_composer.h"
 #include "../../../global/exec_dir_helper.h"
@@ -2412,17 +2425,17 @@ TEST_F(CInstallPackageComposerTest, ComposeSDVPackage)
     // The amount of modules should be 2
     auto vecModules = manifest.ModuleList();
     EXPECT_EQ(vecModules.size(), 2);
-    auto vecComponents = manifest.ComponentList();
-    EXPECT_EQ(vecComponents.size(), 3);
+    auto vecClasses = manifest.ClassList();
+    EXPECT_EQ(vecClasses.size(), 3);
 
     // The name of the module should fit to the expected file
     std::string szssComponents[] = { "DummyService #1", "DummyDevice", "DummyService #2" };
     for (auto& rssComponent : szssComponents)
     {
-        EXPECT_NE(std::find_if(vecComponents.begin(), vecComponents.end(), [&](const CInstallManifest::SComponent& rsComponent)
+        EXPECT_NE(std::find_if(vecClasses.begin(), vecClasses.end(), [&](const sdv::SClassInfo& rsClass)
             {
-                return rsComponent.ssClassName == rssComponent;
-            }), vecComponents.end());
+                return rsClass.ssName == rssComponent;
+            }), vecClasses.end());
     }
 }
 

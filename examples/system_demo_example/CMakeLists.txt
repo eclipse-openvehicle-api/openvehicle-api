@@ -1,3 +1,13 @@
+#*******************************************************************************
+# Copyright (c) 2025-2026 ZF Friedrichshafen AG
+#
+# This program and the accompanying materials are made available under the 
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0 
+#*******************************************************************************
+
 project(SystemDemoExample)
 
 # Use new policy for project version settings and default warning level
@@ -205,16 +215,11 @@ add_custom_target(example_user_config
     VERBATIM
 )
 
-######################################################################################################################################################################
-#   TODO:           SDV_PACKAGER does not create the toml files, therefore we need to copy them
-######################################################################################################################################################################
-file (COPY ${PROJECT_SOURCE_DIR}/coreconfig/demo.toml DESTINATION ${SDV_FRAMEWORK_RUNTIME}/3001)
-file (COPY ${PROJECT_SOURCE_DIR}/coreconfig/platform.toml DESTINATION ${SDV_FRAMEWORK_RUNTIME}/3001)
-file (COPY ${PROJECT_SOURCE_DIR}/coreconfig/settings.toml DESTINATION ${SDV_FRAMEWORK_RUNTIME}/3001)
-file (COPY ${PROJECT_SOURCE_DIR}/coreconfig/vehicle_abstract.toml DESTINATION ${SDV_FRAMEWORK_RUNTIME}/3001)
-file (COPY ${PROJECT_SOURCE_DIR}/coreconfig/vehicle_ifc.toml DESTINATION ${SDV_FRAMEWORK_RUNTIME}/3001)
-
-
+add_custom_target(example_platform_config
+    ALL
+    COMMAND "${SDV_PACKAGER}" CONFIGURE ${PROJECT_SOURCE_DIR}/coreconfig/platform.toml --instance3001 --platform_config
+    VERBATIM
+)
 
 ######################################################################################################################################################################
 #                                                                   system demo fmu for OpenXilEnv
@@ -224,7 +229,7 @@ file (COPY ${PROJECT_SOURCE_DIR}/coreconfig/vehicle_ifc.toml DESTINATION ${SDV_F
 #
 # What cannot be created automatically is the method OpenAPILoad(const std::string& resources) in file model.cpp
 # The method must load all required components
-# Therfore here the file is copied and overwritten the auto generated file
+# Therefore here the file is copied and overwritten the auto generated file
 #
 # The required toml files need to be copied to the folder:
 # generated/fmu_DemoExampleFMU/DemoExampleFMU/resources

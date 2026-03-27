@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef CLIENT_H
 #define CLIENT_H
 
@@ -55,42 +68,29 @@ private:
 /**
  * @brief Client object
  */
-class CClient : public sdv::CSdvObject, public sdv::IObjectControl, public sdv::com::IClientConnect
+class CClient : public sdv::CSdvObject, public sdv::com::IClientConnect
 {
 public:
     // Interface map
     BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
         SDV_INTERFACE_ENTRY(sdv::com::IClientConnect)
     END_SDV_INTERFACE_MAP()
 
     // Object declaration
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::SystemObject)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
     DECLARE_OBJECT_CLASS_NAME("ConnectionService")
     DECLARE_OBJECT_SINGLETON()
 
     /**
-    * @brief Initialize the object. Overload of sdv::IObjectControl::Initialize.
-    * @param[in] ssObjectConfig Optional configuration string.
-    */
-    void Initialize(const sdv::u8string& ssObjectConfig) override;
-
-    /**
-    * @brief Get the current status of the object. Overload of sdv::IObjectControl::GetStatus.
-    * @return Return the current status of the object.
-    */
-    sdv::EObjectStatus GetStatus() const override;
-
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
      */
-    void SetOperationMode(sdv::EOperationMode eMode) override;
+    virtual bool OnInitialize() override;
 
     /**
-    * @brief Shutdown called before the object is destroyed. Overload of sdv::IObjectControl::Shutdown.
-    */
-    void Shutdown() override;
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
+     */
+    virtual void OnShutdown() override;
 
     /**
      * @brief Connect to a remote system using the connection string to contact the system. Overload of
@@ -122,7 +122,6 @@ public:
     void Disconnect(sdv::com::TConnectionID tConnectionID);
 
 private:
-    sdv::EObjectStatus      m_eObjectStatus = sdv::EObjectStatus::initialization_pending; ///< Object status.
     std::mutex              m_mtxRepositoryProxies;                             ///< Protect access to the remnote repository map.
     std::map<sdv::com::TConnectionID, CRepositoryProxy> m_mapRepositoryProxies; ///< map of remote repositories.
 };

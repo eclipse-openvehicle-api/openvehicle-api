@@ -1,24 +1,27 @@
-/**
-* @file      app.idl
-* @brief     This file provides the core interface definitions SDV framework administration.
-* @version   0.1
-* @date      2024.04.11
-* @author    erik.verhoeven@zf.com
-* @copyright Copyright ZF Friedrichshaven AG (c) 2023-2025
-*/
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
 
 #include "core.idl"
 
- /**
-  * @brief Software Defined Vehicle framework.
-  */
+#verbatim_begin
+#include "../support/string.h"
+#verbatim_end
+ 
+/**
+ * @brief Software Defined Vehicle framework.
+ */
 module sdv
 {
-    #verbatim_begin
-#include "../support/string.h"
-    #verbatim_end
-
-
     /**
      * @brief Failed to open a file.
      */
@@ -153,12 +156,26 @@ module sdv
             /**
             * @brief Save a configuration file pointed to by the provided file path. All components are saved that were added after
             * the last baseline with the configuration specific settings.
-            * @attention Configuration changes can only occur when the system is in configuration mode.
+            * @remarks The function will only save when the configuration has changed.
             * @param[in] ssConfigPath Path to the file containing the configuration (TOML). The path can be an absolute as well as a
             * relative path. In case a relative path is provided, the configuration is stored relative to the executable directory.
-            * @return Returns 'true' on success; 'false' otherwise.
+            * @return Returns 'true' on success (or no changes detected); 'false' otherwise.
             */
             boolean SaveConfig(in u8string ssConfigPath) const;
+
+            /**
+             * @brief Generate the configuration TOML string.
+             * @return The generated configuration string.
+             */
+            u8string GenerateConfigString() const;
+
+            /**
+             * @brief Close the current configuration.
+             * @details This will close und unload the components and modules from the current configuration as well as dependent
+             * components that builds on top of the components being closed. Components that the current configuration depends on
+             * are not closed.
+             */
+            void CloseConfig();
 
             /**
              * @brief Add a search path to a folder where a config file can be found.
@@ -174,7 +191,7 @@ module sdv
              */
             void ResetConfigBaseline();
         };
-    };      // module core
+    }; // module core
 
     /**
      * @brief Installation module.

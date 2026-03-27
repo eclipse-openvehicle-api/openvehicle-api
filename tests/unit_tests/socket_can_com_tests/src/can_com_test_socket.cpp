@@ -1,3 +1,13 @@
+/********************************************************************************
+* Copyright (c) 2025-2026 ZF Friedrichshafen AG
+*
+* This program and the accompanying materials are made available under the 
+* terms of the Apache License Version 2.0 which is available at
+* https://www.apache.org/licenses/LICENSE-2.0
+*
+* SPDX-License-Identifier: Apache-2.0 
+********************************************************************************/
+
 #include "../../../../global/process_watchdog.h"
 #include "../include/can_com_test_helper.h"
 #include <atomic>
@@ -117,9 +127,9 @@ public:
         return CCANSockets::GetInterfaces();
     }
 
-    sdv::EObjectStatus GetTestStatus() const
+    sdv::EObjectState GetTestStatus() const
     {
-        return CCANSockets::GetStatus();
+        return CCANSockets::GetObjectState();
     }
 
     uint64_t GetMessagesSent() const
@@ -190,7 +200,7 @@ bool InitializeAppControl(sdv::app::CAppControl* appcontrol, const std::string& 
 void InitializeCanComObject(CTestCANSocket& canComObj, const std::string config, MockCANReceiver& mockRcv)
 {
     ASSERT_NO_THROW(canComObj.Initialize(config.c_str()));
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialized);
     ASSERT_NO_THROW(canComObj.SetOperationMode(sdv::EOperationMode::configuring));
     ASSERT_NO_THROW(canComObj.RegisterReceiver(&mockRcv));
     EXPECT_NO_THROW(canComObj.SetOperationMode(sdv::EOperationMode::running));
@@ -221,12 +231,12 @@ TEST_F(CANSocketTest, ValidConfigString)
     sdv::u8string ssObjectConfig = R"(canSockets = "vcan0")"; // vcan0 interface must exist
     CTestCANSocket canComObj;
     ASSERT_NO_THROW(canComObj.Initialize(ssObjectConfig.c_str()));
-    ASSERT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::initialized);
+    ASSERT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialized);
 
     ASSERT_NO_THROW(canComObj.Send(testMsg, 0));
 
     ASSERT_NO_THROW(canComObj.Shutdown());
-    ASSERT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    ASSERT_EQ(canComObj.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST_F(CANSocketTest, InvalidConfigString)
@@ -237,10 +247,10 @@ TEST_F(CANSocketTest, InvalidConfigString)
     sdv::u8string ssObjectConfig = R"(canSockets = "vcan08")";
     CTestCANSocket canComObj;
     ASSERT_NO_THROW(canComObj.Initialize(ssObjectConfig.c_str()));
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::initialization_failure);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialization_failure);
 
     ASSERT_NO_THROW(canComObj.Shutdown());
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST_F(CANSocketTest, ValidConfigArray)
@@ -253,12 +263,12 @@ TEST_F(CANSocketTest, ValidConfigArray)
     sdv::u8string ssObjectConfig = R"(canSockets = ["vcan0", "vcan1"])";
     CTestCANSocket canComObj;
     ASSERT_NO_THROW(canComObj.Initialize(ssObjectConfig.c_str()));
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialized);
 
     ASSERT_NO_THROW(canComObj.Send(testMsg, 0));
 
     EXPECT_NO_THROW(canComObj.Shutdown());
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST_F(CANSocketTest, InvalidConfigArray)
@@ -269,10 +279,10 @@ TEST_F(CANSocketTest, InvalidConfigArray)
     sdv::u8string ssObjectConfig = R"(canSockets = ["vcan08", "vcan09"])";
     CTestCANSocket canComObj;
     ASSERT_NO_THROW(canComObj.Initialize(ssObjectConfig.c_str()));
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::initialization_failure);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialization_failure);
 
     ASSERT_NO_THROW(canComObj.Shutdown());
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST_F(CANSocketTest, ValidConfigArrayButUnknownElement)
@@ -285,12 +295,12 @@ TEST_F(CANSocketTest, ValidConfigArrayButUnknownElement)
     sdv::u8string ssObjectConfig = R"(canSockets = ["vcan0", "vcan08"])";
     CTestCANSocket canComObj;
     ASSERT_NO_THROW(canComObj.Initialize(ssObjectConfig.c_str()));
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialized);
 
     ASSERT_NO_THROW(canComObj.Send(testMsg, 0));
 
     ASSERT_NO_THROW(canComObj.Shutdown());
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST_F(CANSocketTest, InvalidConfigIdentifier)
@@ -301,10 +311,10 @@ TEST_F(CANSocketTest, InvalidConfigIdentifier)
     sdv::u8string ssObjectConfig = R"(invalidCanSockets = ["vcan0", "vcan1"])"; // Invalid config identifier
     CTestCANSocket canComObj;
     ASSERT_NO_THROW(canComObj.Initialize(ssObjectConfig.c_str()));
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::initialization_failure);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialization_failure);
 
     ASSERT_NO_THROW(canComObj.Shutdown());
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST_F(CANSocketTest, ReceiveTestDifferentDataSizes)
@@ -695,7 +705,7 @@ TEST_F(CANSocketTest, ManualSendAndReceiveTestOfMulitpleSockets)
     sdv::u8string ssConfig = R"(canSockets = ["vcan0", "vcan3", "vcan8", "vcan1", "vcan9", "vcan4", "vcan2"])";
     CTestCANSocket canComObj;
     ASSERT_NO_THROW(canComObj.Initialize(ssConfig.c_str()));
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialized);
 
     // Register a receiver.
     MockCANReceiver mockRcv;
@@ -741,7 +751,7 @@ TEST_F(CANSocketTest, ManualSendAndReceiveTestOfMulitpleSockets)
 
     EXPECT_NO_THROW(canComObj.UnregisterReceiver(&mockRcv));
     ASSERT_NO_THROW(canComObj.Shutdown());  // Shutdown the object after the test
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 // Test similar to ManualSendAndReceiveTestOfMulitpleSockets
@@ -765,7 +775,7 @@ TEST_F(CANSocketTest, ManualSendAndReceiveTestWithDifferentDataSizes)
     sdv::u8string ssConfig = R"(canSockets = ["vcan0", "vcan3", "vcan8", "vcan1", "vcan9", "vcan4", "vcan2"])";
     CTestCANSocket canComObj;
     ASSERT_NO_THROW(canComObj.Initialize(ssConfig.c_str()));
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialized);
 
     // Register a receiver.
     MockCANReceiver mockRcv;
@@ -811,7 +821,7 @@ TEST_F(CANSocketTest, ManualSendAndReceiveTestWithDifferentDataSizes)
 
     EXPECT_NO_THROW(canComObj.UnregisterReceiver(&mockRcv));
     ASSERT_NO_THROW(canComObj.Shutdown());  // Shutdown the object after the test
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 extern "C" int main(int argc, char* argv[])

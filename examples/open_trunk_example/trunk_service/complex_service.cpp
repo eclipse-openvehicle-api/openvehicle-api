@@ -1,11 +1,19 @@
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ ********************************************************************************/
+
 #include <iostream>
 #include "complex_service.h"
 
 
-void CTrunkExampleService::Initialize(const sdv::u8string& /*ssObjectConfig*/)
+bool CTrunkExampleService::OnInitialize()
 {
-    m_eStatus = sdv::EObjectStatus::initializing;
-
     // Request the basic service for speed. 
     auto pSpeedSvc = sdv::core::GetObject("Vehicle.Speed_Service").GetInterface<vss::Vehicle::SpeedService::IVSS_GetSpeed>();
     if (pSpeedSvc)
@@ -20,24 +28,12 @@ void CTrunkExampleService::Initialize(const sdv::u8string& /*ssObjectConfig*/)
     if ((!pSpeedSvc) || (!m_pTrunkSvc))
     {
         SDV_LOG_ERROR("Could not get interfaces : [CTrunkExampleService]");
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
-
-    m_eStatus = sdv::EObjectStatus::initialized;
+    return true;
 }
 
-sdv::EObjectStatus CTrunkExampleService::GetStatus() const
-{
-    return m_eStatus;
-}
-
-void CTrunkExampleService::SetOperationMode(sdv::EOperationMode /*eMode*/)
-{
-    // Not applicable
-}
-
-void CTrunkExampleService::Shutdown()
+void CTrunkExampleService::OnShutdown()
 {
     // Unregister trunk change event handler.
     auto pSpeedSvc = sdv::core::GetObject("Vehicle.Speed_Service").GetInterface<vss::Vehicle::SpeedService::IVSS_GetSpeed>();

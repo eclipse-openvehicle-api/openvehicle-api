@@ -1,3 +1,17 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Martin Stimpfl - initial API and implementation
+ *   Erik Verhoeven - writing TOML and whitespace preservation
+ ********************************************************************************/
+
 #ifndef PARSER_NODE_TOML_H
 #define PARSER_NODE_TOML_H
 
@@ -9,10 +23,9 @@
 #include <list>
 #include <map>
 
-#include <interfaces/toml.h>
 #include <support/interface_ptr.h>
-#include "lexer_toml.h"
 #include "miscellaneous.h"
+#include "code_snippet.h"
 
 /// The TOML parser namespace
 namespace toml_parser
@@ -30,9 +43,11 @@ namespace toml_parser
      */
     enum class EGenerateOptions : uint32_t
     {
-        inline_when_possible   = 0x01, ///< Try to generate as much as possible as inline nodes.
-        explicit_when_possible = 0x02, ///< Try to generate as much as possible as explicit nodes.
-        no_comments            = 0x10, ///< Do not include comments
+        inline_when_possible   = 0x01,  ///< Try to generate as much as possible as inline nodes.
+        explicit_when_possible = 0x02,  ///< Try to generate as much as possible as explicit nodes.
+        no_comments            = 0x10,  ///< Do not include comments.
+        reduce_whitespace      = 0x20,  ///< Add comments, but reduce extra newlines before and after the node.
+        full_header            = 0x40,  ///< When generating tables or table arrays, include the header in generated code.
     };
 
     /**
@@ -50,7 +65,8 @@ namespace toml_parser
         CGenContext(const std::string& rssPrefixKey = std::string(), uint32_t uiOptions = 0);
 
         /**
-         * @brief Called by the node that is generating the TOML. If not initialized before, initializes with the provided node.
+         * @brief Called by the node that is generating the TOML. If not initialized before, extract the context from the node and
+         * assign this node as top node for the code generation.
          * @param[in] rptrNode Reference to the node that could be used for initialization as top most node.
          */
         void InitTopMostNode(const std::shared_ptr<const CNode>& rptrNode);
@@ -65,9 +81,12 @@ namespace toml_parser
         /**
          * @brief Create a copy of the context class with a new key context.
          * @param[in] rssNewKeyContext Reference to the string containing the new key context.
+         * @param[in] rptrNode Reference to the node pointer to extract the context from.
+         * @param[in] bLastNode When set, this is the last node in the current view.
          * @return The copy of the contetx class.
          */
-        CGenContext CopyWithContext(const std::string& rssNewKeyContext) const;
+        CGenContext CopyWithContext(const std::string& rssNewKeyContext, const std::shared_ptr<CNode>& rptrNode,
+            bool bLastNode) const;
 
         /**
          * @brief Get the stored prefix key that should be used for the TOML code generation.
@@ -80,6 +99,24 @@ namespace toml_parser
          * @return Reference to the key context string.
          */
         const std::string& KeyContext() const;
+
+        /**
+         * @brief The key path composed of the prefix and the relative key path.
+         * @return Reference to the key path string.
+         */
+        const std::string& KeyPath() const;
+
+        /**
+         * @brief The key path composed of the key kontext and the relative key path.
+         * @return Reference to the key path string.
+         */
+        const std::string& FullKeyPath() const;
+
+        /**
+         * @brief The relative key path, relative to the current context.
+         * @return Reference to the key path string.
+         */
+        const std::string& RelKeyPath() const;
 
         /**
          * @brief Is this the top most node?
@@ -100,17 +137,115 @@ namespace toml_parser
          */
         bool CheckOption(EGenerateOptions eOption) const;
 
+        /**
+         * @brief Is the last-node-flag set?
+         * @return Returns whether the last-node-flag has been set indicating the node using this context to be the last node within
+         * the current view.
+         */
+        bool LastNode() const;
+
+        /**
+         * @brief Node presentation form.
+         */
+        enum class EPresentation
+        {
+            standard,        ///< Standard presentation (root or within table/table-array)
+            standard_inline, ///< Inline presentation (root or within table/table-array)
+            embedded,        ///< Embedded presentation (within array or inline-table)
+        };
+
+        /**
+         * @brief Get the presentation form of the node.
+         * @return The node presentation extracted from the node and the generation context.
+         */
+        EPresentation Presentation() const;
+
+        /**
+         * @brief Is the node a standard node?
+         * @return Returns 'true' when the node is a standard node.
+         */
+        bool Standard() const;
+
+        /**
+         * @brief Is the node an inline node?
+         * @remarks Embedded nodes are also inline.
+         * @return Returns 'true' when the node is an inline node.
+         */
+        bool Inline() const;
+
+        /**
+         * @brief Is the node an embedded node (within an inline table or array)?
+         * @return Returns 'true' when the node is an embedded node.
+         */
+        bool Embedded() const;
+
+        /**
+         * @brief Does the node need an assignment (key and when inline, equal sign)?
+         * @remarks Embedded nodes within an array do not need an assignment.
+         * @return Returns 'true' when the node needs an assignment.
+         */
+        bool Assignment() const;
+
+        /**
+         * @brief For an embedded node, is a comma indicating the next node needed?
+         * @remarks Some inline arrays can have a final comma behind the last embedded node.
+         * @return Returns 'true' when a comma is needed.
+         */
+        bool CommaNeeded() const;
+
+        /**
+         * @brief Are comments and newlines allowed? For an embedded node, this might be prohibited. But can also explicitly be
+         * defined in the context.
+         * @remarks Inline tables require a one line definition for the embedded nodes.
+         * @return Returns 'true' if comments and newlines are allowed.
+         */
+        bool CommentAndNewlineAllowed() const;
+
+        /**
+         * @brief Are newlines allowed? For an embedded node, this might be prohibited. But can also explicitly be defined in the
+         * context.
+         * @remarks Inline tables require a one line definition for the embedded nodes.
+         * @return Returns 'true' if comments and newlines are allowed.
+         */
+        bool NewlineAllowed() const;
+
+        /**
+         * @brief For a standard (inline) node, is a newline required at the end of the node definition?
+         * @returns Returns'true' if a newline is required behind the node definition.
+         */
+        bool FinalNewline() const;
+
     private:
-        std::shared_ptr<const CNode>    m_ptrTopMostNode;   ///< Top most node that is used for the generation. The parent nodes of
-                                                            ///< the top most node will not be part of the node generation and if
-                                                            ///< they contain child nodes in their view, the nodes are printed by
-                                                            ///< their parent and not by their view.
-        std::string                     m_ssPrefixKey;      ///< Prefix key to be used during the generation of the TOML code.
-        std::string                     m_ssKeyContext;     ///< string containing the current context. The string must follow the
-                                                            ///< key rules for separation with bare, literal and quoted keys.
-        uint32_t                        m_uiOptions = 0;    ///< Zero or more options to take into account when creating the text to
-                                                            ///< the TOML nodes.
-        bool                            m_bTopMost = true;  ///< Set when this context is the top most context.
+        void ExtractContext(const std::shared_ptr<const CNode>& rptrNode);
+
+        std::shared_ptr<const CNode> m_ptrTopMostNode;                  ///< Top most node that is used for the generation. The
+                                                                        ///< parent nodes of the top most node will not be part of
+                                                                        ///< the node generation and if they contain child nodes in
+                                                                        ///< their view, the nodes are printed by their parent and
+                                                                        ///< not by their view.
+        std::string         m_ssPrefixKey;                              ///< Prefix key to be used during the generation of the TOML
+                                                                        ///< not by their view.
+        std::string         m_ssKeyContext2;
+        std::string         m_ssKeyContext;                             ///< String containing the current context. The string must
+                                                                        ///< follow the key rules for separation with bare, literal
+                                                                        ///< and quoted keys.
+        std::string         m_ssKeyPath;                                ///< The key path composed of the prefix and the relative
+                                                                        ///< key path.
+        std::string         m_ssFullKeyPath;                            ///< The full key path composed of the key context and the
+                                                                        ///< relative key path.
+        std::string         m_ssRelKeyPath;                             ///< The relative key path, relative to the current context.
+        uint32_t            m_uiOptions = 0;                            ///< Zero or more options to take into account when creating
+                                                                        ///< the text to the TOML nodes.
+        bool                m_bTopMost = true;                          ///< Set when this context is the top most context.
+        bool                m_bLastNode = false;                        ///< Is this the last node in the current view?
+        bool                m_bFinalLastNode = false;                   ///< When set, this is the last (top level) node of the node
+                                                                        ///< hierarchy. Only child nodes can still follow.
+        EPresentation       m_ePresentation = EPresentation::standard;  ///< Presentation of the node.
+        bool                m_bOneLine = false;                         ///< Set when the node is not allowed to cover more than
+                                                                        ///< one line (except when using multi-line strings).
+        bool                m_bAssignment = false;                      ///< Does the node need an assignment.
+        bool                m_bCommaNeeded = false;                     ///< Is a comma needed following the node definition?
+        bool                m_bFinalNewline = false;                    ///< Is a final newline behind the definition required?
     };
 
     /**
@@ -118,7 +253,7 @@ namespace toml_parser
      */
     class CNode :
         public std::enable_shared_from_this<CNode>, public sdv::IInterfaceAccess, public sdv::toml::INodeInfo,
-        public sdv::toml::INodeDelete, public sdv::toml::INodeUpdate
+        public sdv::toml::INodeUpdate
     {
     protected:
         /**
@@ -150,7 +285,6 @@ namespace toml_parser
         // Interface map
         BEGIN_SDV_INTERFACE_MAP()
             SDV_INTERFACE_ENTRY(sdv::toml::INodeInfo)
-            SDV_INTERFACE_ENTRY(sdv::toml::INodeDelete)
             SDV_INTERFACE_ENTRY(sdv::toml::INodeUpdate)
         END_SDV_INTERFACE_MAP()
 
@@ -194,8 +328,9 @@ namespace toml_parser
         virtual sdv::any_t GetValue() const override;
 
         /**
-         * @brief Get the index of this node within the parent collection. Overload of sdv::toml::INodeInfo::GetIndex.
-         * @return The index of the node within the parent collection node or npos when no parent is available.
+         * @brief Get the index of this node within the view collection (either the assigned view or the parent). Overload of
+         * sdv::toml::INodeInfo::GetIndex.
+         * @return The index of the node within the view collection node or npos when no parent is available.
          */
         virtual uint32_t GetIndex() const override;
 
@@ -214,27 +349,25 @@ namespace toml_parser
 
         /**
          * @brief Set or replace a comment for the node. Overload of sdv::toml::INodeInfo::SetComment.
-         * @remarks This function can also be used to insert whitespace (with or without comments) when used in raw mode.
-         * Set the comment text for the node. If a comment is proided as text (normal behavior), the comment text will be
-         * formatted automatically when generating the TOML text. If the comment is provided as raw comment, the text should
-         * contain all whitespace and the comment '#' character before the comment text.
-         * Comments inserted before the enode will be inserted on the line before the node uness the comment is provided in raw
-         * format and is ended with a newline and optionally whitespace. Comment inserted behind the node will be inserted on
+         * @details Set the comment text for the node. If a comment is provided as text (normal behavior), the comment text will
+         * be formatted automatically when generating the TOML text. If the comment text should not contain the comment
+         * character '#' before the comment text.
+         * Comments inserted before the node will be inserted on the line before the node unless the comment is provided in raw
+         * format and is ended with a line-break and optionally whitespace. Comment inserted behind the node will be inserted on
          * the same line as the node.
-         * Comments provided as text is automatically wrapped to 80 characters if possible. Newlines in the text will cause a
-         * new comment line to start.
-         * @param[in] ssComment String containing the comment text or the raw comment string to set.
-         * @param[in] uiFlags One or more ECommentFlags flags influencing the behavior of the comment.
+         * Comments provided as text is automatically wrapped to 132 characters if possible. Line-breaks in the text will cause
+         * a new comment line to start.
+         * @param[in] eType The comment type to set the comment text for.
+         * @param[in] ssComment String containing the comment text to set.
          */
-        virtual void SetComment(const sdv::u8string& ssComment, uint32_t uiFlags) override;
+        virtual void SetComment(sdv::toml::INodeInfo::ECommentType eType, const sdv::u8string& ssComment) override;
 
         /**
          * Get the current comment for the node. Overload of sdv::toml::INodeInfo::GetComment.
-         * @remarks To receive the whitespace formatting the node, use this function in raw mode.
-         * @param[in] uiFlags One or more ECommentFlags flags identifying the string format of the comment to return.
+         * @param[in] eType The comment type to get the comment text of.
          * @return String with the comment text or an empty string if no comment is available.
          */
-        virtual sdv::u8string GetComment(uint32_t uiFlags) override;
+        virtual sdv::u8string GetComment(sdv::toml::INodeInfo::ECommentType eType) override;
 
         /**
          * @brief Format the node automatically. This will remove the whitespace between the elements within the node. Comments
@@ -243,24 +376,23 @@ namespace toml_parser
         virtual void AutomaticFormat() override;
 
         /**
+         * @brief Is the node inline? Overload of sdv::toml::INodeInfo::IsInline.
+         * @return Returns whether the node is defined as inline node.
+         */
+        virtual bool IsInline() const override;
+
+        /**
+         * @brief Is the node defined as standard node? Overload of sdv::toml::INodeInfo::IsStandard.
+         * @return Returns whether the node is defined as standard node.
+         */
+        virtual bool IsStandard() const override;
+
+        /**
          * @brief Update the node with TOML code information. The default implementation takes the comment and whitespace around the
          * node and stores this for node reconstruction.
          * @param[in] rNodeRange Reference to the node range information containing the tokens for the code snippets.
          */
         virtual void UpdateNodeCode(const CNodeTokenRange& rNodeRange);
-
-        /**
-         * @brief Delete the current node. Overload of sdv::toml::INodeDelete::DeleteNode.
-         * @attention A successful deletion will cause all interfaces to the current node to become inoperable.
-         * @return Returns whether the deletion was successful.
-         */
-        virtual bool DeleteNode() override;
-
-        /**
-         * @brief Is this node marked as deleted?
-         * @return Returns whether this node has been deleted.
-         */
-        bool IsDeleted() const;
 
         /**
          * @brief Change the key name of the node (if the node is not a value node of an array). Overload of
@@ -275,7 +407,7 @@ namespace toml_parser
         /**
          * @brief Change the value of the node. Overload of sdv::toml::INodeUpdate::ChangeValue.
          * @remarks Only valid for value nodes. Changing the value type is not supported.
-         * @param[in] anyNewValue The value of the node, being either an integer, floating point number, boolean value or a
+         * @param[in] anyNewValue The value of the node, being either an integer, floating point number, virtual bool value or a
          * string. Conversion is automatically done to int64, double float, bool or u8string.
          * @return Returns whether the value change was successful.
          */
@@ -298,6 +430,19 @@ namespace toml_parser
         virtual bool MoveDown() override;
 
         /**
+         * @brief Delete the current node. Overload of sdv::toml::INodeUpdate::DeleteNode.
+         * @attention A successful deletion will cause all interfaces to the current node to become inoperable.
+         * @return Returns whether the deletion was successful.
+         */
+        virtual bool DeleteNode() override;
+
+        /**
+         * @brief Is this node marked as deleted?
+         * @return Returns whether this node has been deleted.
+         */
+        bool IsDeleted() const;
+
+        /**
          * @brief Do a dynamic cast to one of the base types of the node.
          * @return Casted shared pointer to the base type if the type is valid, or an empty pointer if not.
          */
@@ -312,17 +457,17 @@ namespace toml_parser
         std::shared_ptr<const TNodeType> Cast() const;
 
         /**
-         * @brief Gets the parent node pointer
-         * @return Returns the parent node pointer or an empty pointer when no parent was assigned or the stored weak pointer could
-         * not be locked.
-         */
-        std::shared_ptr<CNodeCollection> GetParentPtr() const;
-
-        /**
          * @brief Set the parent node.
          * @param[in] rptrParent Reference to the node to assign to this node as a parent.
          */
         void SetParentPtr(const std::shared_ptr<CNodeCollection>& rptrParent);
+
+        /**
+         * @brief Gets the parent node pointer.
+         * @return Returns the parent node pointer or an empty pointer when no parent was assigned or the stored weak pointer could
+         * not be locked.
+         */
+        std::shared_ptr<CNodeCollection> GetParentPtr() const;
 
         /**
          * @brief Get the parent path of the node.
@@ -336,6 +481,12 @@ namespace toml_parser
          * @param[in] rptrView Reference to the node to assign to this node as a parent or grand parent.
          */
         void SetViewPtr(const std::shared_ptr<CNodeCollection>& rptrView);
+
+        /**
+         * @brief Gets the view definition node pointer.
+         * @return Returns the store view definition node pointer or an empty pointer when no view was assigned.
+         */
+        std::shared_ptr<CNodeCollection> GetViewPtr() const;
 
         /**
          * @brief Checks whether the node is part of the view.
@@ -367,95 +518,8 @@ namespace toml_parser
          */
         virtual std::string GenerateTOML(const CGenContext& rContext = CGenContext()) const = 0;
 
-    protected:
-        /**
-         * @brief Compose a custom path from the node key path using a key prefix and a context.
-         * @param[in] rssPrefixKey The prefix to insert at as a base to the key tree.
-         * @param[in] rssContext The context that is used to define the relative portion of the key. To determine the relative
-         * portion, the context string contains the same prefix as is supplied in rssPrefixKey.
-         * @return Returns the custom path composed of the prefix and the relative portion of the original path.
-         */
-        std::string GetCustomPath(const std::string& rssPrefixKey, const std::string& rssContext) const;
-
-        /**
-         * @brief Comment or code snippet structure.
-         * @details Each node has multiple code snippets used to reproduce the exact code. For example with an assignment:
-         * @code
-         *
-         * # This is out of scope comment before
-         *
-         * # This is comment before
-         *     var_a   =     "abc"  # comment behind
-         *                          # more comment behind
-         *
-         * # This is out of scope comment behind
-         *
-         * @endcode
-         *
-         * The code snippets are identified as follows:
-         * @code
-         * <out of scope comment before>
-         * <comment before>
-         * <space before><key><space>=<space><value><comment behind>
-         * <out of scope comment behind>
-         * @endcode
-         */
-        class CCodeSnippet
-        {
-        public:
-            /**
-             * @brief Access the token list.
-             * @return Reference to the list with tokens.
-             */
-            std::list<CToken>& List();
-
-            /**
-             * @brief Access the comment text string.
-             * @return Reference to the comment string.
-             */
-            std::string& Str();
-
-            /**
-             * @brief Mode the code snippet composer should run in.
-             */
-            enum class EComposeMode
-            {
-                compose_inline,         ///< Compose as inline whitespace and comment. If there is no token list and no comment
-                                        ///< string, compose as one space. If there is only a comment string, insert a space, add
-                                        ///< the comment followed by an obligatory newline, and insert spaces until the next
-                                        ///< provided position. If there are tokens with a comment token, replace the comment. If
-                                        ///< there are tokens without comment, add the comment, newline and spaces.
-                compose_before,         ///< Compose as comment assigned to and located before the node. If there is no token list
-                                        ///< and no comment string, doesn't add anything. If there is only a comment string, adds
-                                        ///< the comment followed by the obligatory newline. If there are tokens with a comment
-                                        ///< token, replace the comment. If there are tokens without the comment, place the comment
-                                        ///< before the last newline or when not available, at the end of the tokens followed by a
-                                        ///< new newline.
-                compose_behind,         ///< Compose as comment assigned to and located behind the node. If there is no token list
-                                        ///< and no comment string, add a newline. If there is a comment string and no tokens,
-                                        ///< add a space, the comment string followed by the obligatory newline. If there is a token
-                                        ///< list without comment, add a comment before the newline or at the end with an additional
-                                        ///< newline.
-                compose_standalone,     ///< Compose as stand-alone comment. Replace any token list if a comment string is
-                                        ///< available.
-            };
-
-            /**
-             * @brief Compose a conde string from the stored tokens and/or string.
-             * @param[in] eMode The mode the composer should run in.
-             * @param[in] nAssignmentOffset The offset for a next assignent; only used for inline composition.
-             * @param[in] nCommentOffset The offset to insert a multi-line comment; only used for inline and behind composition.
-             * @return The composed code string.
-             */
-            std::string Compose(EComposeMode eMode, size_t nAssignmentOffset = 0, size_t nCommentOffset = 0) const;
-
-        private:
-            std::list<CToken>   m_lstTokens;    ///< Token list for the code snippet in raw format.
-            std::string         m_ssComment;    ///< The comment text for the code snippet in text format.
-        };
-
         // White space and comment preservation indices for code generation.
-        const size_t m_nPreNodeCode = 0;             ///< Code snippet before the node. Corresponds to
+        const size_t m_nPreNodeCode = 0;            ///< Code snippet before the node. Corresponds to
                                                     ///< sdv::toml::INodeInfo::ECommentFlags::comment_before.
         const size_t m_nPostNodeCode = 1;           ///< Comment behind the node. Corresponds to
                                                     ///< sdv::toml::INodeInfo::ECommentFlags::comment_behind.
@@ -473,7 +537,7 @@ namespace toml_parser
 
         /**
          * @brief Get the code snippet.
-         * @param[in] nIndex The comment type index to get the comment for.
+         * @param[in] nIndex The comment type index to get the code for.
          * @param[in] rssKey Reference to the key to be used for code snippet identification.
          * @return Reference to the comment structure of the comment. If the provided index is not available in the vector,
          * returns an empty code snippet.
@@ -481,14 +545,37 @@ namespace toml_parser
         const CCodeSnippet& CodeSnippet(size_t nIndex, const std::string& rssKey = std::string()) const;
 
         /**
-         * @brief Get the code snippet (write access). This allows moving the snippet from one node to the another node.
-         * @remarks Since the request to the code snippet could change the location of the vector allocation, access to the code
-         * snippet is valid until the next code snippet is requested.
-         * @param[in] nIndex The comment type index to get the comment for.
+         * @brief Get the code snippet (write access).
+         * @param[in] nIndex The comment type index to get the code for.
          * @param[in] rssKey Reference to the key to be used for code snippet identification.
          * @return Reference to the comment structure of the comment.
          */
         CCodeSnippet& CodeSnippet(size_t nIndex, const std::string& rssKey = std::string());
+
+        /**
+         * @brief Get the code snippet using the comment type.
+         * @param[in] eType The comment type to get the code for.
+         * @return Reference to the comment structure of the comment. If the provided index is not available in the vector,
+         * returns an empty code snippet.
+         */
+        const CCodeSnippet& CodeSnippet(sdv::toml::INodeInfo::ECommentType eType) const;
+
+        /**
+         * @brief Get the code snippet (write access) using the comment type.
+         * @param[in] eType The comment type to get the code for.
+         * @return Reference to the comment structure of the comment. If the provided index is not available in the vector,
+         * returns an empty code snippet.
+         */
+        CCodeSnippet& CodeSnippet(sdv::toml::INodeInfo::ECommentType eType);
+
+        /**
+         * @brief Compose a custom path from the node key path using a key prefix and a context.
+         * @param[in] rssPrefixKey The prefix to insert at as a base to the key tree.
+         * @param[in] rssContext The context that is used to define the relative portion of the key. To determine the relative
+         * portion, the context string contains the same prefix as is supplied in rssPrefixKey.
+         * @return Returns the custom path composed of the prefix and the relative portion of the original path.
+         */
+        std::string GetCustomPath(const std::string& rssPrefixKey, const std::string& rssContext) const;
 
     private:
         std::weak_ptr<CNodeCollection>      m_ptrParent;            ///< Weak pointer to the parent node (if existing).
@@ -610,6 +697,12 @@ namespace toml_parser
          */
         std::string RawValueText() const;
 
+    protected:
+        /**
+         * @brief When updating the node, reset the raw value text.
+         */
+        void ResetRawValueText();
+
     private:
         std::string m_ssRawValue;                   ///< Raw value string.
     };
@@ -647,7 +740,7 @@ namespace toml_parser
         /**
          * @brief Change the value of the node. Overload of sdv::toml::INodeUpdate::ChangeValue.
          * @remarks Only valid for value nodes. Changing the value type is not supported.
-         * @param[in] anyNewValue The value of the node, being either an integer, floating point number, boolean value or a
+         * @param[in] anyNewValue The value of the node, being either an integer, floating point number, virtual bool value or a
          * string. Conversion is automatically done to int64, double float, bool or u8string.
          * @return Returns whether the value change was successful.
          */
@@ -660,7 +753,7 @@ namespace toml_parser
         virtual std::string ValueText() const override;
 
     private:
-        bool    m_bVal = false;     ///< Value in case of boolean node.
+        bool    m_bVal = false;     ///< Value in case of virtual bool node.
     };
 
     /**
@@ -696,7 +789,7 @@ namespace toml_parser
         /**
          * @brief Change the value of the node. Overload of sdv::toml::INodeUpdate::ChangeValue.
          * @remarks Only valid for value nodes. Changing the value type is not supported.
-         * @param[in] anyNewValue The value of the node, being either an integer, floating point number, boolean value or a
+         * @param[in] anyNewValue The value of the node, being either an integer, floating point number, virtual bool value or a
          * string. Conversion is automatically done to int64, double float, bool or u8string.
          * @return Returns whether the value change was successful.
          */
@@ -745,7 +838,7 @@ namespace toml_parser
         /**
          * @brief Change the value of the node. Overload of sdv::toml::INodeUpdate::ChangeValue.
          * @remarks Only valid for value nodes. Changing the value type is not supported.
-         * @param[in] anyNewValue The value of the node, being either an integer, floating point number, boolean value or a
+         * @param[in] anyNewValue The value of the node, being either an integer, floating point number, virtual bool value or a
          * string. Conversion is automatically done to int64, double float, bool or u8string.
          * @return Returns whether the value change was successful.
          */
@@ -806,7 +899,7 @@ namespace toml_parser
         /**
          * @brief Change the value of the node. Overload of sdv::toml::INodeUpdate::ChangeValue.
          * @remarks Only valid for value nodes. Changing the value type is not supported.
-         * @param[in] anyNewValue The value of the node, being either an integer, floating point number, boolean value or a
+         * @param[in] anyNewValue The value of the node, being either an integer, floating point number, virtual bool value or a
          * string. Conversion is automatically done to int64, double float, bool or u8string.
          * @return Returns whether the value change was successful.
          */
@@ -826,8 +919,11 @@ namespace toml_parser
     /**
      * @brief Base structure for arrays and tables.
      */
-    class CNodeCollection : public CNode, public sdv::toml::INodeCollection, public sdv::toml::INodeCollectionInsert
+    class CNodeCollection : public CNode, public sdv::toml::INodeCollection, public sdv::toml::INodeCollectionInsert,
+        public sdv::toml::INodeCollectionConvert
     {
+        // Friend class CNode.
+        friend CNode;
     protected:
         /**
          * @brief Constructor
@@ -842,8 +938,15 @@ namespace toml_parser
         BEGIN_SDV_INTERFACE_MAP()
             SDV_INTERFACE_ENTRY(sdv::toml::INodeCollection)
             SDV_INTERFACE_ENTRY(sdv::toml::INodeCollectionInsert)
+            SDV_INTERFACE_ENTRY(sdv::toml::INodeCollectionConvert)
             SDV_INTERFACE_CHAIN_BASE(CNode)
         END_SDV_INTERFACE_MAP()
+
+        /**
+         * @brief Format the node automatically. This will remove the whitespace between the elements within the node. Comments
+         * will not be changed. Overload of sdv::toml::INodeInfo::AutomaticFormat.
+         */
+        virtual void AutomaticFormat() override;
 
         /**
          * @brief Returns the amount of nodes. Overload of sdv::toml::INodeCollection::GetCount.
@@ -900,7 +1003,7 @@ namespace toml_parser
          * @param[in] ssName Name of the node to insert. Will be ignored for an array collection. The name must adhere to the
          * key names defined by the TOML specification. Defining the key multiple times is not allowed. Quotation of key names
          * is done automatically; the parser decides itself whether the key is bare-key, a literal key or a quoted key.
-         * @param[in] anyValue The value of the node, being either an integer, floating point number, boolean value or a string.
+         * @param[in] anyValue The value of the node, being either an integer, floating point number, virtual bool value or a string.
          * Conversion is automatically done to int64, double float, bool or u8string.
          * @return On success the interface to the newly inserted node is returned or NULL otherwise.
          */
@@ -928,13 +1031,15 @@ namespace toml_parser
          * collection count to insert the node at the end of the collection. Table nodes cannot be inserted before value nodes
          * or arrays. If the index is referencing a position before a value node or an array, the index is automatically
          * corrected.
-         * @param[in] ssKeyName Name of the table node to insert. Will be ignored if the current node is an array collection.
+         * @param[in] ssName Name of the table node to insert. Will be ignored if the current node is an array collection.
          * The name must adhere to the key names defined by the TOML specification. Defining the key multiple times is not
          * allowed. Quotation of key names is done automatically; the parser decides itself whether the key is bare-key, a
          * literal key or a quoted key.
+         * @param[in] ePreference The preferred form of the node to be inserted.
          * @return On success the interface to the newly inserted node is returned or NULL otherwise.
          */
-        virtual sdv::IInterfaceAccess* InsertTable(uint32_t uiIndex, const sdv::u8string& ssKeyName) override;
+        virtual sdv::IInterfaceAccess* InsertTable(uint32_t uiIndex, const sdv::u8string& ssName,
+            sdv::toml::INodeCollectionInsert::EInsertPreference ePreference) override;
 
         /**
          * @brief Insert a table array into the collection at the location before the supplied index. Overload of
@@ -947,36 +1052,82 @@ namespace toml_parser
          * The name must adhere to the key names defined by the TOML specification. Defining the key multiple times is not
          * allowed. Quotation of key names is done automatically; the parser decides itself whether the key is bare-key, a
          * literal key or a quoted key.
+         * @param[in] ePreference The preferred form of the node to be inserted.
          * @return On success the interface to the newly inserted node is returned or NULL otherwise.
          */
-        virtual sdv::IInterfaceAccess* InsertTableArray(uint32_t uiIndex, const sdv::u8string& ssName) override;
+        virtual sdv::IInterfaceAccess* InsertTableArray(uint32_t uiIndex, const sdv::u8string& ssName,
+            sdv::toml::INodeCollectionInsert::EInsertPreference ePreference) override;
 
         /**
          * @brief Insert a TOML string as a child of the current collection node. If the collection is a table, the TOML string
          * should contain values and inline/external/array-table nodes with names. If the collection is an array, the TOML
          * string should contain and inline table nodes without names. Overload of sdv::toml::INodeCollectionInsert::InsertTOML.
+         * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
+         * collection count to insert the node at the end of the collection. Table array nodes cannot be inserted before value
+         * nodes or arrays. If the index is referencing a position before a value node or an array, the index is automatically
+         * corrected.
          * @param[in] ssTOML The TOML string to insert.
          * @param[in] bRollbackOnPartly If only part of the nodes could be inserted, no node will be inserted.
          * @return The result of the insertion.
          */
-        virtual sdv::toml::INodeCollectionInsert::EInsertResult InsertTOML(const sdv::u8string& ssTOML,
+        virtual sdv::toml::INodeCollectionInsert::EInsertResult InsertTOML(uint32_t uiIndex, const sdv::u8string& ssTOML,
             bool bRollbackOnPartly) override;
 
         /**
-         * @brief Delete the current node. Overload of sdv::toml::INodeDelete::DeleteNode.
+         * @brief Delete the current node. Overload of sdv::toml::INodeUpdate::DeleteNode.
          * @attention A successful deletion will cause all interfaces to the current node to become inoperable.
          * @return Returns whether the deletion was successful.
          */
         virtual bool DeleteNode() override;
 
-//protected:
         /**
-         * @brief Remove a node from the collection.
+         * @brief Can the node convert to an inline definition? Overload of sdv::toml::INodeCollectionConvert::CanMakeInline.
+         * @return Returns whether the conversion to inline is possible. Returns 'true' when the node is already inline.
+         */
+        virtual bool CanMakeInline() const override;
+
+        /**
+         * @brief Convert the node to an inline node. Overload of sdv::toml::INodeCollectionConvert::MakeInline.
+         * @return Returns whether the conversion was successful. Returns 'true' when the node was already inline.
+         */
+        virtual bool MakeInline() override;
+
+        /**
+         * @brief Can the node convert to a standard definition? Overload of sdv::toml::INodeCollectionConvert::CanMakeStandard.
+         * @return Returns whether the conversion to standard is possible. Returns 'true' when the node is already defined as
+         * standard node.
+         */
+        virtual bool CanMakeStandard() const override;
+
+        /**
+         * @brief Convert the node to a standard node. Overload of sdv::toml::INodeCollectionConvert::MakeStandard.
+         * @return Returns whether the conversion was successful. Returns 'true' when the node was already defined as standard
+         * node.
+         */
+        virtual bool MakeStandard() override;
+
+        /**
+         * @brief Delete a node from the collection.
          * @remarks The node will not be deleted, but placed in the recycle bin. Deletion will take place at collection destruction.
          * @param[in] rptrNode Reference to the smart pointer pointing to the node to remove.
          * @return Returns whether the removal was successful.
          */
-        bool RemoveNode(const std::shared_ptr<CNode>& rptrNode);
+        bool DeleteNode(const std::shared_ptr<CNode>& rptrNode);
+
+        /**
+         * @brief Insert the node into the view.
+         * @remarks The node must be a descendant (direct child or an indirect child) of the node.
+         * @details Insert the node into the vector (and remove it from any previous vector if still assigned). Inline nodes can be
+         * assigned to stadard and inline nodes. Standard nodes can only be assigned to standard nodes. In the vector, first the
+         * inline nodes and then the standard nodes are located. This means that an inline node will be placed before standard nodes
+         * and standard nodes behind inline nodes, regardless of the index provided.
+         * @param[in] uiIndex Location within the vector to insert the node. Could be sdv::toml::npos to insert as last node.
+         * @param[in] rptrNode Reference to the smart pointer to the node to set the view for. If the node is not a direct child
+         * node, the view pointer of the node will be set.
+         * @return Returns true when the insertion was successful, false when node (likely because the node to insert is a standard
+         * node, whereas this node is an inline node.
+         */
+        bool InsertIntoView(uint32_t uiIndex, const std::shared_ptr<CNode>& rptrNode);
 
         /**
          * @brief Remove a node from a view.
@@ -986,19 +1137,18 @@ namespace toml_parser
         bool RemoveFromView(const std::shared_ptr<CNode>& rptrNode);
 
         /**
-         * @brief Check whether this node is the last node in the collection.
-         * @param[in] rptrNode Reference to the smart pointer pointing to the node to check for.
-         * @return Returns whether the provided node is the last node in the collection.
-         */
-        bool CheckLast(const std::shared_ptr<CNode>& rptrNode);
-
-    public:
-        /**
          * @brief Find the index belonging to the provided node.
          * @param[in] rptrNode Reference to the smart pointer holding the node to return the index for.
          * @return Return the node index. Returns npos if the node could not be found.
          */
-        uint32_t FindIndex(const std::shared_ptr<CNode>& rptrNode);
+        uint32_t FindIndex(const std::shared_ptr<CNode>& rptrNode) const;
+
+        /**
+         * @brief Is the provided child node a direct or indirect child node?
+         * @param[in] rptrNode Reference to the smart pointer of the potential descendant node.
+         * @return Returns whether the provided node is a descendant of the this node.
+         */
+        bool IsDescendant(const std::shared_ptr<CNode>& rptrNode) const;
 
         /**
          * @brief Generic inserting function for nodes.
@@ -1022,6 +1172,24 @@ namespace toml_parser
          */
         template <typename TNodeType, typename... TArgs>
         std::shared_ptr<CNode> Insert(uint32_t uiIndex, const CTokenRange& rrangeKeyPath, const TArgs&... rtArgs);
+
+        /**
+         * @brief Combine the collection with the provided content (mathematical union).
+         * @details Update the child nodes with the child nodes of the provided collection. Extend the collection with nodes that do
+         * not exist and update the existing nodes with new values.
+         * @param[in] rptrCollection Reference to the collection being used for this operation.
+         * @return Returns whether the combination was successful.
+         */
+        virtual bool Combine(const std::shared_ptr<CNodeCollection>& rptrCollection) = 0;
+
+        /**
+         * @brief Reduce the collection with by the provided content (mathematical difference).
+         * @details Reduce the child node with the child nodes already defined and identical in the provided collection. Different
+         * nodes or nodes that are not present in the collection remain.
+         * @param[in] rptrCollection Reference to the collection being used for this operation.
+         * @return Returns whether the reduction was successful.
+         */
+        virtual bool Reduce(const std::shared_ptr<CNodeCollection>& rptrCollection) = 0;
 
     private:
         /**
@@ -1156,8 +1324,23 @@ namespace toml_parser
          */
         virtual void MakeExplicit() override;
 
+        /**
+         * @brief Combine the collection with the provided content (mathematical union). Overload of CNodeCollection::Combine.
+         * @details Update the child nodes with the child nodes of the provided collection. Extend the collection with nodes that do
+         * not exist and update the existing nodes with new values.
+         * @param[in] rptrCollection Reference to the collection being used for this operation.
+         * @return Returns whether the combination was successful.
+         */
+        virtual bool Combine(const std::shared_ptr<CNodeCollection>& rptrCollection) override;
 
-        //bool m_bOpenToAddChildren = true;   ///< If internal table, the table can be extended until the table is closed.
+        /**
+         * @brief Reduce the collection with by the provided content (mathematical difference). Overload of CNodeCollection::Reduce.
+         * @details Reduce the child node with the child nodes already defined and identical in the provided collection. Different
+         * nodes or nodes that are not present in the collection remain.
+         * @param[in] rptrCollection Reference to the collection being used for this operation.
+         * @return Returns whether the reduction was successful.
+         */
+        virtual bool Reduce(const std::shared_ptr<CNodeCollection>& rptrCollection) override;
 
     private:
         bool m_bDefinedExplicitly = true;   ///< When set, the table is defined explicitly.
@@ -1268,6 +1451,13 @@ namespace toml_parser
         bool TableArray() const;
 
         /**
+         * @brief Can the node convert to a standard definition? Overload of sdv::toml::INodeCollectionConvert::CanMakeStandard.
+         * @return Returns whether the conversion to standard is possible. Returns 'true' when the node is already defined as
+         * standard node.
+         */
+        virtual bool CanMakeStandard() const override;
+
+        /**
          * @brief The derived class from the node collection can be inline or not. Overload of CNode::Inline.
          * @return Returns whether the node is an inline node.
          */
@@ -1287,9 +1477,34 @@ namespace toml_parser
          */
         virtual bool Inline(bool bInline) override;
 
+        /**
+         * @brief Does the last child node need a comma following the node?
+         * @return Returns whether the array was defined with the last node requiring a comma following the node.
+         */
+        bool LastNodeWithSucceedingComma() const;
+
+        /**
+         * @brief Combine the collection with the provided content (mathematical union). Overload of CNodeCollection::Combine.
+         * @details Update the child nodes with the child nodes of the provided collection. Extend the collection with nodes that do
+         * not exist and update the existing nodes with new values.
+         * @param[in] rptrCollection Reference to the collection being used for this operation.
+         * @return Returns whether the combination was successful.
+         */
+        virtual bool Combine(const std::shared_ptr<CNodeCollection>& rptrCollection) override;
+
+        /**
+         * @brief Reduce the collection with by the provided content (mathematical difference). Overload of CNodeCollection::Reduce.
+         * @details Reduce the child node with the child nodes already defined and identical in the provided collection. Different
+         * nodes or nodes that are not present in the collection remain.
+         * @param[in] rptrCollection Reference to the collection being used for this operation.
+         * @return Returns whether the reduction was successful.
+         */
+        virtual bool Reduce(const std::shared_ptr<CNodeCollection>& rptrCollection) override;
+
     private:
-        bool m_bDefinedExplicitly = true;   ///< When set, the array is defined explicitly.
-        bool m_bInline = false;             ///< Flag determining whether the table is inline or not.
+        bool m_bDefinedExplicitly = true;       ///< When set, the array is defined explicitly.
+        bool m_bInline = false;                 ///< Flag determining whether the table is inline or not.
+        bool m_bLastChildNodeWithComma = false; ///< Set when the last child node of the array initially has a comma behind the node.
     };
 
     /**
@@ -1323,7 +1538,7 @@ namespace toml_parser
         {}
 
         /**
-         * @brief Delete the current node. Overload of sdv::toml::INodeDelete::DeleteNode.
+         * @brief Delete the current node. Overload of sdv::toml::INodeUpdate::DeleteNode.
          * @attention A successful deletion will cause all interfaces to the current node to become inoperable.
          * @return Returns whether the deletion was successful.
          */
@@ -1387,10 +1602,9 @@ namespace toml_parser
                 {
                     ptrTableArray = std::make_shared<CTableArray>(Parser(), prKey.first.get().StringValue(),
                         prKey.first.get().RawString());
-                    ptrTableArray->SetParentPtr(Cast<CNodeCollection>());
 
-                    // Add to the list
-                    m_lstNodes.push_back(ptrTableArray);
+                    // Set the parent pointer; this will add the node to the list.
+                    ptrTableArray->SetParentPtr(Cast<CNodeCollection>());
                 }
                 else
                     ptrTableArray = (*itNode)->template Cast<CTableArray>();
@@ -1401,6 +1615,7 @@ namespace toml_parser
                 // Create the table.
                 ptrNode = ptrTableArray->Insert<CTable>(sdv::toml::npos, CTokenRange(prKey.first, prKey.first.get().Next()),
                     false, true);
+                ptrNode->SetViewPtr(Cast<CNodeCollection>());
             } else if (!Cast<CArray>() && itNode != m_lstNodes.end())
             {
                 // If existing... this might be a duplicate if not explicitly defined before.
@@ -1422,10 +1637,9 @@ namespace toml_parser
                 // Create the target node.
                 ptrNode = std::make_shared<TNodeType>(Parser(), prKey.first.get().StringValue(), prKey.first.get().RawString(),
                     rtArgs...);
-                ptrNode->SetParentPtr(Cast<CNodeCollection>());
 
-                // Add to the list
-                m_lstNodes.push_back(ptrNode);
+                // Set the parent pointer; this will add the node to the list.
+                ptrNode->SetParentPtr(Cast<CNodeCollection>());
 
                 // If the current node is implicit, take over the inline flag (this determines whether a sub-table definition is
                 // allowed or not).
@@ -1480,7 +1694,6 @@ namespace toml_parser
                 // Create an implicit table node.
                 ptrNode = std::make_shared<CTable>(Parser(), prKey.first.get().StringValue(), prKey.first.get().RawString(), false, false);
                 ptrNode->SetParentPtr(Cast<CNodeCollection>());
-                m_lstNodes.push_back(ptrNode);
             }
 
             // Insert the node in the child node
@@ -1490,15 +1703,14 @@ namespace toml_parser
             ptrNode = ptrNodeCollection->Insert<TNodeType>(sdv::toml::npos, prKey.second, rtArgs...);
             if (!ptrNode)
                 throw XTOMLParseException("Could not create the node '" + prKey.first.get().StringValue() + "'.");
-
-            // This node is not the parent, but still presents of the created node. Add the view pointer that they are linked.
-            ptrNode->SetViewPtr(Cast<CNodeCollection>());
         }
 
         // Insert the node at the requested location if this node is inline or this is the view of the node.
         auto itPos = (static_cast<size_t>(uiIndex) >= m_vecNodeOrder.size()) ? m_vecNodeOrder.end() :
             m_vecNodeOrder.begin() + static_cast<size_t>(uiIndex);
         m_vecNodeOrder.insert(itPos, ptrNode);
+        if (ptrNode->GetParentPtr() != Cast<CNodeCollection>())
+            ptrNode->SetViewPtr(Cast<CNodeCollection>());
 
         // Return the result
         return ptrNode;

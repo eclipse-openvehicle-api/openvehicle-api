@@ -4,5 +4,6 @@ Version = 100
 [[Component]]
 Path = "can_com_sim.sdv"
 Class = "CAN_Com_Sim"
+[Component.Parameters]
 Source="system_demo_receiver.asc"
 Target="system_demo_writer.asc"

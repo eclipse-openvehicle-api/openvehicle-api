@@ -1,3 +1,13 @@
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ ********************************************************************************/
+
 #ifndef TRUNK_COMPLEX_SERVICE_EXAMPLE_H
 #define TRUNK_COMPLEX_SERVICE_EXAMPLE_H
 
@@ -22,7 +32,6 @@
  * Output call for basic service:	opening the trunk
  */
 class CTrunkExampleService : public sdv::CSdvObject
-    , public sdv::IObjectControl
     , public vss::Vehicle::SpeedService::IVSS_SetSpeed_Event
     , public ITrunkKitService
 {
@@ -36,45 +45,29 @@ public:
      * @brief Destructor
      */
     ~CTrunkExampleService()
-    {
-        // Just in case...
-        Shutdown();
-    }
+    {}
 
     // Interface map
     BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
         SDV_INTERFACE_ENTRY(vss::Vehicle::SpeedService::IVSS_SetSpeed_Event)
         SDV_INTERFACE_ENTRY(ITrunkKitService)
     END_SDV_INTERFACE_MAP()
 
     // Object declarations
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::ComplexService)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::vehicle_function)
     DECLARE_OBJECT_CLASS_NAME("Open Trunk Service")
     DECLARE_OBJECT_SINGLETON()
 
     /**
-     * @brief Initialize the object. Overload of sdv::IObjectControl::Initialize.
-     * @param[in] ssObjectConfig Optional configuration string.
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
      */
-    void Initialize(const sdv::u8string& ssObjectConfig) override;
+    virtual bool OnInitialize() override;
 
     /**
-     * @brief Get the current status of the object. Overload of sdv::IObjectControl::GetStatus.
-     * @return Return the current status of the object.
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
-    sdv::EObjectStatus GetStatus() const override;
-
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
-     */
-    void SetOperationMode(sdv::EOperationMode eMode) override;
-
-    /**
-     * @brief Shutdown called before the object is destroyed. Overload of sdv::IObjectControl::Shutdown.
-     */
-    void Shutdown() override;
+    virtual void OnShutdown() override;
 
     /**
      * @brief Set vehicleSpeed signal
@@ -89,9 +82,6 @@ public:
     virtual bool PopTrunk() override;
 
 private:
-
-    sdv::EObjectStatus  m_eStatus = sdv::EObjectStatus::initialization_pending; ///< Current object status
-
     float	            m_Speed = 0.0;                                          ///< Speed 
     vss::Vehicle::Body::TrunkService::IVSS_SetOpen* m_pTrunkSvc = nullptr;      ///< Trunk
 };

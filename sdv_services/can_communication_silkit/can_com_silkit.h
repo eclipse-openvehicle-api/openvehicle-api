@@ -1,3 +1,17 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Sudipta Durjoy - initial API and implementation
+ *   Thomas Pfleiderer - refactored and finalized 
+ ********************************************************************************/
+
 #ifndef CAN_COM_SILKIT_H
 #define CAN_COM_SILKIT_H
 
@@ -18,46 +32,54 @@
 /**
 * @brief Component to establish Socket CAN communication between VAPI and external application
 */
-class CCANSilKit : public sdv::CSdvObject, public sdv::IObjectControl, public sdv::can::IRegisterReceiver,
-    public sdv::can::ISend, sdv::can::IInformation
+class CCANSilKit : public sdv::CSdvObject, public sdv::can::IRegisterReceiver, public sdv::can::ISend, sdv::can::IInformation
 {
 public:
 
     // Interface map
     BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
-        SDV_INTERFACE_ENTRY(sdv::can::IRegisterReceiver)
         SDV_INTERFACE_ENTRY(sdv::can::ISend)
         SDV_INTERFACE_ENTRY(sdv::can::IInformation)
     END_SDV_INTERFACE_MAP()
 
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::vehicle_bus)
     DECLARE_OBJECT_CLASS_NAME("CAN_Com_SilKit")
     DECLARE_DEFAULT_OBJECT_NAME("CAN_Communication_Object")
     DECLARE_OBJECT_SINGLETON()
 
-    /**
-     * @brief Initialize the object. Overload of sdv::IObjectControl::Initialize.
-     * @param[in] ssObjectConfig Optional configuration string.
-     */
-    virtual void Initialize(const sdv::u8string& ssObjectConfig) override;
+    BEGIN_SDV_PARAM_MAP()
+        SDV_PARAM_ENABLE_LOCKING()
+        SDV_PARAM_ENTRY(m_SilKitJSONConfigContent, "SilKitConfig", "", "", "SilKit Config JSON.")
+        SDV_PARAM_ENTRY(m_SilKitParticipantName, "SilKitParticipantName", "", "", "Name of the participant.")
+        SDV_PARAM_ENTRY(m_SilKitNetwork, "CanSilKitNetwork", "", "", "Declaration of SilKit CAN network.")
+        SDV_PARAM_ENTRY(m_SilKitRegistryUri, "RegistryURI", "", "", "SilKit Registry URI.")
+        SDV_PARAM_ENTRY(m_SilKitIsSynchronousMode, "SyncMode", "", "", "Enable synchronization mode.")
+        SDV_PARAM_ENTRY(m_SilKitDebugInfo, "DebugInfo", "", "", "Enable debug information.")
+    END_SDV_PARAM_MAP()
 
     /**
-     * @brief Get the current status of the object. Overload of sdv::IObjectControl::GetStatus.
-     * @return Return the current status of the object.
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @details The CAN_Com_SilKit uses the following configuration:
+     * @code
+     *   DebugInfo = true
+     *   SyncMode = true
+     *   SilKitParticipantName = "can_writer"
+     *   CanSilKitNetwork = "PrivateCAN"
+     *   RegistryURI = "silkit://localhost:8500"
+     *   SilKitConfig = """{
+     *                       "Logging": {
+     *                           "Sinks": [ { "Type": "Stdout", "Level": "Info" } ]
+     *                   },
+     *       }"""
+     * @endcode
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
      */
-    virtual sdv::EObjectStatus GetStatus() const override;
+    virtual bool OnInitialize() override;
 
     /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
-    void SetOperationMode(sdv::EOperationMode eMode) override;
-
-    /**
-     * @brief Shutdown called before the object is destroyed. Overload of sdv::IObjectControl::Shutdown.
-     */
-    virtual void Shutdown() override;
+    virtual void OnShutdown() override;
 
     /**
      * @brief Register a CAN message receiver. Overload of sdv::can::IRegisterReceiver::RegisterReceiver.
@@ -136,16 +158,13 @@ private:
      * @param[in] ssSilKitNetwork SilKit network.
      * @return SilKit::Services::Can::ICanController, nullptr on failure.
     */
-   SilKit::Services::Can::ICanController* CreateController(const std::string& ssSilKitNetwork);
+    SilKit::Services::Can::ICanController* CreateController(const std::string& ssSilKitNetwork);
 
     /**
     * @brief Validate if the configuration includes all required settings
-    * @param[in] ssSilKitJSONConfigContent SilKit JSON config file.
-    * @param[in] ssSilKitNetwork Declaration of SilKit CAN network.
-    * @param[in] ssSilKitRegistryUri SilKit Registry URI.
     * @return Return true if required settings are available
     */
-   bool ValidateConfiguration(const std::string& ssSilKitJSONConfigContent, const std::string& ssSilKitNetwork, const std::string& ssSilKitRegistryUri);
+    bool ValidateConfiguration();
 
     /**
      * @brief Function for SilKit Timesyncservice creation and to set simulation step handler.
@@ -154,12 +173,9 @@ private:
 
     /**
      * @brief Function to setup CAN interfaces.
-     * @param[in] ssSilKitJSONConfigContent SilKit JSON config file.
-     * @param[in] ssSilKitNetwork Declaration of SilKit CAN network.
-     * @param[in] ssSilKitRegistryUri SilKit Registry URI.
      * @return Return true if CAN interfaces are setup successfully
      */
-    bool CreateSilKitConnection(const std::string& ssSilKitJSONConfigContent, const std::string& ssSilKitNetwork, const std::string& ssSilKitRegistryUri);
+    bool CreateSilKitConnection();
     
     /**
      * @brief Create lifecycle service.
@@ -185,21 +201,24 @@ private:
      */
     void SilKitTransmitAcknowledgeHandler(const SilKit::Services::Can::CanFrameTransmitEvent& rsSilKitTransmitAcknowledge);
 
-    std::mutex                                           m_ReceiversMtx;                     ///< Protect the receiver set.
-    std::set<sdv::can::IReceive*>                        m_SetReceivers;                     ///< Set with receiver interfaces.
+    std::mutex                              m_ReceiversMtx;                     ///< Protect the receiver set.
+    std::set<sdv::can::IReceive*>           m_SetReceivers;                     ///< Set with receiver interfaces.
      
-    std::queue<sdv::can::SMessage>                       m_MessageQueue;                     ///< Map of the messages to be sent on SilKit.
-    std::mutex                                           m_QueueMutex;                       ///< Protection for message map.
+    std::queue<sdv::can::SMessage>          m_MessageQueue;                     ///< Map of the messages to be sent on SilKit.
+    std::mutex                              m_QueueMutex;                       ///< Protection for message map.
     
-    SilKit::Services::Orchestration::ILifecycleService*  m_SilKitLifeCycleService = nullptr; ///< SilKit lifecycle service.
-    SilKit::Services::Can::ICanController*               m_SilKitCanController = nullptr;    ///< SilKit CAN1 Controller interface.
-    sdv::core::ITimerSimulationStep*                     m_TimerSimulationStep = nullptr;    ///< Timer simulation step.
-    std::unique_ptr<SilKit::IParticipant>                m_SilKitParticipant = nullptr;      ///< SilKit participant.
-    std::string                                          m_SilKitParticipantName;            ///< Configured SilKit participants.
-    bool                                                 m_SilKitIsSynchronousMode = false;  ///< SilKit sync mode when true.
+    SilKit::Services::Orchestration::ILifecycleService* m_SilKitLifeCycleService = nullptr; ///< SilKit lifecycle service.
+    SilKit::Services::Can::ICanController*  m_SilKitCanController = nullptr;    ///< SilKit CAN1 Controller interface.
+    sdv::core::ITimerSimulationStep*        m_TimerSimulationStep = nullptr;    ///< Timer simulation step.
+    std::unique_ptr<SilKit::IParticipant>   m_SilKitParticipant = nullptr;      ///< SilKit participant.
+    std::string                             m_SilKitParticipantName;            ///< Configured SilKit participants.
+    bool                                    m_SilKitIsSynchronousMode = false;  ///< SilKit sync mode when true.
+    bool                                    m_SilKitDebugInfo = false;          ///< SilKit debug information when true.
 
-    uint32_t                                             m_maxCanDataLength = 8;             ///< maximum size of the CAN message.
-    std::atomic<sdv::EObjectStatus>                      m_eStatus = sdv::EObjectStatus::initialization_pending;  ///< Object status.
+    uint32_t                                m_maxCanDataLength = 8;             ///< maximum size of the CAN message.
+    std::string                             m_SilKitNetwork;                    ///< Declaration of SilKit CAN network.
+    std::string                             m_SilKitJSONConfigContent;          ///< SilKit config JSON.
+    std::string                             m_SilKitRegistryUri;
 };
 
 DEFINE_SDV_OBJECT(CCANSilKit)

@@ -1,3 +1,16 @@
+#*******************************************************************************
+# Copyright (c) 2025-2026 ZF Friedrichshafen AG
+#
+# This program and the accompanying materials are made available under the 
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0 
+#
+# Contributors:
+#   Erik Verhoeven - initial API and implementation
+#*******************************************************************************
+
 # Include cross-compilation toolchain file
 include(../cross-compile-tools.cmake)
 
@@ -142,6 +155,14 @@ add_custom_command(
     VERBATIM
     )
 add_custom_command(
+    OUTPUT ${INTERFACE_DIR}/param.h
+    DEPENDS sdv_idl_compiler
+    MAIN_DEPENDENCY ${INTERFACE_DIR}/param.idl
+    COMMENT "Compiling param.idl"
+    COMMAND sdv_idl_compiler ${INTERFACE_DIR}/param.idl -O${INTERFACE_DIR} --no_ps
+    VERBATIM
+    )
+add_custom_command(
     OUTPUT ${INTERFACE_DIR}/repository.h
     DEPENDS sdv_idl_compiler
     MAIN_DEPENDENCY ${INTERFACE_DIR}/repository.idl
@@ -175,6 +196,7 @@ add_custom_target(CompileCoreIDL
         ${INTERFACE_DIR}/mem.h
         ${INTERFACE_DIR}/module.h
         ${INTERFACE_DIR}/process.h
+        ${INTERFACE_DIR}/param.h
         ${INTERFACE_DIR}/repository.h
         ${INTERFACE_DIR}/timer.h
     )
@@ -190,7 +212,8 @@ add_subdirectory(task_timer)
 add_subdirectory(ipc_com)
 add_subdirectory(ipc_connect)
 add_subdirectory(ipc_shared_mem)
-add_subdirectory(ipc_sockets)
+add_subdirectory(uds_win_sockets)
+add_subdirectory(uds_unix_sockets)
 add_subdirectory(process_control)
 add_subdirectory(hardware_ident)
 add_subdirectory(manifest_util)

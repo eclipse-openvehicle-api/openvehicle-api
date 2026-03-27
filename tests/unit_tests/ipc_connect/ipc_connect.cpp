@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "../../include/gtest_custom.h"
 #include <support/sdv_core.h>
 #include <support/app_control.h>
@@ -29,15 +42,15 @@ ViewFilter = "Fatal"
 
     // Start listener
     CListener listener;
-    EXPECT_EQ(listener.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(listener.GetObjectState(), sdv::EObjectState::initialization_pending);
     listener.Initialize(R"code([Listener]
 Type = "Local"
 )code");
-    EXPECT_EQ(listener.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(listener.GetObjectState(), sdv::EObjectState::initialized);
 
     // Shutdown
     listener.Shutdown();
-    EXPECT_EQ(listener.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(listener.GetObjectState(), sdv::EObjectState::destruction_pending);
     appcontrol.Shutdown();
 }
 
@@ -65,16 +78,16 @@ ViewFilter = "Fatal"
 
     // Start listener
     CListener listener;
-    EXPECT_EQ(listener.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(listener.GetObjectState(), sdv::EObjectState::initialization_pending);
     listener.Initialize(R"code([Listener]
 Type = "Local"
 Instance = 1234
 )code");
-    EXPECT_EQ(listener.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(listener.GetObjectState(), sdv::EObjectState::initialized);
 
     // Shutdown
     listener.Shutdown();
-    EXPECT_EQ(listener.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(listener.GetObjectState(), sdv::EObjectState::destruction_pending);
     appcontrol.Shutdown();
 }
 
@@ -102,9 +115,9 @@ ViewFilter = "Fatal"
 
     // Start client
     CClient client;
-    EXPECT_EQ(client.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(client.GetObjectState(), sdv::EObjectState::initialization_pending);
     client.Initialize("");
-    EXPECT_EQ(client.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(client.GetObjectState(), sdv::EObjectState::initialized);
     sdv::TObjectPtr ptrClient = client.Connect(R"code([Client]
 Type = "local"
 )code");
@@ -113,7 +126,7 @@ Type = "local"
     // Shutdown
     ptrClient.Clear();
     client.Shutdown();
-    EXPECT_EQ(client.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(client.GetObjectState(), sdv::EObjectState::destruction_pending);
     appcontrol.Shutdown();
 }
 
@@ -141,9 +154,9 @@ ViewFilter = "Fatal"
 
     // Start client
     CClient client;
-    EXPECT_EQ(client.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(client.GetObjectState(), sdv::EObjectState::initialization_pending);
     client.Initialize("");
-    EXPECT_EQ(client.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(client.GetObjectState(), sdv::EObjectState::initialized);
     sdv::TObjectPtr ptrClient = client.Connect(R"code([Client]
 Type = "local"
 Instance = 1234
@@ -153,7 +166,7 @@ Instance = 1234
     // Shutdown
     ptrClient.Clear();
     client.Shutdown();
-    EXPECT_EQ(client.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(client.GetObjectState(), sdv::EObjectState::destruction_pending);
     appcontrol.Shutdown();
 }
 
@@ -187,17 +200,17 @@ ViewFilter = "Fatal"
 
     // Start listener
     CListener listener;
-    EXPECT_EQ(listener.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(listener.GetObjectState(), sdv::EObjectState::initialization_pending);
     listener.Initialize(R"code([Listener]
 Type = "Local"
 )code");
-    EXPECT_EQ(listener.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(listener.GetObjectState(), sdv::EObjectState::initialized);
 
     // Start client
     CClient client;
-    EXPECT_EQ(client.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(client.GetObjectState(), sdv::EObjectState::initialization_pending);
     client.Initialize("");
-    EXPECT_EQ(client.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(client.GetObjectState(), sdv::EObjectState::initialized);
     sdv::TObjectPtr ptrClient = client.Connect(R"code([Client]
 Type = "Local"
 )code");
@@ -218,9 +231,9 @@ Type = "Local"
     // Shutdown
     ptrClient.Clear();
     client.Shutdown();
-    EXPECT_EQ(client.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(client.GetObjectState(), sdv::EObjectState::destruction_pending);
     listener.Shutdown();
-    EXPECT_EQ(listener.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(listener.GetObjectState(), sdv::EObjectState::destruction_pending);
     appcontrol.Shutdown();
 }
 
@@ -254,18 +267,18 @@ ViewFilter = "Fatal"
 
     // Start listener
     CListener listener;
-    EXPECT_EQ(listener.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(listener.GetObjectState(), sdv::EObjectState::initialization_pending);
     listener.Initialize(R"code([Listener]
 Type = "Local"
 Instance = 1234
 )code");
-    EXPECT_EQ(listener.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(listener.GetObjectState(), sdv::EObjectState::initialized);
 
     // Start client
     CClient client;
-    EXPECT_EQ(client.GetStatus(), sdv::EObjectStatus::initialization_pending);
+    EXPECT_EQ(client.GetObjectState(), sdv::EObjectState::initialization_pending);
     client.Initialize("");
-    EXPECT_EQ(client.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(client.GetObjectState(), sdv::EObjectState::initialized);
     sdv::TObjectPtr ptrClient = client.Connect(R"code([Client]
 Type = "Local"
 Instance = 1234
@@ -287,8 +300,8 @@ Instance = 1234
     // Shutdown
     ptrClient.Clear();
     client.Shutdown();
-    EXPECT_EQ(client.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(client.GetObjectState(), sdv::EObjectState::destruction_pending);
     listener.Shutdown();
-    EXPECT_EQ(listener.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(listener.GetObjectState(), sdv::EObjectState::destruction_pending);
     appcontrol.Shutdown();
 }

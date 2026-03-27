@@ -1,3 +1,16 @@
+#*******************************************************************************
+# Copyright (c) 2025-2026 ZF Friedrichshafen AG
+#
+# This program and the accompanying materials are made available under the 
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0 
+#
+# Contributors:
+#   Erik Verhoeven - initial API and implementation
+#*******************************************************************************
+
 # Define project
 project(RepositoryTests VERSION 1.0 LANGUAGES CXX)
 
@@ -10,7 +23,7 @@ message("Use IDL compiler: ${SDVIDL}")
 
 # Compile the IDL
 add_custom_command(
-    OUTPUT ${PROJECT_SOURCE_DIR}/generated/test_component.h
+    OUTPUT ${PROJECT_SOURCE_DIR}/generated/test_component.h ${PROJECT_SOURCE_DIR}/generated/ps/proxystub.cpp ${PROJECT_SOURCE_DIR}/generated/serdes/test_component_serdes.h
     DEPENDS sdv_idl_compiler
     MAIN_DEPENDENCY test_component.idl
     COMMENT "Build test_component.idl"
@@ -19,8 +32,9 @@ add_custom_command(
     )
 
 set_source_files_properties(test_component_ps.cpp OBJECT_DEPENDS ${PROJECT_SOURCE_DIR}/generated/test_component.h)
+set_source_files_properties(test_component_ps.cpp OBJECT_DEPENDS ${PROJECT_SOURCE_DIR}/generated/ps/proxystub.cpp)
+set_source_files_properties(test_component_ps.cpp OBJECT_DEPENDS ${PROJECT_SOURCE_DIR}/generated/serdes/test_component_serdes.h)
 set_source_files_properties(test_component.cpp OBJECT_DEPENDS ${PROJECT_SOURCE_DIR}/generated/test_component.h)
-
 
 # Add the dynamic library
 add_library(ComponentTest_Repository_ps SHARED
@@ -43,9 +57,7 @@ set_target_properties(ComponentTest_Repository_test_module PROPERTIES SUFFIX ".s
 
 # Execute the installation helper utility to create an installation manifest for the core files.
 add_custom_target(ComponentTest_Repository_install_manifest
-# TODO EVE
-#    COMMAND "$<TARGET_FILE:sdv_packager>" -O. --instance2005 -NComponentTest_Repository "$<TARGET_FILE:ComponentTest_Repository_test_module>" "$<TARGET_FILE:ComponentTest_Repository_ps>" "-I$<TARGET_FILE_DIR:ComponentTest_Repository_test_module>" --settings --create_configtest.toml --exclude_config_class"TestObject_CreateChain" --exclude_config_class"TestObject_CreateChainLock" --exclude_config_class"TestObject_CreateChainLockThread" --exclude_config_class"TestObject_CreateDuringShutdown" --exclude_config_class"TestObject_IObjectControlFail"
-    COMMAND "$<TARGET_FILE:sdv_packager>" DIRECT_INSTALL ComponentTest_Repository --instance2005 "$<TARGET_FILE:ComponentTest_Repository_test_module>" "$<TARGET_FILE:ComponentTest_Repository_ps>" "-I$<TARGET_FILE_DIR:ComponentTest_Repository_test_module>" --overwrite --user_config
+    COMMAND "$<TARGET_FILE:sdv_packager>" DIRECT_INSTALL ComponentTest_Repository -T. --instance2005 "$<TARGET_FILE:ComponentTest_Repository_test_module>" "$<TARGET_FILE:ComponentTest_Repository_ps>" "-I$<TARGET_FILE_DIR:ComponentTest_Repository_test_module>" --overwrite --user_config+TestObject_ComplexHelloService+TestObject_HelloUtility --interface_config+Example_Object+Example_Object_2+TestObject_HelloDevice+TestObject_BasicHelloService+TestObject_SystemHelloService
     DEPENDS ComponentTest_Repository_test_module ComponentTest_Repository_ps
     WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 )
@@ -53,7 +65,7 @@ add_custom_target(ComponentTest_Repository_install_manifest
 # Define target
 add_executable(ComponentTest_Repository
     "repository_test.cpp"
-    "isolation_test.cpp"
+    "isolation_test.cpp"                                            
     )
 
 target_link_libraries(ComponentTest_Repository ${CMAKE_DL_LIBS} GTest::GTest)

@@ -1,3 +1,13 @@
+#*******************************************************************************
+# Copyright (c) 2025-2026 ZF Friedrichshafen AG
+#
+# This program and the accompanying materials are made available under the 
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0 
+#*******************************************************************************
+
 # Use new policy for project version settings and default warning level
 cmake_policy(SET CMP0048 NEW)   # requires CMake 3.14
 cmake_policy(SET CMP0092 NEW)   # requires CMake 3.15

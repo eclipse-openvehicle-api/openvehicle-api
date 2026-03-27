@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Thomas Pfleiderer - initial API and implementation
+ ********************************************************************************/
+
 /**
  * @brief file template for the TX signals (device header)
  */
@@ -21,15 +34,13 @@ const char szTXVehicleDeviceHeaderTemplate[] = R"code(/**
  */
 class CVehicleDevice%class_name%
 	: public sdv::CSdvObject
-	, public sdv::IObjectControl
 %tx_vd_interface_list%{
 public:
 
 	BEGIN_SDV_INTERFACE_MAP()
-		SDV_INTERFACE_ENTRY(sdv::IObjectControl)
 %tx_vd_interface_entry_list%	END_SDV_INTERFACE_MAP()
 
-	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::vehicle_bus)
 	DECLARE_OBJECT_CLASS_NAME("%vss_original%_Device")
 
 	/**
@@ -37,32 +48,19 @@ public:
 	 */
 	CVehicleDevice%class_name%();
 
-	/**
-	* @brief initialize device to get the object name or use the default.
-	* @param[in] objectConfig Configuration containing the object name
-	*/
-	void Initialize(const sdv::u8string& objectConfig) override;
+    /**
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
+     */
+    virtual bool OnInitialize() override;
 
-	/**
-	* @brief Gets the current status of the object
-	* @return EObjectStatus The current status of the object
-	*/
-	sdv::EObjectStatus GetStatus() const override;
-
-	/**
-	 * @brief Set the component operation mode. Overlovd of sdv::IObjectControl::SetOperationMode.
-	 * @param[in] eMode The operation mode, the component should run in.
-	 */
-	void SetOperationMode(/*in*/ sdv::EOperationMode eMode) override;
-
-	/**
-	* @brief Shutdown function is to shutdown the execution of request thread
-	*/
-	void Shutdown() override;
+    /**
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
+     */
+    virtual void OnShutdown() override;
 	%tx_vd_function_list%
 private:
 	%tx_variable_list%
-	std::atomic<sdv::EObjectStatus> m_status = { sdv::EObjectStatus::initialization_pending }; ///< To update the object status when it changes.
 };
 
 DEFINE_SDV_OBJECT(CVehicleDevice%class_name%)
@@ -81,66 +79,21 @@ const char szTXVehicleDeviceClassTemplate[] = R"code(/**
 #include <iostream>
 #include "vd_%class_name_lowercase%.h"
 
-/**
- * @brief Constructor
- */
 CVehicleDevice%class_name%::CVehicleDevice%class_name%()
 {
 }
 
-/**
-* @brief initialize device to get the object name or use the default.
-* @param[in] objectConfig Configuration containing the object name
-*/
-void CVehicleDevice%class_name%::Initialize(const sdv::u8string&)
+bool CVehicleDevice%class_name%::OnInitialize()
 {
-    if (m_status != sdv::EObjectStatus::initialization_pending)
-	{
-	    return;
-    }
 	sdv::core::CDispatchService dispatch;
 %tx_variable_init_list%
 %tx_variable_check_list%
+	return true;
 }
 
-
-/**
-* @brief Gets the current status of the object
-* @return EObjectStatus The current status of the object
-*/
-sdv::EObjectStatus CVehicleDevice%class_name%::GetStatus() const
-{
-	return m_status;
-}
-
-/**
- * @brief Set the component operation mode. Overlovd of sdv::IObjectControl::SetOperationMode.
- * @param[in] eMode The operation mode, the component should run in.
- */
-void CVehicleDevice%class_name%::SetOperationMode(/*in*/ sdv::EOperationMode eMode)
-{
-	switch (eMode)
-	{
-	case sdv::EOperationMode::configuring:
-		if (m_status == sdv::EObjectStatus::running || m_status == sdv::EObjectStatus::initialized)
-			m_status = sdv::EObjectStatus::configuring;
-		break;
-	case sdv::EOperationMode::running:
-		if (m_status == sdv::EObjectStatus::configuring || m_status == sdv::EObjectStatus::initialized)
-			m_status = sdv::EObjectStatus::running;
-		break;
-	default:
-		break;
-	}
-}
-
-/**
-* @brief Shutdown function is to shutdown the execution of request thread
-*/
-void CVehicleDevice%class_name%::Shutdown()
+void CVehicleDevice%class_name%::OnShutdown()
 {
 %tx_reset_signals%
-	m_status = sdv::EObjectStatus::destruction_pending;
 }
 
 %tx_function_implementations%
@@ -169,10 +122,9 @@ class CBasicService%class_name%
 public:
 
 	BEGIN_SDV_INTERFACE_MAP()
-		SDV_INTERFACE_ENTRY(sdv::CSdvObject)
 %tx_bs_interface_entry_list%	END_SDV_INTERFACE_MAP()
 
-	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::BasicService)
+	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::device)
 	DECLARE_OBJECT_CLASS_NAME("%vss_original%_Service")
 
 	/**

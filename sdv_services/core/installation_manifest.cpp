@@ -1,6 +1,20 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "installation_manifest.h"
-#include "toml_parser/parser_toml.h"
+#include <support/component_impl.h>
 #include <support/serdes.h>
+#include <support/toml.h>
 
 #if defined _WIN32 && defined __GNUC__
 #pragma GCC diagnostic push
@@ -10,6 +24,74 @@
 #ifdef __unix__
 #include <dlfcn.h>
 #endif
+
+std::string ClassInfo2TOML(const sdv::SClassInfo& rsClass)
+{
+    toml_parser::CParser parser("");
+    sdv::toml::CNodeCollection nodeRoot(&parser.Root());
+    auto nodeClass = nodeRoot.AddTableArray("Class");
+    if (!rsClass.ssModulePath.empty())
+        nodeClass.AddValue("Path", rsClass.ssModulePath);
+    if (rsClass.ssName.empty()) return {};
+    nodeClass.AddValue("Name", rsClass.ssName);
+    if (!rsClass.seqClassAliases.empty())
+    {
+        auto nodeAliases = nodeClass.AddArray("Aliases");
+        for (const auto& rssAlias : rsClass.seqClassAliases)
+            nodeAliases.AddValue("", rssAlias);
+    }
+    if (!rsClass.ssDefaultObjectName.empty() && rsClass.ssDefaultObjectName != rsClass.ssName)
+        nodeClass.AddValue("DefaultName", rsClass.ssDefaultObjectName);
+    if (!rsClass.ssDefaultConfig.empty())
+        nodeClass.AddTOML(rsClass.ssDefaultConfig);
+    if (rsClass.eType == sdv::EObjectType::undefined) return {};
+    nodeClass.AddValue("Type", ::sdv::ObjectType2String(rsClass.eType));
+    if (rsClass.uiFlags & static_cast<uint32_t>(sdv::EObjectFlags::singleton))
+        nodeClass.AddValue("Singleton", true);
+    if (!rsClass.seqDependencies.empty())
+    {
+        auto nodeDependencies = nodeClass.AddArray("Dependencies");
+        for (const auto& rssDependency : rsClass.seqDependencies)
+            nodeDependencies.AddValue("" , rssDependency);
+    }
+
+    return parser.GenerateTOML();
+}
+
+sdv::SClassInfo TOML2ClassInfo(const std::string& rssTOML, size_t nIndex /*= 0*/)
+{
+    toml_parser::CParser parser(rssTOML);
+    return TOML2ClassInfo(parser.Root().Cast<toml_parser::CNodeCollection>(), nIndex);
+}
+
+sdv::SClassInfo TOML2ClassInfo(const std::shared_ptr<toml_parser::CNodeCollection>& rptrTOML, size_t nIndex /*= 0*/)
+{
+    if (!rptrTOML) return {};
+    sdv::toml::CNodeCollection nodeRoot(rptrTOML.get());
+    sdv::toml::CNodeCollection nodeClass = nodeRoot.GetDirect("Class[" + std::to_string(nIndex) + "]");
+    if (!nodeClass)
+        nodeClass = nodeRoot.GetDirect("Class");
+    if (!nodeClass) return {};
+    
+    sdv::SClassInfo sClass{};
+    sClass.ssModulePath = nodeClass.GetDirect("Path").GetValueAsString();
+    sClass.ssName = nodeClass.GetDirect("Name").GetValueAsString();
+    sdv::toml::CNodeCollection nodeAliases = nodeClass.GetDirect("Aliases");
+    for (size_t nAliasIndex = 0; nAliasIndex < nodeAliases.GetCount(); nAliasIndex++)
+        sClass.seqClassAliases.push_back(nodeAliases.Get(nAliasIndex).GetValueAsString());
+    sClass.ssDefaultObjectName = nodeClass.GetDirect("DefaultName").GetValueAsString();
+    sClass.ssDefaultConfig = nodeClass.GetDirect("Parameters").GetTOML();
+    sClass.eType = sdv::String2ObjectType(nodeClass.GetDirect("Type").GetValue());
+    if (static_cast<bool>(nodeClass.GetDirect("Singleton").GetValue()))
+        sClass.uiFlags = static_cast<uint32_t>(sdv::EObjectFlags::singleton);
+    sdv::toml::CNodeCollection nodeDependencies = nodeClass.GetDirect("Dependencies");
+    for (size_t nDependencyIndex = 0; nDependencyIndex < nodeDependencies.GetCount(); nDependencyIndex++)
+        sClass.seqDependencies.push_back(nodeDependencies.Get(nDependencyIndex).GetValueAsString());
+    if (sClass.ssName.empty() || sClass.eType == sdv::EObjectType::undefined)
+        return {};
+
+    return sClass;
+}
 
 /**
  * @brief Read the module manifest from the binary.
@@ -165,61 +247,43 @@ bool CInstallManifest::Read(const std::string& rssManifest, bool bBlockSystemObj
 
     // Parse the manifest
     toml_parser::CParser parser(rssManifest);
+    sdv::toml::CNodeCollection nodeRoot(&parser.Root());
 
     // Get the installation version - must be identical to the interface version
-    auto ptrInstallVersionNode = parser.Root().Direct("Installation.Version");
-    if (!ptrInstallVersionNode || ptrInstallVersionNode->GetValue() != SDVFrameworkInterfaceVersion) return false;
+    if (nodeRoot.GetDirect("Installation.Version").GetValue() != SDVFrameworkInterfaceVersion) return false;
 
     // Get the installation name
-    auto ptrInstallNameNode = parser.Root().Direct("Installation.Name");
-    if (!ptrInstallNameNode) return false;
-    m_ssInstallName = static_cast<std::string>(ptrInstallNameNode->GetValue());
+    m_ssInstallName = nodeRoot.GetDirect("Installation.Name").GetValueAsString();
     if (m_ssInstallName.empty()) return false;
 
     // Get installation properties. The properties are optional
-    auto ptrProperties = parser.Root().Direct("Properties");
-    std::shared_ptr<toml_parser::CTable> ptrPropertyTable;
-    if (ptrProperties) ptrPropertyTable = ptrProperties->Cast<toml_parser::CTable>();
-    if (ptrPropertyTable)
+    sdv::toml::CNodeCollection nodeProperties = nodeRoot.GetDirect("Properties");
+    for (size_t nIndex = 0; nIndex < nodeProperties.GetCount(); nIndex++)
     {
-        for (uint32_t uiIndex = 0; uiIndex < ptrPropertyTable->GetCount(); uiIndex++)
-        {
-            auto ptrProperty = ptrPropertyTable->Get(uiIndex);
-            if (ptrProperty)
-                m_mapProperties[ptrProperty->GetName()] = static_cast<std::string>(ptrProperty->GetValue());
-        }
+        auto nodeProperty = nodeProperties.Get(nIndex);
+        if (nodeProperty)
+            m_mapProperties[nodeProperty.GetName()] = nodeProperty.GetValueAsString();
     }
 
     // Build the module list
-    auto ptrModulesNode = parser.Root().Direct("Module");
-    if (!ptrModulesNode) return true;   // No modules in the manifest
-    auto ptrModuleArrayNode = ptrModulesNode->Cast<toml_parser::CArray>();
-    if (!ptrModuleArrayNode) return false;  // Must be array
-    for (uint32_t uiModuleIndex = 0; uiModuleIndex < ptrModuleArrayNode->GetCount(); uiModuleIndex++)
+    sdv::toml::CNodeCollection nodeModules = nodeRoot.GetDirect("Module");
+    if (!nodeModules) return true;   // No modules in the manifest
+    for (size_t nIndex = 0; nIndex < nodeModules.GetCount(); nIndex++)
     {
         // Get the module
-        auto ptrModule = ptrModuleArrayNode->Get(uiModuleIndex);
-        if (!ptrModule) continue;
+        sdv::toml::CNodeCollection nodeModule = nodeModules.Get(nIndex);
+        if (!nodeModule) continue;
 
         // Get the module path
-        auto ptrModulePath = ptrModule->Direct("Path");
-        if (!ptrModulePath) continue;
-        std::filesystem::path pathModule = static_cast<std::string>(ptrModulePath->GetValue());
+        std::filesystem::path pathModule = nodeModule.GetDirect("Path").GetValueAsPath();
         std::string ssModuleManifest;
 
-        // Get the component list (if available)
-        auto ptrModuleComponents = ptrModule->Direct("Component");
-        if (ptrModuleComponents)
-        {
-            // The module manifest contains the TOML text of the component array
-            auto ptrModuleComponentArray = ptrModuleComponents->Cast<toml_parser::CArray>();
-            if (ptrModuleComponentArray)
-                ssModuleManifest = ptrModuleComponents->GenerateTOML();
-        }
+        // Get the class list (if available) and get the fitting TOML for the classes.
+        sdv::toml::CNodeCollection nodeClasses = nodeModule.GetDirect("Class");
+        if (nodeClasses) ssModuleManifest = nodeClasses.GetTOML();
 
         // Add the module
-        m_vecModules.push_back(SModule(pathModule, ssModuleManifest,
-            m_bBlockSystemObjects));
+        m_vecModules.push_back(SModule(pathModule, ssModuleManifest, m_bBlockSystemObjects));
     }
 
     return true;
@@ -290,7 +354,7 @@ bool CInstallManifest::AddModule(const std::filesystem::path& rpathModulePath,
         auto ptrInterfaceNode = parser.Root().Direct("Interface.Version");
         if (!ptrInterfaceNode) return false;
         if (ptrInterfaceNode->GetValue() != SDVFrameworkInterfaceVersion) return false;
-        auto ptrComponentsNode = parser.Root().Direct("Component");
+        auto ptrComponentsNode = parser.Root().Direct("Class");
         if (!ptrComponentsNode) return true;    // No component available in the manifest
         if (!ptrComponentsNode->Cast<toml_parser::CArray>()) return false;
         ssComponentsManifest = ptrComponentsNode->GenerateTOML();
@@ -330,39 +394,39 @@ std::string CInstallManifest::FindModuleManifest(const std::filesystem::path& rp
     return {};
 }
 
-std::optional<CInstallManifest::SComponent> CInstallManifest::FindComponentByClass(const std::string& rssClass) const
+std::optional<sdv::SClassInfo> CInstallManifest::FindComponentByClass(const std::string& rssClass) const
 {
     // Search for the correct module
-    SComponent sRet{};
+    sdv::SClassInfo sRet{};
     auto itModule = std::find_if(m_vecModules.begin(), m_vecModules.end(), [&](const SModule& rsEntry)
         {
-            return std::find_if(rsEntry.vecComponents.begin(), rsEntry.vecComponents.end(),
-                [&](const SComponent& sComponent)
+            return std::find_if(rsEntry.vecClasses.begin(), rsEntry.vecClasses.end(),
+                [&](const sdv::SClassInfo& sClass)
                 {
                     // Note, use the class, alias and the default object name for searching...
-                    if (sComponent.ssClassName == rssClass ||
-                        std::find(sComponent.seqAliases.begin(), sComponent.seqAliases.end(), rssClass) !=
-                            sComponent.seqAliases.end())
+                    if (sClass.ssName == rssClass ||
+                        std::find(sClass.seqClassAliases.begin(), sClass.seqClassAliases.end(), rssClass) !=
+                            sClass.seqClassAliases.end())
                     {
-                        sRet = sComponent;
+                        sRet = sClass;
                         return true;
                     }
                     return false;
-                }) != rsEntry.vecComponents.end();
+                }) != rsEntry.vecClasses.end();
         });
     if (itModule != m_vecModules.end()) return sRet;
     return {};
 }
 
-std::vector<CInstallManifest::SComponent> CInstallManifest::ComponentList() const
+std::vector<sdv::SClassInfo> CInstallManifest::ClassList() const
 {
-    std::vector<SComponent> vecComponents;
+    std::vector<sdv::SClassInfo> vecClasses;
     for (const auto& rsModule : m_vecModules)
     {
-        for (const auto& rsComponent : rsModule.vecComponents)
-            vecComponents.push_back(rsComponent);
+        for (const auto& rsComponent : rsModule.vecClasses)
+            vecClasses.push_back(rsComponent);
     }
-    return vecComponents;
+    return vecClasses;
 }
 
 std::vector<std::filesystem::path> CInstallManifest::ModuleList() const
@@ -409,67 +473,65 @@ CInstallManifest::SModule::SModule(const std::filesystem::path& rpathRelModule, 
 {
     // Parse the manifest and extract information from them...
     toml_parser::CParser parser(rssManifest);
-    auto ptrComponents = parser.Root().Direct("Component");
-    if (!ptrComponents) return; // No objects...
-    auto ptrComponentArray = ptrComponents->Cast<toml_parser::CArray>();
-    if (!ptrComponentArray) return; // No objects...
-    for (uint32_t uiIndex = 0; uiIndex < ptrComponentArray->GetCount(); uiIndex++)
+    auto ptrClasses = parser.Root().Direct("Class");
+    if (!ptrClasses) return; // No objects...
+    auto ptrClassArray = ptrClasses->Cast<toml_parser::CArray>();
+    if (!ptrClassArray) return; // No objects...
+    for (uint32_t uiIndex = 0; uiIndex < ptrClassArray->GetCount(); uiIndex++)
     {
-        auto ptrComponent = ptrComponentArray->Get(uiIndex);
-        if (!ptrComponent) continue;
+        //auto ptrClass = ptrClassArray->Get(uiIndex);
+        //if (!ptrClass) continue;
 
-        // Fill in the component structure
-        SComponent sComponent{};
-        //sComponent.pathModule = rpathModule;
-        sComponent.pathRelModule = rpathRelModule;
-        sComponent.ssManifest = ptrComponent->GenerateTOML(toml_parser::CGenContext("Component"));
-        auto ptrClassName = ptrComponent->Direct("Class");
-        if (!ptrClassName) continue;
-        sComponent.ssClassName = static_cast<std::string>(ptrClassName->GetValue());
-        auto ptrAliases = ptrComponent->Direct("Aliases");
-        if (ptrAliases)
-        {
-            auto ptrAliasesArray = ptrAliases->Cast<toml_parser::CArray>();
-            for (uint32_t uiAliasIndex = 0; ptrAliasesArray && uiAliasIndex < ptrAliasesArray->GetCount(); uiAliasIndex++)
-            {
-                auto ptrClassAlias = ptrAliasesArray->Get(uiAliasIndex);
-                if (ptrClassAlias)
-                    sComponent.seqAliases.push_back(static_cast<sdv::u8string>(ptrClassAlias->GetValue()));
-            }
-        }
-        auto ptrDefaultName = ptrComponent->Direct("DefaultName");
-        if (ptrDefaultName) sComponent.ssDefaultObjectName = static_cast<std::string>(ptrDefaultName->GetValue());
-        else sComponent.ssDefaultObjectName = sComponent.ssClassName;
-        auto ptrType = ptrComponent->Direct("Type");
-        if (!ptrType) continue;
-        std::string ssType = static_cast<std::string>(ptrType->GetValue());
-        if (ssType == "System") sComponent.eType = sdv::EObjectType::SystemObject;
-        else if (ssType == "Device") sComponent.eType = sdv::EObjectType::Device;
-        else if (ssType == "BasicService") sComponent.eType = sdv::EObjectType::BasicService;
-        else if (ssType == "ComplexService") sComponent.eType = sdv::EObjectType::ComplexService;
-        else if (ssType == "App") sComponent.eType = sdv::EObjectType::Application;
-        else if (ssType == "Proxy") sComponent.eType = sdv::EObjectType::Proxy;
-        else if (ssType == "Stub") sComponent.eType = sdv::EObjectType::Stub;
-        else if (ssType == "Utility") sComponent.eType = sdv::EObjectType::Utility;
-        else continue;
-        if (bBlockSystemObjects && sComponent.eType == sdv::EObjectType::SystemObject) continue;
-        auto ptrSingleton = ptrComponent->Direct("Singleton");
-        if (ptrSingleton && static_cast<bool>(ptrSingleton->GetValue()))
-            sComponent.uiFlags = static_cast<uint32_t>(sdv::EObjectFlags::singleton);
-        auto ptrDependencies = ptrComponent->Direct("Dependencies");
-        if (ptrDependencies)
-        {
-            auto ptrDependencyArray = ptrDependencies->Cast<toml_parser::CArray>();
-            for (uint32_t uiDependencyIndex = 0; ptrDependencyArray && uiDependencyIndex < ptrDependencyArray->GetCount();
-                uiDependencyIndex++)
-            {
-                auto ptrDependsOn = ptrDependencyArray->Get(uiDependencyIndex);
-                if (ptrDependsOn)
-                    sComponent.seqDependencies.push_back(static_cast<sdv::u8string>(ptrDependsOn->GetValue()));
-            }
-        }
+        //// Fill in the component structure
+        //sdv::SClassInfo sClass{};
+        ////sClass.pathModule = rpathModule;
+        //sClass.ssModulePath = rpathRelModule.generic_u8string();
+        ////sClass.ssManifest = ptrClass->GenerateTOML(toml_parser::CGenContext("Class"));
+        //auto ptrClassName = ptrClass->Direct("Name");
+        //if (!ptrClassName) continue;
+        //sClass.ssName = ptrClassName->GetValue();
+        //auto ptrAliases = ptrClass->Direct("Aliases");
+        //if (ptrAliases)
+        //{
+        //    auto ptrAliasesArray = ptrAliases->Cast<toml_parser::CArray>();
+        //    for (uint32_t uiAliasIndex = 0; ptrAliasesArray && uiAliasIndex < ptrAliasesArray->GetCount(); uiAliasIndex++)
+        //    {
+        //        auto ptrClassAlias = ptrAliasesArray->Get(uiAliasIndex);
+        //        if (ptrClassAlias)
+        //            sClass.seqClassAliases.push_back(static_cast<sdv::u8string>(ptrClassAlias->GetValue()));
+        //    }
+        //}
+        //auto ptrDefaultName = ptrClass->Direct("DefaultName");
+        //if (ptrDefaultName) sClass.ssDefaultObjectName = ptrDefaultName->GetValue();
+        //else sClass.ssDefaultObjectName = sClass.ssName;
+        //auto ptrType = ptrClass->Direct("Type");
+        //if (!ptrType) continue;
+        //sClass.eType = sdv::String2ObjectType(ptrType->GetValue());
+        //if (sClass.eType == sdv::EObjectType::Undefined) continue;
+        //if (bBlockSystemObjects && sClass.eType == sdv::EObjectType::system_object) continue;
+        //auto ptrSingleton = ptrClass->Direct("Singleton");
+        //if (ptrSingleton && static_cast<bool>(ptrSingleton->GetValue()))
+        //    sClass.uiFlags = static_cast<uint32_t>(sdv::EObjectFlags::singleton);
+        //auto ptrDependencies = ptrClass->Direct("Dependencies");
+        //if (ptrDependencies)
+        //{
+        //    auto ptrDependencyArray = ptrDependencies->Cast<toml_parser::CArray>();
+        //    for (uint32_t uiDependencyIndex = 0; ptrDependencyArray && uiDependencyIndex < ptrDependencyArray->GetCount();
+        //        uiDependencyIndex++)
+        //    {
+        //        auto ptrDependsOn = ptrDependencyArray->Get(uiDependencyIndex);
+        //        if (ptrDependsOn)
+        //            sClass.seqDependencies.push_back(static_cast<sdv::u8string>(ptrDependsOn->GetValue()));
+        //    }
+        //}
 
-        vecComponents.push_back(sComponent);
+        //vecClasses.push_back(sClass);
+
+        auto sClass = TOML2ClassInfo(parser.Root().Cast<toml_parser::CNodeCollection>(), uiIndex);
+        if (bBlockSystemObjects && sClass.eType == sdv::EObjectType::system_object) continue;
+        if (sClass.eType == sdv::EObjectType::undefined) continue;
+        sClass.ssModulePath = rpathRelModule.generic_u8string();
+        vecClasses.push_back(sClass);
     }
 }
 

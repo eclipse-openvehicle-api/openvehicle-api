@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "gtest/gtest.h"
 #include "../../../sdv_services/ipc_shared_mem/channel_mgnt.h"
 #include "../../../sdv_services/ipc_shared_mem/connection.h"
@@ -192,11 +205,11 @@ TEST(SharedMemChannelService, Instantiate)
     CSharedMemChannelMgnt mgnt;
     EXPECT_NO_THROW(mgnt.Initialize(""));
 
-    EXPECT_EQ(mgnt.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgnt.GetObjectState(), sdv::EObjectState::initialized);
 
     EXPECT_NO_THROW(mgnt.Shutdown());
 
-    EXPECT_EQ(mgnt.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgnt.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     appcontrol.Shutdown();
 }
@@ -209,11 +222,11 @@ TEST(SharedMemChannelService, ChannelConfigString)
     CSharedMemChannelMgnt mgnt;
     EXPECT_NO_THROW(mgnt.Initialize(""));
 
-    EXPECT_EQ(mgnt.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgnt.GetObjectState(), sdv::EObjectState::initialized);
 
     EXPECT_NO_THROW(mgnt.Shutdown());
 
-    EXPECT_EQ(mgnt.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgnt.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST(SharedMemChannelService, CreateRandomEndpoint)
@@ -225,14 +238,14 @@ TEST(SharedMemChannelService, CreateRandomEndpoint)
 
     // Create an endpoint.
     EXPECT_NO_THROW(mgnt.Initialize(""));
-    EXPECT_EQ(mgnt.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgnt.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgnt.CreateEndpoint("");
     EXPECT_NE(sChannelEndpoint.pConnection, nullptr);
     EXPECT_FALSE(sChannelEndpoint.ssConnectString.empty());
     if (sChannelEndpoint.pConnection) sdv::TObjectPtr(sChannelEndpoint.pConnection);
     EXPECT_NO_THROW(mgnt.Shutdown());
 
-    EXPECT_EQ(mgnt.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgnt.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST(SharedMemChannelService, CreateExplicitEndpoint)
@@ -244,7 +257,7 @@ TEST(SharedMemChannelService, CreateExplicitEndpoint)
 
     // Create an endpoint.
     EXPECT_NO_THROW(mgnt.Initialize(""));
-    EXPECT_EQ(mgnt.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgnt.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgnt.CreateEndpoint(R"code([IpcChannel]
 Name = "CHANNEL_1234"
 Size = 10240
@@ -254,7 +267,7 @@ Size = 10240
     if (sChannelEndpoint.pConnection) sdv::TObjectPtr(sChannelEndpoint.pConnection);
     EXPECT_NO_THROW(mgnt.Shutdown());
 
-    EXPECT_EQ(mgnt.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgnt.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST(SharedMemChannelService, GetRandomEndpointAccess)
@@ -266,9 +279,9 @@ TEST(SharedMemChannelService, GetRandomEndpointAccess)
 
     // Create an endpoint.
     EXPECT_NO_THROW(mgntServer.Initialize(""));
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     EXPECT_NO_THROW(mgntClient.Initialize(""));
-    EXPECT_EQ(mgntClient.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint("");
     EXPECT_NE(sChannelEndpoint.pConnection, nullptr);
     EXPECT_FALSE(sChannelEndpoint.ssConnectString.empty());
@@ -281,8 +294,8 @@ TEST(SharedMemChannelService, GetRandomEndpointAccess)
     EXPECT_NO_THROW(mgntServer.Shutdown());
     EXPECT_NO_THROW(mgntClient.Shutdown());
 
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::destruction_pending);
-    EXPECT_EQ(mgntClient.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::destruction_pending);
+    EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST(SharedMemChannelService, GetExplicitEndpointAccess)
@@ -294,9 +307,9 @@ TEST(SharedMemChannelService, GetExplicitEndpointAccess)
 
     // Create an endpoint.
     EXPECT_NO_THROW(mgntServer.Initialize(""));
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     EXPECT_NO_THROW(mgntClient.Initialize(""));
-    EXPECT_EQ(mgntClient.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint(R"code([IpcChannel]
 Name = "CHANNEL_1234"
 Size = 10240
@@ -312,8 +325,8 @@ Size = 10240
     EXPECT_NO_THROW(mgntServer.Shutdown());
     EXPECT_NO_THROW(mgntClient.Shutdown());
 
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::destruction_pending);
-    EXPECT_EQ(mgntClient.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::destruction_pending);
+    EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST(SharedMemChannelService, WaitForConnection)
@@ -325,7 +338,7 @@ TEST(SharedMemChannelService, WaitForConnection)
 
     // Create an endpoint.
     EXPECT_NO_THROW(mgnt.Initialize(""));
-    EXPECT_EQ(mgnt.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgnt.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgnt.CreateEndpoint("");
     EXPECT_NE(sChannelEndpoint.pConnection, nullptr);
     EXPECT_FALSE(sChannelEndpoint.ssConnectString.empty());
@@ -360,7 +373,7 @@ TEST(SharedMemChannelService, WaitForConnection)
 
     EXPECT_NO_THROW(mgnt.Shutdown());
 
-    EXPECT_EQ(mgnt.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgnt.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST(SharedMemChannelService, AsyncConnect)
@@ -372,9 +385,9 @@ TEST(SharedMemChannelService, AsyncConnect)
 
     // Create an endpoint.
     EXPECT_NO_THROW(mgntServer.Initialize(""));
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     EXPECT_NO_THROW(mgntClient.Initialize(""));
-    EXPECT_EQ(mgntClient.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint("");
     EXPECT_NE(sChannelEndpoint.pConnection, nullptr);
     EXPECT_FALSE(sChannelEndpoint.ssConnectString.empty());
@@ -456,8 +469,8 @@ TEST(SharedMemChannelService, AsyncConnect)
     EXPECT_NO_THROW(mgntServer.Shutdown());
     EXPECT_NO_THROW(mgntClient.Shutdown());
 
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::destruction_pending);
-    EXPECT_EQ(mgntClient.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::destruction_pending);
+    EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST(SharedMemChannelService, EstablishConnectionEvents)
@@ -469,9 +482,9 @@ TEST(SharedMemChannelService, EstablishConnectionEvents)
 
     // Create an endpoint.
     EXPECT_NO_THROW(mgntServer.Initialize(""));
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     EXPECT_NO_THROW(mgntClient.Initialize(""));
-    EXPECT_EQ(mgntClient.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint("");
     EXPECT_NE(sChannelEndpoint.pConnection, nullptr);
     EXPECT_FALSE(sChannelEndpoint.ssConnectString.empty());
@@ -572,8 +585,8 @@ TEST(SharedMemChannelService, EstablishConnectionEvents)
     EXPECT_NO_THROW(mgntServer.Shutdown());
     EXPECT_NO_THROW(mgntClient.Shutdown());
 
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::destruction_pending);
-    EXPECT_EQ(mgntClient.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::destruction_pending);
+    EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST(SharedMemChannelService, EstablishReconnect)
@@ -585,11 +598,11 @@ TEST(SharedMemChannelService, EstablishReconnect)
 
     // Create an endpoint.
     EXPECT_NO_THROW(mgntServer.Initialize(""));
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     EXPECT_NO_THROW(mgntClient1.Initialize(""));
-    EXPECT_EQ(mgntClient1.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntClient1.GetObjectState(), sdv::EObjectState::initialized);
     EXPECT_NO_THROW(mgntClient2.Initialize(""));
-    EXPECT_EQ(mgntClient2.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntClient2.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint("");
     EXPECT_NE(sChannelEndpoint.pConnection, nullptr);
     EXPECT_FALSE(sChannelEndpoint.ssConnectString.empty());
@@ -656,7 +669,7 @@ TEST(SharedMemChannelService, EstablishReconnect)
 
     EXPECT_NO_THROW(ptrServerConnection.Clear());
     EXPECT_NO_THROW(mgntServer.Shutdown());
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST(SharedMemChannelService, EstablishReconnectEvents)
@@ -668,11 +681,11 @@ TEST(SharedMemChannelService, EstablishReconnectEvents)
 
     // Create an endpoint.
     EXPECT_NO_THROW(mgntServer.Initialize(""));
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     EXPECT_NO_THROW(mgntClient1.Initialize(""));
-    EXPECT_EQ(mgntClient1.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntClient1.GetObjectState(), sdv::EObjectState::initialized);
     EXPECT_NO_THROW(mgntClient2.Initialize(""));
-    EXPECT_EQ(mgntClient2.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntClient2.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint("");
     EXPECT_NE(sChannelEndpoint.pConnection, nullptr);
     EXPECT_FALSE(sChannelEndpoint.ssConnectString.empty());
@@ -760,7 +773,7 @@ TEST(SharedMemChannelService, EstablishReconnectEvents)
 
     EXPECT_NO_THROW(ptrServerConnection.Clear());
     EXPECT_NO_THROW(mgntServer.Shutdown());
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST(SharedMemChannelService, AppEstablishConnection)
@@ -774,7 +787,7 @@ Mode = "Essential")code"));
 
     // Create an endpoint.
     EXPECT_NO_THROW(mgntServer.Initialize(""));
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint("");
     EXPECT_NE(sChannelEndpoint.pConnection, nullptr);
     EXPECT_FALSE(sChannelEndpoint.ssConnectString.empty());
@@ -838,7 +851,7 @@ Mode = "Essential")code"));
 
     EXPECT_NO_THROW(mgntServer.Shutdown());
 
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     // Wait for process termination
     pProcessLifetime->WaitForTerminate(tProcessID, 0xffffffff);
@@ -855,7 +868,7 @@ Mode = "Essential")code"));
 
     // Create an endpoint.
     EXPECT_NO_THROW(mgntServer.Initialize(""));
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint("");
     EXPECT_NE(sChannelEndpoint.pConnection, nullptr);
     EXPECT_FALSE(sChannelEndpoint.ssConnectString.empty());
@@ -918,7 +931,7 @@ Mode = "Essential")code"));
 
     EXPECT_NO_THROW(mgntServer.Shutdown());
 
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST(SharedMemChannelService, AppForcedShutdown_Watchdog)
@@ -932,7 +945,7 @@ Mode = "Essential")code"));
 
     // Create an endpoint.
     EXPECT_NO_THROW(mgntServer.Initialize(""));
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint("");
     EXPECT_NE(sChannelEndpoint.pConnection, nullptr);
     EXPECT_FALSE(sChannelEndpoint.ssConnectString.empty());
@@ -997,7 +1010,7 @@ Mode = "Essential")code"));
 
     EXPECT_NO_THROW(mgntServer.Shutdown());
 
-    EXPECT_EQ(mgntServer.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::destruction_pending);
 
     // Wait for process termination
     pProcessLifetime->WaitForTerminate(tProcessID, 0xffffffff);
@@ -1018,7 +1031,7 @@ Mode = "Essential")code"));
     // Create the first control endpoint.
     CSharedMemChannelMgnt mgntControl1;
     EXPECT_NO_THROW(mgntControl1.Initialize(""));
-    EXPECT_EQ(mgntControl1.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntControl1.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sEndpoint1 = mgntControl1.CreateEndpoint("");
     EXPECT_NE(sEndpoint1.pConnection, nullptr);
     EXPECT_FALSE(sEndpoint1.ssConnectString.empty());
@@ -1054,7 +1067,7 @@ Mode = "Essential")code"));
     // Create the second control endpoint.
     CSharedMemChannelMgnt mgntControl2;
     EXPECT_NO_THROW(mgntControl2.Initialize(""));
-    EXPECT_EQ(mgntControl2.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntControl2.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sEndpoint2 = mgntControl2.CreateEndpoint("");
     EXPECT_NE(sEndpoint2.pConnection, nullptr);
     EXPECT_FALSE(sEndpoint2.ssConnectString.empty());
@@ -1101,7 +1114,7 @@ Mode = "Essential")code"));
     // Create the first control endpoint.
     CSharedMemChannelMgnt mgntControl1;
     EXPECT_NO_THROW(mgntControl1.Initialize(""));
-    EXPECT_EQ(mgntControl1.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntControl1.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sEndpoint1 = mgntControl1.CreateEndpoint("");
     EXPECT_NE(sEndpoint1.pConnection, nullptr);
     EXPECT_FALSE(sEndpoint1.ssConnectString.empty());
@@ -1137,7 +1150,7 @@ Mode = "Essential")code"));
     // Create the second control endpoint.
     CSharedMemChannelMgnt mgntControl2;
     EXPECT_NO_THROW(mgntControl2.Initialize(""));
-    EXPECT_EQ(mgntControl2.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntControl2.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sEndpoint2 = mgntControl2.CreateEndpoint("");
     EXPECT_NE(sEndpoint2.pConnection, nullptr);
     EXPECT_FALSE(sEndpoint2.ssConnectString.empty());
@@ -1182,7 +1195,7 @@ Mode = "Essential")code"));
     // Create the first control endpoint.
     CSharedMemChannelMgnt mgntControl1;
     EXPECT_NO_THROW(mgntControl1.Initialize(""));
-    EXPECT_EQ(mgntControl1.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntControl1.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sEndpoint1 = mgntControl1.CreateEndpoint("");
     EXPECT_NE(sEndpoint1.pConnection, nullptr);
     EXPECT_FALSE(sEndpoint1.ssConnectString.empty());
@@ -1218,7 +1231,7 @@ Mode = "Essential")code"));
     // Create the second control endpoint.
     CSharedMemChannelMgnt mgntControl2;
     EXPECT_NO_THROW(mgntControl2.Initialize(""));
-    EXPECT_EQ(mgntControl2.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(mgntControl2.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sEndpoint2 = mgntControl2.CreateEndpoint("");
     EXPECT_NE(sEndpoint2.pConnection, nullptr);
     EXPECT_FALSE(sEndpoint2.ssConnectString.empty());

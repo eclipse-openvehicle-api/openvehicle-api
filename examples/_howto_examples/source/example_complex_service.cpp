@@ -54,7 +54,7 @@ public:
     END_SDV_INTERFACE_MAP()
 
     DECLARE_OBJECT_CLASS_NAME("ComplexService_Component")
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::ComplexService);
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::complex_service);
 
     /**
     * @brief Set speed

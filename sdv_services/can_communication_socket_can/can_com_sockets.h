@@ -1,3 +1,17 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Sudipta Durjoy - initial API and implementation
+ *   Thomas Pfleiderer - refactored and finalized 
+ ********************************************************************************/
+
 #ifndef CAN_COM_SOCKET_H
 #define CAN_COM_SOCKET_H
 
@@ -29,7 +43,7 @@
 /**
 * @brief Component to establish Socket CAN communication between VAPI and external application
 */
-class CCANSockets : public sdv::CSdvObject, public sdv::IObjectControl, public sdv::can::IRegisterReceiver,
+class CCANSockets : public sdv::CSdvObject, public sdv::can::IRegisterReceiver,
     public sdv::can::ISend, sdv::can::IInformation
 {
 public:
@@ -42,39 +56,27 @@ public:
         SDV_INTERFACE_ENTRY(sdv::can::IInformation)
     END_SDV_INTERFACE_MAP()
 
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::vehicle_bus)
     DECLARE_OBJECT_CLASS_NAME("CAN_Com_Sockets")
     DECLARE_DEFAULT_OBJECT_NAME("CAN_Communication_Object")
     DECLARE_OBJECT_SINGLETON()
 
     /**
-     * @brief Initialize the object. Overload of sdv::IObjectControl::Initialize.
-     * @param[in] ssObjectConfig Optional configuration string.
+     * @brief Initialize the object. Overload of sdv::CSdvObject::OnInitialize.
      * The configuration contains either one interface name a list of interface names.
      * The Send() method must use the index of this list to determine the interface
      * In case of a single interface name the index is 0.
      * canSockets = "vcan0"
      * or
      * canSockets = ["vcan1", "vcan8", "vcan9", "vcan2"]
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
      */
-    virtual void Initialize(const sdv::u8string& ssObjectConfig) override;
+    virtual bool OnInitialize() override;
 
     /**
-     * @brief Get the current status of the object. Overload of sdv::IObjectControl::GetStatus.
-     * @return Return the current status of the object.
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
-    virtual sdv::EObjectStatus GetStatus() const override;
-
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
-     */
-    void SetOperationMode(sdv::EOperationMode eMode) override;
-
-    /**
-     * @brief Shutdown called before the object is destroyed. Overload of sdv::IObjectControl::Shutdown.
-     */
-    virtual void Shutdown() override;
+    virtual void OnShutdown() override;
 
     /**
      * @brief Register a CAN message receiver. Overload of sdv::can::IRegisterReceiver::RegisterReceiver.
@@ -125,6 +127,16 @@ private:
         const std::set<std::string>& availableInterfaces);
 
     /**
+     * @brief Write log information about the configured can sockets
+     */
+    void LogConfigurations();
+
+    /**
+     * @brief Write log information about the existing can hardware
+     */
+    void LogAllCanInterfaceNames();
+
+    /**
     * @brief Socket definition structure
     */
     struct SSocketDefinition
@@ -134,7 +146,6 @@ private:
         std::string name;     ///< interface name, can be empty in case of an invalid socket element
     };
 
-    std::atomic<sdv::EObjectStatus> m_eStatus = sdv::EObjectStatus::initialization_pending;  ///< Object status
     std::thread                     m_threadReceive;    ///< Receive thread.
     mutable std::mutex              m_mtxReceivers;     ///< Protect the receiver set.
     std::set<sdv::can::IReceive*>   m_setReceivers;     ///< Set with receiver interfaces.

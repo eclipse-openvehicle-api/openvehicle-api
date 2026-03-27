@@ -1,3 +1,13 @@
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ ********************************************************************************/
+
 #ifndef CONSOLE_OUTPUT_H
 #define CONSOLE_OUTPUT_H
 
@@ -152,7 +162,7 @@ private:
     float               m_SpeedBS = 0.0;                    ///< Speed Data Link
 
     vss::Vehicle::Body::TrunkService::IVSS_SetOpen* m_pTrunkSvc = nullptr;  ///< Front Left Door
-    ITrunkKitService*   m_pITrunkComplexService                 = nullptr;  ///< Trunk Service interface pointer.
+    ITrunkKitService*   m_pTrunkComplexService                  = nullptr;  ///< Trunk Service interface pointer.
 
 
 #ifdef _WIN32

@@ -1,3 +1,13 @@
+/********************************************************************************
+* Copyright (c) 2025-2026 ZF Friedrichshafen AG
+*
+* This program and the accompanying materials are made available under the 
+* terms of the Apache License Version 2.0 which is available at
+* https://www.apache.org/licenses/LICENSE-2.0
+*
+* SPDX-License-Identifier: Apache-2.0 
+********************************************************************************/
+
 #include "../../../../global/process_watchdog.h"
 #include "../include/can_com_test_helper.h"
 
@@ -52,9 +62,9 @@ class CTestCANSilkit : public CCANSilKit
         return CCANSilKit::GetInterfaces();
     }
 
-    sdv::EObjectStatus GetTestStatus() const
+    sdv::EObjectState GetTestStatus() const
     {
-        return CCANSilKit::GetStatus();
+        return CCANSilKit::GetObjectState();
     }
 
     uint64_t GetMessagesSent() const
@@ -104,7 +114,7 @@ bool InitializeAppControl(sdv::app::CAppControl* appcontrol, const std::string& 
 void InitializeCanComObject(CTestCANSilkit& canComObj, const std::string config, MockCANReceiver& mockRcv)
 {
     ASSERT_NO_THROW(canComObj.Initialize(config.c_str()));
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialized);
     ASSERT_NO_THROW(canComObj.SetOperationMode(sdv::EOperationMode::configuring));
     ASSERT_NO_THROW(canComObj.RegisterReceiver(&mockRcv));
     EXPECT_NO_THROW(canComObj.SetOperationMode(sdv::EOperationMode::running));
@@ -147,12 +157,12 @@ TEST_F(CANSilkitTest, ValidConfigString)
     )";
     CTestCANSilkit canComObj;
     ASSERT_NO_THROW(canComObj.Initialize(ssObjectConfig.c_str()));
-    ASSERT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::initialized);
+    ASSERT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialized);
 
     ASSERT_NO_THROW(canComObj.Send(testMsg, 0));
 
     ASSERT_NO_THROW(canComObj.Shutdown());
-    ASSERT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::shutdown_in_progress);
+    ASSERT_EQ(canComObj.GetObjectState(), sdv::EObjectState::shutdown_in_progress);
 }
 
 TEST_F(CANSilkitTest, InvalidConfigIdentifier)
@@ -176,10 +186,10 @@ TEST_F(CANSilkitTest, InvalidConfigIdentifier)
 
     CTestCANSilkit canComObj;
     ASSERT_NO_THROW(canComObj.Initialize(ssObjectConfig.c_str()));
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::initialization_failure);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialization_failure);
 
     ASSERT_NO_THROW(canComObj.Shutdown());
-    EXPECT_EQ(canComObj.GetStatus(), sdv::EObjectStatus::shutdown_in_progress);
+    EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::shutdown_in_progress);
 }
 
 TEST_F(CANSilkitTest, SendReceiveTest)
@@ -219,9 +229,9 @@ TEST_F(CANSilkitTest, SendReceiveTest)
     MockCANReceiver mockRcv;
 
     canComObj1.Initialize(ssConfig1.c_str());
-    ASSERT_EQ(canComObj1.GetStatus(), sdv::EObjectStatus::initialized);
+    ASSERT_EQ(canComObj1.GetObjectState(), sdv::EObjectState::initialized);
     canComObj2.Initialize(ssConfig2.c_str());
-    ASSERT_EQ(canComObj2.GetStatus(), sdv::EObjectStatus::initialized);
+    ASSERT_EQ(canComObj2.GetObjectState(), sdv::EObjectState::initialized);
 
     ASSERT_NO_THROW(canComObj1.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_NO_THROW(canComObj2.SetOperationMode(sdv::EOperationMode::configuring));

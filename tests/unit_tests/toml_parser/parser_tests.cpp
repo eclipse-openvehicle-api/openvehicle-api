@@ -1,3 +1,17 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Martin Stimpfl - initial API and implementation
+ *   Erik Verhoeven - writing TOML and whitespace preservation
+ ********************************************************************************/
+
 #include <gtest/gtest.h>
 #include "../../../sdv_services/core/toml_parser/parser_toml.h"
 #include "../../../sdv_services/core/toml_parser/parser_node_toml.h"
@@ -59,7 +73,7 @@ TEST(RecognizeTypes, Key_Value)
 
     auto value_name = parser.Root().Direct("name");
     EXPECT_EQ(value_name->GetType(), sdv::toml::ENodeType::node_string);
-    EXPECT_EQ(value_name->GetValue(), sdv::any_t("Hammer"));
+    EXPECT_EQ(value_name->GetValue(), "Hammer");
     EXPECT_EQ(value_name->GetIndex(), 0u);
 
     auto value_id = parser.Root().Direct("id");
@@ -425,6 +439,37 @@ TEST(NestedContent, InlineTable)
     ASSERT_NE(table3_e_b, nullptr);
     EXPECT_EQ(table3_e_b->GetType(), sdv::toml::ENodeType::node_string);
     EXPECT_EQ(static_cast<std::string>(table3_e_b->GetValue()), "E");
+}
+
+TEST(NestedContent, InlineTableBreakLine)
+{
+    // The following are not allowed
+    EXPECT_THROW(toml_parser::CParser(R"code(
+table = { a = 1, b = 2,
+    c = 3, d = 4 }
+)code"), sdv::toml::XTOMLParseException);
+    EXPECT_THROW(toml_parser::CParser(R"code(
+table = { a = 1, b = 2
+    ,c = 3, d = 4 }
+)code"), sdv::toml::XTOMLParseException);
+
+    // Line breaks are allowed when part of an array or have multi-line strings
+    EXPECT_NO_THROW(toml_parser::CParser(R"code(
+array = [{ a = 1, b = 2},
+    {c = 3, d = 4}]
+)code"));
+    EXPECT_NO_THROW(toml_parser::CParser(R"code(
+table = { a = 1, b = [2, 3,
+    4, 5], c = 6, d = 7}
+)code"));
+    EXPECT_NO_THROW(toml_parser::CParser(R"code(
+table = { x = "abc", y = """def-
+ghi""", z = "jkl" }
+)code"));
+    EXPECT_NO_THROW(toml_parser::CParser(R"code(
+table = { x = 'abc', y = '''def-
+ghi''', z = 'jkl' }
+)code"));
 }
 
 TEST(SpecialCases, Keys)

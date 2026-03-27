@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef WILDCARD_MATCH_H
 #define WILDCARD_MATCH_H
 
@@ -32,8 +45,8 @@
  *    extension ending with "n" match.
  *  - "subdir?_*" - all files from a directory starting with the name "subdir" followed by a single digit or character, followed
  *    with a "_" and zero or more characters.
- *  - "**\\/file*.bin" - all files starting with the name "file" followed by zero or more characters and the extension ".bin" in this
- *    and any subdirectory.
+ *  - "**\\/file*.bin" - all files starting with the name "file" followed by zero or more characters and the extension ".bin" in
+ *    this and any subdirectory.
  * @param[in] rpathRel Reference to the relative path to check for a match.
  * @param[in] rssPattern Reference to the string containing the pattern to match.
  * @return Returns whether the path matches.

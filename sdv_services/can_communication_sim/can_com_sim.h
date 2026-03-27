@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef CAN_COM_SIMULATION_H
 #define CAN_COM_SIMULATION_H
 
@@ -15,8 +28,7 @@
 /**
 * @brief Component to establish Socket CAN communication between VAPI and external application
 */
-class CCANSimulation : public sdv::CSdvObject, public sdv::IObjectControl, public sdv::can::IRegisterReceiver,
-    public sdv::can::ISend, sdv::can::IInformation
+class CCANSimulation : public sdv::CSdvObject, public sdv::can::IRegisterReceiver, public sdv::can::ISend, sdv::can::IInformation
 {
 public:
     /**
@@ -31,39 +43,47 @@ public:
 
     // Interface map
     BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
         SDV_INTERFACE_ENTRY(sdv::can::IRegisterReceiver)
         SDV_INTERFACE_ENTRY(sdv::can::ISend)
         SDV_INTERFACE_ENTRY(sdv::can::IInformation)
     END_SDV_INTERFACE_MAP()
 
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+    // Declarations
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::vehicle_bus)
     DECLARE_OBJECT_CLASS_NAME("CAN_Com_Sim")
     DECLARE_DEFAULT_OBJECT_NAME("CAN_Communication_Object")
     DECLARE_OBJECT_SINGLETON()
 
-    /**
-     * @brief Initialize the object. Overload of sdv::IObjectControl::Initialize.
-     * @param[in] ssObjectConfig Optional configuration string.
-     */
-    virtual void Initialize(const sdv::u8string& ssObjectConfig) override;
+    // Parameter map
+    BEGIN_SDV_PARAM_MAP()
+        SDV_PARAM_PATH_ENTRY(m_pathSource, "Source", "", "Path to the source ASC file.")
+        SDV_PARAM_PATH_ENTRY(m_pathTarget, "Target", "", "Path to the target ASC file.")
+    END_SDV_PARAM_MAP()
 
     /**
-     * @brief Get the current status of the object. Overload of sdv::IObjectControl::GetStatus.
-     * @return Return the current status of the object.
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
      */
-    virtual sdv::EObjectStatus GetStatus() const override;
+    virtual bool OnInitialize() override;
 
     /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
+     * @brief Change to configuration mode event. After this a call to this function locked parameters can be changed again.
+     * Overload of sdv::CSdvObject::OnChangeToConfigMode.
      */
-    void SetOperationMode(sdv::EOperationMode eMode) override;
+    virtual void OnChangeToConfigMode() override;
 
     /**
-     * @brief Shutdown called before the object is destroyed. Overload of sdv::IObjectControl::Shutdown.
+     * @brief Change to running mode event. Parameters were locked before the call to this event. Overload of
+     * sdv::CSdvObject::OnChangeToRunningMode.
+     * @return Returns 'true' when the configuration is valid and the running instances could be started. Otherwise returns
+     * 'false'.
      */
-    virtual void Shutdown() override;
+    virtual bool OnChangeToRunningMode() override;
+
+    /**
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
+     */
+    virtual void OnShutdown() override;
 
     /**
      * @brief Register a CAN message receiver. Overload of sdv::can::IRegisterReceiver::RegisterReceiver.
@@ -98,7 +118,6 @@ private:
      */
     void PlaybackFunc(const asc::SCanMessage& rsMsg);
 
-    std::atomic<sdv::EObjectStatus>             m_eStatus = sdv::EObjectStatus::initialization_pending;  ///< Object status
     std::thread                                 m_threadReceive;            ///< Receive thread.
     mutable std::mutex                          m_mtxReceivers;             ///< Protect the receiver set.
     std::set<sdv::can::IReceive*>               m_setReceivers;             ///< Set with receiver interfaces.

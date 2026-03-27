@@ -1,6 +1,18 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "logger.h"
 #include <sstream>
-#include "sdv_core.h"
 #include "../../global/exec_dir_helper.h"
 
 #ifdef __unix__
@@ -9,6 +21,12 @@
 #ifdef __GNUC__
 #include <unistd.h> // for getpid
 #endif
+
+CLogger& GetDefaultLogger()
+{
+    static CLogger default_logger;
+    return default_logger;
+}
 
 CLogger::~CLogger()
 {
@@ -140,12 +158,3 @@ std::string CLogger::GetDateTime(std::chrono::time_point<std::chrono::system_clo
     output << std::put_time(std::localtime(&time), timeFormat.c_str());
     return output.str();
 }
-
-#ifndef DO_NOT_INCLUDE_IN_UNIT_TEST
-
-CLogger& CLoggerService::GetDefaultLogger()
-{
-    return ::GetDefaultLogger();
-}
-
-#endif

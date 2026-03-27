@@ -28,7 +28,7 @@ public:
 	END_SDV_INTERFACE_MAP()
 
 	DECLARE_OBJECT_CLASS_NAME("Access_Component")
-	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::BasicService);
+	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::basic_service);
 	
 	/**
 	* @brief Show messages, implements the function of IShowExample

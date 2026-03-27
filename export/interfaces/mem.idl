@@ -1,15 +1,19 @@
-/**
- * @file      mem.idl
- * @brief     This file provides the memory management interface definitions of the core SDV framework.
- * @version   0.1
- * @date      2023.05.22
- * @author    erik.verhoeven@zf.com
- * @copyright Copyright ZF Friedrichshaven AG (c) 2023
- */
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
 
 #include "core.idl"
 
- /**
+/**
  * @brief Software Defined Vehicle framework.
  */
 module sdv

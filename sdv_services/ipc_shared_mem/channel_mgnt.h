@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef CHANNEL_MGNT_H
 #define CHANNEL_MGNT_H
 
@@ -9,8 +22,8 @@
 #include "watchdog.h"
 #include "connection.h"
 
-#define TEST_DECLARE_OBJECT_CLASS_ALIAS(...)                                                                                            \
-    static sdv::sequence<sdv::u8string> GetClassAliasesStaticMyTest()                                                                    \
+#define TEST_DECLARE_OBJECT_CLASS_ALIAS(...)                                                                                       \
+    static sdv::sequence<sdv::u8string> GetClassAliasesStaticMyTest()                                                              \
     {                                                                                                                              \
         return sdv::sequence<sdv::u8string>({__VA_ARGS__});                                                                        \
     }
@@ -19,46 +32,26 @@
 /**
  * @brief IPC channel management class for the shared memory communication.
  */
-class CSharedMemChannelMgnt : public sdv::CSdvObject, public sdv::IObjectControl, public sdv::ipc::ICreateEndpoint,
-    public sdv::ipc::IChannelAccess
+class CSharedMemChannelMgnt : public sdv::CSdvObject, public sdv::ipc::ICreateEndpoint, public sdv::ipc::IChannelAccess
 {
 public:
     // Interface map
     BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
         SDV_INTERFACE_ENTRY(sdv::ipc::IChannelAccess)
         SDV_INTERFACE_ENTRY(sdv::ipc::ICreateEndpoint)
     END_SDV_INTERFACE_MAP()
 
     // Object declarations
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::SystemObject)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
     DECLARE_OBJECT_CLASS_NAME("DefaultSharedMemoryChannelControl")
     DECLARE_OBJECT_CLASS_ALIAS("LocalChannelControl")
     DECLARE_DEFAULT_OBJECT_NAME("LocalChannelControl")
     DECLARE_OBJECT_SINGLETON()
 
     /**
-     * @brief Initialize the object. Overload of sdv::IObjectControl::Initialize.
-     * @param[in] ssObjectConfig Optional configuration string.
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
-    void Initialize(const sdv::u8string& ssObjectConfig) override;
-
-    /**
-     * @brief Get the current status of the object. Overload of sdv::IObjectControl::GetStatus.
-     * @return Return the current status of the object.
-     */
-    sdv::EObjectStatus GetStatus() const override;
-
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
-     */
-    void SetOperationMode(sdv::EOperationMode eMode) override;
-
-    /**
-     * @brief Shutdown called before the object is destroyed. Overload of sdv::IObjectControl::Shutdown.
-     */
-    void Shutdown() override;
+    virtual void OnShutdown() override;
 
     /**
      * @brief Create IPC connection object and return the endpoint information. Overload of
@@ -111,7 +104,6 @@ private:
         CSharedMemBufferRx  bufferTargetRx;     ///< Target Rx channel
     };
 
-    sdv::EObjectStatus  m_eObjectStatus = sdv::EObjectStatus::initialization_pending;    ///< Object status.
     std::map<std::string, std::unique_ptr<SChannel>>    m_mapChannels;      ///< Map with channels.
     CWatchDog                   m_watchdog;                                 ///< Process monitor for connections.
 };

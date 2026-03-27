@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "can_dl.h"
 #include <support/any.h>
 #include <cmath>
@@ -167,7 +180,7 @@ const char szHdrTemplate[] = R"code(/**
 /**
  * @brief Data link class.
  */
-class CDataLink : public sdv::CSdvObject, public sdv::IObjectControl, public sdv::can::IReceive
+class CDataLink : public sdv::CSdvObject, public sdv::can::IReceive
 {
 public:
     /**
@@ -182,38 +195,25 @@ public:
 
     // Interface map
     BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
         SDV_INTERFACE_ENTRY(sdv::can::IReceive)
     END_SDV_INTERFACE_MAP()
 
     // Declarations
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::vehicle_bus)
     DECLARE_OBJECT_CLASS_NAME("CAN_data_link")
     DECLARE_DEFAULT_OBJECT_NAME("DataLink")
     DECLARE_OBJECT_SINGLETON()
 
     /**
-     * @brief Initialize the object. Overload of sdv::IObjectControl::Initialize.
-     * @param[in] ssObjectConfig Optional configuration string.
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
      */
-    void Initialize(const sdv::u8string& ssObjectConfig) override;
+    virtual bool OnInitialize() override;
 
     /**
-     * @brief Get the current status of the object. Overload of sdv::IObjectControl::GetStatus.
-     * @return Return the current status of the object.
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
-    sdv::EObjectStatus GetStatus() const override;
-
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
-     */
-    void SetOperationMode(sdv::EOperationMode eMode) override;
-
-    /**
-     * @brief Shutdown called before the object is destroyed. Overload of sdv::IObjectControl::Shutdown.
-     */
-    void Shutdown() override;
+    virtual void OnShutdown() override;
 
     /**
      * @brief Process a receive a CAN message. Overload of sdv::can::IReceive::Receive.
@@ -264,7 +264,6 @@ private:
         double      dValue;     ///< 64-bit double precision floating point number.
     };
 %message_def%
-    sdv::EObjectStatus              m_eStatus = sdv::EObjectStatus::initialization_pending;  ///< Keep track of the object status.
     size_t                          m_nIfcIndex = %ifc_index%;              ///< CAN Interface index.
     sdv::can::IRegisterReceiver*    m_pRegister = nullptr;                  ///< CAN receiver registration interface.
     sdv::can::ISend*                m_pSend = nullptr;                      ///< CAN sender interface.
@@ -308,17 +307,14 @@ CDataLink::~CDataLink()
     Shutdown(); // Just in case
 }
 
-void CDataLink::Initialize(const sdv::u8string& /*ssObjectConfig*/)
+bool CDataLink::OnInitialize()
 {
-    if (m_eStatus != sdv::EObjectStatus::initialization_pending) return;
-
     // Get the CAN communication object.
     sdv::TInterfaceAccessPtr ptrCANObject = sdv::core::GetObject("CAN_Communication_Object");
     if (!ptrCANObject)
     {
 		SDV_LOG_ERROR("CDataLink::Initialize() failure, 'CAN_Communication_Object' not found");
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
 
     %init_ifc_index%// Get the CAN receiver registration interface.
@@ -326,8 +322,7 @@ void CDataLink::Initialize(const sdv::u8string& /*ssObjectConfig*/)
     if (!m_pRegister)
     {
 		SDV_LOG_ERROR("CDataLink::Initialize() failure, 'sdv::can::IRegisterReceiver' interface not found");
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
     m_pRegister->RegisterReceiver(static_cast<sdv::can::IReceive*>(this));
 
@@ -336,42 +331,17 @@ void CDataLink::Initialize(const sdv::u8string& /*ssObjectConfig*/)
     if (!m_pSend)
     {
 		SDV_LOG_ERROR("CDataLink::Initialize() failure, 'sdv::can::ISend' interface not found");
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
 
     // Initialize messages
     bool bSuccess = true;%init_msg%
 
-    m_eStatus = bSuccess ? sdv::EObjectStatus::initialized : sdv::EObjectStatus::initialization_failure;
+    return bSuccess;
 }
 
-sdv::EObjectStatus CDataLink::GetStatus() const
+void CDataLink::OnShutdown()
 {
-    return m_eStatus;
-}
-
-void CDataLink::SetOperationMode(sdv::EOperationMode eMode)
-{
-    switch (eMode)
-    {
-    case sdv::EOperationMode::configuring:
-        if (m_eStatus == sdv::EObjectStatus::running || m_eStatus == sdv::EObjectStatus::initialized)
-            m_eStatus = sdv::EObjectStatus::configuring;
-        break;
-    case sdv::EOperationMode::running:
-        if (m_eStatus == sdv::EObjectStatus::configuring || m_eStatus == sdv::EObjectStatus::initialized)
-            m_eStatus = sdv::EObjectStatus::running;
-        break;
-    default:
-        break;
-    }
-}
-
-void CDataLink::Shutdown()
-{
-    m_eStatus = sdv::EObjectStatus::shutdown_in_progress;
-
     // Unregister receiver interface.
     if (m_pRegister) m_pRegister->UnregisterReceiver(static_cast<sdv::can::IReceive*>(this));
     m_pRegister = nullptr;
@@ -379,9 +349,6 @@ void CDataLink::Shutdown()
     m_pSend = nullptr;
 
     // Terminate messages%term_msg%
-
-    // Update the status
-    m_eStatus = sdv::EObjectStatus::destruction_pending;
 }
 
 void CDataLink::Receive(/*in*/ [[maybe_unused]] const sdv::can::SMessage& sMsg, /*in*/ uint32_t uiIfcIndex)
@@ -605,8 +572,7 @@ std::string CCanDataLinkGen::CodeInitInterfaceIndex(const std::string& rssIfcNam
     if (!pInfo)
     {
         // CAN information interface not found.
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
     sdv::sequence<sdv::string> seqInterfaces = pInfo->GetInterfaces();
     size_t nIndex = 0;
@@ -621,9 +587,10 @@ std::string CCanDataLinkGen::CodeInitInterfaceIndex(const std::string& rssIfcNam
     if (nIndex >= seqInterfaces.size())
     {
         // Interface with supplied name not found.
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
+
+    return true;
 )code", mapKeywords);
 }
 
@@ -696,8 +663,9 @@ std::string CCanDataLinkGen::CodeTxMessageDefinition(const dbc::SMessageDef& rsM
         /**
          * @brief Initialize the message by registering all signals.
          * @param[in] pSend The send-interface of the CAN.
+         * @param[in] nIfcIndex CAN Interface index. 
          */
-        bool Init(sdv::can::ISend* pSend);
+        bool Init(sdv::can::ISend* pSend, size_t nIfcIndex);
 
         /**
          * @brief Terminate the message by unregistering all signals.
@@ -712,7 +680,8 @@ std::string CCanDataLinkGen::CodeTxMessageDefinition(const dbc::SMessageDef& rsM
 
         sdv::core::CDispatchService&    m_rdispatch;            ///< Reference to the dispatch service.
         sdv::core::CTrigger             m_trigger;              ///< Message trigger being called by the dispatch service.
-        sdv::can::ISend*        m_pSend = nullptr;      ///< Message sending interface.
+        sdv::can::ISend*                m_pSend = nullptr;      ///< Message sending interface.
+        size_t                          m_nIfcIndex = 0;        ///< CAN Interface index.        
         %sig_decl%
     } m_sTxMsg%msg_name%;
 )code", mapKeywords);
@@ -759,7 +728,7 @@ std::string CCanDataLinkGen::CodeInitTxMessage(const dbc::SMessageDef& rsMsg)
     mapKeywords["msg_name"] = rsMsg.ssName;
 
     return ReplaceKeywords(R"code(
-    bSuccess &= m_sTxMsg%msg_name%.Init(m_pSend);)code", mapKeywords);
+    bSuccess &= m_sTxMsg%msg_name%.Init(m_pSend, m_nIfcIndex);)code", mapKeywords);
 }
 
 std::string CCanDataLinkGen::CodeTermRxMessage(const dbc::SMessageDef& rsMsg)
@@ -975,10 +944,14 @@ CDataLink::STxMsg_%msg_name%::STxMsg_%msg_name%(sdv::core::CDispatchService& rdi
     m_rdispatch(rdispatch)
 {}
 
-bool CDataLink::STxMsg_%msg_name%::Init(sdv::can::ISend* pSend)
+bool CDataLink::STxMsg_%msg_name%::Init(sdv::can::ISend* pSend, size_t nIfcIndex)
 {
-    if (!pSend) return false;
+    if (!pSend) 
+    {
+        return false;
+    }
     m_pSend = pSend;
+    m_nIfcIndex = nIfcIndex;
 
     // Register signals
     bool bSuccess = true;%sig_register%
@@ -1020,8 +993,7 @@ void CDataLink::STxMsg_%msg_name%::Transmit()
     transaction.Finish();
 
     // Transmit the message
-    // TODO: Determine CAN interface index...
-    m_pSend->Send(msg, 0);
+    m_pSend->Send(msg, static_cast<uint32_t>(m_nIfcIndex));
 }
 )code", mapKeywords);
 }

@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef MEMORY_H
 #define MEMORY_H
 
@@ -53,5 +66,11 @@ private:
     std::map<void*, size_t> m_mapTracker;       ///< Memory manager allocation tracker
 #endif
 };
+
+/**
+ * @brief Return the memory manager.
+ * @return Reference to the memory manager.
+ */
+CMemoryManager& GetMemoryManager();
 
 #endif // !define MEMORY_H

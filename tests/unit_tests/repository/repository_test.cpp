@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include <gtest/gtest.h>
 #include <fstream>
 #include "mock.h"
@@ -16,47 +29,52 @@ public:
         SDV_INTERFACE_ENTRY(sdv::IObjectControl)
     END_SDV_INTERFACE_MAP()
 
-    virtual void Initialize([[maybe_unused]] const sdv::u8string& ssObjectConfig)
+    virtual void Initialize([[maybe_unused]] const sdv::u8string& ssObjectConfig) override
     {
         FAIL() << "Error: Initialize should not be called by Repo Service!";
-        //m_eObjectStatus = sdv::EObjectStatus::initialization_failure;
+        //m_eObjectState = sdv::EObjectState::initialization_failure;
     }
 
-    virtual sdv::EObjectStatus GetStatus() const
+    virtual sdv::EObjectState GetObjectState() const override
     {
-        return m_eObjectStatus;
+        return m_eObjectState;
     }
 
     /**
      * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
      * @param[in] eMode The operation mode, the component should run in.
      */
-    void SetOperationMode(sdv::EOperationMode eMode)
+    virtual void SetOperationMode(sdv::EOperationMode eMode) override
     {
         switch (eMode)
         {
         case sdv::EOperationMode::configuring:
-            if (m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized)
-                m_eObjectStatus = sdv::EObjectStatus::configuring;
+            if (m_eObjectState == sdv::EObjectState::running || m_eObjectState == sdv::EObjectState::initialized)
+                m_eObjectState = sdv::EObjectState::configuring;
             break;
         case sdv::EOperationMode::running:
-            if (m_eObjectStatus == sdv::EObjectStatus::configuring || m_eObjectStatus == sdv::EObjectStatus::initialized)
-                m_eObjectStatus = sdv::EObjectStatus::running;
+            if (m_eObjectState == sdv::EObjectState::configuring || m_eObjectState == sdv::EObjectState::initialized)
+                m_eObjectState = sdv::EObjectState::running;
             break;
         default:
             break;
         }
     }
 
-    virtual void Shutdown()
+    virtual sdv::u8string GetObjectConfig() const override
     {
-        m_eObjectStatus = sdv::EObjectStatus::shutdown_in_progress;
+        return {};
+    }
+
+    virtual void Shutdown() override
+    {
+        m_eObjectState = sdv::EObjectState::shutdown_in_progress;
         FAIL() << "Error: Shutdown should not be called by Repo Service!";
-        //m_eObjectStatus = sdv::EObjectStatus::destruction_pending;
+        //m_eObjectState = sdv::EObjectState::destruction_pending;
 
     }
 
-    sdv::EObjectStatus m_eObjectStatus = sdv::EObjectStatus::initialization_pending;
+    sdv::EObjectState m_eObjectState = sdv::EObjectState::initialization_pending;
 };
 
 TEST(RepositoryTest, LoadNonexistentModule)

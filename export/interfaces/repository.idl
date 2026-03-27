@@ -1,19 +1,22 @@
-/**
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
  *
- * @file      repository.idl
- * @brief     This file provides interfaces related to the repository service
- * @version   0.1
- * @date      2022.11.21
- * @author    steffen.altmeier@zf.com
- * @copyright Copyright ZF Friedrichshaven AG (c) 2022
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
- */
+ * SPDX-License-Identifier: Apache-2.0 
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "core.idl"
 #include "module.idl"
 
- /**
-  * @brief Software Defined Vehicle framework.
-  */
+/**
+ * @brief Software Defined Vehicle framework.
+ */
 module sdv
 {
     /**
@@ -110,6 +113,7 @@ module sdv
 
         /**
          * @brief Interface used to control object creation and destruction.
+         * @remarks This interface is exposed by the repository on for standalone, essential and isolated applications.
          */
         interface IRepositoryControl
         {
@@ -128,8 +132,7 @@ module sdv
              * @param[in] ssObjectName Name of the object, required to be unique. For standalone and essential applications, the
              * name string can be empty, in which case the object might either provide a name proposal or the name is the same as
              * the class name. Use the returned object ID to request the name of the object.
-             * @param[in] ssObjectConfig Optional configuration handed over to the object upon creation via IObjectControl. Only
-             * valid for standalone, essential and isolated applications.
+             * @param[in] ssObjectConfig Optional configuration handed over to the object upon creation via IObjectControl.
              * @return Returns the object ID when the object creation was successful or 0 when not. On success the object is
              * available through the IObjectAccess interface. If the object already exists (class and object names are identical),
              * the object ID of the existing object is returned.

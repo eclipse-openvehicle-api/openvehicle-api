@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ *
+ * Contributors: 
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include <atomic>
 #include <interfaces/ipc.h>
 #include <support/sdv_core.h>
@@ -274,7 +287,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
         return REPOSITORY_SERVICE_ACCESS_ERROR;
     }
     sdv::SClassInfo sClassInfo = pRepositoryInfo->FindClass(parser.GetDirect("Isolation.Class").GetValue());
-    if (sClassInfo.ssClassName.empty())
+    if (sClassInfo.ssName.empty())
     {
         if (!bSilent)
             std::cerr << "ERROR: " << CANNOT_FIND_OBJECT_MSG << " Class name: " << ssClassName << std::endl;
@@ -284,13 +297,14 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     sdv::IInterfaceAccess* pObject = nullptr;
     switch (sClassInfo.eType)
     {
-    case sdv::EObjectType::ComplexService:
+    case sdv::EObjectType::complex_service:
+    case sdv::EObjectType::vehicle_function:
     {
         sdv::core::TObjectID tObjectID = pRepositoryControl->CreateObject(ssClassName, ssObjectName, ssConfig);
         pObject = pObjectAccess->GetObjectByID(tObjectID);
         break;
     }
-    case sdv::EObjectType::Utility:
+    case sdv::EObjectType::utility:
         pObject = pCreateUtility->CreateUtility(ssClassName, ssConfig);
         break;
     default:

@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef IPC_NAMED_MUTEX_H
 #define IPC_NAMED_MUTEX_H
 
@@ -51,9 +64,9 @@ namespace ipc
 
         /**
          * @brief Named mutex constructor. Opens or creates a named mutex. This mutex is unlocked.
-         * @param[in] szName Pointer to the zero terminated name of the mutex. Can be null to automatically generate a name.
+         * @param[in] rssName Reference to name of the mutex. Can be empty to automatically generate a name.
          */
-        named_mutex(const char* szName = nullptr) noexcept;
+        named_mutex(const std::string& rssName = std::string());
 
         /**
          * @brief Copy constructor is deleted.
@@ -118,10 +131,10 @@ namespace ipc
     };
 
 #ifdef _WIN32
-    inline named_mutex::named_mutex(const char* szName) noexcept : m_handle(nullptr)
+    inline named_mutex::named_mutex(const std::string& rssName) : m_handle(nullptr)
     {
-        if (szName)
-            m_ssName = szName;
+        if (!rssName.empty())
+            m_ssName = rssName;
         else
         {
             std::srand(static_cast<unsigned>(std::time(nullptr))); // Use current time as seed for random generator
@@ -186,10 +199,10 @@ namespace ipc
 
 #elif defined __unix__
 
-    inline named_mutex::named_mutex(const char* szName) noexcept : m_handle(nullptr)
+    inline named_mutex::named_mutex(const std::string& rssName) : m_handle(nullptr)
     {
-        if (szName)
-            m_ssName = szName;
+        if (!rssName.empty())
+            m_ssName = rssName;
         else
         {
             std::srand(static_cast<unsigned>(std::time(nullptr))); // Use current time as seed for random generator

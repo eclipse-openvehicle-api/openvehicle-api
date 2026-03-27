@@ -1,9 +1,23 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "module_control.h"
-#include "sdv_core.h"
 #include <algorithm>
 #include "../../global/exec_dir_helper.h"
 #include "toml_parser/parser_toml.h"
 #include "toml_parser//parser_node_toml.h"
+#include "app_settings.h"
+#include "app_config.h"
 
 /// @cond DOXYGEN_IGNORE
 #ifdef _WIN32
@@ -16,8 +30,14 @@
 #endif
 /// @endcond
 
-CModuleControl::CModuleControl()
-{}
+// GetModuleControl might be redirected for unit tests.
+#ifndef GetModuleControl 
+CModuleControl& GetModuleControl()
+{
+    static CModuleControl module_control;
+    return module_control;
+}
+#endif // !defined GetModuleControl
 
 CModuleControl::~CModuleControl()
 {
@@ -123,7 +143,7 @@ sdv::core::TModuleID CModuleControl::Load(const sdv::u8string& ssModulePath)
         pathModule = static_cast<std::string>(ssModulePath);
     else
     {
-        if (GetAppControl().IsMainApplication() || GetAppControl().IsIsolatedApplication())
+        if (GetAppSettings().IsMainApplication() || GetAppSettings().IsIsolatedApplication())
         {
             // Check the installation for the module.
             pathModule = GetAppConfig().FindInstalledModule(static_cast<std::string>(ssModulePath));
@@ -180,7 +200,6 @@ sdv::core::TModuleID CModuleControl::Load(const sdv::u8string& ssModulePath)
     // Create a new instance (even if the module could not be found).
     std::shared_ptr<CModuleInst> ptrModule = std::make_shared<CModuleInst>(static_cast<std::string>(ssModulePath), pathModule);
     m_lstModules.push_back(ptrModule);
-    m_setConfigModules.insert(ptrModule->GetModuleID());
     if (!ptrModule->IsValid())
     {
         SDV_LOG_ERROR("The module was not found \"", ssModulePath, "\"");
@@ -234,12 +253,13 @@ std::shared_ptr<CModuleInst> CModuleControl::FindModuleByClass(const std::string
     // For main and isolated applications, check whether the module is in one of the installation manifests.
     auto optManifest = GetAppConfig().FindInstalledComponent(rssClass);
     if (!optManifest) return nullptr;
-    auto ssManifest = GetAppConfig().FindInstalledModuleManifest(optManifest->pathRelModule);
+    std::filesystem::path pathModule = std::filesystem::u8path(static_cast<std::string>(optManifest->ssModulePath));
+    auto ssManifest = GetAppConfig().FindInstalledModuleManifest(pathModule);
     if (ssManifest.empty()) return nullptr;
     lock.unlock();
 
     // Load the module
-    return GetModule(ContextLoad(optManifest->pathRelModule, ssManifest));
+    return GetModule(ContextLoad(pathModule, ssManifest));
 }
 
 std::shared_ptr<CModuleInst> CModuleControl::GetModule(sdv::core::TModuleID tModuleID) const
@@ -281,28 +301,84 @@ void CModuleControl::ResetConfigBaseline()
     m_setConfigModules.clear();
 }
 
-std::string CModuleControl::SaveConfig(const std::set<std::filesystem::path>& rsetIgnoreModule)
+sdv::core::EConfigProcessResult CModuleControl::LoadModulesFromConfig(const CAppConfigFile& rconfig, bool bAllowPartialLoad)
+{
+    // TODO EVE: Extract the parameters from the configuration and store them at the class info.
+
+    switch (GetAppSettings().GetContextType())
+    {
+    case sdv::app::EAppContext::main:
+    case sdv::app::EAppContext::isolated:
+    case sdv::app::EAppContext::maintenance:
+        return sdv::core::EConfigProcessResult::successful; // Do not load anything
+    default:
+        break;
+    }
+
+    // First load the modules in the module list
+    auto vecModules = rconfig.GetModuleList();
+    size_t nSuccess = 0, nFail = 0;
+    for (const auto& rsModule : vecModules)
+    {
+        sdv::core::TModuleID tModuleID = Load(rsModule.pathModule.generic_u8string());
+        if (tModuleID)
+            ++nSuccess;
+        else
+            ++nFail;
+    }
+
+    // Load all the modules from the class list
+    auto vecClasses = rconfig.GetClassList();
+    for (const auto& rsClass : vecClasses)
+    {
+        if (rsClass.ssModulePath.empty()) continue;
+        sdv::core::TModuleID tModuleID = Load(rsClass.ssModulePath);
+        if (tModuleID)
+            ++nSuccess;
+        else
+            ++nFail;
+    }
+
+    // Load all the modules from the component list
+    auto vecComponents = rconfig.GetComponentList();
+    for (const auto& rsComponent : vecComponents)
+    {
+        if (rsComponent.pathModule.empty()) continue;
+        sdv::core::TModuleID tModuleID = Load(rsComponent.pathModule.generic_u8string());
+        if (tModuleID)
+            ++nSuccess;
+        else
+            ++nFail;
+    }
+
+    if (!bAllowPartialLoad && nFail) return sdv::core::EConfigProcessResult::failed;
+    if (!nFail) return sdv::core::EConfigProcessResult::successful;
+    if (nSuccess) return sdv::core::EConfigProcessResult::partially_successful;
+    return sdv::core::EConfigProcessResult::failed;
+}
+
+std::string CModuleControl::SaveConfig(const std::set<std::filesystem::path>& /*rsetIgnoreModule*/)
 {
     std::stringstream sstream;
-    std::unique_lock<std::recursive_mutex> lock(m_mtxModules);
+    //std::unique_lock<std::recursive_mutex> lock(m_mtxModules);
 
-    // Add all the loaded modules
-    for (const std::shared_ptr<CModuleInst>& rptrModule : m_lstModules)
-    {
-        if (m_setConfigModules.find(rptrModule->GetModuleID()) != m_setConfigModules.end() &&
-            rsetIgnoreModule.find(rptrModule->GetModuleConfigPath()) != rsetIgnoreModule.end())
-        {
-            sstream << std::endl;
-            sstream << "[[Module]]" << std::endl;
-            sstream << "Path = \"" << rptrModule->GetModuleConfigPath().generic_u8string() << "\"" << std::endl;
-        }
-    }
+    //// Add all the loaded modules
+    //for (const std::shared_ptr<CModuleInst>& rptrModule : m_lstModules)
+    //{
+    //    if (m_setConfigModules.find(rptrModule->GetModuleID()) != m_setConfigModules.end() &&
+    //        rsetIgnoreModule.find(rptrModule->GetModuleConfigPath()) != rsetIgnoreModule.end())
+    //    {
+    //        sstream << std::endl;
+    //        sstream << "[[Module]]" << std::endl;
+    //        sstream << "Path = \"" << rptrModule->GetModuleConfigPath().generic_u8string() << "\"" << std::endl;
+    //    }
+    //}
     return sstream.str();
 }
 
 sdv::core::TModuleID CModuleControl::ContextLoad(const std::filesystem::path& rpathModule, const std::string& rssManifest)
 {
-    if (GetAppControl().IsMaintenanceApplication()) return 0;   // Not allowed
+    if (GetAppSettings().IsMaintenanceApplication()) return 0;   // Not allowed
 
     // Run through the manifest and check for complex services, applications and utilities.
     // TODO EVE: Temporary suppression of cppcheck warning.
@@ -357,7 +433,6 @@ bool CModuleControl::ContextUnload(sdv::core::TModuleID tModuleID, bool bForce)
             return ptrModule && ptrModule->GetModuleID() == tModuleID;
         });
     if (itModule == m_lstModules.end()) return true; // Cannot find the module to unload. This is not an error!
-    m_setConfigModules.erase(tModuleID);        // Remove from config if part of it.
 
     // Check whether it is possible to unload.
     bool bSuccess = (*itModule)->Unload(bForce);
@@ -395,17 +470,8 @@ void CModuleControl::AddCurrentPath()
     if (pathExeDir != pathCoreDir) m_lstSearchPaths.push_back(pathExeDir);
 }
 
-#ifndef DO_NOT_INCLUDE_IN_UNIT_TEST
-
-CModuleControl& CModuleControlService::GetModuleControl()
-{
-    return ::GetModuleControl();
-}
-
 bool CModuleControlService::EnableModuleControlAccess()
 {
-    return GetAppControl().IsStandaloneApplication() ||
-        GetAppControl().IsEssentialApplication();
+    return GetAppSettings().IsStandaloneApplication() ||
+        GetAppSettings().IsEssentialApplication();
 }
-
-#endif

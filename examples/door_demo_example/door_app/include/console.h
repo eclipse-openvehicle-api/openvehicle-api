@@ -1,3 +1,13 @@
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ ********************************************************************************/
+ 
 #ifndef CONSOLE_OUTPUT_H
 #define CONSOLE_OUTPUT_H
 
@@ -12,29 +22,30 @@
 #include "signal_names.h"
 #include <fcntl.h>
 #include <atomic>
-#include "../interfaces/vss_vehiclechassisdooraxle01left_vd_rx.h"
-#include "../interfaces/vss_vehiclechassisdooraxle01left_bs_rx.h"
-#include "../interfaces/vss_vehiclechassisdooraxle01right_bs_rx.h"
-#include "../interfaces/vss_vehiclechassisdooraxle02left_bs_rx.h"
-#include "../interfaces/vss_vehiclechassisdooraxle02right_bs_rx.h"
+
+#include "../../generated/vss_files/vss_vehiclebodydooraxle_01left_vd_rx.h"
+#include "../../generated/vss_files/vss_vehiclebodydooraxle_01left_bs_rx.h"
+#include "../../generated/vss_files/vss_vehiclebodydooraxle_01right_bs_rx.h"
+#include "../../generated/vss_files/vss_vehiclebodydooraxle_02left_bs_rx.h"
+#include "../../generated/vss_files/vss_vehiclebodydooraxle_02right_bs_rx.h"
 
 #ifdef __unix__
 #include <termios.h>        // Needed for tcgetattr and fcntl
 #include <unistd.h>
 #endif
 
-#include "../generated/door_service/door_ifc.h"
+#include "../../generated/door_service/door_ifc.h"
 
 /**
  * @brief Console operation class.
  * @details This class retrieves RX data from the data dispatch service, vehicle device & basic service of front left door on event change.
  * Furthermore, it shows TX value by polling the RX signals.
  */
-class CConsole : public vss::Vehicle::Chassis::Door::Axle01::LeftDevice::IVSS_WriteIsOpen_Event
-    , public vss::Vehicle::Chassis::Door::Axle01::LeftService::IVSS_SetIsOpen_Event
-    , public vss::Vehicle::Chassis::Door::Axle01::RightService::IVSS_SetIsOpen_Event
-    , public vss::Vehicle::Chassis::Door::Axle02::LeftService::IVSS_SetIsOpen_Event
-    , public vss::Vehicle::Chassis::Door::Axle02::RightService::IVSS_SetIsOpen_Event
+class CConsole : public vss::Vehicle::Body::Door::Axle::_01::LeftDevice::IVSS_WriteIsOpen_Event
+    , public vss::Vehicle::Body::Door::Axle::_01::LeftService::IVSS_SetIsOpenL1_Event
+    , public vss::Vehicle::Body::Door::Axle::_01::RightService::IVSS_SetIsOpenR1_Event
+    , public vss::Vehicle::Body::Door::Axle::_02::LeftService::IVSS_SetIsOpenL2_Event
+    , public vss::Vehicle::Body::Door::Axle::_02::RightService::IVSS_SetIsOpenR2_Event
 {
 public:
     /**

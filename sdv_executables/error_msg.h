@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef EXECUTABLES_ERROR_MSG
 #define EXECUTABLES_ERROR_MSG
 
@@ -87,17 +100,25 @@ MAKE_ERROR_MSG(-1013, CMDLN_SOURCE_FILE_MISSING, "No source file specified.", "T
 MAKE_ERROR_MSG(-1014, CMDLN_TOO_MANY_SOURCE_FILES, "Too many source files were specified.", "Too many source files were specified at the command line. Only one file is supported at the time.")
 MAKE_ERROR_MSG(-1015, CMDLN_INCOMPATIBLE_ARGUMENTS, "Incompatible arguments were supplied, not fitting the command.", "Some arguments cannot be combined with the command on the command line.")
 MAKE_ERROR_MSG(-1016, CMDLN_MISSING_SHOW_COMMAND, "Missing show command.", "The command SHOW was supplied on the command line, but not what to show.")
-MAKE_ERROR_MSG(-1017, CMDLN_INVALID_CONFIG_STRING, "The configuration string is invalid.", "The configuration string should consist of path (only for local) followed by +component,component,....")
-MAKE_ERROR_MSG(-1018, SAVE_INSTALL_MANIFEST_ERROR, "Failed to save the installation manifest.", "Saving the installation manifest returned with an error.")
-MAKE_ERROR_MSG(-1019, SAVE_SETTINGS_FILE_ERROR, "Failed to save application settings file.", "Saving the application settings file returned with an error.")
-MAKE_ERROR_MSG(-1020, SAVE_CONFIG_FILE_ERROR, "Failed to save the config file.", "Saving the configuration file returned with an error.")
-MAKE_ERROR_MSG(-1021, CANNOT_REMOVE_INSTALL_DIR, "Cannot remove existing installation directory.", "Failed to remove an existing installation directory.")
-MAKE_ERROR_MSG(-1022, CREATE_INSTALL_DIR_ERROR, "Cannot create installation directory.", "Failed to create the installation directory.")
-MAKE_ERROR_MSG(-1023, CREATE_TARGET_DIR_ERROR, "Cannot create target root directory.", "Failed to create the target root directory.")
-MAKE_ERROR_MSG(-1024, CREATE_CONFIG_DIR_ERROR, "Cannot create config target directory.", "Failed to create the config target directory.")
-MAKE_ERROR_MSG(-1026, NO_SOURCE_FILES, "No source files were found.", "No source files were found to add to the package.")
-MAKE_ERROR_MSG(-1027, PACKAGE_CREATION_ERROR, "A compose package error has occurred.", "An error has occurred during the package creation.")
-MAKE_ERROR_MSG(-1028, PACKAGE_READ_ERROR, "A read package error has occurred.", "An error has occurred while reading the package.")
+MAKE_ERROR_MSG(-1017, CMDLN_INVALID_CONFIG_STRING, "The configuration string is invalid.", "The configuration string should consist of path (only for local) followed by '+component,component,...'.")
+MAKE_ERROR_MSG(-1018, CMDLN_INVALID_PARAM_STRING, "The configuration parameter string is invalid or could not be parsed.", "The configuration string should consist of an component, a colon separator ':' followed by multiple parameters 'param1=value1,param2=value2,...'.")
+MAKE_ERROR_MSG(-1019, CMDLN_INVALID_PARAM_FILE, "The configuration parameter TOML file could not be read.", "The configuration parameter TOML file contains errors or cannot be read.")
+MAKE_ERROR_MSG(-1020, CMDLN_TOO_MANY_CONFIG_TARGETS, "Too many configuration targets were selected.", "Only one configuration target can be selected for configuration merging.")
+MAKE_ERROR_MSG(-1021, CMDLN_MISSING_TARGET, "No target was provided.", "Cannot continue without target.")
+MAKE_ERROR_MSG(-1030, SAVE_INSTALL_MANIFEST_ERROR, "Failed to save the installation manifest.", "Saving the installation manifest returned with an error.")
+MAKE_ERROR_MSG(-1031, SAVE_SETTINGS_FILE_ERROR, "Failed to save application settings file.", "Saving the application settings file returned with an error.")
+MAKE_ERROR_MSG(-1035, SAVE_CONFIG_FILE_ERROR, "Failed to save the config file.", "Saving the configuration file returned with an error.")
+MAKE_ERROR_MSG(-1036, PARAMETERS_CONFIG_ERROR, "No instance could be found in the configuration to assign the parameters to or no configuration was selected at the command line.", "Storing parameters inside the configuration doesn't work.")
+MAKE_ERROR_MSG(-1040, CANNOT_REMOVE_INSTALL_DIR, "Cannot remove existing installation directory.", "Failed to remove an existing installation directory.")
+MAKE_ERROR_MSG(-1041, CREATE_INSTALL_DIR_ERROR, "Cannot create installation directory.", "Failed to create the installation directory.")
+MAKE_ERROR_MSG(-1042, CREATE_TARGET_DIR_ERROR, "Cannot create target root directory.", "Failed to create the target root directory.")
+MAKE_ERROR_MSG(-1043, CREATE_CONFIG_DIR_ERROR, "Cannot create config target directory.", "Failed to create the config target directory.")
+MAKE_ERROR_MSG(-1050, NO_SOURCE_FILES, "No source files were found.", "No source files were found to add to the package.")
+MAKE_ERROR_MSG(-1055, PACKAGE_CREATION_ERROR, "A compose package error has occurred.", "An error has occurred during the package creation.")
+MAKE_ERROR_MSG(-1058, PACKAGE_READ_ERROR, "A read package error has occurred.", "An error has occurred while reading the package.")
+MAKE_ERROR_MSG(-1060, CANNOT_READ_CONFIG, "The configuration cannot be read.", "An error has occurred while reading the configuration TOML.")
+MAKE_ERROR_MSG(-1061, FAILED_UPDATING_CONFIG, "The configuration could not be updated.", "An error has occurred while updating the configuration TOML.")
+MAKE_ERROR_MSG(-1062, PARTLY_FAILED_UPDATING_CONFIG, "The configuration could only be updated.", "Could not merge all entities in the target configuration.")
 
 ////////// SDV TRACE MONITOR ERROR CODES ////////////
 MAKE_ERROR_MSG(-5500, TRACE_MON_REG_HNDLR_ERROR, "Failed to register application control handler.", "The OS returned an error during the registration of the application control handler.")

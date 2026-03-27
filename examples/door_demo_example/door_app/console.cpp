@@ -1,3 +1,13 @@
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ ********************************************************************************/
+
 #include "include/console.h"
 
 #ifdef _WIN32
@@ -131,7 +141,7 @@ bool CConsole::PrepareDataConsumers()
         }
     }
 
-    auto basicServiceL1 = sdv::core::GetObject("Vehicle.Chassis.Door.Axle01.Left_Service").GetInterface<vss::Vehicle::Chassis::Door::Axle01::LeftService::IVSS_GetIsOpen>();
+    auto basicServiceL1 = sdv::core::GetObject("Vehicle.Body.Door.Axle._01.Left_Service").GetInterface<vss::Vehicle::Body::Door::Axle::_01::LeftService::IVSS_GetIsOpenL1>();
     if (!basicServiceL1)
     {
         SDV_LOG_ERROR("Could not get interface 'LeftService::IVSS_IsOpen': [CConsole]");
@@ -142,29 +152,29 @@ bool CConsole::PrepareDataConsumers()
         /* Interface exists -> Clean the line for Console window */
         PrintText(g_sBasicServiceL1, "                                      "); 
     }
-    basicServiceL1->RegisterOnSignalChangeOfLeftDoorIsOpen01(dynamic_cast<vss::Vehicle::Chassis::Door::Axle01::LeftService::IVSS_SetIsOpen_Event*> (this));
+    basicServiceL1->RegisterOnSignalChangeOfLeftDoorIsOpen01(dynamic_cast<vss::Vehicle::Body::Door::Axle::_01::LeftService::IVSS_SetIsOpenL1_Event*> (this));
     bool value = false;
     PrintValue(g_sFrontLeftDoorIsLocked, "Front Left  Latch:", value, (value ? "locked" : "unlocked"));
 
     // all other doors are optional
-    auto basicServiceR1 = sdv::core::GetObject("Vehicle.Chassis.Door.Axle01.Right_Service").GetInterface<vss::Vehicle::Chassis::Door::Axle01::RightService::IVSS_GetIsOpen>();
+    auto basicServiceR1 = sdv::core::GetObject("Vehicle.Body.Door.Axle._01.Right_Service").GetInterface<vss::Vehicle::Body::Door::Axle::_01::RightService::IVSS_GetIsOpenR1>();
     if (basicServiceR1)
     {
-        basicServiceR1->RegisterOnSignalChangeOfRightDoorIsOpen01(dynamic_cast<vss::Vehicle::Chassis::Door::Axle01::RightService::IVSS_SetIsOpen_Event*> (this));
+        basicServiceR1->RegisterOnSignalChangeOfRightDoorIsOpen01(dynamic_cast<vss::Vehicle::Body::Door::Axle::_01::RightService::IVSS_SetIsOpenR1_Event*> (this));
         PrintValue(g_sFrontRightDoorIsLocked, "Front Right Latch:", value, (value ? "locked" : "unlocked"));
     }
 
-    auto basicServiceL2 = sdv::core::GetObject("Vehicle.Chassis.Door.Axle02.Left_Service").GetInterface<vss::Vehicle::Chassis::Door::Axle02::LeftService::IVSS_GetIsOpen>();
+    auto basicServiceL2 = sdv::core::GetObject("Vehicle.Body.Door.Axle._02.Left_Service").GetInterface<vss::Vehicle::Body::Door::Axle::_02::LeftService::IVSS_GetIsOpenL2>();
     if (basicServiceL2)
     {
-        basicServiceL2->RegisterOnSignalChangeOfLeftDoorIsOpen02(dynamic_cast<vss::Vehicle::Chassis::Door::Axle02::LeftService::IVSS_SetIsOpen_Event*> (this));
+        basicServiceL2->RegisterOnSignalChangeOfLeftDoorIsOpen02(dynamic_cast<vss::Vehicle::Body::Door::Axle::_02::LeftService::IVSS_SetIsOpenL2_Event*> (this));
         PrintValue(g_sRearLeftDoorIsLocked, "Rear  Left  Latch:", value, (value ? "locked" : "unlocked"));
     }
 
-    auto basicServiceR2 = sdv::core::GetObject("Vehicle.Chassis.Door.Axle02.Right_Service").GetInterface<vss::Vehicle::Chassis::Door::Axle02::RightService::IVSS_GetIsOpen>();
+    auto basicServiceR2 = sdv::core::GetObject("Vehicle.Body.Door.Axle._02.Right_Service").GetInterface<vss::Vehicle::Body::Door::Axle::_02::RightService::IVSS_GetIsOpenR2>();
     if (basicServiceR2)
     {
-        basicServiceR2->RegisterOnSignalChangeOfRightDoorIsOpen02(dynamic_cast<vss::Vehicle::Chassis::Door::Axle02::RightService::IVSS_SetIsOpen_Event*> (this));
+        basicServiceR2->RegisterOnSignalChangeOfRightDoorIsOpen02(dynamic_cast<vss::Vehicle::Body::Door::Axle::_02::RightService::IVSS_SetIsOpenR2_Event*> (this));
         PrintValue(g_sRearRightDoorIsLocked, "Rear  Right Latch:", value, (value ? "locked" : "unlocked"));
     }
 
@@ -196,25 +206,26 @@ void CConsole::ResetSignals()
     SetCursorPos(g_sCursor);
 
     // Registrate for the vehicle device & basic service of the front left door. Front left door mzust exist, the others are optional
-    auto vehicleDevice = sdv::core::GetObject("Vehicle.Chassis.Door.Axle01.Left_Device").GetInterface<vss::Vehicle::Chassis::Door::Axle01::LeftDevice::IVSS_IsOpen>();
+    auto vehicleDevice =
+        sdv::core::GetObject("Vehicle.Body.Door.Axle._01.Left_Device").GetInterface < vss::Vehicle::Body::Door::Axle::_01 ::LeftDevice::IVSS_IsOpen > ();
     if (vehicleDevice)
-        vehicleDevice->UnregisterIsOpenEvent(dynamic_cast<vss::Vehicle::Chassis::Door::Axle01::LeftDevice::IVSS_WriteIsOpen_Event*> (this));
+        vehicleDevice->UnregisterIsOpenEvent(dynamic_cast<vss::Vehicle::Body::Door::Axle::_01::LeftDevice::IVSS_WriteIsOpen_Event*> (this));
 
-    auto basicServiceL1 = sdv::core::GetObject("Vehicle.Chassis.Door.Axle01.Left_Service").GetInterface<vss::Vehicle::Chassis::Door::Axle01::LeftService::IVSS_GetIsOpen>();
+    auto basicServiceL1 = sdv::core::GetObject("Vehicle.Body.Door.Axle._01.Left_Service").GetInterface<vss::Vehicle::Body::Door::Axle::_01::LeftService::IVSS_GetIsOpenL1>();
     if (basicServiceL1)
-        basicServiceL1->UnregisterOnSignalChangeOfLeftDoorIsOpen01(dynamic_cast<vss::Vehicle::Chassis::Door::Axle01::LeftService::IVSS_SetIsOpen_Event*> (this));
+        basicServiceL1->UnregisterOnSignalChangeOfLeftDoorIsOpen01(dynamic_cast<vss::Vehicle::Body::Door::Axle::_01::LeftService::IVSS_SetIsOpenL1_Event*> (this));
 
-    auto basicServiceR1 = sdv::core::GetObject("Vehicle.Chassis.Door.Axle01.Right_Service").GetInterface<vss::Vehicle::Chassis::Door::Axle01::RightService::IVSS_GetIsOpen>();
+    auto basicServiceR1 = sdv::core::GetObject("Vehicle.Body.Door.Axle._01.Right_Service").GetInterface<vss::Vehicle::Body::Door::Axle::_01::RightService::IVSS_GetIsOpenR1>();
     if (basicServiceR1)
-        basicServiceR1->UnregisterOnSignalChangeOfRightDoorIsOpen01(dynamic_cast<vss::Vehicle::Chassis::Door::Axle01::RightService::IVSS_SetIsOpen_Event*> (this));
+        basicServiceR1->UnregisterOnSignalChangeOfRightDoorIsOpen01(dynamic_cast<vss::Vehicle::Body::Door::Axle::_01::RightService::IVSS_SetIsOpenR1_Event*> (this));
 
-    auto basicServiceL2 = sdv::core::GetObject("Vehicle.Chassis.Door.Axle02.Left_Service").GetInterface<vss::Vehicle::Chassis::Door::Axle02::LeftService::IVSS_GetIsOpen>();
+    auto basicServiceL2 = sdv::core::GetObject("Vehicle.Body.Door.Axle._02.Left_Service").GetInterface<vss::Vehicle::Body::Door::Axle::_02::LeftService::IVSS_GetIsOpenL2>();
     if (basicServiceL2)
-        basicServiceL2->UnregisterOnSignalChangeOfLeftDoorIsOpen02(dynamic_cast<vss::Vehicle::Chassis::Door::Axle02::LeftService::IVSS_SetIsOpen_Event*> (this));
+        basicServiceL2->UnregisterOnSignalChangeOfLeftDoorIsOpen02(dynamic_cast<vss::Vehicle::Body::Door::Axle::_02::LeftService::IVSS_SetIsOpenL2_Event*> (this));
 
-    auto basicServiceR2 = sdv::core::GetObject("Vehicle.Chassis.Door.Axle02.Right_Service").GetInterface<vss::Vehicle::Chassis::Door::Axle02::RightService::IVSS_GetIsOpen>();
+    auto basicServiceR2 = sdv::core::GetObject("Vehicle.Body.Door.Axle._02.Right_Service").GetInterface<vss::Vehicle::Body::Door::Axle::_02::RightService::IVSS_GetIsOpenR2>();
     if (basicServiceR2)
-        basicServiceR2->UnregisterOnSignalChangeOfRightDoorIsOpen02(dynamic_cast<vss::Vehicle::Chassis::Door::Axle02::RightService::IVSS_SetIsOpen_Event*> (this));
+        basicServiceR2->UnregisterOnSignalChangeOfRightDoorIsOpen02(dynamic_cast<vss::Vehicle::Body::Door::Axle::_02::RightService::IVSS_SetIsOpenR2_Event*> (this));
 
     // Unregister the data link signalss
     if (m_SignalFrontLeftDoorIsOpen) 
@@ -327,13 +338,13 @@ bool CConsole::PrepareDataConsumersForStandAlone()
     }
 
     // Registrate for the vehicle device & basic service of the front left door. Front left door mzust exist, the others are optional
-    auto vehicleDevice = sdv::core::GetObject("Vehicle.Chassis.Door.Axle01.Left_Device").GetInterface<vss::Vehicle::Chassis::Door::Axle01::LeftDevice::IVSS_IsOpen>();
+    auto vehicleDevice = sdv::core::GetObject("Vehicle.Body.Door.Axle._01.Left_Device").GetInterface<vss::Vehicle::Body::Door::Axle::_01::LeftDevice::IVSS_IsOpen>();
     if (!vehicleDevice)
     {
         SDV_LOG_ERROR("Could not get interface 'LeftDevice::IVSS_IsOpen': [CConsole]");
         return false;
     } 
-    vehicleDevice->RegisterIsOpenEvent(dynamic_cast<vss::Vehicle::Chassis::Door::Axle01::LeftDevice::IVSS_WriteIsOpen_Event*> (this));
+    vehicleDevice->RegisterIsOpenEvent(dynamic_cast<vss::Vehicle::Body::Door::Axle::_01::LeftDevice::IVSS_WriteIsOpen_Event*> (this));
     return true;
 }
 

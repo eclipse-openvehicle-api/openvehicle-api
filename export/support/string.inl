@@ -1,9 +1,22 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef SDV_STRING_INL
 #define SDV_STRING_INL
 
 #ifndef SDV_STRING_H
-#error Do not include "string.inl" directly. Include "string.h" instead!
-#endif //!defined SDV_STRING_H
+#include "string.h"
+#endif //! defined SDV_STRING_H
 
 #include <string>
 #include <algorithm>
@@ -2926,7 +2939,7 @@ namespace sdv
     template <typename TCharType, bool bUnicode, size_t nFixedSize>
     inline std::filesystem::path MakePath(const string_base<TCharType, bUnicode, nFixedSize>& rssPath)
     {
-        std::filesystem::path path(MakeWString(rssPath).c_str());
+        std::filesystem::path path(static_cast<std::wstring>(MakeWString(rssPath)));
         return path;
     }
 

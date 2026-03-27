@@ -1,14 +1,15 @@
-/**
- * @file module_control.h
- * @author Sudipta Babu Durjoy FRD DISDS1 (mailto:sudipta.durjoy@zf.com) & Erik Verhoeven FRD DISDS1 (mailto:erik.verhoeven@zf.com)
- * @brief This file contains the implementation for loading VAPI/SDV modules and accessing the exported functions related to
- * VAPI/SDV modules on Windows and Posix
- * @version 2.0
- * @date 2024-04-03
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
  *
- * @copyright Copyright ZF Friedrichshafen AG (c) 2021-2025
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
- */
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
 
 #ifndef MODULE_CONTROL_H
 #define MODULE_CONTROL_H
@@ -21,6 +22,7 @@
 #include <set>
 #include "toml_parser/parser_toml.h"
 #include "module.h"
+#include "app_config_file.h"
 
 /**
  * @brief Module control class
@@ -34,7 +36,7 @@ public:
     /**
      * @brief Default constructor
      */
-    CModuleControl();
+    CModuleControl() = default;
 
     /**
      * @brief No copy constructor
@@ -154,6 +156,17 @@ public:
     void ResetConfigBaseline();
 
     /**
+     * @brief Load all modules from the configuration and build a component class list.
+     * @attention This function doesn't do anything when the application is not running as a local application. In that case, the
+     * function returns no failure.
+     * @remarks Already loaded modules are not loaded again. This is not seen as a failure.
+     * @param[in] rconfig Reference to the configuration file.
+     * @param[in] bAllowPartialLoad When set, allow partial loading the configuration (one or more components).
+     * @return Returns the load result.
+     */
+    sdv::core::EConfigProcessResult LoadModulesFromConfig(const CAppConfigFile& rconfig, bool bAllowPartialLoad);
+
+    /**
      * @brief Save the configuration of all modules.
      * @param[in] rsetIgnoreModule Set of modules not needing to add.
      * @return The string containing all the modules.
@@ -213,7 +226,11 @@ private:
     TConfigSet                              m_setConfigModules;     ///< Set with the modules for storing in the configuration.
 };
 
-#ifndef DO_NOT_INCLUDE_IN_UNIT_TEST
+/**
+ * @brief Return the module control.
+ * @return Reference to the module control.
+ */
+CModuleControl& GetModuleControl();
 
 /**
  * @brief Module control service
@@ -234,15 +251,9 @@ public:
     END_SDV_INTERFACE_MAP()
 
     // Object declarations
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::SystemObject)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
     DECLARE_OBJECT_CLASS_NAME("ModuleControlService")
     DECLARE_OBJECT_SINGLETON()
-
-    /**
-     * @brief Get access to the module control
-     * @return Returns the one global instance of the module control.
-     */
-    static CModuleControl& GetModuleControl();
 
     /**
      * @brief When set, the module control will be enabled.
@@ -251,9 +262,7 @@ public:
     static bool EnableModuleControlAccess();
 };
 
-DEFINE_SDV_OBJECT_NO_EXPORT(CModuleControlService)
-#endif
-
+DEFINE_SDV_OBJECT(CModuleControlService)
 
 #ifdef _WIN32
 #ifdef __GNUC__

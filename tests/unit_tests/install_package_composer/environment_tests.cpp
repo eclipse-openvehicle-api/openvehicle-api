@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifdef _WIN32
 #include <WinSock2.h>
 #include <windows.h>
@@ -532,7 +545,7 @@ TEST_F(CEnvironmentTest, INSTALL_Directories)
     std::filesystem::path pathTargetDir = GetExecDirectory() / "install_package_composer_targets";
 
     CCmdlnStr cmdlnLocalMissingTarget(std::string("INSTALL \"") + pathPackage1.generic_u8string() + "\" --local");
-    CCmdlnStr cmdlnTargetMissingLocal(std::string("INSTALL \"") + pathPackage1.generic_u8string() + "\" \"-T" + pathTargetDir.generic_u8string() + "\"");
+    CCmdlnStr cmdlnAutomaticTargetServer(std::string("INSTALL \"") + pathPackage1.generic_u8string() + "\" \"-T" + pathTargetDir.generic_u8string() + "\"");
     CCmdlnStr cmdlnAvailable(std::string("INSTALL \"") + pathPackage1.generic_u8string() + "\" --local \"-T" + pathTargetDir.generic_u8string() + "\"");
 
     CSdvPackagerEnvironment environment;
@@ -542,11 +555,11 @@ TEST_F(CEnvironmentTest, INSTALL_Directories)
     EXPECT_TRUE(environment.TargetLocation().empty());
     EXPECT_EQ(environment.Error(), CMDLN_TARGET_LOCATION_ERROR);
 
-    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnTargetMissingLocal));
+    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnAutomaticTargetServer));
     EXPECT_EQ(environment.OperatingMode(), CSdvPackagerEnvironment::EOperatingMode::install);
     EXPECT_FALSE(environment.Local());
     EXPECT_EQ(environment.TargetLocation(), pathTargetDir);
-    EXPECT_EQ(environment.Error(), CMDLN_INCOMPATIBLE_ARGUMENTS);
+    EXPECT_EQ(environment.Error(), NO_ERROR);
 
     EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnAvailable));
     EXPECT_EQ(environment.OperatingMode(), CSdvPackagerEnvironment::EOperatingMode::install);
@@ -644,29 +657,24 @@ TEST_F(CEnvironmentTest, INSTALL_LocalConfig)
         pathSrcDir.generic_u8string() + "," + pathTargetDir.generic_u8string() + "\" \"-T" + pathTargetDir.generic_u8string() + "\"");
     CCmdlnStr cmdlnConfigFileMissingLocal(std::string("INSTALL \"") + pathPackage1.generic_u8string() + "\" \"--config_file" +
         pathConfig.generic_u8string() + "\" \"-T" + pathTargetDir.generic_u8string() + "\"");
-    CCmdlnStr cmdlnConfigActivateConfigMissingLocal(std::string("INSTALL \"") + pathPackage1.generic_u8string() +
-        "\" \"--config_file" + pathConfig.generic_u8string() + "\" --activate_config \"-T" + pathTargetDir.generic_u8string() + "\"");
-    CCmdlnStr cmdlnConfigActivateConfigMissingConfig(std::string("INSTALL \"") + pathPackage1.generic_u8string() +
-        "\" --local --activate_config \"-T" + pathTargetDir.generic_u8string() + "\"");
     CCmdlnStr cmdlnAvailable(std::string("INSTALL \"") + pathPackage1.generic_u8string() + "\" \"--config_dir" +
         pathSrcDir.generic_u8string() + "," + pathTargetDir.generic_u8string() + "\" \"--config_file" +
-        pathConfig.filename().generic_u8string() + "\" --activate_config --local \"-T" + pathTargetDir.generic_u8string() + "\"");
+        pathConfig.filename().generic_u8string() + "\" --local \"-T" + pathTargetDir.generic_u8string() + "\"");
     CCmdlnStr cmdlnAvailableExtendedPlus(std::string("INSTALL \"") + pathPackage1.generic_u8string() + "\" \"--config_dir" +
         pathSrcDir.generic_u8string() + "," + pathTargetDir.generic_u8string() + "\" \"--config_file" +
-        pathConfig.filename().generic_u8string() + "+abc+def\" --activate_config --local \"-T" + pathTargetDir.generic_u8string() + "\"");
+        pathConfig.filename().generic_u8string() + "+abc+def\" --local \"-T" + pathTargetDir.generic_u8string() + "\"");
     CCmdlnStr cmdlnAvailableExtendedComma(std::string("INSTALL \"") + pathPackage1.generic_u8string() + "\" \"--config_dir" +
         pathSrcDir.generic_u8string() + "," + pathTargetDir.generic_u8string() + "\" \"--config_file" +
-        pathConfig.filename().generic_u8string() + "+abc,def\" --activate_config --local \"-T" + pathTargetDir.generic_u8string() + "\"");
+        pathConfig.filename().generic_u8string() + "+abc,def\" --local \"-T" + pathTargetDir.generic_u8string() + "\"");
 
     CSdvPackagerEnvironment environment;
-    std::vector<std::string> vecComponents;
+    CSdvPackagerEnvironment::CComponentVector vecComponents;
     EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnConfigDirMissingLocal));
     EXPECT_EQ(environment.OperatingMode(), CSdvPackagerEnvironment::EOperatingMode::install);
     EXPECT_FALSE(environment.Local());
     EXPECT_EQ(environment.LocalConfigLocations().size(), 2);
     EXPECT_TRUE(environment.LocalConfigFile(vecComponents).empty());
     EXPECT_TRUE(vecComponents.empty());
-    EXPECT_FALSE(environment.ActivateLocalConfig());
     EXPECT_EQ(environment.Error(), CMDLN_INCOMPATIBLE_ARGUMENTS);
 
     EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnConfigFileMissingLocal));
@@ -675,25 +683,6 @@ TEST_F(CEnvironmentTest, INSTALL_LocalConfig)
     EXPECT_TRUE(environment.LocalConfigLocations().empty());
     EXPECT_EQ(environment.LocalConfigFile(vecComponents), pathConfig);
     EXPECT_TRUE(vecComponents.empty());
-    EXPECT_FALSE(environment.ActivateLocalConfig());
-    EXPECT_EQ(environment.Error(), CMDLN_INCOMPATIBLE_ARGUMENTS);
-
-    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnConfigActivateConfigMissingLocal));
-    EXPECT_EQ(environment.OperatingMode(), CSdvPackagerEnvironment::EOperatingMode::install);
-    EXPECT_FALSE(environment.Local());
-    EXPECT_TRUE(environment.LocalConfigLocations().empty());
-    EXPECT_EQ(environment.LocalConfigFile(vecComponents), pathConfig);
-    EXPECT_TRUE(vecComponents.empty());
-    EXPECT_TRUE(environment.ActivateLocalConfig());
-    EXPECT_EQ(environment.Error(), CMDLN_INCOMPATIBLE_ARGUMENTS);
-
-    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnConfigActivateConfigMissingConfig));
-    EXPECT_EQ(environment.OperatingMode(), CSdvPackagerEnvironment::EOperatingMode::install);
-    EXPECT_TRUE(environment.Local());
-    EXPECT_TRUE(environment.LocalConfigLocations().empty());
-    EXPECT_TRUE(environment.LocalConfigFile(vecComponents).empty());
-    EXPECT_TRUE(vecComponents.empty());
-    EXPECT_TRUE(environment.ActivateLocalConfig());
     EXPECT_EQ(environment.Error(), CMDLN_INCOMPATIBLE_ARGUMENTS);
 
     EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnAvailable));
@@ -702,7 +691,6 @@ TEST_F(CEnvironmentTest, INSTALL_LocalConfig)
     EXPECT_EQ(environment.LocalConfigLocations().size(), 2);
     EXPECT_EQ(environment.LocalConfigFile(vecComponents), "config.toml");
     EXPECT_TRUE(vecComponents.empty());
-    EXPECT_TRUE(environment.ActivateLocalConfig());
     EXPECT_EQ(environment.Error(), NO_ERROR);
 
     EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnAvailableExtendedPlus));
@@ -711,7 +699,6 @@ TEST_F(CEnvironmentTest, INSTALL_LocalConfig)
     EXPECT_EQ(environment.LocalConfigLocations().size(), 2);
     EXPECT_EQ(environment.LocalConfigFile(vecComponents), "config.toml");
     EXPECT_EQ(vecComponents.size(), 2);
-    EXPECT_TRUE(environment.ActivateLocalConfig());
     EXPECT_EQ(environment.Error(), NO_ERROR);
 
     EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnAvailableExtendedComma));
@@ -720,7 +707,6 @@ TEST_F(CEnvironmentTest, INSTALL_LocalConfig)
     EXPECT_EQ(environment.LocalConfigLocations().size(), 2);
     EXPECT_EQ(environment.LocalConfigFile(vecComponents), "config.toml");
     EXPECT_EQ(vecComponents.size(), 2);
-    EXPECT_TRUE(environment.ActivateLocalConfig());
     EXPECT_EQ(environment.Error(), NO_ERROR);
 }
 
@@ -766,7 +752,7 @@ TEST_F(CEnvironmentTest, INSTALL_ServerConfig)
         "\"");
 
     CSdvPackagerEnvironment environment;
-    std::vector<std::string> vecComponents;
+    CSdvPackagerEnvironment::CComponentVector vecComponents;
     EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnMissing));
     EXPECT_EQ(environment.OperatingMode(), CSdvPackagerEnvironment::EOperatingMode::install);
     EXPECT_FALSE(environment.Local());
@@ -1230,7 +1216,7 @@ TEST_F(CEnvironmentTest, DIRECT_INSTALL_Directories)
     CCmdlnStr cmdlnNoSourceDir("DIRECT_INSTALL abc file1.bin");
     CCmdlnStr cmdlnAvailable(std::string("DIRECT_INSTALL abc file1.bin \"-I") + pathSrcDir.generic_u8string() + "\" ");
     CCmdlnStr cmdlnLocalMissingTarget(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() + "\" --local");
-    CCmdlnStr cmdlnTargetMissingLocal(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() + "\" \"-T" + pathTargetDir.generic_u8string() + "\"");
+    CCmdlnStr cmdlnAutomaticTargetServer(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() + "\" \"-T" + pathTargetDir.generic_u8string() + "\"");
     CCmdlnStr cmdlnLocalAvailable(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() + "\" --local \"-T" + pathTargetDir.generic_u8string() + "\"");
 
     CSdvPackagerEnvironment environment;
@@ -1255,11 +1241,11 @@ TEST_F(CEnvironmentTest, DIRECT_INSTALL_Directories)
     EXPECT_TRUE(environment.TargetLocation().empty());
     EXPECT_EQ(environment.Error(), CMDLN_TARGET_LOCATION_ERROR);
 
-    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnTargetMissingLocal));
+    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnAutomaticTargetServer));
     EXPECT_EQ(environment.OperatingMode(), CSdvPackagerEnvironment::EOperatingMode::direct_install);
     EXPECT_FALSE(environment.Local());
     EXPECT_EQ(environment.TargetLocation(), pathTargetDir);
-    EXPECT_EQ(environment.Error(), CMDLN_INCOMPATIBLE_ARGUMENTS);
+    EXPECT_EQ(environment.Error(), NO_ERROR);
 
     EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnLocalAvailable));
     EXPECT_EQ(environment.OperatingMode(), CSdvPackagerEnvironment::EOperatingMode::direct_install);
@@ -1360,29 +1346,24 @@ TEST_F(CEnvironmentTest, DIRECT_INSTALL_LocalConfig)
         pathSrcDir.generic_u8string() + "," + pathTargetDir.generic_u8string() + "\" \"-T" + pathTargetDir.generic_u8string() + "\"");
     CCmdlnStr cmdlnConfigFileMissingLocal(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() + "\" \"--config_file" +
         pathConfig.generic_u8string() + "\" \"-T" + pathTargetDir.generic_u8string() + "\"");
-    CCmdlnStr cmdlnConfigActivateConfigMissingLocal(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() +
-        "\" \"--config_file" + pathConfig.generic_u8string() + "\" --activate_config \"-T" + pathTargetDir.generic_u8string() + "\"");
-    CCmdlnStr cmdlnConfigActivateConfigMissingConfig(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() +
-        "\" --local --activate_config \"-T" + pathTargetDir.generic_u8string() + "\"");
     CCmdlnStr cmdlnAvailable(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() + "\" \"--config_dir" +
         pathSrcDir.generic_u8string() + "," + pathTargetDir.generic_u8string() + "\" \"--config_file" +
-        pathConfig.filename().generic_u8string() + "\" --activate_config --local \"-T" + pathTargetDir.generic_u8string() + "\"");
+        pathConfig.filename().generic_u8string() + "\" --local \"-T" + pathTargetDir.generic_u8string() + "\"");
     CCmdlnStr cmdlnAvailableExtendedPlus(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() + "\" \"--config_dir" +
         pathSrcDir.generic_u8string() + "," + pathTargetDir.generic_u8string() + "\" \"--config_file" +
-        pathConfig.filename().generic_u8string() + "+abc+def\" --activate_config --local \"-T" + pathTargetDir.generic_u8string() + "\"");
+        pathConfig.filename().generic_u8string() + "+abc+def\" --local \"-T" + pathTargetDir.generic_u8string() + "\"");
     CCmdlnStr cmdlnAvailableExtendedComma(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() + "\" \"--config_dir" +
         pathSrcDir.generic_u8string() + "," + pathTargetDir.generic_u8string() + "\" \"--config_file" +
-        pathConfig.filename().generic_u8string() + "+abc,def\" --activate_config --local \"-T" + pathTargetDir.generic_u8string() + "\"");
+        pathConfig.filename().generic_u8string() + "+abc,def\" --local \"-T" + pathTargetDir.generic_u8string() + "\"");
 
     CSdvPackagerEnvironment environment;
-    std::vector<std::string> vecComponents;
+    CSdvPackagerEnvironment::CComponentVector vecComponents;
     EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnConfigDirMissingLocal));
     EXPECT_EQ(environment.OperatingMode(), CSdvPackagerEnvironment::EOperatingMode::direct_install);
     EXPECT_FALSE(environment.Local());
     EXPECT_EQ(environment.LocalConfigLocations().size(), 2);
     EXPECT_TRUE(environment.LocalConfigFile(vecComponents).empty());
     EXPECT_TRUE(vecComponents.empty());
-    EXPECT_FALSE(environment.ActivateLocalConfig());
     EXPECT_EQ(environment.Error(), CMDLN_INCOMPATIBLE_ARGUMENTS);
 
     EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnConfigFileMissingLocal));
@@ -1391,25 +1372,6 @@ TEST_F(CEnvironmentTest, DIRECT_INSTALL_LocalConfig)
     EXPECT_TRUE(environment.LocalConfigLocations().empty());
     EXPECT_EQ(environment.LocalConfigFile(vecComponents), pathConfig);
     EXPECT_TRUE(vecComponents.empty());
-    EXPECT_FALSE(environment.ActivateLocalConfig());
-    EXPECT_EQ(environment.Error(), CMDLN_INCOMPATIBLE_ARGUMENTS);
-
-    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnConfigActivateConfigMissingLocal));
-    EXPECT_EQ(environment.OperatingMode(), CSdvPackagerEnvironment::EOperatingMode::direct_install);
-    EXPECT_FALSE(environment.Local());
-    EXPECT_TRUE(environment.LocalConfigLocations().empty());
-    EXPECT_EQ(environment.LocalConfigFile(vecComponents), pathConfig);
-    EXPECT_TRUE(vecComponents.empty());
-    EXPECT_TRUE(environment.ActivateLocalConfig());
-    EXPECT_EQ(environment.Error(), CMDLN_INCOMPATIBLE_ARGUMENTS);
-
-    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnConfigActivateConfigMissingConfig));
-    EXPECT_EQ(environment.OperatingMode(), CSdvPackagerEnvironment::EOperatingMode::direct_install);
-    EXPECT_TRUE(environment.Local());
-    EXPECT_TRUE(environment.LocalConfigLocations().empty());
-    EXPECT_TRUE(environment.LocalConfigFile(vecComponents).empty());
-    EXPECT_TRUE(vecComponents.empty());
-    EXPECT_TRUE(environment.ActivateLocalConfig());
     EXPECT_EQ(environment.Error(), CMDLN_INCOMPATIBLE_ARGUMENTS);
 
     EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnAvailable));
@@ -1418,7 +1380,6 @@ TEST_F(CEnvironmentTest, DIRECT_INSTALL_LocalConfig)
     EXPECT_EQ(environment.LocalConfigLocations().size(), 2);
     EXPECT_EQ(environment.LocalConfigFile(vecComponents), "config.toml");
     EXPECT_TRUE(vecComponents.empty());
-    EXPECT_TRUE(environment.ActivateLocalConfig());
     EXPECT_EQ(environment.Error(), NO_ERROR);
 
     EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnAvailableExtendedPlus));
@@ -1427,7 +1388,6 @@ TEST_F(CEnvironmentTest, DIRECT_INSTALL_LocalConfig)
     EXPECT_EQ(environment.LocalConfigLocations().size(), 2);
     EXPECT_EQ(environment.LocalConfigFile(vecComponents), "config.toml");
     EXPECT_EQ(vecComponents.size(), 2);
-    EXPECT_TRUE(environment.ActivateLocalConfig());
     EXPECT_EQ(environment.Error(), NO_ERROR);
 
     EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnAvailableExtendedComma));
@@ -1436,7 +1396,6 @@ TEST_F(CEnvironmentTest, DIRECT_INSTALL_LocalConfig)
     EXPECT_EQ(environment.LocalConfigLocations().size(), 2);
     EXPECT_EQ(environment.LocalConfigFile(vecComponents), "config.toml");
     EXPECT_EQ(vecComponents.size(), 2);
-    EXPECT_TRUE(environment.ActivateLocalConfig());
     EXPECT_EQ(environment.Error(), NO_ERROR);
 }
 
@@ -1467,7 +1426,7 @@ TEST_F(CEnvironmentTest, DIRECT_INSTALL_ServerConfig)
     CCmdlnStr cmdlnAllLocal(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() + "\" --user_config --platform_config --interface_config --abstract_config --local \"-T" + pathTargetDir.generic_u8string() + "\"");
 
     CSdvPackagerEnvironment environment;
-    std::vector<std::string> vecComponents;
+    CSdvPackagerEnvironment::CComponentVector vecComponents;
     EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnMissing));
     EXPECT_EQ(environment.OperatingMode(), CSdvPackagerEnvironment::EOperatingMode::direct_install);
     EXPECT_FALSE(environment.Local());
@@ -1716,6 +1675,270 @@ TEST_F(CEnvironmentTest, DIRECT_INSTALL_ServerConfig)
     EXPECT_EQ(environment.Error(), CMDLN_INCOMPATIBLE_ARGUMENTS);
 }
 
+TEST_F(CEnvironmentTest, DIRECT_INSTALL_ConfigParameters)
+{
+    std::filesystem::path pathSrcDir = GetExecDirectory() / "install_package_composer_sources";
+    std::filesystem::path pathSrcDir2 = GetExecDirectory() / "install_package_composer_sources" / "dummy_package";
+    std::filesystem::path pathSrcFile = pathSrcDir2 / "file1.bin";
+    std::filesystem::path pathConfig = pathSrcDir / "config.toml";
+    std::filesystem::path pathTargetDir = GetExecDirectory() / "install_package_composer_targets";
+
+    CCmdlnStr cmdlnConfigMissing(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() + "\"" +
+        " \"--parametersmy_component1:param1=10,param2=20,groupA.param3=string value\"" +
+        " \"--parametersmy_test21:param5=,groupB.param6=60\"");
+    CCmdlnStr cmdlnLocalConfig(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() + "\" \"--config_dir" +
+        pathSrcDir.generic_u8string() + "," + pathTargetDir.generic_u8string() + "\" \"--config_file" +
+        pathConfig.filename().generic_u8string() + "+my_component1+my_component2=mytest21\" --local \"-T" +
+        pathTargetDir.generic_u8string() + "\"" + " \"--parametersmy_component1:param1=10,param2=20,groupA.param3=string value\"" +
+        " \"--parametersmy_test21:param5=,groupB.param6=60\"");
+    CCmdlnStr cmdlnServerUserConfig(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() + "\" \"--user_config" +
+        "+my_component1+my_component2=mytest21\" \"-T" + pathTargetDir.generic_u8string() + "\"" +
+        " \"--parametersmy_component1:param1=10,param2=20,groupA.param3=string value\"" +
+        " \"--parametersmy_test21:param5=,groupB.param6=60\"");
+    CCmdlnStr cmdlnServerPlatformConfig(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() +
+        "\" \"--platform_config" + "+my_component1+my_component2=mytest21\" \"-T" + pathTargetDir.generic_u8string() + "\"" +
+        " \"--parametersmy_component1:param1=10,param2=20,groupA.param3=string value\"" +
+        " \"--parametersmy_test21:param5=,groupB.param6=60\"");
+    CCmdlnStr cmdlnServerInterfaceConfig(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() +
+        "\" \"--interface_config" + "+my_component1+my_component2=mytest21\" \"-T" + pathTargetDir.generic_u8string() + "\"" +
+        " \"--parametersmy_component1:param1=10,param2=20,groupA.param3=string value\"" +
+        " \"--parametersmy_test21:param5=,groupB.param6=60\"");
+    CCmdlnStr cmdlnServerAbstractConfig(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() +
+        "\" \"--abstract_config" + "+my_component1+my_component2=mytest21\" \"-T" + pathTargetDir.generic_u8string() + "\"" +
+        " \"--parametersmy_component1:param1=10,param2=20,groupA.param3=string value\"" +
+        " \"--parametersmy_test21:param5=,groupB.param6=60\"");
+
+    CSdvPackagerEnvironment environment;
+    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnConfigMissing));
+    EXPECT_EQ(environment.Error(), CMDLN_INCOMPATIBLE_ARGUMENTS);
+
+    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnLocalConfig));
+    EXPECT_EQ(environment.Error(), NO_ERROR);
+    auto vecParameters = environment.ObjectParameters("my_component1");
+    ASSERT_EQ(vecParameters.size(), 3);
+    EXPECT_EQ(vecParameters[0].first, "param1");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[0].second), 10);
+    EXPECT_EQ(vecParameters[1].first, "param2");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 20);
+    EXPECT_EQ(vecParameters[2].first, "groupA.param3");
+    EXPECT_EQ(static_cast<std::string>(vecParameters[2].second), "string value");
+    vecParameters = environment.ObjectParameters("my_test21");
+    ASSERT_EQ(vecParameters.size(), 2);
+    EXPECT_EQ(vecParameters[0].first, "param5");
+    EXPECT_TRUE(vecParameters[0].second.empty());
+    EXPECT_EQ(vecParameters[1].first, "groupB.param6");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 60);
+
+    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnServerUserConfig));
+    EXPECT_EQ(environment.Error(), NO_ERROR);
+    vecParameters = environment.ObjectParameters("my_component1");
+    ASSERT_EQ(vecParameters.size(), 3);
+    EXPECT_EQ(vecParameters[0].first, "param1");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[0].second), 10);
+    EXPECT_EQ(vecParameters[1].first, "param2");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 20);
+    EXPECT_EQ(vecParameters[2].first, "groupA.param3");
+    EXPECT_EQ(static_cast<std::string>(vecParameters[2].second), "string value");
+    vecParameters = environment.ObjectParameters("my_test21");
+    ASSERT_EQ(vecParameters.size(), 2);
+    EXPECT_EQ(vecParameters[0].first, "param5");
+    EXPECT_TRUE(vecParameters[0].second.empty());
+    EXPECT_EQ(vecParameters[1].first, "groupB.param6");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 60);
+
+    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnServerPlatformConfig));
+    EXPECT_EQ(environment.Error(), NO_ERROR);
+    vecParameters = environment.ObjectParameters("my_component1");
+    ASSERT_EQ(vecParameters.size(), 3);
+    EXPECT_EQ(vecParameters[0].first, "param1");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[0].second), 10);
+    EXPECT_EQ(vecParameters[1].first, "param2");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 20);
+    EXPECT_EQ(vecParameters[2].first, "groupA.param3");
+    EXPECT_EQ(static_cast<std::string>(vecParameters[2].second), "string value");
+    vecParameters = environment.ObjectParameters("my_test21");
+    ASSERT_EQ(vecParameters.size(), 2);
+    EXPECT_EQ(vecParameters[0].first, "param5");
+    EXPECT_TRUE(vecParameters[0].second.empty());
+    EXPECT_EQ(vecParameters[1].first, "groupB.param6");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 60);
+
+    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnServerInterfaceConfig));
+    EXPECT_EQ(environment.Error(), NO_ERROR);
+    vecParameters = environment.ObjectParameters("my_component1");
+    ASSERT_EQ(vecParameters.size(), 3);
+    EXPECT_EQ(vecParameters[0].first, "param1");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[0].second), 10);
+    EXPECT_EQ(vecParameters[1].first, "param2");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 20);
+    EXPECT_EQ(vecParameters[2].first, "groupA.param3");
+    EXPECT_EQ(static_cast<std::string>(vecParameters[2].second), "string value");
+    vecParameters = environment.ObjectParameters("my_test21");
+    ASSERT_EQ(vecParameters.size(), 2);
+    EXPECT_EQ(vecParameters[0].first, "param5");
+    EXPECT_TRUE(vecParameters[0].second.empty());
+    EXPECT_EQ(vecParameters[1].first, "groupB.param6");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 60);
+
+    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnServerAbstractConfig));
+    EXPECT_EQ(environment.Error(), NO_ERROR);
+    vecParameters = environment.ObjectParameters("my_component1");
+    ASSERT_EQ(vecParameters.size(), 3);
+    EXPECT_EQ(vecParameters[0].first, "param1");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[0].second), 10);
+    EXPECT_EQ(vecParameters[1].first, "param2");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 20);
+    EXPECT_EQ(vecParameters[2].first, "groupA.param3");
+    EXPECT_EQ(static_cast<std::string>(vecParameters[2].second), "string value");
+    vecParameters = environment.ObjectParameters("my_test21");
+    ASSERT_EQ(vecParameters.size(), 2);
+    EXPECT_EQ(vecParameters[0].first, "param5");
+    EXPECT_TRUE(vecParameters[0].second.empty());
+    EXPECT_EQ(vecParameters[1].first, "groupB.param6");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 60);
+
+    // TODO:
+    // - Check for invalid parameter string
+    // - Check for duplicate parameters (which is not an error).
+}
+
+TEST_F(CEnvironmentTest, DIRECT_INSTALL_ConfigParameterFile)
+{
+    std::filesystem::path pathSrcDir = GetExecDirectory() / "install_package_composer_sources";
+    std::filesystem::path pathSrcDir2 = GetExecDirectory() / "install_package_composer_sources" / "dummy_package";
+    std::filesystem::path pathSrcFile = pathSrcDir2 / "file1.bin";
+    std::filesystem::path pathConfig = pathSrcDir / "config.toml";
+    std::filesystem::path pathTargetDir = GetExecDirectory() / "install_package_composer_targets";
+
+    std::ofstream fstream("param_test_file.toml");
+    ASSERT_TRUE(fstream.is_open());
+    fstream << R"toml(# Parameters for my_component1
+[my_component1]
+param1 = 10
+param2 = 20
+[my_component1.groupA]     # Example with additional table for the GroupA parameters
+param3 = "string value"
+
+# Parameters for test21 (instance of my_component2)
+[my_test21]
+param5=50
+groupB.param6=60           # Grouping using inline table for GroupB parameters
+)toml";
+    fstream.close();
+
+    CCmdlnStr cmdlnConfigMissing(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() + "\"" +
+        " \"--param_fileparam_test_file.toml\"");
+    CCmdlnStr cmdlnLocalConfig(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() + "\" \"--config_dir" +
+        pathSrcDir.generic_u8string() + "," + pathTargetDir.generic_u8string() + "\" \"--config_file" +
+        pathConfig.filename().generic_u8string() + "+my_component1+my_component2=my_test21\" --local \"-T" +
+        pathTargetDir.generic_u8string() + "\"" + " \"--param_fileparam_test_file.toml\"");
+    CCmdlnStr cmdlnServerUserConfig(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() + "\" \"--user_config" +
+        "+my_component1+my_component2=my_test21\" \"-T" + pathTargetDir.generic_u8string() + "\"" +
+        " \"--param_fileparam_test_file.toml\"");
+    CCmdlnStr cmdlnServerPlatformConfig(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() +
+        "\" \"--platform_config" + "+my_component1+my_component2=my_test21\" \"-T" + pathTargetDir.generic_u8string() + "\"" +
+        " \"--param_fileparam_test_file.toml\"");
+    CCmdlnStr cmdlnServerInterfaceConfig(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() +
+        "\" \"--interface_config" + "+my_component1+my_component2=my_test21\" \"-T" + pathTargetDir.generic_u8string() + "\"" +
+        " \"--param_fileparam_test_file.toml\"");
+    CCmdlnStr cmdlnServerAbstractConfig(std::string("DIRECT_INSTALL abc \"") + pathSrcFile.generic_u8string() +
+        "\" \"--abstract_config" + "+my_component1+my_component2=my_test21\" \"-T" + pathTargetDir.generic_u8string() + "\"" +
+        " \"--param_fileparam_test_file.toml\"");
+
+    CSdvPackagerEnvironment environment;
+    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnConfigMissing));
+    EXPECT_EQ(environment.Error(), CMDLN_INCOMPATIBLE_ARGUMENTS);
+
+    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnLocalConfig));
+    EXPECT_EQ(environment.Error(), NO_ERROR);
+    auto vecParameters = environment.ObjectParameters("my_component1");
+    ASSERT_EQ(vecParameters.size(), 3);
+    EXPECT_EQ(vecParameters[0].first, "param1");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[0].second), 10);
+    EXPECT_EQ(vecParameters[1].first, "param2");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 20);
+    EXPECT_EQ(vecParameters[2].first, "groupA.param3");
+    EXPECT_EQ(static_cast<std::string>(vecParameters[2].second), "string value");
+    vecParameters = environment.ObjectParameters("my_test21");
+    ASSERT_EQ(vecParameters.size(), 2);
+    EXPECT_EQ(vecParameters[0].first, "param5");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[0].second), 50);
+    EXPECT_EQ(vecParameters[1].first, "groupB.param6");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 60);
+
+    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnServerUserConfig));
+    EXPECT_EQ(environment.Error(), NO_ERROR);
+    vecParameters = environment.ObjectParameters("my_component1");
+    ASSERT_EQ(vecParameters.size(), 3);
+    EXPECT_EQ(vecParameters[0].first, "param1");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[0].second), 10);
+    EXPECT_EQ(vecParameters[1].first, "param2");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 20);
+    EXPECT_EQ(vecParameters[2].first, "groupA.param3");
+    EXPECT_EQ(static_cast<std::string>(vecParameters[2].second), "string value");
+    vecParameters = environment.ObjectParameters("my_test21");
+    ASSERT_EQ(vecParameters.size(), 2);
+    EXPECT_EQ(vecParameters[0].first, "param5");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[0].second), 50);
+    EXPECT_EQ(vecParameters[1].first, "groupB.param6");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 60);
+
+    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnServerPlatformConfig));
+    EXPECT_EQ(environment.Error(), NO_ERROR);
+    vecParameters = environment.ObjectParameters("my_component1");
+    ASSERT_EQ(vecParameters.size(), 3);
+    EXPECT_EQ(vecParameters[0].first, "param1");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[0].second), 10);
+    EXPECT_EQ(vecParameters[1].first, "param2");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 20);
+    EXPECT_EQ(vecParameters[2].first, "groupA.param3");
+    EXPECT_EQ(static_cast<std::string>(vecParameters[2].second), "string value");
+    vecParameters = environment.ObjectParameters("my_test21");
+    ASSERT_EQ(vecParameters.size(), 2);
+    EXPECT_EQ(vecParameters[0].first, "param5");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[0].second), 50);
+    EXPECT_EQ(vecParameters[1].first, "groupB.param6");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 60);
+
+    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnServerInterfaceConfig));
+    EXPECT_EQ(environment.Error(), NO_ERROR);
+    vecParameters = environment.ObjectParameters("my_component1");
+    ASSERT_EQ(vecParameters.size(), 3);
+    EXPECT_EQ(vecParameters[0].first, "param1");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[0].second), 10);
+    EXPECT_EQ(vecParameters[1].first, "param2");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 20);
+    EXPECT_EQ(vecParameters[2].first, "groupA.param3");
+    EXPECT_EQ(static_cast<std::string>(vecParameters[2].second), "string value");
+    vecParameters = environment.ObjectParameters("my_test21");
+    ASSERT_EQ(vecParameters.size(), 2);
+    EXPECT_EQ(vecParameters[0].first, "param5");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[0].second), 50);
+    EXPECT_EQ(vecParameters[1].first, "groupB.param6");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 60);
+
+    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnServerAbstractConfig));
+    EXPECT_EQ(environment.Error(), NO_ERROR);
+    vecParameters = environment.ObjectParameters("my_component1");
+    ASSERT_EQ(vecParameters.size(), 3);
+    EXPECT_EQ(vecParameters[0].first, "param1");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[0].second), 10);
+    EXPECT_EQ(vecParameters[1].first, "param2");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 20);
+    EXPECT_EQ(vecParameters[2].first, "groupA.param3");
+    EXPECT_EQ(static_cast<std::string>(vecParameters[2].second), "string value");
+    vecParameters = environment.ObjectParameters("my_test21");
+    ASSERT_EQ(vecParameters.size(), 2);
+    EXPECT_EQ(vecParameters[0].first, "param5");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[0].second), 50);
+    EXPECT_EQ(vecParameters[1].first, "groupB.param6");
+    EXPECT_EQ(static_cast<size_t>(vecParameters[1].second), 60);
+
+    // TODO:
+    // - Check for invalid parameter string
+    // - Check for duplicate parameters (which is not an error).
+}
+
 TEST_F(CEnvironmentTest, UNINSTALL_InstallName)
 {
     CCmdlnStr cmdlnMissing("UNINSTALL");
@@ -1781,22 +2004,29 @@ TEST_F(CEnvironmentTest, UNINSTALL_Directories)
 {
     std::filesystem::path pathTargetDir = GetExecDirectory() / "install_package_composer_targets";
 
+    CCmdlnStr cmdlnServerAutomaticTarget("UNINSTALL abc");
     CCmdlnStr cmdlnLocalMissingTarget("UNINSTALL abc --local");
-    CCmdlnStr cmdlnTargetMissingLocal(std::string("UNINSTALL abc \"-T") + pathTargetDir.generic_u8string() + "\"");
+    CCmdlnStr cmdlnServerAvailable(std::string("UNINSTALL abc \"-T") + pathTargetDir.generic_u8string() + "\"");
     CCmdlnStr cmdlnAvailable(std::string("UNINSTALL abc --local \"-T") + pathTargetDir.generic_u8string() + "\"");
 
     CSdvPackagerEnvironment environment;
+    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnServerAutomaticTarget));
+    EXPECT_EQ(environment.OperatingMode(), CSdvPackagerEnvironment::EOperatingMode::uninstall);
+    EXPECT_FALSE(environment.Local());
+    EXPECT_FALSE(environment.TargetLocation().empty());
+    EXPECT_EQ(environment.Error(), NO_ERROR);
+
     EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnLocalMissingTarget));
     EXPECT_EQ(environment.OperatingMode(), CSdvPackagerEnvironment::EOperatingMode::uninstall);
     EXPECT_TRUE(environment.Local());
     EXPECT_TRUE(environment.TargetLocation().empty());
     EXPECT_EQ(environment.Error(), CMDLN_TARGET_LOCATION_ERROR);
 
-    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnTargetMissingLocal));
+    EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnServerAvailable));
     EXPECT_EQ(environment.OperatingMode(), CSdvPackagerEnvironment::EOperatingMode::uninstall);
     EXPECT_FALSE(environment.Local());
     EXPECT_EQ(environment.TargetLocation(), pathTargetDir);
-    EXPECT_EQ(environment.Error(), CMDLN_INCOMPATIBLE_ARGUMENTS);
+    EXPECT_EQ(environment.Error(), NO_ERROR);
 
     EXPECT_NO_THROW(environment = CSdvPackagerEnvironment(cmdlnAvailable));
     EXPECT_EQ(environment.OperatingMode(), CSdvPackagerEnvironment::EOperatingMode::uninstall);

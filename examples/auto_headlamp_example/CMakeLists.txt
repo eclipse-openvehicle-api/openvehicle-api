@@ -1,3 +1,13 @@
+#*******************************************************************************
+# Copyright (c) 2025-2026 ZF Friedrichshafen AG
+#
+# This program and the accompanying materials are made available under the 
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0 
+#*******************************************************************************
+
 project(AutoHeadlight)
 
 # Use new policy for project version settings and default warning level
@@ -128,7 +138,7 @@ file (COPY ${PROJECT_SOURCE_DIR}/config/autoheadlight_cs.toml DESTINATION ${CMAK
 #
 # What cannot be created automatically is the method OpenAPILoad(const std::string& resources) in file model.cpp
 # The method must load all required components
-# Therfore here the file is copied and overwritten the auto generated file
+# Therefore here the file is copied and overwritten the auto generated file
 #
 # The required toml files need to be copied to the folder:
 # generated/fmu_DemoExampleFMU/DemoExampleFMU/resources

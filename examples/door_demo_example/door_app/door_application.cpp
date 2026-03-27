@@ -1,3 +1,13 @@
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ ********************************************************************************/
+
 #include "../door_app/include/door_application.h"
 #include "../door_app/include/signal_names.h"
 
@@ -126,7 +136,7 @@ bool CDoorControl::Initialize(const uint32_t numberOfDoors)
         }
     }
     
-    bResult &= LoadConfigFile("Load door service (complex service): ", "door_comple_service.toml");
+    bResult &= LoadConfigFile("Load door service (complex service): ", "door_complex_service.toml");
 
     if (!bResult) 
     {

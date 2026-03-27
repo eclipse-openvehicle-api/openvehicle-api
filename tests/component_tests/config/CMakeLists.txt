@@ -1,12 +1,69 @@
-# Define project
-project(ConfigTests VERSION 1.0 LANGUAGES CXX)
+#*******************************************************************************
+# Copyright (c) 2025-2026 ZF Friedrichshafen AG
+#
+# This program and the accompanying materials are made available under the 
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0 
+#
+# Contributors:
+#   Erik Verhoeven - initial API and implementation
+#*******************************************************************************
 
-# Define target
-add_executable(ComponentTest_Config config_tests.cpp)
+# Define project
+project (ConfigTests VERSION 1.0 LANGUAGES CXX)
+
+# Get CRC++ from github
+include(FetchContent)
+FetchContent_Declare(
+  CRCpp
+  GIT_REPOSITORY                https://github.com/d-bahr/CRCpp
+  GIT_TAG                       release-1.2.0.0
+)
+FetchContent_MakeAvailable(CRCpp)
+
+# Add include directories
+include_directories(../export ${CRCpp_SOURCE_DIR})
+
+## build module example for the test
+#add_library(ComponentTest_ConfigInstall_Module SHARED
+#    "test_component.cpp"
+#    )
+#
+#if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+#    target_link_options(ComponentTest_ConfigInstall_Module PUBLIC -fPIC)
+#    target_link_libraries(ComponentTest_ConfigInstall_Module GTest::GTest)
+#    if (WIN32)
+#        target_link_libraries(ComponentTest_ConfigInstall_Module Ws2_32 Winmm Rpcrt4.lib)
+#    else()
+#        target_link_libraries(ComponentTest_ConfigInstall_Module ${CMAKE_DL_LIBS} rt)
+#    endif()
+#else()
+#    target_link_libraries(ComponentTest_ConfigInstall_Module GTest::GTest Rpcrt4.lib)
+#endif()
+#
+#set_target_properties(ComponentTest_ConfigInstall_Module PROPERTIES PREFIX "")
+#set_target_properties(ComponentTest_ConfigInstall_Module PROPERTIES SUFFIX ".sdv")
+#
+## Execute the sdv_packager utility to install the component in instance #2006.
+#add_custom_target(ComponentTest_ConfigInstall_install_manifest
+## TODO EVE
+##    COMMAND "$<TARGET_FILE:sdv_packager>" -O. --instance2006 -NComponentTest_ConfigInstall "$<TARGET_FILE:ComponentTest_ConfigInstall_Module>" "-I$<TARGET_FILE_DIR:ComponentTest_ConfigInstall_Module>" --settings --create_configtest.toml
+#    COMMAND "$<TARGET_FILE:sdv_packager>" DIRECT_INSTALL ComponentTest_Config --instance2006 "$<TARGET_FILE:ComponentTest_ConfigInstall_Module>" "-I$<TARGET_FILE_DIR:ComponentTest_ConfigInstall_Module>" --overwrite --user_config
+#    DEPENDS ComponentTest_ConfigInstall_Module
+#    WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+#)
+
+# Module control test executable
+add_executable(ComponentTest_Config
+    "main.cpp"
+    "config_tests.cpp"
+     )
 
 target_link_libraries(ComponentTest_Config ${CMAKE_DL_LIBS} GTest::GTest)
 
-# Add the test
+# Add the Data Dispatch Service unittest
 add_test(NAME ComponentTest_Config COMMAND ComponentTest_Config WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 
 # Execute the test
@@ -17,3 +74,5 @@ add_custom_command(TARGET ComponentTest_Config POST_BUILD
 
 # Build dependencies
 add_dependencies(ComponentTest_Config dependency_sdv_components)
+add_dependencies(ComponentTest_Config ComponentTest_Repository)    # Use the repository components for this test
+

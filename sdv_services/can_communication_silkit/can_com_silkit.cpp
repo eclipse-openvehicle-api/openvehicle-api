@@ -1,80 +1,47 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Sudipta Durjoy - initial API and implementation
+ *   Thomas Pfleiderer - refactored and finalized 
+ ********************************************************************************/
+
 #include "can_com_silkit.h"
 #include <support/toml.h>
 #include <bitset>
 
-void CCANSilKit::Initialize(const sdv::u8string& rssObjectConfig)
+bool CCANSilKit::OnInitialize()
 {
-    std::string silKitNetwork = "";
-    std::string silKitJSONConfigContent = "";
-    std::string silKitRegistryUri = "";
-    try
-    {
-        sdv::toml::CTOMLParser config(rssObjectConfig.c_str());
-        sdv::toml::CNode nodeSilKitConfig = config.GetDirect("SilKitConfig");
-        if (nodeSilKitConfig.GetType() == sdv::toml::ENodeType::node_string)
-        {
-            silKitJSONConfigContent = static_cast<std::string>(nodeSilKitConfig.GetValue());
-        }
-
-        sdv::toml::CNode nodeSilKitParticipant = config.GetDirect("SilKitParticipantName");
-        if (nodeSilKitParticipant.GetType() == sdv::toml::ENodeType::node_string)
-        {
-            m_SilKitParticipantName = static_cast<std::string>(nodeSilKitParticipant.GetValue());
-        }
-
-        sdv::toml::CNode nodeSilKitNetwork = config.GetDirect("CanSilKitNetwork");
-        if (nodeSilKitNetwork.GetType() == sdv::toml::ENodeType::node_string)
-        {
-            silKitNetwork = static_cast<std::string>(nodeSilKitNetwork.GetValue());
-        }
-
-        sdv::toml::CNode nodeSilKitRegistryURI = config.GetDirect("RegistryURI");
-        if (nodeSilKitRegistryURI.GetType() == sdv::toml::ENodeType::node_string)
-        {
-            silKitRegistryUri = static_cast<std::string>(nodeSilKitRegistryURI.GetValue());
-        }
-
-        sdv::toml::CNode nodeSilKitSyncMode = config.GetDirect("SyncMode");
-        if (nodeSilKitSyncMode.GetType() == sdv::toml::ENodeType::node_boolean)
-        {
-            m_SilKitIsSynchronousMode = static_cast<bool>(nodeSilKitSyncMode.GetValue());
-        }
-    }
-    catch (const sdv::toml::XTOMLParseException& e)
-    {
-        SDV_LOG_ERROR("Configuration could not be read: ", e.what());
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
-    }
-
     m_TimerSimulationStep = sdv::core::GetObject<sdv::core::ITimerSimulationStep>("SimulationTaskTimerService");
 
-    if (!ValidateConfiguration(silKitJSONConfigContent, silKitNetwork, silKitRegistryUri))
+    if (!ValidateConfiguration())
     {
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
 
-    if (!CreateSilKitConnection(silKitJSONConfigContent, silKitNetwork, silKitRegistryUri))
+    if (!CreateSilKitConnection())
     {
         SDV_LOG_ERROR("Error createing SilKit connection, probably invalid JSON content");
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
-
-    // Update status only if initialization was successful
-    m_eStatus = sdv::EObjectStatus::initialized;
+    return true;
 }
 
-bool CCANSilKit::ValidateConfiguration(const std::string& ssSilKitJSONConfigContent, const std::string& ssSilKitNetwork, const std::string& ssSilKitRegistryUri)
+bool CCANSilKit::ValidateConfiguration()
 {
     bool success = true;
-    SDV_LOG_INFO("SilKit connecting to network: ", ssSilKitNetwork.c_str());
-    SDV_LOG_INFO("SilKit registry URI: ", ssSilKitRegistryUri.c_str());
+    SDV_LOG_INFO("SilKit connecting to network: ", m_SilKitNetwork.c_str());
+    SDV_LOG_INFO("SilKit registry URI: ", m_SilKitRegistryUri.c_str());
     m_SilKitIsSynchronousMode ? SDV_LOG_INFO("SilKit is running in synchronous mode.") : SDV_LOG_INFO("SilKit is running in asynchronous mode.");
     m_TimerSimulationStep ? SDV_LOG_WARNING("Run simulation with simulation timer service.") : SDV_LOG_WARNING("Run simulation with real time service.");
 
-    if (ssSilKitJSONConfigContent.empty())
+    if (m_SilKitJSONConfigContent.empty())
     {
         SDV_LOG_ERROR("Error reading config file content for SilKit, missing 'SilKitConfig'.");
         success = false;
@@ -84,23 +51,23 @@ bool CCANSilKit::ValidateConfiguration(const std::string& ssSilKitJSONConfigCont
         SDV_LOG_ERROR("SilKit CAN participant is not found in configuration, missing 'SilKitParticipantName'.");
         success = false;
     }
-    if (ssSilKitNetwork.empty())
+    if (m_SilKitNetwork.empty())
     {
         SDV_LOG_ERROR("Error reading SilKit network name, missing 'CanSilKitNetwork'.");
         success = false;
     }
     else
     {
-        SDV_LOG_INFO("SilKit connecting to network: ", ssSilKitNetwork.c_str());
+        SDV_LOG_INFO("SilKit connecting to network: ", m_SilKitNetwork.c_str());
     }
-    if (ssSilKitRegistryUri.empty())
+    if (m_SilKitRegistryUri.empty())
     {
         SDV_LOG_ERROR("Error reading SilKit registry URI, missing 'RegistryURI'.");
         success = false;
     }
     else
     {
-        SDV_LOG_INFO("SilKit registry URI: ", ssSilKitRegistryUri.c_str());
+        SDV_LOG_INFO("SilKit registry URI: ", m_SilKitRegistryUri.c_str());
     }
 
     if (!m_TimerSimulationStep)
@@ -120,67 +87,40 @@ bool CCANSilKit::ValidateConfiguration(const std::string& ssSilKitJSONConfigCont
     return success;
 }
 
-sdv::EObjectStatus CCANSilKit::GetStatus() const
+void CCANSilKit::OnShutdown()
 {
-    return m_eStatus;
-}
-
-void CCANSilKit::SetOperationMode(sdv::EOperationMode eMode)
-{
-    switch (eMode)
-    {
-    case sdv::EOperationMode::configuring:
-        if (m_eStatus == sdv::EObjectStatus::running || m_eStatus == sdv::EObjectStatus::initialized)
-            m_eStatus = sdv::EObjectStatus::configuring;
-        break;
-    case sdv::EOperationMode::running:
-        if (m_eStatus == sdv::EObjectStatus::configuring || m_eStatus == sdv::EObjectStatus::initialized)
-            m_eStatus = sdv::EObjectStatus::running;
-        break;
-    default:
-        break;
-    }
-}
-
-void CCANSilKit::Shutdown()
-{
-    SDV_LOG_INFO("Initiating shutdown process...");
-
-    m_eStatus = sdv::EObjectStatus::shutdown_in_progress;
-
     try
     {
         if (m_SilKitLifeCycleService)
         {
             SDV_LOG_INFO("Stopping SilKit Lifecycle Service...");
             m_SilKitLifeCycleService->Stop("Shutdown requested.");
-            m_SilKitLifeCycleService = nullptr;
         }
 
         if (m_SilKitCanController)
         {
             SDV_LOG_INFO("Stopping SilKit CAN Controller...");
             m_SilKitCanController->Stop();
-            m_SilKitCanController = nullptr;
         }
 
         if (m_SilKitParticipant)
         {
             SDV_LOG_INFO("Resetting SilKit Participant...");
             m_SilKitParticipant.reset();
-            m_SilKitParticipant = nullptr;
         }
     }
     catch (const SilKit::SilKitError& e)
     {
         SDV_LOG_ERROR("SilKit exception occurred during shutdown: ", e.what());
-        m_eStatus = sdv::EObjectStatus::runtime_error;
     }
     catch (const std::exception& e)
     {
         SDV_LOG_ERROR("Unknown exception occurred during shutdown: ", e.what());
-        m_eStatus = sdv::EObjectStatus::runtime_error;
     }
+
+    m_SilKitLifeCycleService = nullptr;
+    m_SilKitCanController = nullptr;
+    m_SilKitParticipant = nullptr;
 
     std::lock_guard<std::mutex> lock(m_QueueMutex);
     while (!m_MessageQueue.empty())
@@ -191,12 +131,13 @@ void CCANSilKit::Shutdown()
 
 void CCANSilKit::RegisterReceiver(/*in*/ sdv::can::IReceive* pReceiver)
 {
-    if (m_eStatus != sdv::EObjectStatus::configuring) 
+    if (GetObjectState() != sdv::EObjectState::configuring) 
         return;
 
     if (!pReceiver)
     {
         SDV_LOG_ERROR("No CAN receiver available.");
+        SetObjectIntoConfigErrorState();
         return;
     }
 
@@ -234,7 +175,7 @@ void CCANSilKit::UnregisterReceiver(/*in*/ sdv::can::IReceive* pReceiver)
 sdv::sequence<sdv::u8string> CCANSilKit::GetInterfaces() const
 {
     sdv::sequence<sdv::u8string> seqIfcNames;
-    if (m_eStatus != sdv::EObjectStatus::running) return seqIfcNames;
+    if (GetObjectState() != sdv::EObjectState::running) return seqIfcNames;
 
     seqIfcNames.push_back(m_SilKitParticipantName);
 
@@ -249,6 +190,7 @@ std::shared_ptr<SilKit::Config::IParticipantConfiguration> CCANSilKit::GetSilKit
     if (silKitParticipantCconfig == nullptr)
     {
         SDV_LOG_ERROR("Error parsing the SilKit config content: ", ssSilKitJSONConfigContent.c_str());
+        SetObjectIntoConfigErrorState();
         return nullptr;
     }
 
@@ -261,6 +203,7 @@ std::unique_ptr<SilKit::IParticipant> CCANSilKit::CreateParticipantFromJSONConfi
     if (silKitParticipantConfig == nullptr)
     {
         SDV_LOG_ERROR("The SilKit configuaration file could not be opened.");
+        SetObjectIntoConfigErrorState();
         return nullptr;
     }
 
@@ -322,23 +265,24 @@ bool CCANSilKit::SetHandlerFunctions(SilKit::Services::Orchestration::ILifecycle
     try
     {
         // Set a SilKit Stop Handler
-        silKitLifeCycleService->SetStopHandler([this]()
+        silKitLifeCycleService->SetStopHandler(
+            [this]()
             {
-                m_eStatus = sdv::EObjectStatus::runtime_error;
+                SetObjectIntoRuntimeErrorState();
                 SDV_LOG_INFO("SilKit StopHandlerhandler called");
             });
 
         // Set a Shutdown Handler
         silKitLifeCycleService->SetShutdownHandler([this]()
             {
-                m_eStatus = sdv::EObjectStatus::runtime_error;
+                SetObjectIntoRuntimeErrorState();
                 SDV_LOG_INFO("SilKit Shutdown handler called");
             });
 
         // Set a Shutdown Handler
         silKitLifeCycleService->SetAbortHandler([this](auto /*participantState*/)
             {
-                m_eStatus = sdv::EObjectStatus::runtime_error;
+                SetObjectIntoRuntimeErrorState();
                 SDV_LOG_INFO("SilKit Abort handler called");
             });
 
@@ -363,18 +307,18 @@ bool CCANSilKit::SetHandlerFunctions(SilKit::Services::Orchestration::ILifecycle
     return true;
 }
 
-bool CCANSilKit::CreateSilKitConnection(const std::string& ssSilKitJSONConfigContent, const std::string& ssSilKitNetwork, const std::string& ssSilKitRegistryUri)
+bool CCANSilKit::CreateSilKitConnection()
 {
     try
     {
-        m_SilKitParticipant = CreateParticipantFromJSONConfig(ssSilKitJSONConfigContent, ssSilKitRegistryUri);
+        m_SilKitParticipant = CreateParticipantFromJSONConfig(m_SilKitJSONConfigContent, m_SilKitRegistryUri);
         if (m_SilKitParticipant == nullptr)
         {
             SDV_LOG_ERROR("SilKit COM adapter is not available.");
             return false;
         } 
 
-        m_SilKitCanController = CreateController(ssSilKitNetwork);    
+        m_SilKitCanController = CreateController(m_SilKitNetwork);    
         if (m_SilKitCanController == nullptr)
         {
             SDV_LOG_ERROR("SilKit CAN controller is not available.");
@@ -416,7 +360,7 @@ bool CCANSilKit::CreateSilKitConnection(const std::string& ssSilKitJSONConfigCon
 
 void CCANSilKit::SilKitReceiveMessageHandler(const SilKit::Services::Can::CanFrame& rsSilKitCanFrame)
 {
-    if (m_eStatus != sdv::EObjectStatus::running) 
+    if (GetObjectState() != sdv::EObjectState::running) 
         return;
 
     if (rsSilKitCanFrame.dlc > m_maxCanDataLength)
@@ -461,7 +405,7 @@ void CCANSilKit::SilKitTransmitAcknowledgeHandler(const SilKit::Services::Can::C
 
 void CCANSilKit::Send(/*in*/ const sdv::can::SMessage& sSDVCanMessage, /*in*/ uint32_t)
 {
-    if (m_eStatus != sdv::EObjectStatus::running)
+    if (GetObjectState() != sdv::EObjectState::running)
         return;
 
     if(sSDVCanMessage.bCanFd)

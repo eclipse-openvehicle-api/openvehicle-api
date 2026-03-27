@@ -1,3 +1,17 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Martin Stimpfl - initial API and implementation
+ *   Erik Verhoeven - writing TOML and whitespace preservation
+ ********************************************************************************/
+
 #ifndef LEXER_TOML_H
 #define LEXER_TOML_H
 
@@ -11,6 +25,32 @@
 /// The TOML parser namespace
 namespace toml_parser
 {
+    /**
+     * @brief Safe stack implementation for an enum returning a default value when the stack is empty.
+     */
+    template <typename TEnum, TEnum TDefault>
+    class enum_stack : public std::stack<TEnum>
+    {
+    public:
+        /**
+         * @brief Pop the top-most entry from the stack if the stack is not empty.
+         */
+        void pop()
+        {
+            if (!std::stack<TEnum>::empty())
+                std::stack<TEnum>::pop();
+        }
+
+        /**
+         * @brief Return the value of the top-most entry of the stack or if empty a default value.
+         * @return The top-most or default value.
+         */
+        TEnum top() const
+        {
+            return std::stack<TEnum>::empty() ? TDefault : std::stack<TEnum>::top();
+        }
+    };
+
     /**
      * @brief Node token range used to regenerate the source from the node entries.
      * @details A node can have several token ranges identifying code that belongs to the node or precedes or succeeds the node. The
@@ -167,9 +207,14 @@ namespace toml_parser
         void Feed(const std::string& rssString, bool bValueOnly = false);
 
         /**
+         * @brief Clear the lexer content.
+         */
+        void Clear();
+
+        /**
          * @brief Reset the lexer cursor position.
          */
-        void Reset();
+        void ResetCursor();
 
         /**
          * @brief Navigation modes supported by the lexer.
@@ -362,11 +407,13 @@ namespace toml_parser
          */
         enum class EExpectation
         {
+            undefined,          ///< Error case when code is supplied that was not expected.
             expect_key,        ///< A key is expected over a value
             expect_value,      ///< A value is expected over a key
             expect_value_once, ///< A value is expected over a key once
         };
-        std::stack<EExpectation> m_stackExpectations; ///< Tracking of key or value expectations in nested structures
+        enum_stack<EExpectation, EExpectation::undefined>
+            m_stackExpectations; ///< Tracking of key or value expectations in nested structures
 
         const std::vector<std::string>
             m_vecKeyDelimiters{"\n", "\t", "\r", " ", "", ".", "=", "]"}; ///< Characters that delimit a key

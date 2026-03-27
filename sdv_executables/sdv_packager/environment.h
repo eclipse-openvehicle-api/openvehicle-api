@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef ENVIRONMENT_H
 #define ENVIRONMENT_H
 
@@ -5,9 +18,14 @@
 #include <vector>
 #include <filesystem>
 #include <cstdint>
+#include <fstream>
+#include <functional>
 #include "../../global/cmdlnparser/cmdlnparser.h"
 #include "../error_msg.h"
 #include <interfaces/config.h>
+#include "../../sdv_services/core/app_config_file.h"
+#include "../../sdv_services/core/toml_parser/parser_toml.h"
+#include <support/toml.h>
 
 /**
  * @brief Compare whether two characters are identical when both are converted to lower case.
@@ -39,6 +57,10 @@ inline bool iequals(const std::string& rssLeft, const std::string& rssRight)
 class CSdvPackagerEnvironment
 {
 public:
+    /**
+     * @brief Component vector containing the component class names and optionally the component instantiation names.
+     */
+    using CComponentVector = std::vector<std::pair<std::string, std::string>>;
 
     /**
      * @brief Environment exception triggered on error during command line processing.
@@ -74,8 +96,9 @@ public:
     {
         none,               ///< No mode selected
         pack,               ///< Packing operation (default)
-        direct_install,     ///< Direct installation.
         install,            ///< Installation
+        direct_install,     ///< Direct installation.
+        configure,          ///< Configure
         uninstall,          ///< Remove an installed package.
         verify,             ///< Verify integrity
         show,               ///< Show content
@@ -198,6 +221,13 @@ public:
     const std::vector<SModule>& ModuleList() const;
 
     /**
+     * @brief List of files to configure the system.
+     * @return Returns a reference to the variable containing the list of files. Could contain wildcards and regular expression 
+     * strings.
+     */
+    const std::vector<std::string>& ConfigFileList() const;
+
+    /**
      * @brief Get the package path. Available for installation, uninstallation, verification and content showing commands.
      * @return Returns a reference to the variable containing the package path.
      */
@@ -264,7 +294,7 @@ public:
      * are to be added (if a configuration file was supplied).
      * @return Returns a reference to the variable containing the path to the configuration file or empty when no file was supplied.
      */
-    const std::filesystem::path& LocalConfigFile(std::vector<std::string>& rvecComponents) const;
+    const std::filesystem::path& LocalConfigFile(CComponentVector& rvecComponents) const;
 
     /**
      * @brief During package installation, the configuration file locations during local operation.
@@ -273,19 +303,13 @@ public:
     const std::vector<std::filesystem::path>& LocalConfigLocations() const;
 
     /**
-     * @brief Activate the local configuration in the settings file of the system.
-     * @return Returns whether a configuration is requested.
-     */
-    bool ActivateLocalConfig() const;
-
-    /**
      * @brief Add the components to the user configuration.
      * @remarks Only complex services will be inserted.
      * @param[out] rvecComponents Reference to a list of component names to add to the configuration. If no components are listed, all components
      * are to be added (if a the function returns true).
      * @return Returns true if a configuration update is requested; false otherwise.
      */
-    bool InsertIntoUserConfig(std::vector<std::string>& rvecComponents) const;
+    bool InsertIntoUserConfig(CComponentVector& rvecComponents) const;
 
     /**
      * @brief Add the components to the platform configuration.
@@ -293,7 +317,7 @@ public:
      * are to be added (if a the function returns true).
      * @return Returns true if a configuration update is requested; false otherwise.
      */
-    bool InsertIntoPlatformConfig(std::vector<std::string>& rvecComponents) const;
+    bool InsertIntoPlatformConfig(CComponentVector& rvecComponents) const;
 
     /**
      * @brief Add the components to the vehicle interface configuration.
@@ -301,7 +325,7 @@ public:
      * are to be added (if a the function returns true).
      * @return Returns true if a configuration update is requested; false otherwise.
      */
-    bool InsertIntoVehicleInterfaceConfig(std::vector<std::string>& rvecComponents) const;
+    bool InsertIntoVehicleInterfaceConfig(CComponentVector& rvecComponents) const;
 
     /**
      * @brief Add the components to the vehicle abstraction configuration.
@@ -309,7 +333,15 @@ public:
      * are to be added (if a the function returns true).
      * @return Returns true if a configuration update is requested; false otherwise.
      */
-    bool InsertIntoVehicleAbstractionConfig(std::vector<std::string>& rvecComponents) const;
+    bool InsertIntoVehicleAbstractionConfig(CComponentVector& rvecComponents) const;
+
+    /**
+     * @brief Get the object parameter map for the provided object instance.
+     * @param[in] rssObjectInstance Reference to the object instance name to get the parameter map for.
+     * @return Returns a reference to the parameter vector. It is guaranteed that the parameters are unique. Can be empty when
+     * there are no parameters for the object instance.
+     */
+    const TParameterVector& ObjectParameters(const std::string& rssObjectInstance) const;
 
     /**
      * @brief The installation name for the package creation.
@@ -385,9 +417,10 @@ private:
      * missing, the string starts with '+'. The components might also be optional. If missing, the '+' is also not needed.
      * @param[in] rssInput Reference to the configuration string.
      * @param[out] rpath Reference to the path to be returned.
-     * @param[out] rvecComponents Reference to the vector containing the component names.
+     * @param[out] rvecComponents Reference to the vector containing the component class names and optionally component
+     * instantiation names (or empty when the name should be extracted from the component class).
      */
-    void SplitConfigString(const std::string& rssInput, std::filesystem::path& rpath, std::vector<std::string>& rvecComponents);
+    void SplitConfigString(const std::string& rssInput, std::filesystem::path& rpath, CComponentVector& rvecComponents);
 
     /**
      * @brief Process the parsed environment settings.
@@ -407,14 +440,17 @@ private:
     bool                        m_bUpdate = false;                  ///< Update an existing installation.
     bool                        m_bOverwrite = false;               ///< Overwrite an existing installation.
     EOperatingMode              m_eOperatingMode = EOperatingMode::none; ///< Operating mode of the packager utility.
-    std::vector<SModule>        m_vecModules;                       ///< List of modules (module search string).
+    std::vector<SModule>        m_vecModules;                       ///< List of modules (module search strings).
+    std::vector<std::string>    m_vecConfigFiles;                   ///< List of configuration files (file search strings).
     std::filesystem::path       m_pathSourceLocation;               ///< Path to the input location.
     std::filesystem::path       m_pathOutputLocation;               ///< Path to the output location.
     std::filesystem::path       m_pathTargetLocation;               ///< Path to the target location (at installation).
-    std::filesystem::path       m_pathRootLocation;                 ///< Target root location (includes the instance for server location).
-    std::filesystem::path       m_pathInstallLocation;              ///< Target install location (root location with installation name).
-    std::filesystem::path       m_pathPackage;                      ///< Path to the package during installation, uninstallation, integrity checking and
-                                                                    ///< content showing. 
+    std::filesystem::path       m_pathRootLocation;                 ///< Target root location (includes the instance for server
+                                                                    ///< location).
+    std::filesystem::path       m_pathInstallLocation;              ///< Target install location (root location with installation
+                                                                    ///< name).
+    std::filesystem::path       m_pathPackage;                      ///< Path to the package during installation, uninstallation,
+                                                                    ///< integrity checking andcontent showing. 
     uint32_t                    m_uiInstanceID = 1000u;             ///< Instance number (optional).
     std::string                 m_ssInstallName;                    ///< Installation name.
     std::string                 m_ssProductName;                    ///< Product name (default is package name).
@@ -424,17 +460,21 @@ private:
     std::string                 m_ssCopyrights;                     ///< Copyright
     std::string                 m_ssPackageVersion;                 ///< Package version string
     std::filesystem::path       m_pathConfigLocal;                  ///< Configuration file path (local only).
-    std::vector<std::string>    m_vecConfigLocalComponents;         ///< List of components to add to the configuration file.
-    bool                        m_bActivateLocalConfig = false;     ///< Activate the local config in the settings file.
+    CComponentVector            m_vecConfigLocalComponents;         ///< List of components to add to the configuration file.
     std::vector<std::filesystem::path> m_vecLocalConfigDirs;        ///< List of directories to scan for the component to uninstall.
-    std::vector<std::string>    m_vecUserConfigComponents;          ///< User configuration (server only).
-    std::vector<std::string>    m_vecPlatformConfigComponents;      ///< Platform configuration (server only).
-    std::vector<std::string>    m_vecVehIfcConfigComponents;        ///< Vehicle interface configuration (server only).
-    std::vector<std::string>    m_vecVehAbstrConfigComponents;      ///< Vehicle abstraction configuration (server only).
-    bool                        m_bInsertIntoUserConfig = false;    ///< When set, insert the components into the user config (server only).
-    bool                        m_bInsertIntoPlatformConfig = false;///< When set, insert the components into the platform config (server only).
-    bool                        m_bInsertIntoVehIfcConfig = false;  ///< When set, insert the components into the vehicle interface config (server only).
-    bool                        m_bInsertIntoVehAbstrConfig = false;///< When set, insert the components into the vehicle abstraction config (server only).
+    CComponentVector            m_vecUserConfigComponents;          ///< User configuration (server only).
+    CComponentVector            m_vecPlatformConfigComponents;      ///< Platform configuration (server only).
+    CComponentVector            m_vecVehIfcConfigComponents;        ///< Vehicle interface configuration (server only).
+    CComponentVector            m_vecVehAbstrConfigComponents;      ///< Vehicle abstraction configuration (server only).
+    std::map<std::string, TParameterVector> m_mapParameters;        ///< Map with parameters associated to their instances.
+    bool                        m_bInsertIntoUserConfig = false;    ///< When set, insert the components into the user config
+                                                                    ///< (server only).
+    bool                        m_bInsertIntoPlatformConfig = false;///< When set, insert the components into the platform config
+                                                                    ///< (server only).
+    bool                        m_bInsertIntoVehIfcConfig = false;  ///< When set, insert the components into the vehicle interface
+                                                                    ///< config (server only).
+    bool                        m_bInsertIntoVehAbstrConfig = false;///< When set, insert the components into the vehicle
+                                                                    ///< abstraction config (server only).
     uint32_t                    m_uiShowFlags = 0;                  ///< Show package information bitmask.
     int                         m_nError = NO_ERROR;                ///< Error code after processing the command line.
     std::string                 m_ssArgError;                       ///< Error text after processing the command line.
@@ -451,18 +491,20 @@ CSdvPackagerEnvironment::CSdvPackagerEnvironment(size_t nArgs, const TCharType**
     {
         std::vector<std::string> vecCommands;
 
-        // COMMANDS (selective argument groups 1-6):
-        //   PACK                       Pack modules and files into an installation package
+        // COMMANDS (selective argument groups 1-7):
+        //   PACK                       Pack modules and files into an installation package.
         //                              Usage: sdv_packager PACK <package name> <files> <options>
-        //   INSTALL                    Install a package into the system
+        //   INSTALL                    Install a package into the system.
         //                              Usage: sdv_packager INSTALL <package path> <options>
-        //   DIRECT_INSTALL             Directly install modules and files into the system (without the creation of a package)
+        //   DIRECT_INSTALL             Directly install modules and files into the system (without the creation of a package).
         //                              Usage: sdv_packager DIRECT_INSTALL <package name> <files> <options>
-        //   UNINSTALL                  Remove an installation from the system
+        //   CONFIGURE                  Install a configuration into the system.
+        //                              Usage: sdv_packager CONFIGURE <config files> <options>
+        //   UNINSTALL                  Remove an installation from the system.
         //                              Usage: sdv_packager UNINSTALL <package name> <options>
         //   VERIFY                     Verify the consistency and the integrity of an installation package.
         //                              Usage: sdv_packager VERIFY <package path> <options>
-        //   SHOW                       Show package information
+        //   SHOW                       Show package information.
         //                              Usage: sdv_packager SHOW <ALL|INFO|MODULES|COMPONENTS> <package path> <options>
         m_cmdln.DefineDefaultArgument(vecCommands, "COMMAND <...> <options>");
 
@@ -471,7 +513,7 @@ CSdvPackagerEnvironment::CSdvPackagerEnvironment(size_t nArgs, const TCharType**
         //     -s, --silent            Silent mode
         //     -v, --verbose           Verbose mode
         //     --version               Show version
-        auto& rArgHelpDef = m_cmdln.DefineOption("?", m_bHelp, "Show help", true, 0, 1, 2, 3, 4, 5, 6);
+        auto& rArgHelpDef = m_cmdln.DefineOption("?", m_bHelp, "Show help", true, 0, 1, 2, 3, 4, 5, 6, 7);
         rArgHelpDef.AddSubOptionName("help");
         auto& rArgSilentDef = m_cmdln.DefineOption("s", m_bSilent, "Do not show any information on STDOUT. Not compatible with "
             "'--verbose'.");
@@ -481,13 +523,13 @@ CSdvPackagerEnvironment::CSdvPackagerEnvironment(size_t nArgs, const TCharType**
         rArgVerboseDef.AddSubOptionName("verbose");
         m_cmdln.DefineSubOption("version", m_bVersion, "Show version information.");
 
-        // ARGUMENT SELECTION GROUP #2 & #3 & #4: General options during installation/uninstallation
+        // ARGUMENT SELECTION GROUP #2 & #3, #4 & #5: General options during installation/uninstallation
         //     -L, --local                  Local installation
         //     --instance<id>               Instance ID to use for installation
-        auto& rLocalArgDef = m_cmdln.DefineOption("L", m_bLocal, "Target the local system.", true, 2, 3, 4);
+        auto& rLocalArgDef = m_cmdln.DefineOption("L", m_bLocal, "Target the local system.", true, 2, 3, 4, 5);
         rLocalArgDef.AddSubOptionName("local");
         auto& rInstance = m_cmdln.DefineSubOption("instance", m_uiInstanceID, "The instance ID of the SDV server instance when not "
-            "targeting the local system (default ID is 1000).", true, 2, 3, 4);
+            "targeting the local system (default ID is 1000).", true, 2, 3, 4, 5);
 
         // ARGUMENT SELECTION GROUP #1 - Packing:
         //     -O<path>                     Optional destination location
@@ -519,14 +561,16 @@ CSdvPackagerEnvironment::CSdvPackagerEnvironment(size_t nArgs, const TCharType**
         m_cmdln.DefineSubOption("set_copyright", m_ssCopyrights, "Set copyright information.", true, 1, 3);
         m_cmdln.DefineSubOption("set_version", m_ssPackageVersion, "Set package version (needed to allow updates).", true, 1, 3);
 
-        // ARGUMENT SELECTION GROUP #2 & #3 & #4- Installation from package and direct installation:
+        // ARGUMENT SELECTION GROUP #2 & #3 & #5- Installation from package and direct installation:
         //     -T<path>                     Optional target location
         //     -P, --update                 Use update if a previous package with older version has been found
         //     -W, --overwrite              Use overwrite if a previous package has been found
         //     --verify_signed              Verify whether the package is signed and if not return an error (not implemented)
         m_cmdln.DefineGroup("Installation / uninstallation");
-        auto& rTargetLoc = m_cmdln.DefineOption("T", m_pathTargetLocation, "The target location for package installation. Required "
-            "when targeting a local system ('--local' option).", true, 2, 3, 4);
+        auto& rTargetLoc = m_cmdln.DefineOption("T", m_pathTargetLocation, "The target location for package installation. For "
+            "server based installations, this is the root location containing the instance ID sub-directories with the "
+            "installations. For local installations, this is the real target directory for installing the content.",
+            true, 2, 3, 5);
         auto& rArgDefUpdate = m_cmdln.DefineOption("P", m_bUpdate, "Update the installation if an older version is existing.",
             true, 2, 3);
         rArgDefUpdate.AddSubOptionName("update");
@@ -535,23 +579,20 @@ CSdvPackagerEnvironment::CSdvPackagerEnvironment(size_t nArgs, const TCharType**
         rArgDefOverwrite.AddSubOptionName("overwrite");
 
         // Configuration
-        // ARGUMENT SELECTION GROUP #2 & #3 & #4 - Update from package and directly and uninstallation:
+        // ARGUMENT SELECTION GROUP #2 & #3, #4 & #5 - Update from package and directly and uninstallation:
         //     --config_dir<paths...>       Local instance only; directory to configuration files to update.
         m_cmdln.DefineGroup("Configuration update");
         auto& rConfigDir = m_cmdln.DefineSubOption("config_dir", m_vecLocalConfigDirs, "One or more configuration directories "
-            "to scan for components being updated. Use with local systems only ('--local' option).", true, 2, 3, 4);
+            "to scan for components being updated. Use with local systems only ('--local' option).", true, 2, 3, 4, 5);
 
-        //     --config_file<path>[=<x,>[all,-component,-...]|[+component,+....]]   Local instance only; configuration file.
-        //     --activate_config                                                    Local instance only; select config into settings.
-        //     --user_config[=<x,>[all,-component,-...]|[+component,+....]]         Server instance only; user configuration.
-        //     --platform_config[=<x,>[all,-component,-...]|[+component,+....]]     Server instance only; platform config.
-        //     --vehifc_config[=<x,>[all,-component,-...]|[+component,+....]]       Server instance only; vehicle interface config.
-        //     --vehabstr_config[=<x,>[all,-component,-...]|[+component,+....]]     Server instance only; vehicle abstraction config.
+        //     --config_file<path>[+component[=name]+....]]                     Local instance only; configuration file.
+        //     --user_config[+component[=name]+....]]                           Server instance only; user configuration.
+        //     --platform_config[+component[=name]+....]]                       Server instance only; platform config.
+        //     --interface_config[+component[=name]+....]]                      Server instance only; vehicle interface config.
+        //     --abstract_config[+component[=name]+....]]                       Server instance only; vehicle abstraction config.
         std::string ssConfigFileLocal;
         auto& rConfigFile = m_cmdln.DefineSubOption("config_file", ssConfigFileLocal, "Update a user configuration file. For "
             "usage, see explanatory text above. Use with local systems only ('--local' option).", true, 2, 3);
-        auto& rActivateConfig = m_cmdln.DefineSubOption("activate_config", m_bActivateLocalConfig, "Update the settings file to "
-            "automatically activate the provided configuration file. Use with local system only ('--local' option).", true, 2, 3);
         std::string ssUserConfigServer, ssPlatformConfigServer, ssInterfaceConfigServer, ssAbstrConfigServer;
         auto& rPlatformConfig = m_cmdln.DefineSubOption("platform_config", ssPlatformConfigServer, "Update the platform "
             "configuration defining which components of this installation are used to interact with the hardware platform. For "
@@ -565,18 +606,41 @@ CSdvPackagerEnvironment::CSdvPackagerEnvironment(size_t nArgs, const TCharType**
         auto& rUserConfig = m_cmdln.DefineSubOption("user_config", ssUserConfigServer, "Update the user configuration defining "
             "which components of this installation need to be instantiated automatically. User configuration can only contain "
             "complex services. For usage, see explanatory text above. Use on server only.", true, 2, 3);
+        m_cmdln.DefineSubOption("config_file", m_pathConfigLocal, "Update a user configuration file. usage, see explanatory text "
+            "above. Use with local systems only ('--local' option).", true, 4);
+        m_cmdln.DefineSubOption("platform_config", m_bInsertIntoPlatformConfig, "Update the platform "
+            "configuration defining which components of this installation are used to interact with the hardware platform. Use "
+            "on server only.", true, 4);
+        m_cmdln.DefineSubOption("interface_config", m_bInsertIntoVehIfcConfig, "Update the vehicle "
+            "interface configuration defining which components of this installation represent the vehicle interface. Use on server "
+            "only.", true, 4);
+        m_cmdln.DefineSubOption("abstract_config", m_bInsertIntoVehAbstrConfig, "Update the vehicle abstraction "
+            "configuration defining which components of this installation represent an abstracted vehicle to the application "
+            "components. Use on server only.", true, 4);
+        m_cmdln.DefineSubOption("user_config", m_bInsertIntoUserConfig, "Update the user configuration defining "
+            "which components of this installation need to be instantiated automatically. User configuration can only contain "
+            "complex services. Use on server only.", true, 4);
 
-        // ARGUMENT SELECTION GROUP #5 - Package verififcation
+        //      --parameters<component_name>:<param>=<value>[,<param>=<value>...]   Parameters for an added component.
+        //      --param_file<TOML_file>                                             Parameters from a file for an added component.
+        std::vector<std::string> vecParametersRaw;
+        m_cmdln.DefineSubOption("parameters", vecParametersRaw, "Parameters for a component instance. For  usage, see explanatory "
+            "text above.", true, 2, 3);
+        std::vector<std::filesystem::path> vecParamFiles;
+        m_cmdln.DefineSubOption("param_file", vecParamFiles, "Parameters for one or more component instances located in a "
+            "parameter TOML file. For usage, see explanatory text above.", true, 2, 3);
+
+        // ARGUMENT SELECTION GROUP #6 - Package verififcation
         m_cmdln.DefineGroup("Verification options");
         //     --verify_signed              Verify whether the package is signed and if not return an error (not implemented)
 
-        // ARGUMENT SELECTION GROUP #6 - Show package information
+        // ARGUMENT SELECTION GROUP #7 - Show package information
         //     --show_simple
         //     --xml (not implemented)
         //     --json (not implemented)
         m_cmdln.DefineGroup("Show options");
         bool bShowSimple = false;
-        m_cmdln.DefineSubOption("show_simple", bShowSimple, "Show package information in simple format.", true, 6);
+        m_cmdln.DefineSubOption("show_simple", bShowSimple, "Show package information in simple format.", true, 7);
 
         m_cmdln.Parse(static_cast<size_t>(nArgs), rgszArgs);
 
@@ -589,7 +653,7 @@ CSdvPackagerEnvironment::CSdvPackagerEnvironment(size_t nArgs, const TCharType**
         else // TODO: if not XML and JSON, add console
             m_uiShowFlags |= static_cast<uint32_t>(EShowMask::console);
 
-        // Split the configuration strings
+        // Split the configuration strings, unless in CONFIGURE mode
         if (!ssConfigFileLocal.empty())
             SplitConfigString(ssConfigFileLocal, m_pathConfigLocal, m_vecConfigLocalComponents);
         if (rUserConfig.OptionAvailableOnCommandLine())
@@ -655,8 +719,8 @@ CSdvPackagerEnvironment::CSdvPackagerEnvironment(size_t nArgs, const TCharType**
                 rInterfaceConfig.OptionAvailableOnCommandLine() || rAbstrConfig.OptionAvailableOnCommandLine())
             {
                 m_nError = CMDLN_INCOMPATIBLE_ARGUMENTS;
-                m_ssArgError = "The configuration options '--user_config', '--platform_config', '--vehifc_config' and "
-                    "'--vehabstr_config' cannot be used with with local installations ('--local' option).";
+                m_ssArgError = "The configuration options '--user_config', '--platform_config', '--interface_config' and "
+                    "'--abstract_config' cannot be used with with local installations ('--local' option).";
                 return;
             }
             if (!rTargetLoc.OptionAvailableOnCommandLine())
@@ -664,13 +728,6 @@ CSdvPackagerEnvironment::CSdvPackagerEnvironment(size_t nArgs, const TCharType**
                 m_nError = CMDLN_TARGET_LOCATION_ERROR;
                 m_ssArgError = "The target location option '-T' must be used when specifying local installations ('--local' "
                     "option).";
-                return;
-            }
-            if (rActivateConfig.OptionAvailableOnCommandLine() && !rConfigFile.OptionAvailableOnCommandLine())
-            {
-                m_nError = CMDLN_INCOMPATIBLE_ARGUMENTS;
-                m_ssArgError = "Activating a configuration file using the option '--activate_config' can only be used with when a "
-                    "configuration file is provided using the option '--config_file'.";
                 return;
             }
         } else
@@ -682,13 +739,6 @@ CSdvPackagerEnvironment::CSdvPackagerEnvironment(size_t nArgs, const TCharType**
                     "('--local' option).";
                 return;
             }
-            if (rActivateConfig.OptionAvailableOnCommandLine())
-            {
-                m_nError = CMDLN_INCOMPATIBLE_ARGUMENTS;
-                m_ssArgError = "The configuration file option '--activate_config' can only be used with with local "
-                    "installations ('--local' option).";
-                return;
-            }
             if (rConfigDir.OptionAvailableOnCommandLine())
             {
                 m_nError = CMDLN_INCOMPATIBLE_ARGUMENTS;
@@ -696,10 +746,159 @@ CSdvPackagerEnvironment::CSdvPackagerEnvironment(size_t nArgs, const TCharType**
                     "('--local' option).";
                 return;
             }
-            if (rTargetLoc.OptionAvailableOnCommandLine())
+        }
+
+        // Add a parameter to the current instance. If the parameter is already present, the parameter will not be overwritten.
+        auto itInstance = m_mapParameters.end();
+        auto fnAddParameter = [&](const std::string& rssObjectInstance, const std::string& rssKey,
+            const sdv::any_t& rany) -> bool
+        {
+            if (itInstance == m_mapParameters.end() || itInstance->first != rssObjectInstance)
+            {
+                // Find or create the instance
+                itInstance = m_mapParameters.find(rssObjectInstance);
+                if (itInstance == m_mapParameters.end())
+                {
+                    auto prInsert = m_mapParameters.emplace(rssObjectInstance, std::vector<std::pair<std::string, sdv::any_t>>());
+                    if (!prInsert.second || prInsert.first == m_mapParameters.end())
+                        return false;
+                    itInstance = prInsert.first;
+                }
+            }
+            if (itInstance == m_mapParameters.end()) return false;
+
+            // Check for the existence
+            if (std::find_if(itInstance->second.begin(), itInstance->second.end(), [&](const auto& prParameter)
+                { return prParameter.first == rssKey; }) != itInstance->second.end()) return true;  // Not an error...
+
+            // Add the parameter
+            itInstance->second.push_back(std::make_pair(rssKey, rany));
+
+            return true;
+        };
+
+        // Parameters are only valid when a configuration is supplied.
+        if (!vecParametersRaw.empty() || !vecParamFiles.empty())
+        {
+            // Parameters can only be added when a configuration is created.
+            if (!m_bInsertIntoUserConfig && !m_bInsertIntoPlatformConfig && !m_bInsertIntoVehIfcConfig
+                && !m_bInsertIntoVehAbstrConfig && ssConfigFileLocal.empty())
             {
                 m_nError = CMDLN_INCOMPATIBLE_ARGUMENTS;
-                m_ssArgError = "The target location option '-T' can only be used with with local installations ('--local' option).";
+                m_ssArgError = CMDLN_INCOMPATIBLE_ARGUMENTS_MSG;
+                return;
+            }
+        }
+
+        // Process command line parameters
+        // The list of raw parameters are started with a component instance, followed by parameters.
+        std::string ssInstance;
+        for (const std::string& rssParameterRaw : vecParametersRaw)
+        {
+            size_t nInstanceSep = rssParameterRaw.find_first_of(':');
+            if (nInstanceSep == std::string::npos)
+                nInstanceSep = 0;
+            else
+            {
+                ssInstance = rssParameterRaw.substr(0, nInstanceSep);
+                ++nInstanceSep;
+            }
+
+            size_t nAssignment = rssParameterRaw.find_first_of('=', nInstanceSep);
+            if (nAssignment == nInstanceSep || nAssignment == std::string::npos)
+            {
+                m_nError = CMDLN_INVALID_PARAM_STRING;
+                m_ssArgError = CMDLN_INVALID_PARAM_STRING_MSG;
+                return;
+            }
+            std::string ssParamName = rssParameterRaw.substr(nInstanceSep, nAssignment - nInstanceSep);
+            std::string ssParamValue = rssParameterRaw.substr(nAssignment + 1);
+            if (ssParamName.empty()) // An empty name is not allowed. An empty value is allowed.
+            {
+                m_nError = CMDLN_INVALID_PARAM_STRING;
+                m_ssArgError = CMDLN_INVALID_PARAM_STRING_MSG;
+                return;
+            }
+
+            // Add the parameter to the instance in the map.
+            sdv::any_t anyValue;
+            if (!ssParamValue.empty()) anyValue = ssParamValue;
+            if (!fnAddParameter(ssInstance, ssParamName, anyValue))
+            {
+                m_nError = CMDLN_INVALID_PARAM_STRING;
+                m_ssArgError = CMDLN_INVALID_PARAM_STRING_MSG;
+                return;
+            }
+        }
+
+        // Process parameter files
+        for (std::filesystem::path& rpathParamFile : vecParamFiles)
+        {
+            try
+            {
+                // Load the file
+                std::ifstream fstream(rpathParamFile);
+                if (!fstream.is_open())
+                {
+                    m_nError = CMDLN_INVALID_PARAM_FILE;
+                    m_ssArgError = CMDLN_INVALID_PARAM_FILE_MSG;
+                    return;
+                }
+                std::string ssContent((std::istreambuf_iterator<char>(fstream)), std::istreambuf_iterator<char>());
+                fstream.close();
+
+                // Split the parameter path from the object instance.
+                auto fnSplit = [](const std::string& rssNodePath) -> std::pair<std::string, std::string>
+                {
+                    size_t nSeparator = rssNodePath.find_first_of('.');
+                    if (nSeparator == std::string::npos)
+                        return std::make_pair(rssNodePath, std::string());
+                    return std::make_pair(rssNodePath.substr(0, nSeparator), rssNodePath.substr(nSeparator + 1));
+                };
+
+                // Parse the file
+                toml_parser::CParser parser(ssContent);
+                sdv::toml::CNodeCollection root(&parser.Root());
+
+                // Lambda function to iterative add parameters
+                std::function<void(const sdv::toml::CNodeCollection&)> fnProcessObjectInstance =
+                    [&](const sdv::toml::CNodeCollection& rTable)
+                {
+                    for (size_t nNodeIndex = 0; nNodeIndex < rTable.GetCount(); nNodeIndex++)
+                    {
+                        sdv::toml::CNode node = rTable.Get(nNodeIndex);
+                        switch (node.GetType())
+                        {
+                        case sdv::toml::ENodeType::node_boolean:
+                        case sdv::toml::ENodeType::node_integer:
+                        case sdv::toml::ENodeType::node_floating_point:
+                        case sdv::toml::ENodeType::node_string:
+                            {
+                                auto prParameter = fnSplit(node.GetQualifiedPath());
+                                if (!prParameter.first.empty() && !prParameter.second.empty())
+                                    fnAddParameter(prParameter.first, prParameter.second, node.GetValue());
+                            }
+                            break;
+                        case sdv::toml::ENodeType::node_table:
+                            {
+                                sdv::toml::CNodeCollection group(node);
+                                if (!group.IsValid())
+                                    break;
+                                fnProcessObjectInstance(group);
+                            }
+                            break;
+                        default:
+                            // Ignore...
+                            break;
+                        }
+                    }
+                };
+                fnProcessObjectInstance(root);
+            }
+            catch (const sdv::toml::XTOMLParseException& /*rxExcept*/)
+            {
+                m_nError = CMDLN_INVALID_PARAM_FILE;
+                m_ssArgError = CMDLN_INVALID_PARAM_FILE_MSG;
                 return;
             }
         }

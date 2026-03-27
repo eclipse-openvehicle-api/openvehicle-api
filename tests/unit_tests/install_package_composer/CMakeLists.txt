@@ -1,3 +1,16 @@
+#*******************************************************************************
+# Copyright (c) 2025-2026 ZF Friedrichshafen AG
+#
+# This program and the accompanying materials are made available under the 
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0 
+#
+# Contributors:
+#   Erik Verhoeven - initial API and implementation
+#*******************************************************************************
+
 # Define project
 project(InstallPackageComposerTests VERSION 1.0 LANGUAGES CXX)
 
@@ -38,7 +51,6 @@ set_target_properties(UnitTest_InstallPackageComposer_Component2 PROPERTIES PREF
 set_target_properties(UnitTest_InstallPackageComposer_Component2 PROPERTIES SUFFIX ".sdv")
 
 # Define target
-# TODO EVE
 add_executable(UnitTest_InstallPackageComposer
     composer_test_suite.cpp
     composer_test_suite.h

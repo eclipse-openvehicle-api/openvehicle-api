@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include <gtest/gtest.h>
 #include <mutex>
 #include <iostream>
@@ -27,7 +40,7 @@ public:
         SDV_INTERFACE_ENTRY(ITestLock)
     END_SDV_INTERFACE_MAP()
 
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::device)
     DECLARE_OBJECT_CLASS_NAME("TestLockService")
 
     void Lock() override
@@ -49,88 +62,26 @@ DEFINE_SDV_OBJECT(CTestLockService)
 /**
  * @brief Example component testing IObjectControl
  */
-    class CTestObjectControl
-    : public sdv::CSdvObject
-    , public sdv::IObjectControl
+class CTestObjectControl : public sdv::CSdvObject
 {
 public:
-
-    ~CTestObjectControl()
-    {
-        EXPECT_EQ(m_eObjectStatus, sdv::EObjectStatus::destruction_pending);
-    }
-
-    BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
-    END_SDV_INTERFACE_MAP()
-
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::device)
     DECLARE_OBJECT_CLASS_NAME("Example_Object")
 
     /**
-     * @brief Initialize method. On success, a subsequent call to GetStatus returns EObjectStatus::running
-     * @param[in] ssObjectConfig Optional configuration string.
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
      */
-    virtual void Initialize([[maybe_unused]] const sdv::u8string& ssObjectConfig)
+    virtual bool OnInitialize() override
     {
-        EXPECT_EQ(m_eObjectStatus, sdv::EObjectStatus::initialization_pending);
-
-        m_eObjectStatus = sdv::EObjectStatus::initialized;
+        return true;
     }
 
     /**
-     * @brief Gets the current status of the object
-     * @return EObjectStatus The current status of the object
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
-    virtual sdv::EObjectStatus GetStatus() const
-    {
-        return m_eObjectStatus;
-    }
-
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
-     */
-    void SetOperationMode(sdv::EOperationMode eMode)
-    {
-        switch (eMode)
-        {
-        case sdv::EOperationMode::configuring:
-            if (m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized)
-                m_eObjectStatus = sdv::EObjectStatus::configuring;
-            break;
-        case sdv::EOperationMode::running:
-            if (m_eObjectStatus == sdv::EObjectStatus::configuring || m_eObjectStatus == sdv::EObjectStatus::initialized)
-                m_eObjectStatus = sdv::EObjectStatus::running;
-            break;
-        default:
-            break;
-        }
-    }
-
-    /**
-     * @brief Shutdown method called before the object is destroyed.
-     * @attention Implement calls to other SDV objects here as this is no longer considered safe during the destructor of the object!
-     * After a call to shutdown any threads/callbacks/etc that could call other SDV objects need to have been stopped.
-     * The SDV object itself is to remain in a state where it can respond to calls to its interfaces as other objects may still call it during the shutdown sequence!
-     * Any subsequent call to GetStatus should return EObjectStatus::destruction_pending
-     */
-    virtual void Shutdown()
-    {
-        EXPECT_TRUE(m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized ||
-            m_eObjectStatus == sdv::EObjectStatus::configuring);
-        if (m_eObjectStatus != sdv::EObjectStatus::running && m_eObjectStatus != sdv::EObjectStatus::initialized
-            && m_eObjectStatus != sdv::EObjectStatus::configuring)
-            std::cout << "Object status = " << static_cast<uint32_t>(m_eObjectStatus) << " (expected initialized=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::initialized) << " or configuring=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::configuring) << " or running=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::running) << ")." << std::endl;
-
-        m_eObjectStatus = sdv::EObjectStatus::destruction_pending;
-    }
-
-private:
-    sdv::EObjectStatus m_eObjectStatus = sdv::EObjectStatus::initialization_pending;
+    virtual void OnShutdown() override
+    {}
 };
 
 DEFINE_SDV_OBJECT(CTestObjectControl)
@@ -138,87 +89,26 @@ DEFINE_SDV_OBJECT(CTestObjectControl)
 /**
 * @brief Example component testing IObjectControl - 2nd component to test duplicate instantiation
 */
-class CTestObjectControl2
-    : public sdv::CSdvObject
-    , public sdv::IObjectControl
+class CTestObjectControl2 : public sdv::CSdvObject
 {
 public:
-    ~CTestObjectControl2()
-    {
-        EXPECT_EQ(m_eObjectStatus, sdv::EObjectStatus::destruction_pending);
-    }
-
-    BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
-    END_SDV_INTERFACE_MAP()
-
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::device)
     DECLARE_OBJECT_CLASS_NAME("Example_Object_2")
 
     /**
-    * @brief Initialize method. On success, a subsequent call to GetStatus returns EObjectStatus::running
-    * @param[in] ssObjectConfig Optional configuration string.
-    */
-    virtual void Initialize([[maybe_unused]] const sdv::u8string& ssObjectConfig)
-    {
-        EXPECT_EQ(m_eObjectStatus, sdv::EObjectStatus::initialization_pending);
-
-        m_eObjectStatus = sdv::EObjectStatus::initialized;
-    }
-
-    /**
-    * @brief Gets the current status of the object
-    * @return EObjectStatus The current status of the object
-    */
-    virtual sdv::EObjectStatus GetStatus() const
-    {
-        return m_eObjectStatus;
-    }
-
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
      */
-    void SetOperationMode(sdv::EOperationMode eMode)
+    virtual bool OnInitialize() override
     {
-        switch (eMode)
-        {
-        case sdv::EOperationMode::configuring:
-            if (m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized)
-                m_eObjectStatus = sdv::EObjectStatus::configuring;
-            break;
-        case sdv::EOperationMode::running:
-            if (m_eObjectStatus == sdv::EObjectStatus::configuring || m_eObjectStatus == sdv::EObjectStatus::initialized)
-                m_eObjectStatus = sdv::EObjectStatus::running;
-            break;
-        default:
-            break;
-        }
+        return true;
     }
 
     /**
-    * @brief Shutdown method called before the object is destroyed.
-    * @attention Implement calls to other SDV objects here as this is no longer considered safe during the destructor of the object!
-    * After a call to shutdown any threads/callbacks/etc that could call other SDV objects need to have been stopped.
-    * The SDV object itself is to remain in a state where it can respond to calls to its interfaces as other objects may still call it during the shutdown sequence!
-    * Any subsequent call to GetStatus should return EObjectStatus::destruction_pending
-    */
-    virtual void Shutdown()
-    {
-        EXPECT_TRUE(m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized ||
-            m_eObjectStatus == sdv::EObjectStatus::configuring);
-        if (m_eObjectStatus != sdv::EObjectStatus::running && m_eObjectStatus != sdv::EObjectStatus::initialized
-            && m_eObjectStatus != sdv::EObjectStatus::configuring)
-            std::cout << "Object status = " << static_cast<uint32_t>(m_eObjectStatus) << " (expected initialized=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::initialized) << " or configuring=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::configuring) << " or running=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::running) << ")." << std::endl;
-
-        m_eObjectStatus = sdv::EObjectStatus::destruction_pending;
-    }
-
-private:
-    sdv::EObjectStatus m_eObjectStatus = sdv::EObjectStatus::initialization_pending;
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
+     */
+    virtual void OnShutdown() override
+    {}
 };
 
 DEFINE_SDV_OBJECT(CTestObjectControl2)
@@ -226,70 +116,26 @@ DEFINE_SDV_OBJECT(CTestObjectControl2)
 /**
  * @brief Example component testing IObjectControl
  */
-    class CTestObjectControlFail
-    : public sdv::CSdvObject
-    , public sdv::IObjectControl
+class CTestObjectControlFail : public sdv::CSdvObject
 {
 public:
-
-    BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
-    END_SDV_INTERFACE_MAP()
-
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::device)
     DECLARE_OBJECT_CLASS_NAME("TestObject_IObjectControlFail")
 
     /**
-     * @brief Initialize method. On success, a subsequent call to GetStatus returns EObjectStatus::running
-     * @param[in] ssObjectConfig Optional configuration string.
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
      */
-    virtual void Initialize([[maybe_unused]] const sdv::u8string& ssObjectConfig)
+    virtual bool OnInitialize() override
     {
-        m_eObjectStatus = sdv::EObjectStatus::initialization_failure;
+        return false;
     }
 
     /**
-     * @brief Gets the current status of the object
-     * @return EObjectStatus The current status of the object
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
-    virtual sdv::EObjectStatus GetStatus() const
-    {
-        return m_eObjectStatus;
-    }
-
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
-     */
-    void SetOperationMode(sdv::EOperationMode eMode)
-    {
-        switch (eMode)
-        {
-        case sdv::EOperationMode::configuring:
-            if (m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized)
-                m_eObjectStatus = sdv::EObjectStatus::configuring;
-            break;
-        case sdv::EOperationMode::running:
-            if (m_eObjectStatus == sdv::EObjectStatus::configuring || m_eObjectStatus == sdv::EObjectStatus::initialized)
-                m_eObjectStatus = sdv::EObjectStatus::running;
-            break;
-        default:
-            break;
-        }
-    }
-
-    /**
-     * @brief Shutdown method called before the object is destroyed.
-     * @attention Implement calls to other SDV objects here as this is no longer considered safe during the destructor of the object!
-     * After a call to shutdown any threads/callbacks/etc that could call other SDV objects need to have been stopped.
-     * The SDV object itself is to remain in a state where it can respond to calls to its interfaces as other objects may still call it during the shutdown sequence!
-     * Any subsequent call to GetStatus should return EObjectStatus::destruction_pending
-     */
-    virtual void Shutdown()
+    virtual void OnShutdown() override
     {}
-
-private:
-    sdv::EObjectStatus m_eObjectStatus = sdv::EObjectStatus::initialization_pending;
 };
 
 DEFINE_SDV_OBJECT(CTestObjectControlFail)
@@ -297,95 +143,45 @@ DEFINE_SDV_OBJECT(CTestObjectControlFail)
 /**
  * @brief Example component testing chained object creation in Initialize
  */
-    class CTestObjectCreate
-    : public sdv::CSdvObject
-    , public sdv::IObjectControl
+class CTestObjectCreate : public sdv::CSdvObject
 {
 public:
-
-    BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
-    END_SDV_INTERFACE_MAP()
-
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::device)
     DECLARE_OBJECT_CLASS_NAME("TestObject_CreateChain")
 
+    BEGIN_SDV_PARAM_MAP()
+        SDV_PARAM_ENTRY(m_ssChainedObject, "chained_object", "", "", "Name of the chained object")
+    END_SDV_PARAM_MAP()
+
     /**
-     * @brief Initialize method. On success, a subsequent call to GetStatus returns EObjectStatus::running
-     * @param[in] ssObjectConfig Optional configuration string.
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
      */
-    virtual void Initialize( const sdv::u8string& ssObjectConfig)
+    virtual bool OnInitialize() override
     {
-        EXPECT_EQ(m_eObjectStatus, sdv::EObjectStatus::initialization_pending);
-
         //create new example object with name ssObjectConfig
-
         auto pRepo = sdv::core::GetObject("RepositoryService");
-        ASSERT_TRUE(pRepo);
+        if (!pRepo) return false;
 
         auto pCreate = sdv::TInterfaceAccessPtr(pRepo).GetInterface<sdv::core::IRepositoryControl>();
-        ASSERT_TRUE(pCreate);
+        if (!pCreate) return false;
 
-        ASSERT_FALSE(ssObjectConfig.empty());
+        if (m_ssChainedObject.empty())
+            return false;
 
-        ASSERT_TRUE(pCreate->CreateObject("Example_Object", ssObjectConfig,nullptr));
+        if (!pCreate->CreateObject("Example_Object", m_ssChainedObject, nullptr))
+            return false;
 
-        m_eObjectStatus = sdv::EObjectStatus::initialized;
+        return true;
     }
 
     /**
-     * @brief Gets the current status of the object
-     * @return EObjectStatus The current status of the object
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
-    virtual sdv::EObjectStatus GetStatus() const
-    {
-        return m_eObjectStatus;
-    }
+    virtual void OnShutdown() override
+    {}
 
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
-     */
-    void SetOperationMode(sdv::EOperationMode eMode)
-    {
-        switch (eMode)
-        {
-        case sdv::EOperationMode::configuring:
-            if (m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized)
-                m_eObjectStatus = sdv::EObjectStatus::configuring;
-            break;
-        case sdv::EOperationMode::running:
-            if (m_eObjectStatus == sdv::EObjectStatus::configuring || m_eObjectStatus == sdv::EObjectStatus::initialized)
-                m_eObjectStatus = sdv::EObjectStatus::running;
-            break;
-        default:
-            break;
-        }
-    }
-
-    /**
-     * @brief Shutdown method called before the object is destroyed.
-     * @attention Implement calls to other SDV objects here as this is no longer considered safe during the destructor of the object!
-     * After a call to shutdown any threads/callbacks/etc that could call other SDV objects need to have been stopped.
-     * The SDV object itself is to remain in a state where it can respond to calls to its interfaces as other objects may still call it during the shutdown sequence!
-     * Any subsequent call to GetStatus should return EObjectStatus::destruction_pending
-     */
-    virtual void Shutdown()
-    {
-        EXPECT_TRUE(m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized ||
-            m_eObjectStatus == sdv::EObjectStatus::configuring);
-        if (m_eObjectStatus != sdv::EObjectStatus::running && m_eObjectStatus != sdv::EObjectStatus::initialized
-            && m_eObjectStatus != sdv::EObjectStatus::configuring)
-            std::cout << "Object status = " << static_cast<uint32_t>(m_eObjectStatus) << " (expected initialized=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::initialized) << " or configuring=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::configuring) << " or running=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::running) << ")." << std::endl;
-
-        m_eObjectStatus = sdv::EObjectStatus::destruction_pending;
-    }
-
-private:
-    sdv::EObjectStatus m_eObjectStatus = sdv::EObjectStatus::initialization_pending;
+    std::string m_ssChainedObject;  ///< Name of the chained object
 };
 
 DEFINE_SDV_OBJECT(CTestObjectCreate)
@@ -393,31 +189,26 @@ DEFINE_SDV_OBJECT(CTestObjectCreate)
 /**
  * @brief Example component testing chained object creation in Initialize while holding a lock
  */
-    class CTestObjectCreateLock
-    : public sdv::CSdvObject
-    , public sdv::IObjectControl
+class CTestObjectCreateLock: public sdv::CSdvObject
 {
 public:
-
-    BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
-    END_SDV_INTERFACE_MAP()
-
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::device)
     DECLARE_OBJECT_CLASS_NAME("TestObject_CreateChainLock")
 
-    /**
-     * @brief Initialize the object. Overload of sdv::IObjectControl::Initialize.
-     * @param[in] ssObjectConfig Optional configuration string.
-     */
-    virtual void Initialize(const sdv::u8string& ssObjectConfig)
-    {
-        EXPECT_EQ(m_eObjectStatus, sdv::EObjectStatus::initialization_pending);
+    BEGIN_SDV_PARAM_MAP()
+        SDV_PARAM_ENTRY(m_ssChainedObject, "chained_object", "", "", "Name of the chained object")
+    END_SDV_PARAM_MAP()
 
+    /**
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
+     */
+    virtual bool OnInitialize() override
+    {
         //create new example object with name ssObjectConfig while holding lock
 
         auto pLock = sdv::core::GetObject<ITestLock>("TestLockService");
-        ASSERT_NE(pLock,nullptr);
+        if (!pLock) return false;
 
         struct SAutoLock
         {
@@ -427,67 +218,25 @@ public:
         } sAutoLock(pLock);
 
         auto pRepo = sdv::core::GetObject("RepositoryService");
-        ASSERT_TRUE(pRepo);
+        if (!pRepo) return false;
 
         auto pCreate = sdv::TInterfaceAccessPtr(pRepo).GetInterface<sdv::core::IRepositoryControl>();
-        ASSERT_TRUE(pCreate);
+        if (!pCreate) return false;
 
-        ASSERT_FALSE(ssObjectConfig.empty());
+        if (m_ssChainedObject.empty()) return false;
 
-        ASSERT_TRUE(pCreate->CreateObject("Example_Object", ssObjectConfig, nullptr));
+        if (!pCreate->CreateObject("Example_Object", m_ssChainedObject, nullptr)) return false;
 
-        m_eObjectStatus = sdv::EObjectStatus::initialized;
+        return true;
     }
 
     /**
-     * @brief Get the current status of the object. Overload of sdv::IObjectControl::GetStatus.
-     * @return Return the current status of the object.
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
-    virtual sdv::EObjectStatus GetStatus() const
-    {
-        return m_eObjectStatus;
-    }
+    virtual void OnShutdown() override
+    {}
 
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
-     */
-    void SetOperationMode(sdv::EOperationMode eMode)
-    {
-        switch (eMode)
-        {
-        case sdv::EOperationMode::configuring:
-            if (m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized)
-                m_eObjectStatus = sdv::EObjectStatus::configuring;
-            break;
-        case sdv::EOperationMode::running:
-            if (m_eObjectStatus == sdv::EObjectStatus::configuring || m_eObjectStatus == sdv::EObjectStatus::initialized)
-                m_eObjectStatus = sdv::EObjectStatus::running;
-            break;
-        default:
-            break;
-        }
-    }
-
-    /**
-     * @brief Shutdown called before the object is destroyed. Overload of sdv::IObjectControl::Shutdown.
-     */
-    virtual void Shutdown()
-    {
-        EXPECT_TRUE(m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized ||
-            m_eObjectStatus == sdv::EObjectStatus::configuring);
-        if (m_eObjectStatus != sdv::EObjectStatus::running && m_eObjectStatus != sdv::EObjectStatus::initialized
-            && m_eObjectStatus != sdv::EObjectStatus::configuring)
-            std::cout << "Object status = " << static_cast<uint32_t>(m_eObjectStatus) << " (expected initialized=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::initialized) << " or configuring=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::configuring) << " or running=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::running) << ")." << std::endl;
-
-        m_eObjectStatus = sdv::EObjectStatus::destruction_pending;
-    }
-
-private:
-    sdv::EObjectStatus m_eObjectStatus = sdv::EObjectStatus::initialization_pending;
+    std::string m_ssChainedObject; ///< Name of the chained object
 };
 
 DEFINE_SDV_OBJECT(CTestObjectCreateLock)
@@ -495,33 +244,33 @@ DEFINE_SDV_OBJECT(CTestObjectCreateLock)
 /**
  * @brief Example component testing chained object creation in Initialize in extra thread holding a lock
  */
-    class CTestObjectCreateLockThread
-    : public sdv::CSdvObject
-    , public sdv::IObjectControl
+class CTestObjectCreateLockThread : public sdv::CSdvObject
 {
 public:
-
-    BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
-    END_SDV_INTERFACE_MAP()
-
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::device)
     DECLARE_OBJECT_CLASS_NAME("TestObject_CreateChainLockThread")
 
-    /**
-     * @brief Initialize the object. Overload of sdv::IObjectControl::Initialize.
-     * @param[in] ssObjectConfig Optional configuration string.
-     */
-    virtual void Initialize(const sdv::u8string& ssObjectConfig)
-    {
-        EXPECT_EQ(m_eObjectStatus, sdv::EObjectStatus::initialization_pending);
+    BEGIN_SDV_PARAM_MAP()
+        SDV_PARAM_ENTRY(m_ssChainedObject, "chained_object", "", "", "Name of the chained object")
+    END_SDV_PARAM_MAP()
 
-        auto fun = [ssObjectConfig]()
+    /**
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
+     */
+    virtual bool OnInitialize() override
+    {
+        bool bResult = true;
+        auto fun = [this, &bResult]()
         {
             //create new example object with name ssObjectConfig while holding lock
 
             auto pLock = sdv::core::GetObject<ITestLock>("TestLockService");
-            ASSERT_NE(pLock, nullptr);
+            if (!pLock)
+            {
+                bResult = false;
+                return;
+            }
 
             struct SAutoLock
             {
@@ -531,72 +280,46 @@ public:
             } sAutoLock(pLock);
 
             auto pRepo = sdv::core::GetObject("RepositoryService");
-            ASSERT_TRUE(pRepo);
+            if (!pRepo)
+            {
+                bResult = false;
+                return;
+            }
 
             auto pCreate = sdv::TInterfaceAccessPtr(pRepo).GetInterface<sdv::core::IRepositoryControl>();
-            ASSERT_TRUE(pCreate);
+            if (!pCreate)
+            {
+                bResult = false;
+                return;
+            }
 
-            ASSERT_FALSE(ssObjectConfig.empty());
+            if (m_ssChainedObject.empty())
+            {
+                bResult = false;
+                return;
+            }
 
-            ASSERT_TRUE(pCreate->CreateObject("Example_Object", ssObjectConfig, nullptr));
+            if (!pCreate->CreateObject("Example_Object", m_ssChainedObject, nullptr))
+            {
+                bResult = false;
+                return;
+            }
         };
 
         std::thread testThread(fun);
 
         testThread.join();
 
-        m_eObjectStatus = sdv::EObjectStatus::initialized;
+        return bResult;
     }
 
     /**
-     * @brief Get the current status of the object. Overload of sdv::IObjectControl::GetStatus.
-     * @return Return the current status of the object.
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
-    virtual sdv::EObjectStatus GetStatus() const
-    {
-        return m_eObjectStatus;
-    }
+    virtual void OnShutdown() override
+    {}
 
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
-     */
-    void SetOperationMode(sdv::EOperationMode eMode)
-    {
-        switch (eMode)
-        {
-        case sdv::EOperationMode::configuring:
-            if (m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized)
-                m_eObjectStatus = sdv::EObjectStatus::configuring;
-            break;
-        case sdv::EOperationMode::running:
-            if (m_eObjectStatus == sdv::EObjectStatus::configuring || m_eObjectStatus == sdv::EObjectStatus::initialized)
-                m_eObjectStatus = sdv::EObjectStatus::running;
-            break;
-        default:
-            break;
-        }
-    }
-
-    /**
-     * @brief Shutdown called before the object is destroyed. Overload of sdv::IObjectControl::Shutdown.
-     */
-    virtual void Shutdown()
-    {
-        EXPECT_TRUE(m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized ||
-            m_eObjectStatus == sdv::EObjectStatus::configuring);
-        if (m_eObjectStatus != sdv::EObjectStatus::running && m_eObjectStatus != sdv::EObjectStatus::initialized
-            && m_eObjectStatus != sdv::EObjectStatus::configuring)
-            std::cout << "Object status = " << static_cast<uint32_t>(m_eObjectStatus) << " (expected initialized=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::initialized) << " or configuring=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::configuring) << " or running=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::running) << ")." << std::endl;
-
-        m_eObjectStatus = sdv::EObjectStatus::destruction_pending;
-    }
-
-private:
-    sdv::EObjectStatus m_eObjectStatus = sdv::EObjectStatus::initialization_pending;
+    std::string m_ssChainedObject; ///< Name of the chained object
 };
 
 DEFINE_SDV_OBJECT(CTestObjectCreateLockThread)
@@ -605,78 +328,30 @@ DEFINE_SDV_OBJECT(CTestObjectCreateLockThread)
 /**
  * @brief Example component testing IObjectControl
  */
-    class CTestObjectCreateDuringShutdown
-    : public sdv::CSdvObject
-    , public sdv::IObjectControl
+class CTestObjectCreateDuringShutdown : public sdv::CSdvObject
 {
 public:
-
-    BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
-    END_SDV_INTERFACE_MAP()
-
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::device)
     DECLARE_OBJECT_CLASS_NAME("TestObject_CreateDuringShutdown")
 
     /**
-     * @brief Initialize method. On success, a subsequent call to GetStatus returns EObjectStatus::running
-     * @param[in] ssObjectConfig Optional configuration string.
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
      */
-    virtual void Initialize([[maybe_unused]] const sdv::u8string& ssObjectConfig)
+    virtual bool OnInitialize() override
     {
-        EXPECT_EQ(m_eObjectStatus, sdv::EObjectStatus::initialization_pending);
-
-        m_eObjectStatus = sdv::EObjectStatus::initialized;
+        return true;
     }
 
     /**
-     * @brief Gets the current status of the object
-     * @return EObjectStatus The current status of the object
-     */
-    virtual sdv::EObjectStatus GetStatus() const
-    {
-        return m_eObjectStatus;
-    }
-
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
-     */
-    void SetOperationMode(sdv::EOperationMode eMode)
-    {
-        switch (eMode)
-        {
-        case sdv::EOperationMode::configuring:
-            if (m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized)
-                m_eObjectStatus = sdv::EObjectStatus::configuring;
-            break;
-        case sdv::EOperationMode::running:
-            if (m_eObjectStatus == sdv::EObjectStatus::configuring || m_eObjectStatus == sdv::EObjectStatus::initialized)
-                m_eObjectStatus = sdv::EObjectStatus::running;
-            break;
-        default:
-            break;
-        }
-    }
-
-    /**
-     * @brief Shutdown method called before the object is destroyed.
+     * @brief Shutdown method called before the object is destroyed. Overload of sdv::CSdvObject::OnShutdown.
      * @attention Implement calls to other SDV objects here as this is no longer considered safe during the destructor of the object!
      * After a call to shutdown any threads/callbacks/etc that could call other SDV objects need to have been stopped.
      * The SDV object itself is to remain in a state where it can respond to calls to its interfaces as other objects may still call it during the shutdown sequence!
-     * Any subsequent call to GetStatus should return EObjectStatus::destruction_pending
+     * Any subsequent call to GetObjectState should return EObjectState::destruction_pending
      */
-    virtual void Shutdown()
+    virtual void OnShutdown() override
     {
-        EXPECT_TRUE(m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized ||
-            m_eObjectStatus == sdv::EObjectStatus::configuring);
-        if (m_eObjectStatus != sdv::EObjectStatus::running && m_eObjectStatus != sdv::EObjectStatus::initialized
-            && m_eObjectStatus != sdv::EObjectStatus::configuring)
-            std::cout << "Object status = " << static_cast<uint32_t>(m_eObjectStatus) << " (expected initialized=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::initialized) << " or configuring=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::configuring) << " or running=" <<
-            static_cast<uint32_t>(sdv::EObjectStatus::running) << ")." << std::endl;
-
         //create new example object
         //this is allowed during shutdown as it's needed in case new proxies are created
 
@@ -687,12 +362,7 @@ public:
         ASSERT_TRUE(pCreate);
 
         ASSERT_FALSE(pCreate->CreateObject("Example_Object", nullptr, nullptr));
-
-        m_eObjectStatus = sdv::EObjectStatus::destruction_pending;
     }
-
-private:
-    sdv::EObjectStatus m_eObjectStatus = sdv::EObjectStatus::initialization_pending;
 };
 DEFINE_SDV_OBJECT(CTestObjectCreateDuringShutdown)
 
@@ -707,7 +377,7 @@ public:
         SDV_INTERFACE_ENTRY(IHello)
     END_SDV_INTERFACE_MAP()
 
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::device)
     DECLARE_OBJECT_CLASS_NAME("TestObject_HelloDevice")
 
     /**
@@ -740,7 +410,7 @@ public:
         SDV_INTERFACE_ENTRY(IHello)
     END_SDV_INTERFACE_MAP()
 
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::BasicService)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::basic_service)
     DECLARE_OBJECT_CLASS_NAME("TestObject_BasicHelloService")
 
     /**
@@ -781,7 +451,7 @@ public:
         SDV_INTERFACE_ENTRY(IHello)
     END_SDV_INTERFACE_MAP()
 
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::ComplexService)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::complex_service)
     DECLARE_OBJECT_CLASS_NAME("TestObject_ComplexHelloService")
 
     /**
@@ -814,7 +484,7 @@ public:
         SDV_INTERFACE_ENTRY(IHello)
     END_SDV_INTERFACE_MAP()
 
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Utility)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::utility)
     DECLARE_OBJECT_CLASS_NAME("TestObject_HelloUtility")
 
     /**
@@ -847,7 +517,7 @@ public:
         SDV_INTERFACE_ENTRY(IHello)
     END_SDV_INTERFACE_MAP()
 
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::SystemObject)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
     DECLARE_OBJECT_CLASS_NAME("TestObject_SystemHelloService")
 
     /**

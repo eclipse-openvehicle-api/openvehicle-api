@@ -1,13 +1,15 @@
-/**
- * @file connection.h
- * @author Erik Verhoeven FRD DISDS1 (mailto:erik.verhoeven@zf.com)
- * @brief Implementation of connection class.
- * @version 2.0
- * @date 2024-06-24
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
  *
- * @copyright Copyright ZF Friedrichshafen AG (c) 2023-2025
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
- */
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
 
 #ifndef CHANNEL_H
 #define CHANNEL_H

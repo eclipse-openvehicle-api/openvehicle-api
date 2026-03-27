@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "../../include/gtest_custom.h"
 #include "../../../sdv_services/ipc_com/com_ctrl.h"
 #include "../../../sdv_services/ipc_com/com_channel.h"
@@ -920,9 +933,9 @@ TEST(IPC_Communication_Test, Instantiate)
 {
     CCommunicationControl control;
     EXPECT_NO_THROW(control.Initialize(""));
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     EXPECT_NO_THROW(control.Shutdown());
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::destruction_pending);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::destruction_pending);
 }
 
 TEST(IPC_Communication_Test, AssignServerEndpoint)
@@ -940,9 +953,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -981,9 +994,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1038,9 +1051,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1108,9 +1121,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1178,9 +1191,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1210,9 +1223,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1247,9 +1260,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1294,9 +1307,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1338,9 +1351,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1387,9 +1400,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1436,9 +1449,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1489,9 +1502,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1536,9 +1549,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1610,9 +1623,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1662,9 +1675,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1715,9 +1728,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1761,9 +1774,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1825,9 +1838,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1900,9 +1913,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -1975,9 +1988,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -2038,9 +2051,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -2088,9 +2101,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -2137,9 +2150,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -2241,9 +2254,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -2301,9 +2314,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -2360,9 +2373,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -2408,9 +2421,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -2492,9 +2505,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -2598,9 +2611,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -2704,9 +2717,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -2777,9 +2790,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -2835,9 +2848,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -2882,9 +2895,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -2956,9 +2969,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -3008,9 +3021,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -3061,9 +3074,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -3107,9 +3120,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -3172,9 +3185,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -3248,9 +3261,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -3323,9 +3336,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -3388,9 +3401,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -3440,9 +3453,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -3488,9 +3501,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -3591,9 +3604,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -3650,9 +3663,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -3709,9 +3722,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -3756,9 +3769,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -3839,9 +3852,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -3921,9 +3934,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -4003,9 +4016,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -4071,9 +4084,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -4118,9 +4131,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -4166,9 +4179,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -4269,9 +4282,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -4328,9 +4341,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -4387,9 +4400,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -4434,9 +4447,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -4518,9 +4531,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -4601,9 +4614,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -4683,9 +4696,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -4752,9 +4765,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -4803,9 +4816,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -4851,9 +4864,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -4954,9 +4967,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -5013,9 +5026,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -5072,9 +5085,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -5119,9 +5132,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -5202,9 +5215,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -5284,9 +5297,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -5366,9 +5379,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -5434,9 +5447,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -5481,9 +5494,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -5529,9 +5542,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -5632,9 +5645,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -5691,9 +5704,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -5750,9 +5763,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -5797,9 +5810,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -5881,9 +5894,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -5964,9 +5977,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -6046,9 +6059,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);
@@ -6115,9 +6128,9 @@ ViewFilter = "Fatal"
     // Start communication control
     CCommunicationControl control;
     control.Initialize("");
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::initialized);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::initialized);
     control.SetOperationMode(sdv::EOperationMode::configuring);
-    EXPECT_EQ(control.GetStatus(), sdv::EObjectStatus::configuring);
+    EXPECT_EQ(control.GetObjectState(), sdv::EObjectState::configuring);
 
     // Load the shared memory components
     LoadIPCModules(control);

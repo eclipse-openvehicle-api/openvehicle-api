@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "../../include/gtest_custom.h"
 #include "commandline_parser_test.h"
 #include "../../../global/cmdlnparser/cmdlnparser.h"
@@ -557,13 +570,15 @@ TEST_F(CCommandLineParserTestNoAssignment, SubOptionOverlappingArg)
     EXPECT_TRUE(bServer);
 
     // Mixing up -instance<val> and -instance_a
-    const char* rgszCommandLine2[] = {"this_exe.app", "--instance_a"};
-    CCommandLine cl2(static_cast<uint32_t>(CCommandLine::EParseFlags::no_assignment_character));
-    std::string ssInstance; cl2.DefineSubOption("instance", ssInstance, "Instance ID");
-    bool bInstance_a = false; cl2.DefineSubOption("instance_a", bInstance_a, "Instance A is activited");
-    EXPECT_NO_THROW(cl2.Parse(std::extent<decltype(rgszCommandLine2)>::value, rgszCommandLine2));
-    EXPECT_TRUE(ssInstance.empty());
-    EXPECT_TRUE(bInstance_a);
+    // CHANGE EVE 26.03.2026: The multiple assignment of options was enabled to allow several option sets with identical names but
+    // different assignments to be used in different groups. This, however doesn't protect against overlapping options any more.
+    //const char* rgszCommandLine2[] = {"this_exe.app", "--instance_a"};
+    //CCommandLine cl2(static_cast<uint32_t>(CCommandLine::EParseFlags::no_assignment_character));
+    //std::string ssInstance; cl2.DefineSubOption("instance", ssInstance, "Instance ID");
+    //bool bInstance_a = false; cl2.DefineSubOption("instance_a", bInstance_a, "Instance A is activited");
+    //EXPECT_NO_THROW(cl2.Parse(std::extent<decltype(rgszCommandLine2)>::value, rgszCommandLine2));
+    //EXPECT_TRUE(ssInstance.empty());
+    //EXPECT_TRUE(bInstance_a);
 
     // Mixiong up -enable_opt+ and -enable_options
     const char* rgszCommandLine3[] = {"this_exe.app", "--enable_options"};

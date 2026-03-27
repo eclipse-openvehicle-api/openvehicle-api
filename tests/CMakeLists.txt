@@ -1,3 +1,13 @@
+#*******************************************************************************
+# Copyright (c) 2025-2026 ZF Friedrichshafen AG
+#
+# This program and the accompanying materials are made available under the 
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0 
+#*******************************************************************************
+
 # Define project
 project(Tests VERSION 1.0 LANGUAGES CXX)
 
@@ -41,8 +51,10 @@ file (COPY ${PROJECT_SOURCE_DIR}/sdv_core_reloc.toml DESTINATION ${CMAKE_BINARY_
 # Copy shell script to the build directory
 if(WIN32)
   file (COPY ${PROJECT_SOURCE_DIR}/run_tests_on_windows.ps1 DESTINATION ${CMAKE_BINARY_DIR}/tests/)
+  file (COPY ${PROJECT_SOURCE_DIR}/loop_test_runner_windows.ps1 DESTINATION ${CMAKE_BINARY_DIR}/tests/)
 else()
   file (COPY ${PROJECT_SOURCE_DIR}/run_tests_on_linux.sh DESTINATION ${CMAKE_BINARY_DIR}/tests/)
+  file (COPY ${PROJECT_SOURCE_DIR}/loop_test_runner_linux.sh DESTINATION ${CMAKE_BINARY_DIR}/tests/)
 endif()
 
 # Add test projects
@@ -56,6 +68,7 @@ add_subdirectory(unit_tests/asc_format)
 add_subdirectory(unit_tests/basic_types)
 add_subdirectory(unit_tests/smart_ifc)
 add_subdirectory(unit_tests/toml_parser)
+add_subdirectory(unit_tests/parameters)
 add_subdirectory(unit_tests/module_control)
 add_subdirectory(unit_tests/repository)
 add_subdirectory(unit_tests/shared_mem)
@@ -72,6 +85,13 @@ add_subdirectory(unit_tests/sdv_control)
 add_subdirectory(unit_tests/sdv_macro_test)
 add_subdirectory(unit_tests/install_package_composer)
 add_subdirectory(unit_tests/path_match)
+if(UNIX)
+add_subdirectory(unit_tests/unix_sockets)
+endif()
+if(WIN32)
+add_subdirectory(unit_tests/win_sockets)
+endif()
+add_subdirectory(component_tests/config)
 add_subdirectory(component_tests/logger)
 add_subdirectory(component_tests/data_dispatch_service)
 add_subdirectory(component_tests/repository)
@@ -79,6 +99,6 @@ add_subdirectory(component_tests/config_install)
 add_subdirectory(component_tests/dbc_util)
 add_subdirectory(component_tests/vss_util)
 add_subdirectory(component_tests/task_timer)
-add_subdirectory(component_tests/core_library)
-add_subdirectory(component_tests/config)
+add_subdirectory(component_tests/app_control)
+add_subdirectory(component_tests/toml_parser)
 add_subdirectory(manual_tests/silkit_can_com_tests)

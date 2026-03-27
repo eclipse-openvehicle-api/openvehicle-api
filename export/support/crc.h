@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef SDV_CRC_H
 #define SDV_CRC_H
 
@@ -12,7 +25,7 @@ namespace sdv
      * @tparam T The type to use for bit reflection.
      * @param[in] tValue The value to reflect. Must be a arithmetic or boolean type.
      * @return The reflected value.
-    */
+     */
     template <typename T>
     constexpr T reflect(T tValue)
     {
@@ -53,7 +66,7 @@ namespace sdv
          * @param[in] pData Pointer to the value buffer.
          * @param[in] nCount Amount of values in the buffer.
          * @return The calculated CRC checksum.
-        */
+         */
         template <typename T>
         TCRCType calc_checksum(const T* pData, size_t nCount) noexcept;
 
@@ -62,25 +75,25 @@ namespace sdv
          * @remarks The CRC calculation occurs byte-wise regardless of the endianness of the the processor architecture.
          * @tparam T Type of the value buffer to calculate the CRC for.
          * @param[in] tValue The value to add to the calculation.
-        */
+         */
         template <typename T>
         void add(T tValue) noexcept;
 
         /**
          * @brief Get the currently calculated checksum.
          * @return The CRC checksum.
-        */
+         */
         TCRCType get_checksum() const noexcept;
 
         /**
          * @brief Set a CRC checksum to continue the calculation with additional data.
          * @param[in] tCrcValue The previously calculated CRC value.
-        */
+         */
         void set_checksum(TCRCType tCrcValue) noexcept;
 
         /**
          * @brief Reset the current calculation (resets the CRC value to its initial value).
-        */
+         */
         void reset() noexcept;
 
     private:

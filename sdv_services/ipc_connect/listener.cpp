@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "listener.h"
 #include <support/toml.h>
 #include <interfaces/com.h>
@@ -65,84 +78,63 @@ sdv::u8string CChannelBroker::RequestChannel(/*in*/ const sdv::u8string& /*ssCon
 CListener::CListener() : m_broker(*this)
 {}
 
-void CListener::Initialize(const sdv::u8string& ssObjectConfig)
+bool CListener::OnInitialize()
 {
     const sdv::app::IAppContext* pContext = sdv::core::GetCore<sdv::app::IAppContext>();
     if (!pContext)
     {
         SDV_LOG_ERROR("Failed to get application context!");
-        m_eObjectStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
     sdv::com::IConnectionControl* pConnectionControl = sdv::core::GetObject<sdv::com::IConnectionControl>("CommunicationControl");
     if (!pConnectionControl)
     {
         SDV_LOG_ERROR("Failed to get communication control!");
-        m_eObjectStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
 
     sdv::ipc::ICreateEndpoint* pEndpoint = nullptr;
     std::string ssConfig;
-    try
+    if (m_ssType == "Local")
     {
-        // Determine whether the service is running as server or as client.
-        sdv::toml::CTOMLParser config(ssObjectConfig);
-        std::string ssType = config.GetDirect("Listener.Type").GetValue();
-        if (ssType == "Local")
+        m_bLocalListener = true;
+        pEndpoint = sdv::core::GetObject<sdv::ipc::ICreateEndpoint>("LocalChannelControl");
+        if (!pEndpoint)
         {
-            uint32_t uiInstanceID = config.GetDirect("Listener.Instance").GetValue();
-            m_bLocalListener = true;
-            pEndpoint = sdv::core::GetObject<sdv::ipc::ICreateEndpoint>("LocalChannelControl");
-            if (!pEndpoint)
-            {
-                SDV_LOG_ERROR("No local channel control!");
-                m_eObjectStatus = sdv::EObjectStatus::initialization_failure;
-                return;
-            }
+            SDV_LOG_ERROR("No local channel control!");
+            return false;
+        }
 
-            // Request the instance ID from the app control
-            ssConfig = std::string(R"code([IpcChannel]
-Name = "LISTENER_)code") + std::to_string(uiInstanceID ? uiInstanceID : pContext->GetInstanceID()) + R"code("
+        // Request the instance ID from the app control
+        ssConfig = std::string(R"code([IpcChannel]
+Name = "LISTENER_)code") + std::to_string(m_uiInstanceID ? m_uiInstanceID : pContext->GetInstanceID()) + R"code("
 Size = 2048
 )code";
-        }
-        else if (ssType == "Remote")
-        {
-            m_bLocalListener = false;
-            std::string ssInterface = config.GetDirect("Listener.Interface").GetValue();
-            uint32_t uiPort = config.GetDirect("Listener.Interface").GetValue();
-            if (ssInterface.empty() || !uiPort)
-            {
-                SDV_LOG_ERROR("Missing interface or port number to initialize a remote listener!");
-                m_eObjectStatus = sdv::EObjectStatus::initialization_failure;
-                return;
-            }
-            pEndpoint = sdv::core::GetObject<sdv::ipc::ICreateEndpoint>("RemoteChannelControl");
-            if (!pEndpoint)
-            {
-                SDV_LOG_ERROR("No remote channel control!");
-                m_eObjectStatus = sdv::EObjectStatus::initialization_failure;
-                return;
-            }
-
-            ssConfig = R"code([IpcChannel]
-Interface = ")code" + ssInterface + R"code(
-Port = ")code" + std::to_string(uiPort) + R"code(
-)code";
-        }
-        else
-        {
-            SDV_LOG_ERROR("Invalid or missing listener configuration for listener service!");
-            m_eObjectStatus = sdv::EObjectStatus::initialization_failure;
-            return;
-        }
     }
-    catch (const sdv::toml::XTOMLParseException& rexcept)
+    else if (m_ssType == "Remote")
     {
-        SDV_LOG_ERROR("Invalid service configuration for listener service: ", rexcept.what(), "!");
-        m_eObjectStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        m_bLocalListener = false;
+        if (m_ssInterface.empty() || !m_uiPort)
+        {
+            SDV_LOG_ERROR("Missing interface or port number to initialize a remote listener!");
+            return false;
+        }
+        pEndpoint = sdv::core::GetObject<sdv::ipc::ICreateEndpoint>("RemoteChannelControl");
+        if (!pEndpoint)
+        {
+            SDV_LOG_ERROR("No remote channel control!");
+            return false;
+        }
+
+        ssConfig = R"code([IpcChannel]
+Interface = ")code" + m_ssInterface + R"code(
+Port = ")code" + std::to_string(m_uiPort) + R"code(
+)code";
+    }
+    else
+    {
+        SDV_LOG_ERROR("Invalid or missing listener configuration for listener service!");
+        return false;
     }
 
     // Create the endpoint
@@ -150,8 +142,7 @@ Port = ")code" + std::to_string(uiPort) + R"code(
     if (!sEndpoint.pConnection)
     {
         SDV_LOG_ERROR("Could not create the endpoint for listener service!");
-        m_eObjectStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
     sdv::TObjectPtr ptrEndpoint(sEndpoint.pConnection); // Does automatic destruction if failure happens.
 
@@ -161,39 +152,13 @@ Port = ")code" + std::to_string(uiPort) + R"code(
     if (!m_tConnection)
     {
         SDV_LOG_ERROR("Could not assign the server endpoint!");
-        m_eObjectStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
-
-    m_eObjectStatus = sdv::EObjectStatus::initialized;
+    return true;
 }
 
-sdv::EObjectStatus CListener::GetStatus() const
+void CListener::OnShutdown()
 {
-    return m_eObjectStatus;
-}
-
-void CListener::SetOperationMode(sdv::EOperationMode eMode)
-{
-    switch (eMode)
-    {
-    case sdv::EOperationMode::configuring:
-        if (m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized)
-            m_eObjectStatus = sdv::EObjectStatus::configuring;
-        break;
-    case sdv::EOperationMode::running:
-        if (m_eObjectStatus == sdv::EObjectStatus::configuring || m_eObjectStatus == sdv::EObjectStatus::initialized)
-            m_eObjectStatus = sdv::EObjectStatus::running;
-        break;
-    default:
-        break;
-    }
-}
-
-void CListener::Shutdown()
-{
-    m_eObjectStatus = sdv::EObjectStatus::shutdown_in_progress;
-
     // Shutdown the listener...
     if (m_tConnection != sdv::com::TConnectionID{})
     {
@@ -206,8 +171,6 @@ void CListener::Shutdown()
     }
 
     m_ptrConnection.Clear();
-
-    m_eObjectStatus = sdv::EObjectStatus::destruction_pending;
 }
 
 bool CListener::IsLocalListener() const

@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "gtest/gtest.h"
 #include <support/timer.h>
 #include <chrono>
@@ -66,13 +79,13 @@ TEST(TaskSimulationTimerTest, BasicCounterTestInterface)
 
     CTestTask task;
 
-    sdv::core::CTaskTimer timer(3, &task);
+    sdv::core::CTaskTimer timer(3, &task, true);
     EXPECT_TRUE(timer);
     appcontrol.SetRunningMode();
 
     // Get the simulation task timer service.
     sdv::core::ITimerSimulationStep* pTimerSimulationStep = sdv::core::GetObject<sdv::core::ITimerSimulationStep>("SimulationTaskTimerService");
-    EXPECT_TRUE(pTimerSimulationStep);
+    ASSERT_TRUE(pTimerSimulationStep);
 
     uint32_t expected = 5;
     uint32_t expectedAdditional = 11;
@@ -122,9 +135,9 @@ TEST(TaskSimulationTimerTest, LargerTaskPeriodTest)
     CTestTask task1150;
     CTestTask task3100;
 
-    sdv::core::CTaskTimer timer150(150, &task150);
-    sdv::core::CTaskTimer timer1150(1150, &task1150);
-    sdv::core::CTaskTimer timer3100(3100, &task3100);
+    sdv::core::CTaskTimer timer150(150, &task150, true);
+    sdv::core::CTaskTimer timer1150(1150, &task1150, true);
+    sdv::core::CTaskTimer timer3100(3100, &task3100, true);
     EXPECT_TRUE(timer150);
     EXPECT_TRUE(timer1150);
     EXPECT_TRUE(timer3100);
@@ -132,7 +145,7 @@ TEST(TaskSimulationTimerTest, LargerTaskPeriodTest)
 
     // Get the simulation task timer service.
     sdv::core::ITimerSimulationStep* pTimerSimulationStep = sdv::core::GetObject<sdv::core::ITimerSimulationStep>("SimulationTaskTimerService");
-    EXPECT_TRUE(pTimerSimulationStep);
+    ASSERT_TRUE(pTimerSimulationStep);
 
     uint32_t expected150 = 33;
     uint32_t expected1150 = 4;
@@ -179,9 +192,9 @@ TEST(TaskSimulationTimerTest, MultipleTimerIdenticalTaskPeriodTest)
     CTestTask task2;
     CTestTask task3;
 
-    sdv::core::CTaskTimer timer1(3, &task1);
-    sdv::core::CTaskTimer timer2(3, &task2);
-    sdv::core::CTaskTimer timer3(3, &task3);
+    sdv::core::CTaskTimer timer1(3, &task1, true);
+    sdv::core::CTaskTimer timer2(3, &task2, true);
+    sdv::core::CTaskTimer timer3(3, &task3, true);
     EXPECT_TRUE(timer1);
     EXPECT_TRUE(timer2);
     EXPECT_TRUE(timer3);
@@ -189,7 +202,7 @@ TEST(TaskSimulationTimerTest, MultipleTimerIdenticalTaskPeriodTest)
 
     // Get the simulation task timer service.
     sdv::core::ITimerSimulationStep* pTimerSimulationStep = sdv::core::GetObject<sdv::core::ITimerSimulationStep>("SimulationTaskTimerService");
-    EXPECT_TRUE(pTimerSimulationStep);
+    ASSERT_TRUE(pTimerSimulationStep);
 
     uint32_t expected = 5;
     uint32_t expectedAdditional = 11;
@@ -248,9 +261,9 @@ TEST(TaskSimulationTimerTest, MultipleTimerDifferentTaskPeriodTest)
     CTestTask task3;
     CTestTask task4;
 
-    sdv::core::CTaskTimer timer2(2, &task2);
-    sdv::core::CTaskTimer timer3(3, &task3);
-    sdv::core::CTaskTimer timer4(4, &task4);
+    sdv::core::CTaskTimer timer2(2, &task2, true);
+    sdv::core::CTaskTimer timer3(3, &task3, true);
+    sdv::core::CTaskTimer timer4(4, &task4, true);
     EXPECT_TRUE(timer2);
     EXPECT_TRUE(timer3);
     EXPECT_TRUE(timer4);
@@ -258,7 +271,7 @@ TEST(TaskSimulationTimerTest, MultipleTimerDifferentTaskPeriodTest)
 
     // Get the simulation task timer service.
     sdv::core::ITimerSimulationStep* pTimerSimulationStep = sdv::core::GetObject<sdv::core::ITimerSimulationStep>("SimulationTaskTimerService");
-    EXPECT_TRUE(pTimerSimulationStep);
+    ASSERT_TRUE(pTimerSimulationStep);
 
     uint32_t expected2 = 7;
     uint32_t expected3 = 5;
@@ -322,9 +335,9 @@ TEST(TaskSimulationTimerTest, MultipleTimerLargeSimulationStepTest)
     CTestTask task150;
     CTestTask task450;
 
-    sdv::core::CTaskTimer timer1(1, &task1);
-    sdv::core::CTaskTimer timer150(150, &task150);
-    sdv::core::CTaskTimer timer450(450, &task450);
+    sdv::core::CTaskTimer timer1(1, &task1, true);
+    sdv::core::CTaskTimer timer150(150, &task150, true);
+    sdv::core::CTaskTimer timer450(450, &task450, true);
     EXPECT_TRUE(timer1);
     EXPECT_TRUE(timer150);
     EXPECT_TRUE(timer450);
@@ -332,7 +345,7 @@ TEST(TaskSimulationTimerTest, MultipleTimerLargeSimulationStepTest)
 
     // Get the simulation task timer service.
     sdv::core::ITimerSimulationStep* pTimerSimulationStep = sdv::core::GetObject<sdv::core::ITimerSimulationStep>("SimulationTaskTimerService");
-    EXPECT_TRUE(pTimerSimulationStep);
+    ASSERT_TRUE(pTimerSimulationStep);
 
     uint32_t expected1 = 480;
     uint32_t expected150 = 3;
@@ -369,9 +382,9 @@ TEST(TaskSimulationTimerTest, MultipleTimerLargeAndDifferentSimulationStepTest)
     CTestTask task150;
     CTestTask task450;
 
-    sdv::core::CTaskTimer timer1(1, &task1);
-    sdv::core::CTaskTimer timer150(150, &task150);
-    sdv::core::CTaskTimer timer450(450, &task450);
+    sdv::core::CTaskTimer timer1(1, &task1, true);
+    sdv::core::CTaskTimer timer150(150, &task150, true);
+    sdv::core::CTaskTimer timer450(450, &task450, true);
     EXPECT_TRUE(timer1);
     EXPECT_TRUE(timer150);
     EXPECT_TRUE(timer450);
@@ -379,7 +392,7 @@ TEST(TaskSimulationTimerTest, MultipleTimerLargeAndDifferentSimulationStepTest)
 
     // Get the simulation task timer service.
     sdv::core::ITimerSimulationStep* pTimerSimulationStep = sdv::core::GetObject<sdv::core::ITimerSimulationStep>("SimulationTaskTimerService");
-    EXPECT_TRUE(pTimerSimulationStep);
+    ASSERT_TRUE(pTimerSimulationStep);
 
     uint32_t expected1 = 480;
     uint32_t expected150 = 3;

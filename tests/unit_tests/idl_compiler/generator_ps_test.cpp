@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "includes.h"
 #include "generated/array.h"
 #include "generated/ps/test_proxy.cpp"
@@ -991,7 +1004,7 @@ TEST_F(CGeneratorTest, OperationAny)
 
     EXPECT_TRUE(anyVal.empty());
 
-    proxy.Access().SetAny(sdv::any_t("ansi"));
+    proxy.Access().SetAny("ansi");
 
     proxy.Access().GetAny(anyVal);
 
@@ -1188,7 +1201,7 @@ TEST_F(CGeneratorTest, AttributeAny)
 
     EXPECT_TRUE(anyVal.empty());
 
-    proxy.Access().set_anyMyValue(sdv::any_t("ansi"));
+    proxy.Access().set_anyMyValue("ansi");
 
     anyVal = proxy.Access().get_anyMyValue();
 

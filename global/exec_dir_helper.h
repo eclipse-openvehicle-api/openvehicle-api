@@ -1,13 +1,17 @@
-/**
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
  *
- * @file      exec_dir_helper.h
- * @brief     This file contains helper functions e.g. filesystem
- * @version   0.1
- * @date      2022.11.14
- * @author    Thomas.pfleiderer@zf.com
- * @copyright Copyright ZF Friedrichshaven AG (c) 2022
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
- */
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
+
 #ifndef EXEC_DIR_HELPER_H
 #define EXEC_DIR_HELPER_H
 

@@ -1,7 +1,22 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef PACKAGER_H
 #define PACKAGER_H
 
+#include "core_control.h"
 #include "environment.h"
+#include "../../sdv_services/core/installation_manifest.h"
 
 /**
  * @brief Packager class.
@@ -54,6 +69,13 @@ private:
     bool Copy();
 
     /**
+     * @brief Configure the system with configuration files from the source location. Uses the environment settings to retrieve the
+     * configuration files and the set the target configuration the files should integrate into.
+     * @return Returns whether the configuration operation was successful.
+     */
+    bool Configure();
+
+    /**
      * @brief Remove an installation from the target location. Uses the environment settings to remove the files.
      * @return Returns whether the removal operation was successful.
      */
@@ -70,8 +92,37 @@ private:
      * @return Returns whether the show operation was successful.
      */
     bool ShowContent();
+
+private:
+    /**
+     * @brief After copying files, it is possible to configure the system using the manifest.
+     * @param[in] rmanifest Reference to the manifest holding the objects that were installed.
+     * @return Returns whether the copy operation was successful.
+     */
+    bool ConfigureFromManifest(const CInstallManifest& rmanifest);
+
+    /**
+     * @brief Create/update a configuration file
+     * @param[in] rvecAllClasses Reference to the vector containing all component classes installed by the packager.
+     * @param[in] rpathConfig Reference to the path of the configuration file.
+     * @param[in] rvecComponents Reference to the components to add to the configuration.
+     * @param[in] bUserConfig Set when the configuration is an user configuration; otherwise the configuration is a system
+     * configuration.
+     * @param[in, out] rvecAddedToConfig Reference to the vector containing and being updated with all the installed components.
+     * This vector is used to prevent adding the component to more than configuration.
+     */
+    void WriteConfig(const std::vector<sdv::SClassInfo>& rvecAllClasses, const std::filesystem::path& rpathConfig,
+        const CSdvPackagerEnvironment::CComponentVector& rvecComponents, bool bUserConfig,
+        CSdvPackagerEnvironment::CComponentVector& rvecAddedToConfig);
+
+    /**
+     * @brief Draw a table using the two dimensional vector with information.
+     * @param[in] rvecInfoTable Reference to the two dimensional vector containing the table information.
+     * @param[in] bSimple When set, draws a one column table only. Otherwise all the table information is included.
+     */
+    static void DrawTable(const std::vector<std::vector<std::string>>& rvecInfoTable, bool bSimple);
     
-    CSdvPackagerEnvironment                m_env;                              ///< The packager environment
+    CSdvPackagerEnvironment     m_env;                              ///< The packager environment
     int                         m_nError = NO_ERROR;                ///< Error code after processing the command line.
     std::string                 m_ssArgError;                       ///< Error text after processing the command line.
 };

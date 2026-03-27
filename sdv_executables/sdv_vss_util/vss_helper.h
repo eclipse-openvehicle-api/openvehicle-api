@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Thomas Pfleiderer - initial API and implementation
+ ********************************************************************************/
+
 #ifndef VSS_HELPER_H
 #define VSS_HELPER_H
 
@@ -10,7 +23,6 @@
 #include <fstream>
 #include <thread>
 #include <chrono>
-//#include <algorithm>
 #include <interfaces/dispatch.h>
 
 namespace sdv
@@ -125,7 +137,7 @@ namespace sdv
 
 /**
  * @brief VSS code generator helper class.
-*/
+ */
 class CVSSHelper
 {
 
@@ -133,19 +145,19 @@ public:
 
     /**
      * @brief Signal definition structure (vehicle device) with a single function/value combination
-    */
+     */
     struct SFunctionVDDefinition
     {
         std::string idlType;                            ///< signal value type (IDL: boolean, float, uint8, ...)
         std::string functionName;                       ///< signal value set function name
         std::string signalName;                         ///< signal name
-        std::string canSignalName;                      ///< can signal name (combination of signak messages and signal name)
+        std::string canSignalName;                      ///< can signal name (combination of signa messages and signal name)
         std::string formula;                            ///< c++ code if the value has to be converted
     };
 
     /**
      * @brief Signal definition structure (basic service) with a single function/value combination
-    */
+     */
     struct SFunctionBSDefinition
     {
         std::string idlType;                            ///< signal value type (IDL: boolean, float, uint8, ...)
@@ -155,7 +167,7 @@ public:
 
     /**
      * @brief Signal definition structure (vehicle device) with a single function/value combination
-    */
+     */
     struct SSignalVDDefinition
     {
         std::string vssDefinition;                        ///< vss interface string
@@ -166,7 +178,7 @@ public:
 
     /**
      * @brief Signal definition structure (basic service) with a single function/value combination
-    */
+     */
     struct SSignalBSDefinition
     {
         std::string vssDefinition;                        ///< vss interface string
@@ -177,257 +189,257 @@ public:
     };
 
     /**
-    * @brief Check if all required VD definitions are found required by the BS signals
-    * @param[in] bSilent if true do not print error to console.
-    * @param[in] vdSignals containing all signals definitions of the vehicle devices.
-    * @param[in] bsSignals containing all signals definitions of the basic services.
-    * @return Returns true on success when all definitions are found, otherwise false.
-    */
+     * @brief Check if all required VD definitions are found required by the BS signals
+     * @param[in] bSilent if true do not print error to console.
+     * @param[in] vdSignals containing all signals definitions of the vehicle devices.
+     * @param[in] bsSignals containing all signals definitions of the basic services.
+     * @return Returns true on success when all definitions are found, otherwise false.
+     */
    static bool VehicleDeviceVSSDefinitionExists(bool bSilent, const std::vector<SSignalVDDefinition>& vdSignals,
         const std::vector<SSignalBSDefinition>& bsSignals);
 
 protected:
 
     /**
-    * @brief Create the cmake if not exists and if content has changed
-    * @param[in] filePath full path to the file
-    * @param[in] cmakeContent content of the cmake file
-    */
+     * @brief Create the cmake if not exists and if content has changed
+     * @param[in] filePath full path to the file
+     * @param[in] cmakeContent content of the cmake file
+     */
     void CreateCMakeFile(const std::filesystem::path& filePath, const std::string& cmakeContent) const;
 
     /**
-    * @brief Converts the filename of a full path to lowercase
-    * @param[in] fullPath full path 
-    * @return Returns full path but the filename is lowercase
-    */    
+     * @brief Converts the filename of a full path to lowercase
+     * @param[in] fullPath full path 
+     * @return Returns full path but the filename is lowercase
+     */    
     std::filesystem::path MakeLowercaseFilename(std::filesystem::path& fullPath) const;
 
     /**
-    * @brief Add multiple space characters to increase the input string to a certain size.
-    * @param[in] ssInput Reference to the input string.
-    * @param[in] size of the final string.
-    * @return Returns the string increased by space characters.
-    */
+     * @brief Add multiple space characters to increase the input string to a certain size.
+     * @param[in] ssInput Reference to the input string.
+     * @param[in] size of the final string.
+     * @return Returns the string increased by space characters.
+     */
     std::string Align(const std::string& ssInput, size_t size) const;
 
     /**
-    * @brief trim spaces from begin of the string and end of the string
-    * @param[in] ssInput Reference to the input string to be checked.
-    * @return Returns string without the spaces at front and at the end
-    */
+     * @brief trim spaces from begin of the string and end of the string
+     * @param[in] ssInput Reference to the input string to be checked.
+     * @return Returns string without the spaces at front and at the end
+     */
     std::string Trim(const std::string& ssInput) const;
 
     /**
-    * @brief check for space characters in the string.
-    * @param[in] ssInput Reference to the input string to be checked.
-    * @return Returns true if string contains no space character, otherwise false.
-    */
+     * @brief check for space characters in the string.
+     * @param[in] ssInput Reference to the input string to be checked.
+     * @return Returns true if string contains no space character, otherwise false.
+     */
     bool MustNotContainSpaces(const std::string& ssInput) const;
 
     /**
-    * @brief Get the maximal string size of all class names in the vector container.
-    * @param[in] signals containing all signals definitions which have to be checked.
-    * @param[in] ssTitle Reference to the title string. Is minimum of the return value.
-    * @return Returns the string size of the largest class name string.
-    */
+     * @brief Get the maximal string size of all class names in the vector container.
+     * @param[in] signals containing all signals definitions which have to be checked.
+     * @param[in] ssTitle Reference to the title string. Is minimum of the return value.
+     * @return Returns the string size of the largest class name string.
+     */
     size_t GetMaxClassName(const std::vector<SSignalVDDefinition>& signals, const std::string& ssTitle) const;
 
     /**
-    * @brief Get the maximal string size of all IDL type strings in the vector container.
-    * @param[in] signals containing all signals definitions which have to be checked.
-    * @param[in] ssTitle Reference to the title string. Is minimum of the return value.
-    * @return Returns the string size of the largest IDL type string.
-    */
+     * @brief Get the maximal string size of all IDL type strings in the vector container.
+     * @param[in] signals containing all signals definitions which have to be checked.
+     * @param[in] ssTitle Reference to the title string. Is minimum of the return value.
+     * @return Returns the string size of the largest IDL type string.
+     */
     size_t GetMaxIDLType(const std::vector<SSignalVDDefinition>& signals, const std::string& ssTitle) const;
 
     /**
-    * @brief Get the maximal string size of all ctype strings in the vector container.
-    * @param[in] signals containing all signals definitions which have to be checked.
-    * @param[in] ssTitle Reference to the title string. Is minimum of the return value.
-    * @return Returns the string size of the largest ctype string.
-    */
+     * @brief Get the maximal string size of all ctype strings in the vector container.
+     * @param[in] signals containing all signals definitions which have to be checked.
+     * @param[in] ssTitle Reference to the title string. Is minimum of the return value.
+     * @return Returns the string size of the largest ctype string.
+     */
     size_t GetMaxCTypeFromIDLType(const std::vector<SSignalVDDefinition>& signals, const std::string& ssTitle) const;
 
     /**
-    * @brief Get the maximal string size of all signal name strings in the vector container.
-    * @param[in] signals containing all signals definitions which have to be checked.
-    * @param[in] ssTitle Reference to the title string. Is minimum of the return value.
-    * @return Returns the string size of the largest signal names string.
-    */
+     * @brief Get the maximal string size of all signal name strings in the vector container.
+     * @param[in] signals containing all signals definitions which have to be checked.
+     * @param[in] ssTitle Reference to the title string. Is minimum of the return value.
+     * @return Returns the string size of the largest signal names string.
+     */
     size_t GetMaxSignalName(const std::vector<SSignalVDDefinition>& signals, const std::string& ssTitle) const;
 
     /**
-    * @brief Get the maximal string size of all CAN signal name strings in the vector container.
-    * @param[in] signals containing all signals definitions which have to be checked.
-    * @param[in] ssTitle Reference to the title string. Is minimum of the return value.
-    * @return Returns the string size of the largest signal names string.
-    */
+     * @brief Get the maximal string size of all CAN signal name strings in the vector container.
+     * @param[in] signals containing all signals definitions which have to be checked.
+     * @param[in] ssTitle Reference to the title string. Is minimum of the return value.
+     * @return Returns the string size of the largest signal names string.
+     */
     size_t GetMaxCANSignalName(const std::vector<SSignalVDDefinition>& signals, const std::string& ssTitle) const;
 
     /**
-    * @brief Get the maximal string size of all function name strings in the vector container.
-    * @param[in] signals containing all signals definitions which have to be checked.
-    * @param[in] ssTitle Reference to the title string. Is minimum of the return value.
-    * @return Returns the string size of the largest function names string.
-    */
+     * @brief Get the maximal string size of all function name strings in the vector container.
+     * @param[in] signals containing all signals definitions which have to be checked.
+     * @param[in] ssTitle Reference to the title string. Is minimum of the return value.
+     * @return Returns the string size of the largest function names string.
+     */
     size_t GetMaxFunctionName(const std::vector<SSignalVDDefinition>& signals, const std::string& ssTitle) const;
 
     /**
-    * @brief Get the maximal string size of all vss strings in the vector container.
-    * @param[in] signals containing all signals definitions which have to be checked.
-    * @param[in] ssTitle Reference to the title string. Is minimum of the return value.
-    * @return Returns the string size of the largest vss string.
-    */
+     * @brief Get the maximal string size of all vss strings in the vector container.
+     * @param[in] signals containing all signals definitions which have to be checked.
+     * @param[in] ssTitle Reference to the title string. Is minimum of the return value.
+     * @return Returns the string size of the largest vss string.
+     */
     size_t GetMaxVSSDefinition(const std::vector<SSignalVDDefinition>& signals, const std::string& ssTitle) const;
 
     /**
-    * @brief check for '.' characters in the string.
-    * @param[in] ssInput Reference to the input string to be checked.
-    * @param[in] mustBeEmpty If true input string must not be empty
-    * @return Returns true if string contains '.' or is empty depending on mustBeEmpty, otherwise false.
-    */
+     * @brief check for '.' characters in the string.
+     * @param[in] ssInput Reference to the input string to be checked.
+     * @param[in] mustBeEmpty If true input string must not be empty
+     * @return Returns true if string contains '.' or is empty depending on mustBeEmpty, otherwise false.
+     */
     bool MustContainDotOrIsEmpty(const std::string& ssInput, bool mustBeEmpty) const;
 
     /**
-    * @brief check if vss parts are string and no number. If number add '_'
-    *   for vehicle.chassis.axel.01.left return vehicle.chassis.axel._01.left
-    * @param[in] ssInput Reference to the input string to be checked.
-    * @return Returns valid vss string.
-    */
+     * @brief check if vss parts are string and no number. If number add '_'
+     *   for vehicle.chassis.axel.01.left return vehicle.chassis.axel._01.left
+     * @param[in] ssInput Reference to the input string to be checked.
+     * @return Returns valid vss string.
+     */
     std::string ValidateVSSFormatNumbers(const std::string& ssInput) const;
 
     /**
-    * @brief check if string is a number
-    * @param[in] ssInput Reference to the input string to be checked.
-    * @return Returns false if it is a number, otherwise true.
-    */
+     * @brief check if string is a number
+     * @param[in] ssInput Reference to the input string to be checked.
+     * @return Returns false if it is a number, otherwise true.
+     */
     bool IsNumber(const std::string& ssInput) const;
 
     /**
-    * @brief Returns input string or if empty, returns default string.
-    * @param[in] ssInput string
-    * @param[in] ssDefaultString string used as default if input string is empty
-    * @param[in] index number will be added to the default string.
-    * @return Returns input string or if empty returns default string added by the number.
-    */
+     * @brief Returns input string or if empty, returns default string.
+     * @param[in] ssInput string
+     * @param[in] ssDefaultString string used as default if input string is empty
+     * @param[in] index number will be added to the default string.
+     * @return Returns input string or if empty returns default string added by the number.
+     */
     std::string GenerateDefaultIfEmpty(const std::string& ssInput, std::string ssDefaultString, const uint32_t& index) const;
 
     /**
-    * @brief Returns input string but starts and ends with "'".
-    * @param[in] ssInput string
-    * @return Returns the input string with "'" added at the frond and the end.
-    */
+     * @brief Returns input string but starts and ends with "'".
+     * @param[in] ssInput string
+     * @return Returns the input string with "'" added at the frond and the end.
+     */
     std::string AddQuotationMarks(const std::string& ssInput) const;
 
     /**
-    * @brief Replaces some characters of the input string.
-    * @param[in] ssInput string.
-    * @param[in] from character to be replaced
-    * @param[in] to replacement character.
-    * @return Returns the string with replacements.
-    */
+     * @brief Replaces some characters of the input string.
+     * @param[in] ssInput string.
+     * @param[in] from character to be replaced
+     * @param[in] to replacement character.
+     * @return Returns the string with replacements.
+     */
     std::string ReplaceCharacters(const std::string& ssInput, const std::string& from, const std::string& to) const;
 
     /**
-    * @brief turn the input string to upper case
-    * @param[in] ssInput string.
-    * @return Returns the input string but all characters are upper case
-    */
+     * @brief turn the input string to upper case
+     * @param[in] ssInput string.
+     * @return Returns the input string but all characters are upper case
+     */
     std::string ToUpper(const std::string& ssInput) const;
 
     /**
-    * @brief remove the last part of the vss string
-    * @param[in] ssInput vss string
-    * @return Returns the string but removed the last part after charatcer '.'.
-    */
+     * @brief remove the last part of the vss string
+     * @param[in] ssInput vss string
+     * @return Returns the string but removed the last part after charatcer '.'.
+     */
     std::string ShortenVSSString(const std::string& ssInput) const;
 
     /**
-    * @brief add to the type a cast, for example for 'std::string' it adds "const std::string&'
-    * @param[in] ssSignalType the string representing the type
-    * @return Returns either original string or 'const' and '&' added.
-    */
+     * @brief add to the type a cast, for example for 'std::string' it adds "const std::string&'
+     * @param[in] ssSignalType the string representing the type
+     * @return Returns either original string or 'const' and '&' added.
+     */
     std::string CastValueType(const std::string& ssSignalType) const;
 
     /**
-    * @brief find IDL type and return CType
-    * @param[in] ssIDLType string representing IDL type
-    * @return CType string if IDL type found, otherwise empty string
-    */
+     * @brief find IDL type and return CType
+     * @param[in] ssIDLType string representing IDL type
+     * @return CType string if IDL type found, otherwise empty string
+     */
     std::string GetCTypeFromIDLType(const std::string& ssIDLType) const;
 
     /**
-    * @brief validate if all IDL type are valid
-    * @param[in] vecTypes container of the IDL types
-    * @param[in] silent information to console if not silent
-    * @return True if IDL types are valid, otherwise false
-    */
+     * @brief validate if all IDL type are valid
+     * @param[in] vecTypes container of the IDL types
+     * @param[in] silent information to console if not silent
+     * @return True if IDL types are valid, otherwise false
+     */
     bool ValidateIDLTypes(const std::vector<std::string>& vecTypes, const bool silent) const;
 
     /**
-    * @brief Create folder or sub folder
-    * @param[in] rootPath complete root path
-    * @param[in] subfolder in case this parameter is empty only root path is created otherwise rootPath + subfolder
-    * @return true if directory exists or is created successfully, otherwise false
-    */
+     * @brief Create folder or sub folder
+     * @param[in] rootPath complete root path
+     * @param[in] subfolder in case this parameter is empty only root path is created otherwise rootPath + subfolder
+     * @return true if directory exists or is created successfully, otherwise false
+     */
     bool CreateFolder(const std::filesystem::path& rootPath, const std::string& subfolder) const;
 
     /**
-    * @brief deletes a header file
-    * @param[in] path full path to a folder
-    * @param[in] fileNameNoExtension a file name without the extension
-    */
+     * @brief deletes a header file
+     * @param[in] path full path to a folder
+     * @param[in] fileNameNoExtension a file name without the extension
+     */
     void DeleteHeaderFile(const std::filesystem::path& path, const std::string& fileNameNoExtension) const;
 
     /**
-    * @brief Validates the code style (signal name starts with lower case, function name upper case ...
-    * @param[in] function function definition structure
-    * @param[in] verbose print information to console only if true
-    */
+     * @brief Validates the code style (signal name starts with lower case, function name upper case ...
+     * @param[in] function function definition structure
+     * @param[in] verbose print information to console only if true
+     */
     void ValidateVDCodeStyle(const SFunctionVDDefinition& function, const bool verbose) const;
 
     /**
-    * @brief Validates the code style (signal name starts with lower case, function name upper case ...
-    * @param[in] function function definition structure
-    * @param[in] verbose print information to console only if true
-    */
+     * @brief Validates the code style (signal name starts with lower case, function name upper case ...
+     * @param[in] function function definition structure
+     * @param[in] verbose print information to console only if true
+     */
     void ValidateBSCodeStyle(const SFunctionBSDefinition& function, const bool verbose) const;
 
     /**
-    * @brief Validates the code style (signal name starts with lower case, function name upper case ...
-    * @param[in] signal signal definition structure 
-    * @param[in] verbose print information to console only if true
-    */
+     * @brief Validates the code style (signal name starts with lower case, function name upper case ...
+     * @param[in] signal signal definition structure 
+     * @param[in] verbose print information to console only if true
+     */
     void ValidateVDCodeStyle(const SSignalVDDefinition& signal, const bool verbose) const;
 
     /**
-    * @brief Validates the code style (signal name starts with lower case, function name upper case ...
-    * @param[in] signal signal definition structure
-    * @param[in] verbose print information to console only if true
-    */
+     * @brief Validates the code style (signal name starts with lower case, function name upper case ...
+     * @param[in] signal signal definition structure
+     * @param[in] verbose print information to console only if true
+     */
     void ValidateBSCodeStyle(const SSignalBSDefinition& signal, const bool verbose) const; 
 
 private:
 
     /**
-* @brief Declaration type name association.
-*/
+     * @brief Declaration type name association.
+     */
     using TDeclTypeAssoc = std::pair<std::string, sdv::vss::EDeclType>;
 
     /**
-    * @brief change EDeclType to cType string
-    * @param[in] eDeclType EDeclTyp type
-    * @return Returns cType stringif available, otherwise empty string
-    */
+     * @brief change EDeclType to cType string
+     * @param[in] eDeclType EDeclTyp type
+     * @return Returns cType stringif available, otherwise empty string
+     */
     std::string MapDeclType2CType(const sdv::vss::EDeclType eDeclType) const;
 
     /**
-    * @brief Mapping between declaration type and string name.
-    * @attention Some types have multiple string representatives (e.g. sdv::vss::EDeclType::decltype_short vs. 'short' and
-    * 'int16').
-    * @attention Based on the provided extensions on the command line, the types might be extended by: char16, char32, u8string,
-    * u16string, u32string, pointer, interface_id, interface_t and exception_id
-    */
+     * @brief Mapping between declaration type and string name.
+     * @attention Some types have multiple string representatives (e.g. sdv::vss::EDeclType::decltype_short vs. 'short' and
+     * 'int16').
+     * @attention Based on the provided extensions on the command line, the types might be extended by: char16, char32, u8string,
+     * u16string, u32string, pointer, interface_id, interface_t and exception_id
+     */
     const std::vector<TDeclTypeAssoc> m_vecDeclTypes = {
         {"short", sdv::vss::EDeclType::decltype_short},
         {"unsigned short", sdv::vss::EDeclType::decltype_unsigned_short},

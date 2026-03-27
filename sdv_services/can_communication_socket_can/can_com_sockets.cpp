@@ -1,11 +1,25 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Sudipta Durjoy - initial API and implementation
+ *   Thomas Pfleiderer - refactored and finalized 
+ ********************************************************************************/
+
 #include "can_com_sockets.h"
 
-void CCANSockets::Initialize(const sdv::u8string& rssObjectConfig)
+bool CCANSockets::OnInitialize()
 {
     std::deque<std::string> vecConfigInterfaces;
     try
     {
-        sdv::toml::CTOMLParser config(rssObjectConfig.c_str());
+        sdv::toml::CTOMLParser config(GetObjectConfig());
         sdv::toml::CNodeCollection nodeSource = config.GetDirect("canSockets");
         if (nodeSource.GetType() == sdv::toml::ENodeType::node_array)
         {
@@ -35,8 +49,7 @@ void CCANSockets::Initialize(const sdv::u8string& rssObjectConfig)
     catch (const sdv::toml::XTOMLParseException& e)
     {
         SDV_LOG_ERROR("Configuration could not be read: ", e.what());
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
     
     if (vecConfigInterfaces.size() == 0)
@@ -46,13 +59,40 @@ void CCANSockets::Initialize(const sdv::u8string& rssObjectConfig)
    
     if (!SetupCANSockets(vecConfigInterfaces))
     {
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        LogAllCanInterfaceNames();        
+        return false;
     }
 
+    LogConfigurations();    
     m_threadReceive = std::thread(&CCANSockets::ReceiveThreadFunc, this);
 
-    m_eStatus = sdv::EObjectStatus::initialized;
+    return true;
+}
+
+void CCANSockets::LogConfigurations()
+{
+    for (const auto& socket : m_vecSockets)
+    {
+        if ((socket.localSocket > 0) && (socket.networkInterface > 0))
+        {
+            SDV_LOG_INFO("Configured socket: ", socket.name, ", index: ", socket.networkInterface);
+        }
+    }
+}
+
+void CCANSockets::LogAllCanInterfaceNames()
+{
+    // Retrieve the list of available can interfaces
+    struct ifaddrs *ifaddr, *ifa;
+    if (getifaddrs(&ifaddr) != -1)
+    {
+        SDV_LOG_INFO("List of available can socket interfaces:");
+        for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
+        {
+            SDV_LOG_INFO(ifa->ifa_name);
+        }
+        freeifaddrs(ifaddr);
+    }
 }
 
 bool CCANSockets::SetupCANSockets(const std::deque<std::string>& vecConfigInterfaces)
@@ -60,13 +100,16 @@ bool CCANSockets::SetupCANSockets(const std::deque<std::string>& vecConfigInterf
     // Retrieve the list of available interfaces    
     std::set<std::string> availableInterfaces;
     struct ifaddrs *ifaddr, *ifa;
-    if (getifaddrs(&ifaddr) != -1)
+    if (getifaddrs(&ifaddr) == -1)
     {
-        for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
-        {
-            availableInterfaces.insert(ifa->ifa_name);
-        }   
+        SDV_LOG_ERROR(" Error: getifaddrs()");
+        return false;        
     }
+
+    for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next)
+    {
+        availableInterfaces.insert(ifa->ifa_name);
+    }   
     freeifaddrs(ifaddr);
 
     CreateAndBindSockets(vecConfigInterfaces, availableInterfaces);
@@ -152,32 +195,8 @@ void CCANSockets::CreateAndBindSockets(const std::deque<std::string>& vecConfigI
     }
 }
 
-sdv::EObjectStatus CCANSockets::GetStatus() const
+void CCANSockets::OnShutdown()
 {
-    return m_eStatus;
-}
-
-void CCANSockets::SetOperationMode(sdv::EOperationMode eMode)
-{
-    switch (eMode)
-    {
-    case sdv::EOperationMode::configuring:
-        if (m_eStatus == sdv::EObjectStatus::running || m_eStatus == sdv::EObjectStatus::initialized)
-            m_eStatus = sdv::EObjectStatus::configuring;
-        break;
-    case sdv::EOperationMode::running:
-        if (m_eStatus == sdv::EObjectStatus::configuring || m_eStatus == sdv::EObjectStatus::initialized)
-            m_eStatus = sdv::EObjectStatus::running;
-        break;
-    default:
-        break;
-    }
-}
-
-void CCANSockets::Shutdown()
-{
-    m_eStatus = sdv::EObjectStatus::shutdown_in_progress;
-
     // Wait until the receiving thread is finished.
     if (m_threadReceive.joinable())
         m_threadReceive.join();
@@ -190,13 +209,11 @@ void CCANSockets::Shutdown()
             close(socket.localSocket);  
         }
     }
-
-    m_eStatus = sdv::EObjectStatus::destruction_pending;
 }
 
 void CCANSockets::RegisterReceiver(/*in*/ sdv::can::IReceive* pReceiver)
 {
-    if (m_eStatus != sdv::EObjectStatus::configuring) return;
+    if (GetObjectState() != sdv::EObjectState::configuring) return;
     if (!pReceiver) return;
 
     SDV_LOG_INFO("Registering VAPI CAN communication receiver...");
@@ -222,7 +239,7 @@ void CCANSockets::UnregisterReceiver(/*in*/ sdv::can::IReceive* pReceiver)
 sdv::sequence<sdv::u8string> CCANSockets::GetInterfaces() const
 {
     sdv::sequence<sdv::u8string> seqIfcNames;
-    if (m_eStatus != sdv::EObjectStatus::running) 
+    if (GetObjectState() != sdv::EObjectState::running) 
     {
         return seqIfcNames;
     }
@@ -241,7 +258,7 @@ sdv::sequence<sdv::u8string> CCANSockets::GetInterfaces() const
 
 void CCANSockets::Send(const sdv::can::SMessage& sMsg, uint32_t uiConfigIndex)
 {
-    if (m_eStatus != sdv::EObjectStatus::running) return;
+    if (GetObjectState() != sdv::EObjectState::running) return;
     if (sMsg.bCanFd) return;  // CAN-FD not supported
     if (sMsg.seqData.size() > 8) return;  // Invalid message length.
 
@@ -267,15 +284,17 @@ void CCANSockets::Send(const sdv::can::SMessage& sMsg, uint32_t uiConfigIndex)
 
     std::unique_lock<std::mutex> lock(m_mtxSockets);
 
-    auto it = m_vecSockets.begin();
-    std::advance(it, uiConfigIndex); 
-    if (it != m_vecSockets.end()) 
+    for (const auto& socket : m_vecSockets)
     {
-        if ((it->localSocket > 0) && (it->networkInterface > 0))
+        if ((socket.localSocket > 0) && (socket.networkInterface > 0))
         {
-            sAddr.can_ifindex = it->networkInterface;
-            sAddr.can_family  = AF_CAN;
-            sendto(it->localSocket, &sFrame, sizeof(can_frame), 0, reinterpret_cast<sockaddr*>(&sAddr), sizeof(sAddr));
+            if ((uint)socket.networkInterface == uiConfigIndex)
+            {
+                sAddr.can_ifindex = socket.networkInterface;
+                sAddr.can_family  = AF_CAN;
+                sendto(socket.localSocket, &sFrame, sizeof(can_frame), 0, reinterpret_cast<sockaddr*>(&sAddr), sizeof(sAddr));
+                break;
+            }            
         }
     }
 }
@@ -285,16 +304,16 @@ void CCANSockets::ReceiveThreadFunc()
     while (true)
     {
         enum {retry, cont, exit} eNextStep = exit;
-        switch (m_eStatus)
+        switch (GetObjectState())
         {
-        case sdv::EObjectStatus::configuring:
-        case sdv::EObjectStatus::initialization_pending:
-        case sdv::EObjectStatus::initialized:
-        case sdv::EObjectStatus::initializing:
+        case sdv::EObjectState::configuring:
+        case sdv::EObjectState::initialization_pending:
+        case sdv::EObjectState::initialized:
+        case sdv::EObjectState::initializing:
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             eNextStep = retry;
             break;
-        case sdv::EObjectStatus::running:
+        case sdv::EObjectState::running:
             eNextStep = cont;
             break;
         default:

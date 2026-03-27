@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef SDV_CORE_H
 #define SDV_CORE_H
 
@@ -48,6 +61,87 @@
 
 namespace sdv
 {
+    /**
+     * @brief Get the object type string from the type
+     * @param[in] eType The object type to get the string from.
+     * @return The object type string.
+     */
+    inline std::string ObjectType2String(sdv::EObjectType eType)
+    {
+        switch (eType)
+        {
+        case EObjectType::system_object:
+            return "SystemObject";
+        case EObjectType::device:
+            return "Device";
+        case EObjectType::platform_abstraction:
+            return "PlatformAbstraction";
+        case EObjectType::vehicle_bus:
+            return "VehicleBus";
+        case EObjectType::basic_service:
+            return "BasicService";
+        case EObjectType::sensor:
+            return "Sensor";
+        case EObjectType::actuator:
+            return "Actuator";
+        case EObjectType::complex_service:
+            return "ComplexService";
+        case EObjectType::vehicle_function:
+            return "VehicleFunction";
+        case EObjectType::application:
+            return "Application";
+        case EObjectType::proxy:
+            return "Proxy";
+        case EObjectType::stub:
+            return "Stub";
+        case EObjectType::utility:
+            return "Utility";
+        default:
+            return "Unknown";
+        }
+    }
+
+    /**
+     * @brief Get the object type from the string
+     * @param[in] rssType Reference to the string identifying the object type.
+     * @return The object type or sdv::EObjectType::Undefined.
+     */
+    inline EObjectType String2ObjectType(const std::string& rssType)
+    {
+        if (rssType == "SystemObject")
+            return EObjectType::system_object;
+        if (rssType == "Device")
+            return EObjectType::device;
+        if (rssType == "PlatformAbstraction")
+            return EObjectType::platform_abstraction;
+        if (rssType == "VehicleBus")
+            return EObjectType::vehicle_bus;
+        if (rssType == "BasicService")
+            return EObjectType::basic_service;
+        if (rssType == "Sensor")
+            return EObjectType::sensor;
+        if (rssType == "Actuator")
+            return EObjectType::actuator;
+        if (rssType == "ComplexService")
+            return EObjectType::complex_service;
+        if (rssType == "VehicleFunction")
+            return EObjectType::complex_service;
+        if (rssType == "Application")
+            return EObjectType::application;
+        if (rssType == "Proxy")
+            return EObjectType::proxy;
+        if (rssType == "Stub")
+            return EObjectType::stub;
+        if (rssType == "Utility")
+            return EObjectType::utility;
+        return EObjectType::undefined;
+    }
+} // namespace sdv
+
+
+#ifndef SDV_NO_LOADER
+namespace sdv{
+
     namespace core
     {
         namespace internal
@@ -345,6 +439,6 @@ namespace sdv
 #endif
     }
 }
-
+#endif // !defined SDV_NO_LOADER
 
 #endif // !define SDV_CORE_H

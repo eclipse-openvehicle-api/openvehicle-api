@@ -1,3 +1,13 @@
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ ********************************************************************************/
+
 #include <iostream>
 #include "complex_service.h"
 
@@ -8,22 +18,17 @@ CCounterSteeringExampleService::CCounterSteeringExampleService()
 }
 
 CCounterSteeringExampleService::~CCounterSteeringExampleService()
-{
-    // Just in case...
-    Shutdown();
-}
+{}
 
-void CCounterSteeringExampleService::Initialize(const sdv::u8string& /*ssObjectConfig*/)
+bool CCounterSteeringExampleService::OnInitialize()
 {
-    m_eStatus = sdv::EObjectStatus::initializing;
-
     // Request the basic service for monitoring the alive counter.
     m_pAliveCounterSvc = sdv::core::GetObject("Vehicle.Software.Application.IsActiveCounter_Service").GetInterface<vss::Vehicle::Software::Application::IsActiveCounterService::IVSS_SetCounter>();
     if (!m_pAliveCounterSvc)
     {
         SDV_LOG_ERROR("Could not get interface 'IVSS_SetCounter': [CCounterSteeringExampleService]");
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
+        ;
     }
 
     // Request the basic service for the rear axle.
@@ -31,8 +36,7 @@ void CCounterSteeringExampleService::Initialize(const sdv::u8string& /*ssObjectC
     if (!m_pRearAxleSvc)
     {
         SDV_LOG_ERROR("Could not get interface 'IVSS_SetAngle': [CCounterSteeringExampleService]");
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
 
     // Request the basic service for the steering wheel.
@@ -40,8 +44,7 @@ void CCounterSteeringExampleService::Initialize(const sdv::u8string& /*ssObjectC
     if (!pSteeringWheelSvc)
     {
         SDV_LOG_ERROR("Could not get interface 'IVSS_SetSteeringAngle': [CCounterSteeringExampleService]");
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
 
     // Request the basic service for the vehicle speed.
@@ -49,8 +52,7 @@ void CCounterSteeringExampleService::Initialize(const sdv::u8string& /*ssObjectC
     if (!pVehSpeedSvc)
     {
         SDV_LOG_ERROR("Could not get interface 'IVSS_SetSpeed': [CCounterSteeringExampleService]");
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
 
     // Register steering wheel change event handler.
@@ -64,26 +66,14 @@ void CCounterSteeringExampleService::Initialize(const sdv::u8string& /*ssObjectC
     if (!m_Timer)
     {
         SDV_LOG_ERROR("CCounterSteeringExampleService: tasktimer with 10 milliseconds could not be created.");
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
 
     SDV_LOG_INFO("CCounterSteeringExampleService: tasktimer created with 10 milliseconds");
-
-    m_eStatus = sdv::EObjectStatus::initialized;
+    return true;
 }
 
-sdv::EObjectStatus CCounterSteeringExampleService::GetStatus() const
-{
-    return m_eStatus;
-}
-
-void CCounterSteeringExampleService::SetOperationMode(sdv::EOperationMode /*eMode*/)
-{
-    // Not applicable
-}
-
-void CCounterSteeringExampleService::Shutdown()
+void CCounterSteeringExampleService::OnShutdown()
 {
     // Terminate the alive counter
     m_Timer.Reset();

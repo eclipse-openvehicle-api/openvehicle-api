@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef SDV_ANY_INL
 #define SDV_ANY_INL
 
@@ -29,16 +42,138 @@ namespace sdv
         clear();
     }
 
-    template <typename TType>
-    inline any_t::any_t(TType tVal) : any_t()
+    inline any_t::any_t(bool bValParam) : any_t()
     {
-        set(tVal);
+        eValType = EValType::val_type_bool;
+        bVal = bValParam;
+    }
+
+    inline any_t::any_t(int8_t iVal) : any_t()
+    {
+        eValType = EValType::val_type_int8;
+        i8Val = iVal;
+    }
+
+    inline any_t::any_t(int16_t iVal) : any_t()
+    {
+        eValType = EValType::val_type_int16;
+        i16Val = iVal;
+    }
+
+    inline any_t::any_t(int32_t iVal) : any_t()
+    {
+        eValType = EValType::val_type_int32;
+        i32Val = iVal;
+    }
+
+#ifdef _WIN32
+    inline any_t::any_t(long iVal) : any_t()
+    {
+        eValType = EValType::val_type_int32;
+        i32Val = iVal;
+    }
+#endif
+
+    inline any_t::any_t(int64_t iVal) : any_t()
+    {
+        eValType = EValType::val_type_int64;
+        i64Val = iVal;
+    }
+
+#ifdef __linux__
+    inline any_t::any_t(long long int iVal) : any_t()
+    {
+        eValType = EValType::val_type_int64;
+        i64Val = iVal;
+    }
+#endif
+
+    inline any_t::any_t(uint8_t uiVal) : any_t()
+    {
+        eValType = EValType::val_type_uint8;
+        ui8Val = uiVal;
+    }
+
+    inline any_t::any_t(uint16_t uiVal) : any_t()
+    {
+        eValType = EValType::val_type_uint16;
+        ui16Val = uiVal;
+    }
+
+    inline any_t::any_t(uint32_t uiVal) : any_t()
+    {
+        eValType = EValType::val_type_uint32;
+        ui32Val = uiVal;
+    }
+
+#ifdef _WIN32
+    inline any_t::any_t(unsigned long uiVal) : any_t()
+    {
+        eValType = EValType::val_type_uint32;
+        ui32Val = uiVal;
+    }
+#endif
+
+    inline any_t::any_t(uint64_t uiVal) : any_t()
+    {
+        eValType = EValType::val_type_uint64;
+        ui64Val = uiVal;
+    }
+
+#ifdef __linux__
+    inline any_t::any_t(unsigned long long int uiVal) : any_t()
+    {
+        eValType = EValType::val_type_uint64;
+        ui64Val = uiVal;
+    }
+#endif
+
+    inline any_t::any_t(char cValParam) : any_t()
+    {
+        eValType = EValType::val_type_char;
+        cVal = cValParam;
+    }
+
+    inline any_t::any_t(char16_t cValParam) : any_t()
+    {
+        eValType = EValType::val_type_char16;
+        c16Val = cValParam;
+    }
+
+    inline any_t::any_t(char32_t cValParam) : any_t()
+    {
+        eValType = EValType::val_type_char32;
+        c32Val = cValParam;
+    }
+
+    inline any_t::any_t(wchar_t cValParam) : any_t()
+    {
+        eValType = EValType::val_type_wchar;
+        cwVal = cValParam;
+    }
+
+    inline any_t::any_t(float fValParam) : any_t()
+    {
+        eValType = EValType::val_type_float;
+        fVal = fValParam;
+    }
+
+    inline any_t::any_t(double fValParam) : any_t()
+    {
+        eValType = EValType::val_type_double;
+        dVal = fValParam;
+    }
+
+    inline any_t::any_t(long double fValParam) : any_t()
+    {
+        eValType = EValType::val_type_long_double;
+        ldVal = fValParam;
     }
 
     inline any_t::any_t(const string& rssVal) : any_t()
     {
-          eValType = EValType::val_type_string;
-          new (&ssVal) string(rssVal);
+        eValType = EValType::val_type_string;
+        new (&ssVal) string(rssVal);
     }
 
     inline any_t::any_t(const u8string& rssVal) : any_t()
@@ -65,17 +200,29 @@ namespace sdv
         new (&sswVal) wstring(rssVal);
     }
 
-    inline any_t::any_t(const char* sz) : any_t(sdv::u8string(sz))
-    {}
+    inline any_t::any_t(const char* szVal) : any_t()
+    {
+        eValType = EValType::val_type_u8string;
+        new (&ss8Val) u8string(szVal);
+    }
     
-    inline any_t::any_t(const char16_t* sz) : any_t(sdv::u16string(sz))
-    {}
+    inline any_t::any_t(const char16_t* szVal) : any_t()
+    {
+        eValType = EValType::val_type_u16string;
+        new (&ss16Val) u16string(szVal);
+    }
 
-    inline any_t::any_t(const char32_t* sz) : any_t(sdv::u32string(sz))
-    {}
+    inline any_t::any_t(const char32_t* szVal) : any_t()
+    {
+        eValType = EValType::val_type_u32string;
+        new (&ss32Val) u32string(szVal);
+    }
 
-    inline any_t::any_t(const wchar_t* sz) : any_t(sdv::wstring(sz))
-    {}
+    inline any_t::any_t(const wchar_t* szVal) : any_t()
+    {
+        eValType = EValType::val_type_wstring;
+        new (&sswVal) wstring(szVal);
+    }
 
     inline any_t::any_t(const std::string& rssVal) : any_t()
     {
@@ -99,6 +246,36 @@ namespace sdv
     {
         eValType = EValType::val_type_wstring;
         new (&sswVal) wstring(rssVal);
+    }
+
+    inline any_t::any_t(const std::filesystem::path& rpathVal) : any_t(rpathVal.generic_u8string())
+    {}
+
+    inline any_t::any_t(interface_t ifcValParam) : any_t()
+    {
+        eValType = EValType::val_type_interface;
+        new (&ifcVal) interface_t(ifcValParam);
+    }
+
+    // Assignment already covered by any_t(uint64)
+    //inline any_t::any_t(interface_id idIfcVal) : any_t()
+    //{
+    //    eValType = EValType::val_type_interface_id;
+    //    new (&idIfcVal) interface_id(idIfcVal);
+    //}
+
+    // Assignment already covered by any_t(uint64)
+    //inline any_t::any_t(exception_id idExceptVal) : any_t()
+    //{
+    //    eValType = EValType::val_type_exception_id;
+    //    new (&idIfcVal) exception_id(idIfcValParam);
+    //}
+
+    template <typename TEnum, typename TEnable>
+    inline any_t::any_t(TEnum eVal) : any_t()
+    {
+        static_assert(std::is_enum_v<TEnum>, "The type is not supported to be converted to sdv::any_t!");
+        set(static_cast<std::underlying_type_t<TEnum>>(eVal));
     }
 
     template <typename TType>
@@ -188,10 +365,243 @@ namespace sdv
         rany.eValType = EValType::val_type_empty;
     }
 
-    template <typename TType>
-    inline any_t& any_t::operator=(TType tVal)
+    inline any_t& any_t::operator=(bool bValParam)
     {
-        set(tVal);
+        set(bValParam);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(int8_t iVal)
+    {
+        set(iVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(int16_t iVal)
+    {
+        set(iVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(int32_t iVal)
+    {
+        set(iVal);
+        return *this;
+    }
+    
+#ifdef _WIN32
+    inline any_t& any_t::operator=(long iVal)
+    {
+        set(iVal);
+        return *this;
+    }
+#endif
+    
+    inline any_t& any_t::operator=(int64_t iVal)
+    {
+        set(iVal);
+        return *this;
+    }
+
+#ifdef __linux__
+    inline any_t& any_t::operator=(long long int iVal)
+    {
+        set(iVal);
+        return *this;
+    }
+#endif
+
+    inline any_t& any_t::operator=(uint8_t uiVal)
+    {
+        set(uiVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(uint16_t uiVal)
+    {
+        set(uiVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(uint32_t uiVal)
+    {
+        set(uiVal);
+        return *this;
+    }
+
+#ifdef _WIN32
+    inline any_t& any_t::operator=(unsigned long uiVal)
+    {
+        set(uiVal);
+        return *this;
+    }
+#endif
+
+    inline any_t& any_t::operator=(uint64_t uiVal)
+    {
+        set(uiVal);
+        return *this;
+    }
+
+#ifdef __linux__
+    inline any_t& any_t::operator=(unsigned long long int uiVal)
+    {
+        set(uiVal);
+        return *this;
+    }
+#endif
+
+    inline any_t& any_t::operator=(char cValParam)
+    {
+        set(cValParam);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(char16_t cValParam)
+    {
+        set(cValParam);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(char32_t cValParam)
+    {
+        set(cValParam);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(wchar_t cValParam)
+    {
+        set(cValParam);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(float fValParam)
+    {
+        set(fValParam);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(double fValParam)
+    {
+        set(fValParam);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(long double fValParam)
+    {
+        set(fValParam);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(const string& rssVal)
+    {
+        set(rssVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(const u8string& rssVal)
+    {
+        set(rssVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(const u16string& rssVal)
+    {
+        set(rssVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(const u32string& rssVal)
+    {
+        set(rssVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(const wstring& rssVal)
+    {
+        set(rssVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(const char* szVal)
+    {
+        set(szVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(const char16_t* szVal)
+    {
+        set(szVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(const char32_t* szVal)
+    {
+        set(szVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(const wchar_t* szVal)
+    {
+        set(szVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(const std::string& rssVal)
+    {
+        set(rssVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(const std::u16string& rssVal)
+    {
+        set(rssVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(const std::u32string& rssVal)
+    {
+        set(rssVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(const std::wstring& rssVal)
+    {
+        set(rssVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(const std::filesystem::path& rpathVal)
+    {
+        set(rpathVal);
+        return *this;
+    }
+
+    inline any_t& any_t::operator=(interface_t ifcValParam)
+    {
+        set(ifcValParam);
+        return *this;
+    }
+
+    // Assignment already covered by operator=(uint64)
+    //inline any_t& any_t::operator=(interface_id idIfcValParam)
+    //{
+    //    set(idIfcValParam);
+    //    return *this;
+    //}
+
+    // Assignment already covered by operator=(uint64)
+    //inline any_t& any_t::operator=(exception_id idExceptValParam)
+    //{
+    //    set(idExceptValParam);
+    //    return *this;
+    //}
+
+    template <typename TEnum, typename TEnable>
+    inline any_t& any_t::operator=(TEnum eVal)
+    {
+        static_assert(std::is_enum_v<TEnum>, "The type is not supported to be converted to sdv::any_t!");
+        set(static_cast<std::underlying_type_t<TEnum>>(eVal));
         return *this;
     }
 
@@ -392,6 +802,11 @@ namespace sdv
         return get<wstring>();
     }
 
+    inline any_t::operator std::filesystem::path() const
+    {
+        return get<std::filesystem::path>();
+    }
+
     inline any_t::operator interface_t() const
     {
         return get<interface_t>();
@@ -448,429 +863,250 @@ namespace sdv
         eValType = EValType::val_type_empty;
     }
 
-    /**
-     * @brief Set the boolean value (specialization)
-     * @param[in] bValParam The boolean value.
-     */
-    template <>
     inline void any_t::set(bool bValParam)
     {
         clear();
         eValType = EValType::val_type_bool;
-        bVal = bValParam;
+        bVal     = bValParam;
     }
 
-    /**
-     * @brief Set the integer value (specialization)
-     * @param[in] iValParam The integer value.
-     */
-    template <>
-    inline void any_t::set(int8_t iValParam)
+    inline void any_t::set(int8_t iVal)
     {
         clear();
         eValType = EValType::val_type_int8;
-        i8Val = iValParam;
+        i8Val    = iVal;
     }
 
-    /**
-     * @brief Set the unsigned integer value (specialization)
-     * @param[in] uiValParam The unsigned integer value.
-     */
-    template <>
-    inline void any_t::set(uint8_t uiValParam)
-    {
-        clear();
-        eValType = EValType::val_type_uint8;
-        ui8Val = uiValParam;
-    }
-
-    /**
-     * @brief Set the integer value (specialization)
-     * @param[in] iValParam The integer value.
-     */
-    template <>
-    inline void any_t::set(int16_t iValParam)
+    inline void any_t::set(int16_t iVal)
     {
         clear();
         eValType = EValType::val_type_int16;
-        i16Val = iValParam;
+        i16Val   = iVal;
     }
 
-    /**
-     * @brief Set the unsigned integer value (specialization)
-     * @param[in] uiValParam The unsigned integer value.
-     */
-    template <>
-    inline void any_t::set(uint16_t uiValParam)
+    inline void any_t::set(int32_t iVal)
+    {
+        clear();
+        eValType = EValType::val_type_int32;
+        i32Val   = iVal;
+    }
+
+#ifdef _WIN32
+    inline void any_t::set(long iVal)
+    {
+        clear();
+        eValType = EValType::val_type_int32;
+        i32Val   = iVal;
+    }
+#endif
+
+    inline void any_t::set(int64_t iVal)
+    {
+        clear();
+        eValType = EValType::val_type_int64;
+        i64Val   = iVal;
+    }
+
+#ifdef __linux__
+    inline void any_t::set(long long int iVal)
+    {
+        clear();
+        eValType = EValType::val_type_int64;
+        i64Val   = iVal;
+    }
+#endif
+
+    inline void any_t::set(uint8_t uiVal)
+    {
+        clear();
+        eValType = EValType::val_type_uint8;
+        ui8Val   = uiVal;
+    }
+
+    inline void any_t::set(uint16_t uiVal)
     {
         clear();
         eValType = EValType::val_type_uint16;
-        ui16Val = uiValParam;
+        ui16Val  = uiVal;
     }
 
-    /**
-     * @brief Set the integer value (specialization)
-     * @param[in] iValParam The integer value.
-     */
-    template <>
-    inline void any_t::set(int32_t iValParam)
-    {
-        clear();
-        eValType = EValType::val_type_int32;
-        i32Val = iValParam;
-    }
-
-#ifdef _WIN32
-    /**
-     * @brief Set the long value (specialization)
-     * @param[in] iValParam The long value.
-     */
-    template <>
-    inline void any_t::set(long lValParam)
-    {
-        clear();
-        eValType = EValType::val_type_int32;
-        i32Val = static_cast<int32_t>(lValParam);
-    }
-#endif
-
-    /**
-     * @brief Set the unsigned integer value (specialization)
-     * @param[in] uiValParam The unsigned integer value.
-     */
-    template <>
-    inline void any_t::set(uint32_t uiValParam)
+    inline void any_t::set(uint32_t uiVal)
     {
         clear();
         eValType = EValType::val_type_uint32;
-        ui32Val = uiValParam;
+        ui32Val  = uiVal;
     }
 
 #ifdef _WIN32
-    /**
-     * @brief Set the unsigned long value (specialization)
-     * @param[in] uiValParam The unsigned long value.
-     */
-    template <>
-    inline void any_t::set(unsigned long ulValParam)
+    inline void any_t::set(unsigned long uiVal)
     {
         clear();
         eValType = EValType::val_type_uint32;
-        ui32Val = static_cast<uint32_t>(ulValParam);
+        ui32Val  = uiVal;
     }
 #endif
 
-    /**
-     * @brief Set the integer value (specialization)
-     * @param[in] iValParam The integer value.
-     */
-    template <>
-    inline void any_t::set(int64_t iValParam)
-    {
-        clear();
-        eValType = EValType::val_type_int64;
-        i64Val = iValParam;
-    }
-
-#ifdef __linux__
-    /**
-    * @brief Set the long long value (specialization)
-    * @param[in] iValParam The integer value.
-    */
-    template <>
-    inline void any_t::set(long long llValParam)
-    {
-        clear();
-        eValType = EValType::val_type_int64;
-        i64Val = static_cast<int64_t>(llValParam);
-    }
-#endif
-
-    /**
-     * @brief Set the unsigned integer value (specialization)
-     * @param[in] uiValParam The unsigned integer value.
-     */
-    template <>
-    inline void any_t::set(uint64_t uiValParam)
+    inline void any_t::set(uint64_t uiVal)
     {
         clear();
         eValType = EValType::val_type_uint64;
-        ui64Val = uiValParam;
+        ui64Val  = uiVal;
     }
 
 #ifdef __linux__
-    /**
-     * @brief Set the unsigned long long value (specialization)
-     * @param[in] uiValParam The unsigned long long value.
-     */
-    template <>
-    inline void any_t::set(unsigned long long ullValParam)
+    inline void any_t::set(unsigned long long int uiVal)
     {
         clear();
         eValType = EValType::val_type_uint64;
-        ui64Val = static_cast<uint64_t>(ullValParam);
+        ui64Val  = uiVal;
     }
 #endif
 
-    /**
-     * @brief Set the character value (specialization)
-     * @param[in] cValParam The character value.
-     */
-    template <>
     inline void any_t::set(char cValParam)
     {
         clear();
         eValType = EValType::val_type_char;
-        cVal = cValParam;
+        cVal     = cValParam;
     }
 
-    /**
-     * @brief Set the character value (specialization)
-     * @param[in] c16ValParam The character value.
-     */
-    template <>
-    inline void any_t::set(char16_t c16ValParam)
+    inline void any_t::set(char16_t cValParam)
     {
         clear();
         eValType = EValType::val_type_char16;
-        c16Val = c16ValParam;
+        c16Val   = cValParam;
     }
 
-    /**
-     * @brief Set the character value (specialization)
-     * @param[in] c32ValParam The character value.
-     */
-    template <>
-    inline void any_t::set(char32_t c32ValParam)
+    inline void any_t::set(char32_t cValParam)
     {
         clear();
         eValType = EValType::val_type_char32;
-        c32Val = c32ValParam;
+        c32Val   = cValParam;
     }
 
-    /**
-     * @brief Set the character value (specialization)
-     * @param[in] cwValParam The character value.
-     */
-    template <>
-    inline void any_t::set(wchar_t cwValParam)
+    inline void any_t::set(wchar_t cValParam)
     {
         clear();
         eValType = EValType::val_type_wchar;
-        cwVal = cwValParam;
+        cwVal    = cValParam;
     }
 
-    /**
-     * @brief Set the float value (specialization)
-     * @param[in] fValParam The float value.
-     */
-    template <>
     inline void any_t::set(float fValParam)
     {
         clear();
         eValType = EValType::val_type_float;
-        fVal = fValParam;
+        fVal     = fValParam;
     }
 
-    /**
-     * @brief Set the double value (specialization)
-     * @param[in] dValParam The double value.
-     */
-    template <>
-    inline void any_t::set(double dValParam)
+    inline void any_t::set(double fValParam)
     {
         clear();
         eValType = EValType::val_type_double;
-        dVal = dValParam;
+        dVal     = fValParam;
     }
 
-    /**
-     * @brief Set the long double value (specialization)
-     * @param[in] ldValParam The long double value.
-     */
-    template <>
-    inline void any_t::set(long double ldValParam)
+    inline void any_t::set(long double fValParam)
     {
         clear();
         eValType = EValType::val_type_long_double;
-        ldVal = ldValParam;
+        ldVal    = fValParam;
     }
 
-    /// @cond DOXYGEN_IGNORE
-    ///**
-    // * @brief Set the fixed value (specialization)
-    // * @param[in] fixValParam The SDV fixed value.
-    // */
-    //template <>
-    //inline void any_t::set(fixed fixValParam)
-    //{
-    //  clear();
-    //  eValType = EValType::val_type_fixed;
-    //  fixVal = fixValParam;
-    //}
-    /// @endcond
-
-    /**
-     * @brief Set the string value (specialization)
-     * @param[in] rssValParam The string value.
-     */
-    template <>
-    inline void any_t::set(const string& rssValParam)
+    inline void any_t::set(const string& rssVal)
     {
-      clear();
-      eValType = EValType::val_type_string;
-      new (&ssVal) string(rssValParam);
+        clear();
+        eValType = EValType::val_type_string;
+        new (&ssVal) string(rssVal);
     }
 
-    /**
-     * @brief Set the string value (specialization)
-     * @param[in] rss8ValParam The string value.
-     */
-    template <>
-    inline void any_t::set(const u8string& rss8ValParam)
+    inline void any_t::set(const u8string& rssVal)
     {
         clear();
         eValType = EValType::val_type_u8string;
-        new (&ss8Val) u8string(rss8ValParam);
+        new (&ss8Val) u8string(rssVal);
     }
 
-    /**
-     * @brief Set the string value (specialization)
-     * @param[in] rssValParam The string value.
-     */
-    template <>
-    inline void any_t::set(const std::string& rssValParam)
+    inline void any_t::set(const u16string& rssVal)
+    {
+        clear();
+        eValType = EValType::val_type_u16string;
+        new (&ss16Val) u16string(rssVal);
+    }
+
+    inline void any_t::set(const u32string& rssVal)
+    {
+        clear();
+        eValType = EValType::val_type_u32string;
+        new (&ss32Val) u32string(rssVal);
+    }
+
+    inline void any_t::set(const wstring& rssVal)
+    {
+        clear();
+        eValType = EValType::val_type_wstring;
+        new (&sswVal) wstring(rssVal);
+    }
+
+    inline void any_t::set(const char* szVal)
     {
         clear();
         eValType = EValType::val_type_u8string;
-        new (&ss8Val) u8string(rssValParam);
+        new (&ss8Val) u8string(szVal);
     }
 
-    /**
-     * @brief Set the string value (specialization)
-     * @param[in] pszValParam The string value.
-     */
-    template <>
-    inline void any_t::set(const char* pszValParam)
-    {
-        clear();
-        eValType = EValType::val_type_u8string;
-        new (&ss8Val) u8string(pszValParam ? pszValParam : "");
-    }
-
-    /**
-     * @brief Set the string value (specialization)
-     * @param[in] rss16ValParam The string value.
-     */
-    template <>
-    inline void any_t::set(const u16string& rss16ValParam)
+    inline void any_t::set(const char16_t* szVal)
     {
         clear();
         eValType = EValType::val_type_u16string;
-        new (&ss16Val) u16string(rss16ValParam);
+        new (&ss16Val) u16string(szVal);
     }
 
-    /**
-     * @brief Set the string value (specialization)
-     * @param[in] rss16ValParam The string value.
-     */
-    template <>
-    inline void any_t::set(const std::u16string& rss16ValParam)
+    inline void any_t::set(const char32_t* szVal)
+    {
+        clear();
+        eValType = EValType::val_type_u32string;
+        new (&ss32Val) u32string(szVal);
+    }
+
+    inline void any_t::set(const wchar_t* szVal)
+    {
+        clear();
+        eValType = EValType::val_type_wstring;
+        new (&sswVal) wstring(szVal);
+    }
+
+    inline void any_t::set(const std::string& rssVal)
+    {
+        clear();
+        eValType = EValType::val_type_string;
+        new (&ssVal) string(rssVal);
+    }
+
+    inline void any_t::set(const std::u16string& rssVal)
     {
         clear();
         eValType = EValType::val_type_u16string;
-        new (&ss16Val) u16string(rss16ValParam);
+        new (&ss16Val) u16string(rssVal);
     }
 
-    /**
-     * @brief Set the string value (specialization)
-     * @param[in] psz16ValParam The string value.
-     */
-    template <>
-    inline void any_t::set(const char16_t* psz16ValParam)
-    {
-        clear();
-        eValType = EValType::val_type_u16string;
-        new (&ss16Val) u16string(psz16ValParam ? psz16ValParam : u"");
-    }
-
-    /**
-     * @brief Set the string value (specialization)
-     * @param[in] rss32ValParam The string value.
-     */
-    template <>
-    inline void any_t::set(const u32string& rss32ValParam)
+    inline void any_t::set(const std::u32string& rssVal)
     {
         clear();
         eValType = EValType::val_type_u32string;
-        new (&ss32Val) u32string(rss32ValParam);
+        new (&ss32Val) u32string(rssVal);
     }
 
-    /**
-     * @brief Set the string value (specialization)
-     * @param[in] rss32ValParam The string value.
-     */
-    template <>
-    inline void any_t::set(const std::u32string& rss32ValParam)
-    {
-        clear();
-        eValType = EValType::val_type_u32string;
-        new (&ss32Val) u32string(rss32ValParam);
-    }
-
-    /**
-     * @brief Set the string value (specialization)
-     * @param[in] psz32ValParam The string value.
-     */
-    template <>
-    inline void any_t::set(const char32_t* psz32ValParam)
-    {
-        clear();
-        eValType = EValType::val_type_u32string;
-        new (&ss32Val) u32string(psz32ValParam ? psz32ValParam : U"");
-    }
-
-    /**
-     * @brief Set the string value (specialization)
-     * @param[in] rsswValParam The string value.
-     */
-    template <>
-    inline void any_t::set(const wstring& rsswValParam)
+    inline void any_t::set(const std::wstring& rssVal)
     {
         clear();
         eValType = EValType::val_type_wstring;
-        new (&sswVal) wstring(rsswValParam);
+        new (&sswVal) wstring(rssVal);
     }
 
-    /**
-     * @brief Set the string value (specialization)
-     * @param[in] rsswValParam The string value.
-     */
-    template <>
-    inline void any_t::set(const std::wstring& rsswValParam)
+    inline void any_t::set(const std::filesystem::path& rpathVal)
     {
-        clear();
-        eValType = EValType::val_type_wstring;
-        new (&sswVal) wstring(rsswValParam);
+        set(rpathVal.generic_u8string());
     }
 
-    /**
-     * @brief Set the string value (specialization)
-     * @param[in] pszwValParam The string value.
-     */
-    template <>
-    inline void any_t::set(const wchar_t* pszwValParam)
-    {
-        clear();
-        eValType = EValType::val_type_wstring;
-        new (&sswVal) wstring(pszwValParam ? pszwValParam : L"");
-    }
-
-    /**
-     * @brief Set the interface value (specialization)
-     * @param[in] ifcValParam The interface value.
-     */
-    template <>
     inline void any_t::set(interface_t ifcValParam)
     {
         clear();
@@ -878,8 +1114,7 @@ namespace sdv
         new (&ifcVal) interface_t(ifcValParam);
     }
 
-    // Assignment already covered by operator=(uint64)
-    //template <>
+    // Assignment already covered by set(uint64)
     //inline void any_t::set(interface_id idIfcValParam)
     //{
     //  clear();
@@ -887,14 +1122,20 @@ namespace sdv
     //  idIfcVal = idIfcValParam;
     //}
 
-    // Assignment already covered by operator=(uint64)
-    //template <>
+    // Assignment already covered by set(uint64)
     //inline void any_t::set(exception_id idExceptValParam)
     //{
     //  clear();
     //  eValType = EValType::val_type_exception;
     //  idExceptVal = idExceptValParam;
     //}
+
+    template <typename TEnum, typename TEnable>
+    void any_t::set(TEnum eVal)
+    {
+        static_assert(std::is_enum_v<TEnum>, "The type is not supported to be converted to sdv::any_t!");
+        set(static_cast<std::underlying_type_t<TEnum>>(eVal));
+    }
 
     template <typename TType>
     inline void any_t::set(TType tVal, EValType eValTypeParam)
@@ -935,37 +1176,42 @@ namespace sdv
     template <typename TType>
     inline TType any_t::get() const
     {
-        TType tVal;
-        switch (eValType)
+        if constexpr (std::is_enum_v<TType>)
+            return static_cast<TType>(get<std::underlying_type_t<TType>>());
+        else
         {
-        case EValType::val_type_bool:           convert(bVal, tVal);            break;
-        case EValType::val_type_int8:           convert(i8Val, tVal);           break;
-        case EValType::val_type_uint8:          convert(ui8Val, tVal);          break;
-        case EValType::val_type_int16:          convert(i16Val, tVal);          break;
-        case EValType::val_type_uint16:         convert(ui16Val, tVal);         break;
-        case EValType::val_type_int32:          convert(i32Val, tVal);          break;
-        case EValType::val_type_uint32:         convert(ui32Val, tVal);         break;
-        case EValType::val_type_int64:          convert(i64Val, tVal);          break;
-        case EValType::val_type_uint64:         convert(ui64Val, tVal);         break;
-        case EValType::val_type_char:           convert(cVal, tVal);            break;
-        case EValType::val_type_char16:         convert(c16Val, tVal);          break;
-        case EValType::val_type_char32:         convert(c32Val, tVal);          break;
-        case EValType::val_type_wchar:          convert(cwVal, tVal);           break;
-        case EValType::val_type_float:          convert(fVal, tVal);            break;
-        case EValType::val_type_double:         convert(dVal, tVal);            break;
-        case EValType::val_type_long_double:    convert(ldVal, tVal);           break;
-        //case EValType::val_type_fixed:          convert(fixValue, tVal);        break;
-        case EValType::val_type_string:         convert(ssVal, tVal);           break;
-        case EValType::val_type_u8string:       convert(ss8Val, tVal);          break;
-        case EValType::val_type_u16string:      convert(ss16Val, tVal);         break;
-        case EValType::val_type_u32string:      convert(ss32Val, tVal);         break;
-        case EValType::val_type_wstring:        convert(sswVal, tVal);          break;
-        case EValType::val_type_interface:      convert(ifcVal, tVal);          break;
-        case EValType::val_type_interface_id:   convert(idIfcVal, tVal);        break;
-        case EValType::val_type_exception_id:   convert(idExceptVal, tVal);     break;
-        default:                                tVal = TType();                 break;
+            TType tVal;
+            switch (eValType)
+            {
+            case EValType::val_type_bool:           convert(bVal, tVal);            break;
+            case EValType::val_type_int8:           convert(i8Val, tVal);           break;
+            case EValType::val_type_uint8:          convert(ui8Val, tVal);          break;
+            case EValType::val_type_int16:          convert(i16Val, tVal);          break;
+            case EValType::val_type_uint16:         convert(ui16Val, tVal);         break;
+            case EValType::val_type_int32:          convert(i32Val, tVal);          break;
+            case EValType::val_type_uint32:         convert(ui32Val, tVal);         break;
+            case EValType::val_type_int64:          convert(i64Val, tVal);          break;
+            case EValType::val_type_uint64:         convert(ui64Val, tVal);         break;
+            case EValType::val_type_char:           convert(cVal, tVal);            break;
+            case EValType::val_type_char16:         convert(c16Val, tVal);          break;
+            case EValType::val_type_char32:         convert(c32Val, tVal);          break;
+            case EValType::val_type_wchar:          convert(cwVal, tVal);           break;
+            case EValType::val_type_float:          convert(fVal, tVal);            break;
+            case EValType::val_type_double:         convert(dVal, tVal);            break;
+            case EValType::val_type_long_double:    convert(ldVal, tVal);           break;
+            //case EValType::val_type_fixed:          convert(fixValue, tVal);        break;
+            case EValType::val_type_string:         convert(ssVal, tVal);           break;
+            case EValType::val_type_u8string:       convert(ss8Val, tVal);          break;
+            case EValType::val_type_u16string:      convert(ss16Val, tVal);         break;
+            case EValType::val_type_u32string:      convert(ss32Val, tVal);         break;
+            case EValType::val_type_wstring:        convert(sswVal, tVal);          break;
+            case EValType::val_type_interface:      convert(ifcVal, tVal);          break;
+            case EValType::val_type_interface_id:   convert(idIfcVal, tVal);        break;
+            case EValType::val_type_exception_id:   convert(idExceptVal, tVal);     break;
+            default:                                tVal = TType();                 break;
+            }
+            return tVal;
         }
-        return tVal;
     }
 
     namespace internal
@@ -994,7 +1240,8 @@ namespace sdv
                 std::is_same_v<TType, std::string> || std::is_same_v<TType, std::u16string> ||
                 std::is_same_v<TType, std::u32string> || std::is_same_v<TType, std::wstring> ||
                 std::is_same_v<TType, const char*> || std::is_same_v<TType, const char16_t*> ||
-                std::is_same_v<TType, const char32_t*> || std::is_same_v<TType, const wchar_t*>)
+                std::is_same_v<TType, const char32_t*> || std::is_same_v<TType, const wchar_t*> ||
+                std::is_same_v<TType, std::filesystem::path>)
                 return ETypeClass::string;
             else 
                 return ETypeClass::other;
@@ -1053,23 +1300,29 @@ namespace sdv
             */
             static TDstType convert(TSrcType tVal)
             {
-                if constexpr (std::is_same_v<TSrcType, char>)
+                if constexpr (std::is_same_v<TDstType, std::filesystem::path>)
+                    return {};
+                else if constexpr (std::is_same_v<TSrcType, char>)
                 {
-                    char sz[] = { tVal, '\0' };
+                    char sz[] = {tVal, '\0'};
                     return MakeString<char, typename TDstType::value_type, true, 0>(sz);
-                } else if constexpr (std::is_same_v<TSrcType, char16_t>)
+                }
+                else if constexpr (std::is_same_v<TSrcType, char16_t>)
                 {
-                    char16_t sz[] = { tVal, u'\0' };
+                    char16_t sz[] = {tVal, u'\0'};
                     return MakeString<char16_t, typename TDstType::value_type, true, 0>(sz);
-                } else if constexpr (std::is_same_v<TSrcType, char32_t>)
+                }
+                else if constexpr (std::is_same_v<TSrcType, char32_t>)
                 {
-                    char32_t sz[] = { tVal, U'\0' };
+                    char32_t sz[] = {tVal, U'\0'};
                     return MakeString<char32_t, typename TDstType::value_type, true, 0>(sz);
-                } else if constexpr (std::is_same_v<TSrcType, wchar_t>)
+                }
+                else if constexpr (std::is_same_v<TSrcType, wchar_t>)
                 {
-                    wchar_t sz[] = { tVal, L'\0' };
+                    wchar_t sz[] = {tVal, L'\0'};
                     return MakeString<wchar_t, typename TDstType::value_type, true, 0>(sz);
-                } else
+                }
+                else
                     return MakeString<char, typename TDstType::value_type, true, 0>(std::to_string(tVal));
             }
         };
@@ -1114,22 +1367,27 @@ namespace sdv
         {
             /**
              * @brief Convert from one string (SDV, C or C++) to another string (SDV).
-             * @param[in] tVal The source string.
+             * @param[in] rssVal The source string.
              * @return The SDV target string.
             */
-            static TDstType convert(TSrcType tVal)
+            static TDstType convert(const TSrcType& rssVal)
             {
                 if constexpr (std::is_pointer_v<TSrcType>)
                 {
                     using TSrcCharType = std::remove_const_t<std::remove_pointer_t<TSrcType>>;
-                    return MakeString<TSrcCharType, true, 0, typename TDstType::value_type, true, 0>(string_base<TSrcCharType, true, 0>(tVal));
+                    return MakeString<TSrcCharType, true, 0, typename TDstType::value_type, true, 0>(string_base<TSrcCharType, true, 0>(rssVal));
                 }
+                else if constexpr (std::is_same_v<TSrcType, std::basic_string<typename TSrcType::value_type>> &&
+                        std::is_same_v<TDstType, std::basic_string<typename TDstType::value_type>>)
+                    return MakeString<typename TSrcType::value_type, typename TDstType::value_type, true, 0>(rssVal);
                 else if constexpr (std::is_same_v<TSrcType, std::basic_string<typename TSrcType::value_type>>)
-                    return MakeString<typename TSrcType::value_type, typename TDstType::value_type, typename TDstType::is_unicode, 0>(tVal);
+                    return MakeString<typename TSrcType::value_type, typename TDstType::value_type, typename TDstType::is_unicode, 0>(rssVal);
                 else if constexpr (std::is_same_v<TDstType, std::basic_string<typename TDstType::value_type>>)
-                    return MakeString<typename TSrcType::value_type, TSrcType::is_unicode, 0, typename TDstType::value_type, true, 0>(tVal);
+                    return MakeString<typename TSrcType::value_type, TSrcType::is_unicode, 0, typename TDstType::value_type, true, 0>(rssVal);
+                else if constexpr (std::is_same_v<TDstType, std::filesystem::path>)
+                    return MakePath(rssVal);
                 else
-                    return MakeString<typename TSrcType::value_type, TSrcType::is_unicode, 0, typename TDstType::value_type, TDstType::is_unicode, 0>(tVal);
+                    return MakeString<typename TSrcType::value_type, TSrcType::is_unicode, 0, typename TDstType::value_type, TDstType::is_unicode, 0>(rssVal);
             }
         };
     }
@@ -1181,9 +1439,14 @@ namespace sdv
             static constexpr bool bStdString = std::is_same_v<T, std::string> || std::is_same_v<T, std::u16string> ||
                 std::is_same_v<T, std::u32string> || std::is_same_v<T, std::wstring>;
 
+            /// Is the provided type a STD path?
+            /// @tparam The type to check.
+            template <typename T>
+            static constexpr bool bStdPath = std::is_same_v<T, std::filesystem::path>;
+
             /// Are both types a SDV or STD string or one of the type SDV or STD string and the other C string?
-            static constexpr bool bString = (bSdvString<TType1> || bStdString<TType1>) &&
-                (bSdvString<TType2> || bStdString<TType2>);
+            static constexpr bool bString = (bSdvString<TType1> || bStdString<TType1> || bStdPath<TType1>) &&
+                (bSdvString<TType2> || bStdString<TType2> || bStdPath<TType2>);
 
             /// Type to use when any of these conditions occur.
             using TType = std::conditional_t<bEqualType, TType1,
@@ -1233,6 +1496,10 @@ namespace sdv
                 else
                     return false;
             }
+            else if constexpr (std::is_same_v<TType1, std::filesystem::path>)
+                return Compare<std::string, TType2, eType>(rtVal1.generic_u8string(), rtVal2);
+            else if constexpr (std::is_same_v<TType2, std::filesystem::path>)
+                return Compare<TType1, std::string, eType>(rtVal1, rtVal2.generic_u8string());
             else if constexpr (eType == any_t::ECompareType::compare_equal)
                 return static_cast<compare_priority_t<TType1, TType2>>(rtVal1) ==
                     static_cast<compare_priority_t<TType1, TType2>>(rtVal2);
@@ -1353,13 +1620,21 @@ namespace sdv
     template <typename TType>
     inline bool operator==(const sdv::any_t& ranyVal1, TType tVal2)
     {
-        return ranyVal1.Compare<TType, any_t::ECompareType::compare_equal>(tVal2);
+        if constexpr (std::is_enum_v<TType>)
+            return ranyVal1.Compare<std::underlying_type_t<TType>, any_t::ECompareType::compare_equal>(
+                static_cast<std::underlying_type_t<TType>>(tVal2));
+        else
+            return ranyVal1.Compare<TType, any_t::ECompareType::compare_equal>(tVal2);
     }
 
     template <typename TType>
     inline bool operator==(TType tVal1, const sdv::any_t& ranyVal2)
     {
-        return ranyVal2.Compare<TType, any_t::ECompareType::compare_equal>(tVal1);
+        if constexpr (std::is_enum_v<TType>)
+            return ranyVal2.Compare<std::underlying_type_t<TType>, any_t::ECompareType::compare_equal>(
+                static_cast<std::underlying_type_t<TType>>(tVal1));
+        else
+            return ranyVal2.Compare<TType, any_t::ECompareType::compare_equal>(tVal1);
     }
 
     inline bool operator==(const sdv::any_t& ranyVal1, const sdv::any_t& ranyVal2)
@@ -1370,13 +1645,21 @@ namespace sdv
     template <typename TType>
     inline bool operator!=(const sdv::any_t& ranyVal1, TType tVal2)
     {
-        return ranyVal1.Compare<TType, any_t::ECompareType::compare_inequal>(tVal2);
+        if constexpr (std::is_enum_v<TType>)
+            return ranyVal1.Compare<std::underlying_type_t<TType>, any_t::ECompareType::compare_inequal>(
+                static_cast<std::underlying_type_t<TType>>(tVal2));
+        else
+            return ranyVal1.Compare<TType, any_t::ECompareType::compare_inequal>(tVal2);
     }
 
     template <typename TType>
     inline bool operator!=(TType tVal1, const sdv::any_t& ranyVal2)
     {
-        return ranyVal2.Compare<TType, any_t::ECompareType::compare_inequal>(tVal1);
+        if constexpr (std::is_enum_v<TType>)
+            return ranyVal2.Compare<std::underlying_type_t<TType>, any_t::ECompareType::compare_inequal>(
+                static_cast<std::underlying_type_t<TType>>(tVal1));
+        else
+            return ranyVal2.Compare<TType, any_t::ECompareType::compare_inequal>(tVal1);
     }
 
     inline bool operator!=(const sdv::any_t& ranyVal1, const sdv::any_t& ranyVal2)

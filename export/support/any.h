@@ -1,3 +1,16 @@
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef SDV_ANY_H
 #define SDV_ANY_H
 
@@ -93,61 +106,147 @@ namespace sdv
 
         /**
          * @brief Assignment constructor.
-         * @param[in] tVal The value to assign.
+         * @param[in] bVal The value to assign.
          */
-        template <typename TType>
-        explicit any_t(TType tVal);
+        any_t(bool bVal);
+
+        /**
+         * @{
+         * @brief Assignment constructor.
+         * @param[in] iVal The value to assign.
+         */
+        any_t(int8_t iVal);
+        any_t(int16_t iVal);
+        any_t(int32_t iVal);
+#ifdef _WIN32
+        any_t(long iVal);
+#endif
+        any_t(int64_t iVal);
+#ifdef __linux__
+        any_t(long long int iVal);
+#endif
+        /**
+         * @}
+         */
+
+        /**
+         * @{
+         * @brief Assignment constructor.
+         * @param[in] uiVal The value to assign.
+         */
+        any_t(uint8_t uiVal);
+        any_t(uint16_t uiVal);
+        any_t(uint32_t uiVal);
+#ifdef _WIN32
+        any_t(unsigned long uiVal);
+#endif
+        any_t(uint64_t uiVal);
+#ifdef __linux__
+        any_t(unsigned long long int uiVal);
+#endif
+        /**
+         * @}
+         */
+
+        /**
+        * @{
+         * @brief Assignment constructor.
+         * @param[in] cVal The value to assign.
+         */
+        any_t(char cVal);
+        any_t(char16_t cVal);
+        any_t(char32_t cVal);
+        any_t(wchar_t cVal);
+        /**
+         * @}
+         */
+
+        /**
+         * @{
+         * @brief Assignment constructor.
+         * @param[in] fVal The value to assign.
+         */
+        any_t(float fVal);
+        any_t(double fVal);
+        any_t(long double fVal);
+        /**
+         * @}
+         */
 
         /**
         * @{
         * @brief SDV string constructors.
         * @param[in] rssVal Reference to the string object.
         */
-        explicit any_t(const string& rssVal);
-        explicit any_t(const u8string& rssVal);
-        explicit any_t(const u16string& rssVal);
-        explicit any_t(const u32string& rssVal);
-        explicit any_t(const wstring& rssVal);
+        any_t(const string& rssVal);
+        any_t(const u8string& rssVal);
+        any_t(const u16string& rssVal);
+        any_t(const u32string& rssVal);
+        any_t(const wstring& rssVal);
         /**
-        * @}
-        */
+         * @}
+         */
 
         /**
+        * @{
          * @brief C-style string constructors.
-         * @param[in] sz Zero terminated string.
+         * @param[in] szVal Zero terminated string.
          */
-        any_t(const char* sz);
-
+        any_t(const char* szVal);
+        any_t(const char16_t* szVal);
+        any_t(const char32_t* szVal);
+        any_t(const wchar_t* szVal);
         /**
-         * @brief C-style string constructors.
-         * @param[in] sz Zero terminated string.
+         * @}
          */
-        any_t(const char16_t* sz);
-
-        /**
-         * @brief C-style string constructors.
-         * @param[in] sz Zero terminated string.
-         */
-        any_t(const char32_t* sz);
-
-        /**
-         * @brief C-style string constructors.
-         * @param[in] sz Zero terminated string.
-         */
-        any_t(const wchar_t* sz);
 
         /**
         * @{
         * @brief STD string constructors.
         * @param[in] rssVal Reference to the string object.
         */
-        explicit any_t(const std::string& rssVal);
-        explicit any_t(const std::u16string& rssVal);
-        explicit any_t(const std::u32string& rssVal);
-        explicit any_t(const std::wstring& rssVal);
+        any_t(const std::string& rssVal);
+        any_t(const std::u16string& rssVal);
+        any_t(const std::u32string& rssVal);
+        any_t(const std::wstring& rssVal);
         /**
         * @}
         */
+
+        /**
+         * @brief STD path constructor (will be stored as u8string).
+         * @param[in] rpathVal Reference to the path object.
+         */
+        any_t(const std::filesystem::path& rpathVal);
+
+        /**
+         * @brief Interface constructor.
+         * @param[in] ifcVal Interface pointer.
+         */
+        any_t(interface_t ifcVal);
+
+        // Assignment already covered by any_t(uint64)
+        ///**
+        // * brief Interface ID constructor.
+        // * param[in] idIfcVal Interface ID.
+        // */
+        //any_t(interface_id idIfcVal);
+
+        // Assignment already covered by any_t(uint64)
+        ///**
+        // * brief Exception ID constructor.
+        // * param[in] idExceptVal Exception ID.
+        // */
+        //any_t(exception_id idExceptVal);
+
+        /**
+         * @brief Enum constructor.
+         * @tparam TEnum Type of enum.
+         * @tparam TEnable Enable the function if the TType is an enum.
+         * @param eVal The eunm value.
+         */
+        template <typename TEnum, typename TEnable = std::enable_if_t<std::is_enum_v<TEnum>>>
+        explicit any_t(TEnum eVal);
 
         /**
         * @brief Assignment constructor.
@@ -171,11 +270,158 @@ namespace sdv
 
         /**
          * @brief Assignment operator.
-         * @param[in] tVal The value to assign.
+         * @param[in] bVal The value to assign.
          * @return Reference to this class.
          */
-        template <typename TType>
-        any_t& operator=(TType tVal);
+        any_t& operator=(bool bVal);
+
+        /**
+         * @{
+         * @brief Assignment operator.
+         * @param[in] iVal The value to assign.
+         * @return Reference to this class.
+         */
+        any_t& operator=(int8_t iVal);
+        any_t& operator=(int16_t iVal);
+        any_t& operator=(int32_t iVal);
+#ifdef _WIN32
+        any_t& operator=(long iVal);
+#endif
+        any_t& operator=(int64_t iVal);
+#ifdef __linux__
+        any_t& operator=(long long int iVal);
+#endif
+        /**
+         * @}
+         */
+
+        /**
+         * @{
+         * @brief Assignment operator.
+         * @param[in] uiVal The value to assign.
+         * @return Reference to this class.
+         */
+        any_t& operator=(uint8_t uiVal);
+        any_t& operator=(uint16_t uiVal);
+        any_t& operator=(uint32_t uiVal);
+#ifdef _WIN32
+        any_t& operator=(unsigned long uiVal);
+#endif
+        any_t& operator=(uint64_t uiVal);
+#ifdef __linux__
+        any_t& operator=(unsigned long long int uiVal);
+#endif
+        /**
+         * @}
+         */
+
+        /**
+         * @{
+         * @brief Assignment operator.
+         * @param[in] cVal The value to assign.
+         * @return Reference to this class.
+         */
+        any_t& operator=(char cVal);
+        any_t& operator=(char16_t cVal);
+        any_t& operator=(char32_t cVal);
+        any_t& operator=(wchar_t cVal);
+        /**
+         * @}
+         */
+
+        /**
+         * @{
+         * @brief Assignment operator.
+         * @param[in] fVal The value to assign.
+         * @return Reference to this class.
+         */
+        any_t& operator=(float fVal);
+        any_t& operator=(double fVal);
+        any_t& operator=(long double fVal);
+        /**
+         * @}
+         */
+
+        /**
+         * @{
+         * @brief SDV string assignment operator.
+         * @param[in] rssVal Reference to the string object.
+         * @return Reference to this class.
+         */
+        any_t& operator=(const string& rssVal);
+        any_t& operator=(const u8string& rssVal);
+        any_t& operator=(const u16string& rssVal);
+        any_t& operator=(const u32string& rssVal);
+        any_t& operator=(const wstring& rssVal);
+        /**
+         * @}
+         */
+
+        /**
+         * @{
+         * @brief C-style string assignment operator.
+         * @param[in] szVal Zero terminated string.
+         * @return Reference to this class.
+         */
+        any_t& operator=(const char* szVal);
+        any_t& operator=(const char16_t* szVal);
+        any_t& operator=(const char32_t* szVal);
+        any_t& operator=(const wchar_t* szVal);
+        /**
+         * @}
+         */
+
+        /**
+         * @{
+         * @brief STD string assignment operator.
+         * @param[in] rssVal Reference to the string object.
+         * @return Reference to this class.
+         */
+        any_t& operator=(const std::string& rssVal);
+        any_t& operator=(const std::u16string& rssVal);
+        any_t& operator=(const std::u32string& rssVal);
+        any_t& operator=(const std::wstring& rssVal);
+        /**
+         * @}
+         */
+
+        /**
+         * @brief STD path assignment operator (will be stored as u8string).
+         * @param[in] rpathVal Reference to the path object.
+         * @return Reference to this class.
+         */
+        any_t& operator=(const std::filesystem::path& rpathVal);
+
+        /**
+         * @brief Interface assignment operator.
+         * @param[in] ifcVal Interface pointer.
+         * @return Reference to this class.
+         */
+        any_t& operator=(interface_t ifcVal);
+
+        // Assignment already covered by operator=(uint64)
+        ///**
+        // * brief Interface ID operator.
+        // * param[in] idIfcVal Interface ID.
+        // */
+        //any_t& operator=(interface_id idIfcVal);
+
+        // Assignment already covered by operator=(uint64)
+        ///**
+        // * brief Exception ID operator.
+        // * param[in] idExceptVal Exception ID.
+        // */
+        //any_t& operator=(exception_id idExceptVal);
+
+        /**
+         * @brief Enum assignment operator.
+         * tparam TEnum Enum type.
+         * @tparam TEnable Enable the function if the TType is an enum.
+         * @param[in] eVal Enum value.
+         * @return Reference to this class.
+         */
+        template <typename TEnum, typename TEnable = std::enable_if_t<std::is_enum_v<TEnum>>>
+        any_t& operator=(TEnum eVal);
 
         /**
          * @brief Copy assignment operator.
@@ -231,6 +477,7 @@ namespace sdv
         operator std::u16string() const;
         operator std::u32string() const;
         operator std::wstring() const;
+        operator std::filesystem::path() const;
         /**
          * @}
          */
@@ -247,12 +494,148 @@ namespace sdv
         void clear();
 
         /**
-         * @brief Assign the value to the any. The any takes the value type based on the value.
-         * @tparam TType The type of the value to set.
-         * @param[in] tVal The value to set.
+         * @brief Assignment function.
+         * @param[in] bVal The value to assign.
          */
-        template <typename TType>
-        void set(TType tVal);
+        void set(bool bVal);
+
+        /**
+         * @{
+         * @brief Assignment function.
+         * @param[in] iVal The value to assign.
+         */
+        void set(int8_t iVal);
+        void set(int16_t iVal);
+        void set(int32_t iVal);
+#ifdef _WIN32
+        void set(long iVal);
+#endif
+        void set(int64_t iVal);
+#ifdef __linux__
+        void set(long long int iVal);
+#endif
+        /**
+         * @}
+         */
+
+        /**
+         * @{
+         * @brief Assignment function.
+         * @param[in] uiVal The value to assign.
+         */
+        void set(uint8_t uiVal);
+        void set(uint16_t uiVal);
+        void set(uint32_t uiVal);
+#ifdef _WIN32
+        void set(unsigned long uiVal);
+#endif
+        void set(uint64_t uiVal);
+#ifdef __linux__
+        void set(unsigned long long int uiVal);
+#endif
+        /**
+         * @}
+         */
+
+        /**
+         * @{
+         * @brief Assignment function.
+         * @param[in] cVal The value to assign.
+         */
+        void set(char cVal);
+        void set(char16_t cVal);
+        void set(char32_t cVal);
+        void set(wchar_t cVal);
+        /**
+         * @}
+         */
+
+        /**
+         * @{
+         * @brief Assignment function.
+         * @param[in] fVal The value to assign.
+         */
+        void set(float fVal);
+        void set(double fVal);
+        void set(long double fVal);
+        /**
+         * @}
+         */
+
+        /**
+         * @{
+         * @brief SDV string assignment function.
+         * @param[in] rssVal Reference to the string object.
+         */
+        void set(const string& rssVal);
+        void set(const u8string& rssVal);
+        void set(const u16string& rssVal);
+        void set(const u32string& rssVal);
+        void set(const wstring& rssVal);
+        /**
+         * @}
+         */
+
+        /**
+         * @{
+         * @brief C-style string assignment function.
+         * @param[in] szVal Zero terminated string.
+         */
+        void set(const char* szVal);
+        void set(const char16_t* szVal);
+        void set(const char32_t* szVal);
+        void set(const wchar_t* szVal);
+        /**
+         * @}
+         */
+
+        /**
+         * @{
+         * @brief STD string assignment function.
+         * @param[in] rssVal Reference to the string object.
+         */
+        void set(const std::string& rssVal);
+        void set(const std::u16string& rssVal);
+        void set(const std::u32string& rssVal);
+        void set(const std::wstring& rssVal);
+        /**
+         * @}
+         */
+
+        /**
+         * @brief STD path assignment function (will be stored as u8string).
+         * @param[in] rpathVal Reference to the path object.
+         */
+        void set(const std::filesystem::path& rpathVal);
+
+        /**
+         * @brief Interface assignment function.
+         * @param[in] ifcVal Interface pointer.
+         */
+        void set(interface_t ifcVal);
+
+        // Assignment already covered by set(uint64)
+        ///**
+        // * brief Interface ID assignment function.
+        // * param[in] idIfcVal Interface ID.
+        // */
+        //void set(interface_id idIfcVal);
+
+        // Assignment already covered by set(uint64)
+        ///**
+        // * brief Exception ID assignment function.
+        // * param[in] idExceptVal Exception ID.
+        // */
+        //void set(exception_id idExceptVal);
+
+        /**
+         * @brief Enum assignment function.
+         * tparam TEnum Enum type.
+         * @tparam TEnable Enable the function if the TType is an enum.
+         * @param[in] eVal Enum value.
+         */
+        template <typename TEnum, typename TEnable = std::enable_if_t<std::is_enum_v<TEnum>>>
+        void set(TEnum eVal);
 
         /**
          * @brief Assign the value to the any. The value will be converted to the provided value type.
@@ -273,7 +656,7 @@ namespace sdv
 
         /**
          * @brief Comparison type.
-        */
+         */
         enum class ECompareType
         {
             compare_equal,

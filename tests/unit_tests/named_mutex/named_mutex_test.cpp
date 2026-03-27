@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include <gtest/gtest.h>
 #include "../../../global/process_watchdog.h"
 #include "../../../global/ipc_named_mutex.h"
@@ -127,6 +140,6 @@ TEST(NamedMutexTest, Naming)
     ipc::named_mutex mtx1("HELLO");
     EXPECT_FALSE(mtx1.name().empty());
 
-    ipc::named_mutex mtx2(nullptr);
+    ipc::named_mutex mtx2;
     EXPECT_FALSE(mtx2.name().empty());
 }

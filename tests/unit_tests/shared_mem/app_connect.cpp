@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include <support/mem_access.h>
 #include <support/app_control.h>
 #include "../../../global/base64.h"
@@ -310,9 +323,9 @@ extern "C" int main(int argc, char* argv[])
     // Create an control management channel (if required).
     CSharedMemChannelMgnt mgntControlMgntChannel;
     mgntControlMgntChannel.Initialize("");
-    if (mgntControlMgntChannel.GetStatus() != sdv::EObjectStatus::initialized) return -11;
+    if (mgntControlMgntChannel.GetObjectState() != sdv::EObjectState::initialized) return -11;
     mgntControlMgntChannel.SetOperationMode(sdv::EOperationMode::running);
-    if (mgntControlMgntChannel.GetStatus() != sdv::EObjectStatus::running) return -11;
+    if (mgntControlMgntChannel.GetObjectState() != sdv::EObjectState::running) return -11;
 
     // Open the control channel endpoint
     sdv::TObjectPtr ptrControlConnection;
@@ -337,9 +350,9 @@ extern "C" int main(int argc, char* argv[])
     // Create the data management channel.
     CSharedMemChannelMgnt mgntDataMgntChannel;
     mgntDataMgntChannel.Initialize("");
-    if (mgntDataMgntChannel.GetStatus() != sdv::EObjectStatus::initialized) return -1;
+    if (mgntDataMgntChannel.GetObjectState() != sdv::EObjectState::initialized) return -1;
     mgntDataMgntChannel.SetOperationMode(sdv::EOperationMode::running);
-    if (mgntDataMgntChannel.GetStatus() != sdv::EObjectStatus::running) return -1;
+    if (mgntDataMgntChannel.GetObjectState() != sdv::EObjectState::running) return -1;
 
     // If this is a server, create a data endpoint and communicate this endpoint over the control channel.
     // If not, open the data endpoint.
@@ -420,11 +433,11 @@ Size = 1024000
     if (pDataConnect && uiDataEventCookie) pDataConnect->UnregisterStatusEventCallback(uiDataEventCookie);
     ptrDataConnection.Clear();
     mgntDataMgntChannel.Shutdown();
-    if (mgntDataMgntChannel.GetStatus() != sdv::EObjectStatus::destruction_pending) return -6;
+    if (mgntDataMgntChannel.GetObjectState() != sdv::EObjectState::destruction_pending) return -6;
     if (pControlConnect && uiControlEventCookie) pControlConnect->UnregisterStatusEventCallback(uiControlEventCookie);
     ptrControlConnection.Clear();
     mgntControlMgntChannel.Shutdown();
-    if (mgntControlMgntChannel.GetStatus() != sdv::EObjectStatus::destruction_pending) return -16;
+    if (mgntControlMgntChannel.GetObjectState() != sdv::EObjectState::destruction_pending) return -16;
 
     TRACE("Shutdown of app ", bServer ? "server" : "client", " connect process...");
 

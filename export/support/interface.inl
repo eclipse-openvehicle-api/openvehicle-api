@@ -1,8 +1,21 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef SDV_INTERFACE_INL
 #define SDV_INTERFACE_INL
 
 #ifndef SDV_INTERFACE_H
-#error Do not include "interface.inl" directly. Include "interface.h" instead!
+#include "interface.h"
 #endif //!defined SDV_INTERFACE_H
 
 #include <cstddef>

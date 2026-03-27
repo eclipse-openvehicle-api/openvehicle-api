@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef ISOLATION_OBJECT_MONITOR_H
 #define ISOLATION_OBJECT_MONITOR_H
 
@@ -34,10 +47,10 @@ public:
     virtual void Initialize(/*in*/ const sdv::u8string& ssObjectConfig) override;
 
     /**
-     * @brief Get the current status of the object. Overload of sdv::IObjectControl::GetStatus.
-     * @return Return the current status of the object.
+     * @brief Get the current state of the object. Overload of sdv::IObjectControl::GetObjectState.
+     * @return Return the current state of the object.
      */
-    virtual sdv::EObjectStatus GetStatus() const override;
+    virtual sdv::EObjectState GetObjectState() const override;
 
     /**
      * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
@@ -46,11 +59,17 @@ public:
     virtual void SetOperationMode(/*in*/ sdv::EOperationMode eMode) override;
 
     /**
+     * @brief Get the object configuration for persistence.
+     * @return The object configuration as TOML string.
+     */
+    virtual sdv::u8string GetObjectConfig() const override;
+
+    /**
      * @brief Shutdown called before the object is destroyed. Overload of sdv::IObjectControl::Shutdown.
      * @attention Implement calls to other SDV objects here as this is no longer considered safe during the destructor of the object!
      * After a call to shutdown any threads/callbacks/etc that could call other SDV objects need to have been stopped.
      * The SDV object itself is to remain in a state where it can respond to calls to its interfaces as other objects may still call it during the shutdown sequence!
-     * Any subsequent call to GetStatus should return EObjectStatus::destruction_pending
+     * Any subsequent call to GetObjectState should return EObjectState::destruction_pending
      */
     virtual void Shutdown() override;
 
@@ -63,7 +82,7 @@ public:
 private:
     sdv::TInterfaceAccessPtr        m_ptrObject;                    ///< Smart pointer to the object.
     sdv::IObjectControl*            m_pObjectControl = nullptr;     ///< Pointer to the object control of the application
-    sdv::EObjectStatus              m_eObjectStatus = sdv::EObjectStatus::initialization_pending; ///< Object status (in case there is no object control).
+    sdv::EObjectState              m_eObjectState = sdv::EObjectState::initialization_pending; ///< Object status (in case there is no object control).
 };
 
 #endif // !defined ISOLATION_OBJECT_MONITOR_H

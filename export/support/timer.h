@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef VAPI_TASK_TIMER_H
 #define VAPI_TASK_TIMER_H
 
@@ -25,20 +38,21 @@ namespace sdv
              * @brief Constructor
              * @param[in] uiPeriod The period to create a timer for.
              * @param[in] fnCallback Callback function to be called on task execution.
+             * @param[in] bUseSimTimer Use the simulated task timer instead of the actual task timer.
              */
-            CTaskTimer(uint32_t uiPeriod, std::function<void()> fnCallback) :
+            CTaskTimer(uint32_t uiPeriod, std::function<void()> fnCallback, bool bUseSimTimer = false) :
                 m_ptrCallback(std::make_unique<STimerCallback>(fnCallback))
             {
                 if (!m_ptrCallback) return;
                 if (!uiPeriod) return;
 
                 // Get the task timer service.
-                sdv::core::ITaskTimer* pTaskTimer = sdv::core::GetObject<sdv::core::ITaskTimer>("TaskTimerService");
-                if (!pTaskTimer)
-                {
+                sdv::core::ITaskTimer* pTaskTimer = nullptr;
+                if (bUseSimTimer)
                     pTaskTimer = sdv::core::GetObject<sdv::core::ITaskTimer>("SimulationTaskTimerService");
-                    if (!pTaskTimer) return;
-                }
+                else
+                    pTaskTimer = sdv::core::GetObject<sdv::core::ITaskTimer>("TaskTimerService");
+                if (!pTaskTimer) return;
 
                 // Create the timer
                 m_pTimer = pTaskTimer->CreateTimer(uiPeriod, m_ptrCallback.get());
@@ -49,18 +63,20 @@ namespace sdv
             * @param[in] uiPeriod The period to create a timer for.
             * @param[in] pTask Pointer to the interface of the task object to be called. The object must expose
             * sdv::core::ITastExecute.
-            */
-            CTaskTimer(uint32_t uiPeriod, sdv::IInterfaceAccess* pTask)
+             * @param[in] bUseSimTimer Use the simulated task timer instead of the actual task timer.
+             */
+            CTaskTimer(uint32_t uiPeriod, sdv::IInterfaceAccess* pTask, bool bUseSimTimer = false)
             {
                 if (!uiPeriod) return;
 
                 // Get the task timer service.
-                sdv::core::ITaskTimer* pTaskTimer = sdv::core::GetObject<sdv::core::ITaskTimer>("TaskTimerService");
-                if (!pTaskTimer)
-                {
+                sdv::core::ITaskTimer* pTaskTimer = nullptr;
+                if (bUseSimTimer)
                     pTaskTimer = sdv::core::GetObject<sdv::core::ITaskTimer>("SimulationTaskTimerService");
-                    if (!pTaskTimer) return;
-                }
+                else
+                    pTaskTimer = sdv::core::GetObject<sdv::core::ITaskTimer>("TaskTimerService");
+                if (!pTaskTimer)
+                    return;
 
                 // Create the timer
                 m_pTimer = pTaskTimer->CreateTimer(uiPeriod, pTask);

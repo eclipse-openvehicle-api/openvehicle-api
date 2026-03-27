@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef APP_CONFIG_H
 #define APP_CONFIG_H
 
@@ -9,6 +22,7 @@
 #include <filesystem>
 #include <vector>
 #include <map>
+#include "app_config_file.h"
 
 // @cond DOXYGEN_IGNORE
 // Components are installed using two procedures:
@@ -26,39 +40,18 @@
 // @endcond
 
 /**
+ * @brief Get the location of the core_services.sdv.
+ * @return Path to the directory containing the loaded core directory.
+ */
+std::filesystem::path GetCoreDirectory();
+
+/**
  * @brief Application configuration service
  * @details In the configuration system objects, devices, basic services, complex services and apps are defined and will be started
  * suring the load process. The objects are loaded in this order (system objects first, apps last) unless dependencies define
  * a different order. Utilities, proxy and stub objects are not specified here, since they can be started 'on-the-fly' if needed.
  * Loading a configuration extends the current configuration. Saving a configuration includes all objects since the last
  * configuration not including the components present before the last load.
- *
- * The configuration file is a TOML file with the following format:
- * @code
- * [Configuration]
- * Version = 100                    # Configuration file version.
- *
- * [[Component]]
- * Path = "my_module.sdv            # Relative to the executable or absolute path to the module - not used for main and isolated
- *                                  # applications since the components must be installed.
- * Class = "MyComponent"            # Class name of the component.
- * Name = "MyPersonalComponent"     # Optional instance name of the component. If not provided, the name will automatically be the
- *                                  # default name of the component or if not available the class name of the component.
- * AttributeXYZ = 123               # Additional settings for the component provided during initialization.
- *
- * [[Component]]
- * Class = "MyComponent2"           # Class name of the component - if also present in "my_module.sdv" doesn't need additional
- *                                  # 'Path' value. The component name is taken from the default name of the component.
- *
- * [[Component]]
- * Class = "MyComponent"            # Class name of the component; class is the same as before.
- * Name = "MyPersonalComponent2"    # Specific name identifying another instance of the component.
- *
- * [[Module]]
- * Path = "my_other_module.sdv      # Relative to the executable or absolute path to the module - not used for main and isolated
- *                                  # applications since the components must be installed. This path might contain components not
- *                                  # started, but known by the repository (utilities).
- * @endcode
  *
  * For the main application there are several configuration files:
  *      - Platform configuration (OS support, middleware support, vehicle bus and Ethernet interface configuration - system objects)
@@ -85,7 +78,10 @@ public:
     END_SDV_INTERFACE_MAP()
 
     /**
-     * @brief Load the installation manifests for core, executable and user components. Main and isolated applications only.
+     * @brief Load/reload the installation manifests for core, executable and user components.
+     * @details The installation manifests contain the module and component class information that is used for finding component
+     * classes. Standalone applications only load the core manifest. Server applications additionally load the manifest according to
+     * their instance ID.
      * @return Returns 'true when successful; 'false' when not.
      */
     bool LoadInstallationManifests();
@@ -94,6 +90,25 @@ public:
      * @brief Unload all manifest during shutdown.
      */
     void UnloadInstallatonManifests();
+
+    /**
+     * @brief Load the configuration files listed in the settings.
+     * @details Load the configuration files stored in the settings file (for server applications) or provided through the startup
+     * configuration (for local applications). For server applications, the system configurations are loaded and provided to the
+     * repository for starting the components. After the system configuration, the user configuration is loaded. The module section
+     * and path information in the configuration files is ignored (if available at all) for server applications. For local
+     * applications there are no system configurations to load and only the user configuration is loaded which was provided during
+     * startup. The loading of the modules precedes the loading and starting of the components.
+     * @return Returns 'true' when the loading was successful. 'False' when not.
+     */
+    bool LoadAppConfigs();
+
+    /**
+     * @brief Save the configuration files listed in the settings.
+     * @remarks When running in maintenance mode, all configurations are updated. In all other modes, only the
+     * user application config is updated.
+     */
+    void SaveAppConfigs();
 
     /**
      * @brief Process the provided configuration by loading modules and creating objects/stubs/proxies defined in the
@@ -123,9 +138,23 @@ public:
      * @attention Configuration changes can only occur when the system is in configuration mode.
      * @param[in] ssConfigPath Path to the file containing the configuration (TOML). The path can be an absolute as well as a
      * relative path. In case a relative path is provided, the configuration is stored relative to the executable directory.
-     * @return Returns 'true' on success; 'false' otherwise.
+     * @return Returns 'true' on success (or no changes detected); 'false' otherwise.
      */
     virtual bool SaveConfig(/*in*/ const sdv::u8string& ssConfigPath) const override;
+
+    /**
+     * @brief Generate the configuration TOML string. Overload of sdv::core::IConfig::GenerateConfigString.
+     * @return The generated configuration string.
+     */
+    virtual sdv::u8string GenerateConfigString() const override;
+
+    /**
+     * @brief Close the current configuration. Overload of sdv::core::IConfig::CloseConfig.
+     * @details This will close und unload the components and modules from the current configuration as well as dependent
+     * components that builds on top of the components being closed. Components that the current configuration depends on
+     * are not closed.
+     */
+    virtual void CloseConfig() override;
 
     /**
      * @brief Add a search path to a folder where a config file can be found. Overload of
@@ -136,7 +165,9 @@ public:
     virtual bool AddConfigSearchDir(/*in*/ const sdv::u8string& ssDir) override;
 
     /**
-     * @brief Reset the configuration baseline.
+     * @brief Reset the configuration baseline. Overload of sdv::core::IConfig::ResetConfigBaseline.
+     * @remarks When running as server, the config baseline is limited to the user configuration, which only consists of
+     * complex services. For standalone setups, the configuration can also contain basic services and devices.
      * @details The configuration baseline determines what belongs to the current configuration. Any object being added
      * after this baseline will be stored in a configuration file.
      */
@@ -209,17 +240,37 @@ public:
 
     /**
      * @brief Search for the installed component with the specific class name.
-     * @details Find the first component containing a class with the specified name. For main and isolated applications.
-     * The order of checking the installation manifest is core-manifest, manifest in executable directory and manifest in supplied
-     * installation directory.
+     * @details Find the first component containing a class with the specified name. The order of checking the installation manifest
+     * is core-manifest, manifest in executable directory and manifest in supplied installation directory. For standalone
+     * applications only the core and executable manifests are checked.
      * @remarks Components of system objects specified in the user installation are not returned.
      * @param[in] rssClass Reference to the class that should be searched for. The class is compared to the class name and the
      * default name in the manifest.
-     * @return Optionally returns the component manifest.
+     * @return Optionally returns the component class information.
      */
-    std::optional<CInstallManifest::SComponent> FindInstalledComponent(const std::string& rssClass) const;
+    std::optional<sdv::SClassInfo> FindInstalledComponent(const std::string& rssClass) const;
+
+    /**
+     * @brief Remove any components that are mentioned in the manifest from the configurations available in the settings file.
+     * @remarks Only available when running as maintenance or main application. If running as main application limited to removal
+     * from the user configuration only.
+     * @param[in] rManifest Reference to the manifest file containing the installation components.
+     * @return Returns whether the removal was successful (also when there was nothing to remove) or not successful (when the
+     * components were in one of the system configurations and the application is not running as maintenance application).
+     */
+    bool RemoveFromConfig(const CInstallManifest& rManifest);
 
 private:
+    /**
+     * @brief For standalone applications, compose a proper absolute configuration file path based a relative path and the search
+     * directories provided.
+     * @remarks The path could point to a non-existing file (in case of the save configuration call). The parent directory needs
+     * to exist.
+     * @param[in] rpathConfigFile Reference to the path containing a relatice or absolute path name to the configuration file.
+     * @return Returns a fully qualified path to the configuration file. Or an empty path in case of failure.
+     */
+    std::filesystem::path ComposeConfigPathStandaloneApp(const std::filesystem::path& rpathConfigFile) const;
+
     /**
      * @brief Add config folders of the core_services and the executable to the search paths if not done so already.
      */
@@ -233,17 +284,23 @@ private:
         sdv::sequence<sdv::installation::SFileDesc>  seqFiles;       ///< Companion files
     };
 
-    std::mutex                              m_mtxSearchPaths;       ///< Access protection to directory list.
-    std::list<std::filesystem::path>        m_lstSearchPaths;       ///< List of search directories.
-    std::filesystem::path                   m_pathLastSearchDir;    ///< The last search directory to also save the file to.
-    std::mutex                              m_mtxInstallations;     ///< Access protection to the installations.
-    CInstallManifest                        m_manifestCore;         ///< Install manifest for core components (main and isolated apps).
-    CInstallManifest                        m_manifestExe;          ///< Install manifest for exe components (main and isolated apps).
-    std::vector<CInstallManifest>           m_vecUserManifests;     ///< Install manifests for user components (main and isolated apps).
-    std::map<std::string, SInstallation>    m_mapInstallations;     ///< Installation map.
+    std::mutex                                      m_mtxSearchPaths;       ///< Access protection to directory list.
+    std::list<std::filesystem::path>                m_lstSearchPaths;       ///< List of search directories.
+    std::filesystem::path                           m_pathLastSearchDir;    ///< The last search directory to also save the file to.
+    std::mutex                                      m_mtxInstallations;     ///< Access protection to the installations.
+    CInstallManifest                                m_manifestCore;         ///< Install manifest for core components (main and isolated apps).
+    CInstallManifest                                m_manifestExe;          ///< Install manifest for exe components (main and isolated apps).
+    std::vector<CInstallManifest>                   m_vecUserManifests;     ///< Install manifests for user components (main and isolated apps).
+    std::map<std::string, SInstallation>            m_mapInstallations;     ///< Installation map.
+    std::vector<CAppConfigFile>                     m_vecSysConfigs;        ///< System configurations.
+    CAppConfigFile                                  m_configUserConfig;     ///< User configuration file.
 };
 
-#ifndef DO_NOT_INCLUDE_IN_UNIT_TEST
+/**
+ * @brief Return the application config class.
+ * @return Reference to the application config class.
+ */
+CAppConfig& GetAppConfig();
 
 /**
  * @brief App config service class.
@@ -270,7 +327,7 @@ public:
     END_SDV_INTERFACE_MAP()
 
     // Object declarations
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::SystemObject)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
     DECLARE_OBJECT_CLASS_NAME("ConfigService")
     DECLARE_OBJECT_SINGLETON()
 
@@ -292,8 +349,6 @@ public:
     */
     static bool EnableAppInstallAccess();
 };
-DEFINE_SDV_OBJECT_NO_EXPORT(CAppConfigService)
-
-#endif
+DEFINE_SDV_OBJECT(CAppConfigService)
 
 #endif // !defined APP_CONFIG_H

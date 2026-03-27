@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef DEBUG_LOG_H
 #define DEBUG_LOG_H
 
@@ -18,7 +31,7 @@
 /**
  * @brief Enable debug log by defining the ENABLE_DEBUG_LOG to a value other than zero.
  */
-#define ENABLE_DEBUG_LOG 1
+#define ENABLE_DEBUG_LOG 0
 #endif
 
 #ifndef DECOUPLED_DEBUG_LOG
@@ -46,9 +59,11 @@ namespace debug
         /**
          * @brief Constructor, creating the file. If the file exists, it will be overwritten.
          */
-        CLogger()
+        CLogger() : m_pathLogFile(GetExecDirectory() / GetExecFilename().replace_extension(".log"))
         {
-            m_pathLogFile = GetExecDirectory() / GetExecFilename().replace_extension(".log");
+#if DECOUPLED_DEBUG_LOG == 0
+            StartLog();
+#endif
         }
 
         /**
@@ -67,6 +82,8 @@ namespace debug
             // Prevent the logger mutex to be still in use.
             std::unique_lock<std::mutex> lock(m_mtxLogger);
             lock.unlock();
+#else
+            FinishLog();
 #endif
         }
 
@@ -89,7 +106,6 @@ namespace debug
                 while (!m_threadLogger.joinable())
                     std::this_thread::sleep_for(std::chrono::milliseconds(10));
             }
-            std::cout << rss << std::endl;
 
             // Add message to the log queue
             m_queueLogger.push(sMsg);
@@ -123,12 +139,16 @@ namespace debug
         {
             std::ofstream fstream;
             fstream.open(m_pathLogFile, std::ios_base::out | std::ios_base::trunc);
+
+            // Make one line out of it... prevents a cut in the middle when multiple streams are being used in parallel.
+            std::stringstream sstreamMsg;
+            sstreamMsg << "PID#" << getpid() << ": Starting log of " << GetExecFilename().generic_u8string() << std::endl;
             if (fstream.is_open())
             {
-                fstream << "Starting log of " << GetExecFilename().generic_u8string() << std::endl;
+                fstream << sstreamMsg.str();
                 fstream.close();
             }
-            std::cout << "Starting log of " << GetExecFilename().generic_u8string() << std::endl << std::flush;
+            std::cout << sstreamMsg.str() << std::flush;
         }
 
         /**
@@ -139,12 +159,16 @@ namespace debug
             // Finish logging
             std::ofstream fstream;
             fstream.open(m_pathLogFile, std::ios_base::out | std::ios_base::app);
+
+            // Make one line out of it... prevents a cut in the middle when multiple streams are being used in parallel.
+            std::stringstream sstreamMsg;
+            sstreamMsg << "PID#" << getpid() << ": Ending log of " << GetExecFilename().generic_u8string() << std::endl;
             if (fstream.is_open())
             {
-                fstream << "End log of " << GetExecFilename().generic_u8string() << std::endl;
+                fstream << sstreamMsg.str();
                 fstream.close();
             }
-            std::cout << "End log of " << GetExecFilename().generic_u8string() << std::endl << std::flush;
+            std::cout << sstreamMsg.str() << std::flush;
         }
 
         /**
@@ -160,20 +184,24 @@ namespace debug
         /**
          * @brief Log a message.
          * @param[in] rfstream Reference to the stream to log to.
-         * @param[in9 rsMsg Reference to the message to log.
+         * @param[in] rsMsg Reference to the message to log.
          */
         void LogMsg(std::ofstream& rfstream, const SLogMsg& rsMsg)
         {
             std::string ssIndent(rsMsg.nDepth, '>');
             if (!ssIndent.empty())
                 ssIndent += ' ';
+
+            // Make one line out of it... prevents a cut in the middle when multiple streams are being used in parallel.
+            std::stringstream sstreamMsg;
+            sstreamMsg << "PID#" << getpid() << " THREAD#" << rsMsg.id << ": " << ssIndent << rsMsg.ssMsg << std::endl;
             if (rfstream.is_open())
             {
-                rfstream << rsMsg.id << ": " << ssIndent << rsMsg.ssMsg << std::endl;
+                rfstream << sstreamMsg.str();
                 rfstream.close();
             }
 
-            std::cout << rsMsg.id << ": " << ssIndent << rsMsg.ssMsg << std::endl << std::flush;
+            std::cout << sstreamMsg.str() << std::flush;
         }
 
 #if DECOUPLED_DEBUG_LOG != 0
@@ -241,7 +269,7 @@ namespace debug
             return nDepth;
         }
 
-        std::filesystem::path m_pathLogFile;                ///< Path to the log file.
+        std::filesystem::path       m_pathLogFile;          ///< Path to the log file.
 #if DECOUPLED_DEBUG_LOG != 0
         std::mutex m_mtxLogger;                             ///< Protect against multiple log entries at the same time.
         std::thread                 m_threadLogger;         ///< Logger thread
@@ -271,10 +299,10 @@ namespace debug
          * @param[in] rssFunc Reference to the function name.
          * @param[in] rssFile Reference to the source file the function is implemented in.
          * @param[in] nLine Reference to the line the function logger object is created.
-        */
+         */
         CFuncLogger(const std::string& rssFunc, const std::string& rssFile, size_t nLine) : m_ssFunc(rssFunc)
         {
-            GetLogger().Log(std::string("Enter function:") + rssFunc + " - file " + rssFile + " - line " + std::to_string(nLine));
+            GetLogger().Log(std::string("ENTER FUNCTION: ") + rssFunc + " - FILE " + rssFile + " - LINE " + std::to_string(nLine));
             GetLogger().IncrDepth();
         }
 
@@ -284,25 +312,27 @@ namespace debug
         ~CFuncLogger()
         {
             GetLogger().DecrDepth();
-            GetLogger().Log(std::string("Leave function:") + m_ssFunc);
+            GetLogger().Log(std::string("LEAVE FUNCTION: ") + m_ssFunc);
         }
 
         /**
          * @brief Log a function checkpoint.
+         * @param[in] rssFunc Reference to the function name.
          * @param[in] nLine The line number of this checkpoint.
          */
-        void Checkpoint(size_t nLine)
+        void Checkpoint(const std::string& rssFunc, size_t nLine)
         {
-            GetLogger().Log(std::string("Checkpoint #") + std::to_string(m_nCounter++) + " - line " + std::to_string(nLine));
+            GetLogger().Log("FUNCTION: " + rssFunc + " - LINE " + std::to_string(nLine) + " - CHECKPOINT #" + std::to_string(m_nCounter++));
         }
 
         /**
          * @brief Log a string.
+         * @param[in] nLine The line number of this checkpoint.
          * @param[in] rss Reference to the string to log.
         */
-        void Log(const std::string& rss) const
+        void Log(size_t nLine, const std::string& rss) const
         {
-            GetLogger().Log(rss);
+            GetLogger().Log("LINE " + std::to_string(nLine) + " - MSG: " + rss);
         }
 
     private:
@@ -319,22 +349,29 @@ namespace debug
  * @brief Macro to create a function logger object using the function name, the file name and the line number from the compiler.
  */
 #define FUNC_LOGGER() debug::CFuncLogger logger(__FUNCSIG__, __FILE__, __LINE__)
+
+/**
+ * @brief Macro to set a checkpoint providing the line number from the compiler.
+ */
+#define CHECKPOINT() logger.Checkpoint(__FUNCSIG__, __LINE__)
+
 #else
 /**
 * @brief Macro to create a function logger object using the function name, the file name and the line number from the compiler.
 */
 #define FUNC_LOGGER() debug::CFuncLogger logger(__PRETTY_FUNCTION__, __FILE__, __LINE__)
-#endif
 
 /**
  * @brief Macro to set a checkpoint providing the line number from the compiler.
  */
-#define CHECKPOINT() logger.Checkpoint(__LINE__)
+#define CHECKPOINT() logger.Checkpoint(__PRETTY_FUNCTION__, __LINE__)
+
+#endif
 
 /**
  * @brief Log a message
  */
-#define FUNC_LOG(msg) logger.Log(msg)
+#define FUNC_LOG(msg) logger.Log(__LINE__, msg)
 
 #else
 /**

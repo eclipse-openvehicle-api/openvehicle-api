@@ -1,3 +1,13 @@
+#*******************************************************************************
+# Copyright (c) 2025-2026 ZF Friedrichshafen AG
+#
+# This program and the accompanying materials are made available under the 
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0 
+#*******************************************************************************
+
 project(SystemDemoExample)
 
 # Use new policy for project version settings and default warning level
@@ -96,7 +106,7 @@ set_target_properties(trunk_complex_service PROPERTIES PREFIX "")
 set_target_properties(trunk_complex_service PROPERTIES SUFFIX ".sdv")
 
 ######################################################################################################################################################################
-#                                                                   basic_system trunk application
+#                                                                   open trunk application
 ######################################################################################################################################################################
 
 # Define the executable
@@ -118,32 +128,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 else()
     target_link_libraries(open_trunk_example Rpcrt4.lib)
 endif()
-#[[ 
 
-######################################################################################################################################################################
-#                                                                   open trunk application
-######################################################################################################################################################################
-
-# Define the executable
-add_executable(system_trunk_example
-    example_app/system_trunk_example.cpp
-    example_app/control.h
-    example_app/control.cpp
-    example_app/console.h
-    example_app/console.cpp
-    example_app/signal_names.h
-    )
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    if (WIN32)
-        target_link_libraries(system_trunk_example Ws2_32 Winmm Rpcrt4.lib)
-    else()
-        target_link_libraries(system_trunk_example ${CMAKE_DL_LIBS} rt ${CMAKE_THREAD_LIBS_INIT})
-    endif()
-else()
-    target_link_libraries(system_trunk_example Rpcrt4.lib)
-endif()
-#]]
 # Copy the config files
 file (COPY ${PROJECT_SOURCE_DIR}/config/can_com_simulation_trunk.toml DESTINATION ${CMAKE_BINARY_DIR}/bin/config)
 file (COPY ${PROJECT_SOURCE_DIR}/config/complex_service_trunk.toml DESTINATION ${CMAKE_BINARY_DIR}/bin/config)
@@ -197,14 +182,11 @@ add_custom_target(trunk_user_config
     VERBATIM
 )
 
-######################################################################################################################################################################
-#   TODO:           SDV_PACKAGER does not create the toml files, therefore we need to copy them
-######################################################################################################################################################################
-file (COPY ${PROJECT_SOURCE_DIR}/coreconfig/trunk.toml DESTINATION ${SDV_FRAMEWORK_RUNTIME}/3005)
-file (COPY ${PROJECT_SOURCE_DIR}/coreconfig/platform.toml DESTINATION ${SDV_FRAMEWORK_RUNTIME}/3005)
-file (COPY ${PROJECT_SOURCE_DIR}/coreconfig/settings.toml DESTINATION ${SDV_FRAMEWORK_RUNTIME}/3005)
-file (COPY ${PROJECT_SOURCE_DIR}/coreconfig/vehicle_abstract.toml DESTINATION ${SDV_FRAMEWORK_RUNTIME}/3005)
-file (COPY ${PROJECT_SOURCE_DIR}/coreconfig/vehicle_ifc.toml DESTINATION ${SDV_FRAMEWORK_RUNTIME}/3005)
+add_custom_target(trunk_platform_config
+    ALL
+    COMMAND "${SDV_PACKAGER}" CONFIGURE ${PROJECT_SOURCE_DIR}/coreconfig/platform.toml --instance3005 --platform_config
+    VERBATIM
+)
 
 
 

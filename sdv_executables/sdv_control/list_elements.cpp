@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "list_elements.h"
 #include "print_table.h"
 #include <interfaces/config.h>
@@ -211,23 +224,6 @@ int ListClasses(const SContext& rsContext, const sdv::TObjectPtr& rptrRepository
         return MODULE_CONTROL_SERVICE_ACCESS_ERROR;
     }
 
-    // Class type
-    auto fnPrintClassType = [](sdv::EObjectType eType)
-    {
-        switch (eType)
-        {
-        case sdv::EObjectType::SystemObject:    return "SystemObject";
-        case sdv::EObjectType::Device:          return "Device";
-        case sdv::EObjectType::BasicService:    return "BasicService";
-        case sdv::EObjectType::ComplexService:  return "ComplexService";
-        case sdv::EObjectType::Application:     return "Application";
-        case sdv::EObjectType::Proxy:           return "Proxy";
-        case sdv::EObjectType::Stub:            return "Stub";
-        case sdv::EObjectType::Utility:         return "Utility";
-        default:                                return "Unknown";
-        }
-    };
-
     // Class flags
     auto fnPrintClassFlags = [](uint32_t uiFlags)
     {
@@ -263,7 +259,7 @@ int ListClasses(const SContext& rsContext, const sdv::TObjectPtr& rptrRepository
         {
             sdv::sequence<sdv::SClassInfo> seqClasses = pModuleInfo->GetClassList(rsModuleInfo.tModuleID);
             for (const sdv::SClassInfo& rsClassInfo : seqClasses)
-                vecShortClassList.push_back({ rsClassInfo.ssClassName, fnPrintList(rsClassInfo.seqClassAliases) });
+                vecShortClassList.push_back({ rsClassInfo.ssName, fnPrintList(rsClassInfo.seqClassAliases) });
         }
 
         // Print the module list
@@ -279,10 +275,10 @@ int ListClasses(const SContext& rsContext, const sdv::TObjectPtr& rptrRepository
             sdv::sequence<sdv::SClassInfo> seqClasses = pModuleInfo->GetClassList(rsModuleInfo.tModuleID);
             for (const sdv::SClassInfo& rsClassInfo : seqClasses)
                 vecClassList.push_back({
-                    rsClassInfo.ssClassName,
+                    rsClassInfo.ssName,
                     fnPrintList(rsClassInfo.seqClassAliases),
                     rsClassInfo.ssDefaultObjectName,
-                    fnPrintClassType(rsClassInfo.eType),
+                    sdv::ObjectType2String(rsClassInfo.eType),
                     fnPrintClassFlags(rsClassInfo.uiFlags),
                     std::to_string(static_cast<int64_t>(rsModuleInfo.tModuleID)),
                     fnPrintList(rsClassInfo.seqDependencies) });
@@ -308,23 +304,6 @@ int ListComponents(const SContext& rsContext, const sdv::TObjectPtr& rptrReposit
             std::cerr << "ERROR: " << REPOSITORY_SERVICE_ACCESS_ERROR_MSG << std::endl;
         return REPOSITORY_SERVICE_ACCESS_ERROR;
     }
-
-    // Class type
-    auto fnPrintClassType = [](sdv::EObjectType eType)
-    {
-        switch (eType)
-        {
-        case sdv::EObjectType::SystemObject:    return "SystemObject";
-        case sdv::EObjectType::Device:          return "Device";
-        case sdv::EObjectType::BasicService:    return "BasicService";
-        case sdv::EObjectType::ComplexService:  return "ComplexService";
-        case sdv::EObjectType::Application:     return "Application";
-        case sdv::EObjectType::Proxy:           return "Proxy";
-        case sdv::EObjectType::Stub:            return "Stub";
-        case sdv::EObjectType::Utility:         return "Utility";
-        default:                                return "Unknown";
-        }
-    };
 
     // Object flags
     auto fnPrintObjectFlags = [](uint32_t uiFlags)
@@ -369,9 +348,9 @@ int ListComponents(const SContext& rsContext, const sdv::TObjectPtr& rptrReposit
         for (const sdv::core::SObjectInfo& rsObjectInfo : seqObjects)
             vecObjectList.push_back({
                 std::to_string(static_cast<int64_t>(rsObjectInfo.tModuleID)),
-                rsObjectInfo.sClassInfo.ssClassName,
+                rsObjectInfo.sClassInfo.ssName,
                 rsObjectInfo.ssObjectName,
-                fnPrintClassType(rsObjectInfo.sClassInfo.eType),
+                sdv::ObjectType2String(rsObjectInfo.sClassInfo.eType),
                 fnPrintObjectFlags(rsObjectInfo.uiFlags),
                 std::to_string(static_cast<int64_t>(rsObjectInfo.tModuleID)) });
 

@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef PROCESS_WATCHDOG_H
 #define PROCESS_WATCHDOG_H
 
@@ -41,6 +54,7 @@
 #else
 #error The OS is not supported!
 #endif
+#include "exec_dir_helper.h"
 
 /**
  * @brief Process watchdog class; ends the process when runtime duration has superseded (as is the case when a deadlock has
@@ -125,6 +139,8 @@ private:
                 if (IsDebuggerPresent()) continue;
 
                 std::cerr << "WATCHDOG TERMINATION ENFORCED!!!" << std::endl;
+                std::cerr << GetExecFilename().generic_u8string() << " will be terminated due to inactivity of " <<
+                    std::chrono::duration_cast<std::chrono::seconds>(tpNow - tpStart).count() << " seconds... " << std::endl;
                 std::cerr.flush();
 #ifdef _WIN32
                 // Get the current process handle

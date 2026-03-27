@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include <gtest/gtest.h>
 #include "composer_test_suite.h"
 #include "../../../global/exec_dir_helper.h"
@@ -146,27 +159,27 @@ TEST_F(CInstallManifestTest, WriteReadComponents)
     EXPECT_EQ(vecModules.size(), 2);
     EXPECT_NE(std::find(vecModules.begin(), vecModules.end(), "UnitTest_InstallPackageComposer_Component1.sdv"), vecModules.end());
     EXPECT_NE(std::find(vecModules.begin(), vecModules.end(), "UnitTest_InstallPackageComposer_Component2.sdv"), vecModules.end());
-    auto vecComponents = manifestWrite.ComponentList();
-    EXPECT_EQ(vecComponents.size(), 3);
-    auto itDummyService1 = std::find_if(vecComponents.begin(), vecComponents.end(), [](const auto& sComponent) { return sComponent.ssClassName == "DummyService #1"; });
-    ASSERT_NE(itDummyService1, vecComponents.end());
-    EXPECT_EQ(itDummyService1->pathRelModule, "UnitTest_InstallPackageComposer_Component1.sdv");
-    EXPECT_FALSE(itDummyService1->ssManifest.empty());
-    ASSERT_EQ(itDummyService1->seqAliases.size(), 2);
-    EXPECT_EQ(itDummyService1->seqAliases[0], "Dummy1");
-    EXPECT_EQ(itDummyService1->seqAliases[1], "DummySvc1");
+    auto vecClasses = manifestWrite.ClassList();
+    EXPECT_EQ(vecClasses.size(), 3);
+    auto itDummyService1 = std::find_if(vecClasses.begin(), vecClasses.end(), [](const auto& sComponent) { return sComponent.ssName == "DummyService #1"; });
+    ASSERT_NE(itDummyService1, vecClasses.end());
+    EXPECT_EQ(itDummyService1->ssModulePath, "UnitTest_InstallPackageComposer_Component1.sdv");
+    //EXPECT_FALSE(itDummyService1->ssManifest.empty());
+    ASSERT_EQ(itDummyService1->seqClassAliases.size(), 2);
+    EXPECT_EQ(itDummyService1->seqClassAliases[0], "Dummy1");
+    EXPECT_EQ(itDummyService1->seqClassAliases[1], "DummySvc1");
     EXPECT_EQ(itDummyService1->ssDefaultObjectName, "MyDummy");
-    EXPECT_EQ(itDummyService1->eType, sdv::EObjectType::ComplexService);
+    EXPECT_EQ(itDummyService1->eType, sdv::EObjectType::complex_service);
     EXPECT_EQ(itDummyService1->uiFlags, static_cast<uint32_t>(sdv::EObjectFlags::singleton));
     ASSERT_EQ(itDummyService1->seqDependencies .size(), 2);
     EXPECT_EQ(itDummyService1->seqDependencies[0], "DummyDevice");
     EXPECT_EQ(itDummyService1->seqDependencies[1], "DummyService #2");
-    auto itDummyDevice = std::find_if(vecComponents.begin(), vecComponents.end(), [](const auto& sComponent) { return sComponent.ssClassName == "DummyDevice"; });
-    ASSERT_NE(itDummyDevice, vecComponents.end());
-    EXPECT_EQ(itDummyDevice->pathRelModule, "UnitTest_InstallPackageComposer_Component1.sdv");
-    auto itDummyService2 = std::find_if(vecComponents.begin(), vecComponents.end(), [](const auto& sComponent) { return sComponent.ssClassName == "DummyService #2"; });
-    ASSERT_NE(itDummyService2, vecComponents.end());
-    EXPECT_EQ(itDummyService2->pathRelModule, "UnitTest_InstallPackageComposer_Component2.sdv");
+    auto itDummyDevice = std::find_if(vecClasses.begin(), vecClasses.end(), [](const auto& sComponent) { return sComponent.ssName == "DummyDevice"; });
+    ASSERT_NE(itDummyDevice, vecClasses.end());
+    EXPECT_EQ(itDummyDevice->ssModulePath, "UnitTest_InstallPackageComposer_Component1.sdv");
+    auto itDummyService2 = std::find_if(vecClasses.begin(), vecClasses.end(), [](const auto& sComponent) { return sComponent.ssName == "DummyService #2"; });
+    ASSERT_NE(itDummyService2, vecClasses.end());
+    EXPECT_EQ(itDummyService2->ssModulePath, "UnitTest_InstallPackageComposer_Component2.sdv");
     std::string ssManifest = manifestWrite.Write();
     EXPECT_FALSE(ssManifest.empty());
 
@@ -177,27 +190,27 @@ TEST_F(CInstallManifestTest, WriteReadComponents)
     EXPECT_EQ(vecModules.size(), 2);
     EXPECT_NE(std::find(vecModules.begin(), vecModules.end(), "UnitTest_InstallPackageComposer_Component1.sdv"), vecModules.end());
     EXPECT_NE(std::find(vecModules.begin(), vecModules.end(), "UnitTest_InstallPackageComposer_Component2.sdv"), vecModules.end());
-    vecComponents = manifestRead.ComponentList();
-    EXPECT_EQ(vecComponents.size(), 3);
-    itDummyService1 = std::find_if(vecComponents.begin(), vecComponents.end(), [](const auto& sComponent) { return sComponent.ssClassName == "DummyService #1"; });
-    ASSERT_NE(itDummyService1, vecComponents.end());
-    EXPECT_EQ(itDummyService1->pathRelModule, "UnitTest_InstallPackageComposer_Component1.sdv");
-    EXPECT_FALSE(itDummyService1->ssManifest.empty());
-    ASSERT_EQ(itDummyService1->seqAliases.size(), 2);
-    EXPECT_EQ(itDummyService1->seqAliases[0], "Dummy1");
-    EXPECT_EQ(itDummyService1->seqAliases[1], "DummySvc1");
+    vecClasses = manifestRead.ClassList();
+    EXPECT_EQ(vecClasses.size(), 3);
+    itDummyService1 = std::find_if(vecClasses.begin(), vecClasses.end(), [](const auto& sComponent) { return sComponent.ssName == "DummyService #1"; });
+    ASSERT_NE(itDummyService1, vecClasses.end());
+    EXPECT_EQ(itDummyService1->ssModulePath, "UnitTest_InstallPackageComposer_Component1.sdv");
+    //EXPECT_FALSE(itDummyService1->ssManifest.empty());
+    ASSERT_EQ(itDummyService1->seqClassAliases.size(), 2);
+    EXPECT_EQ(itDummyService1->seqClassAliases[0], "Dummy1");
+    EXPECT_EQ(itDummyService1->seqClassAliases[1], "DummySvc1");
     EXPECT_EQ(itDummyService1->ssDefaultObjectName, "MyDummy");
-    EXPECT_EQ(itDummyService1->eType, sdv::EObjectType::ComplexService);
+    EXPECT_EQ(itDummyService1->eType, sdv::EObjectType::complex_service);
     EXPECT_EQ(itDummyService1->uiFlags, static_cast<uint32_t>(sdv::EObjectFlags::singleton));
     ASSERT_EQ(itDummyService1->seqDependencies .size(), 2);
     EXPECT_EQ(itDummyService1->seqDependencies[0], "DummyDevice");
     EXPECT_EQ(itDummyService1->seqDependencies[1], "DummyService #2");
-    itDummyDevice = std::find_if(vecComponents.begin(), vecComponents.end(), [](const auto& sComponent) { return sComponent.ssClassName == "DummyDevice"; });
-    ASSERT_NE(itDummyDevice, vecComponents.end());
-    EXPECT_EQ(itDummyDevice->pathRelModule, "UnitTest_InstallPackageComposer_Component1.sdv");
-    itDummyService2 = std::find_if(vecComponents.begin(), vecComponents.end(), [](const auto& sComponent) { return sComponent.ssClassName == "DummyService #2"; });
-    ASSERT_NE(itDummyService2, vecComponents.end());
-    EXPECT_EQ(itDummyService2->pathRelModule, "UnitTest_InstallPackageComposer_Component2.sdv");
+    itDummyDevice = std::find_if(vecClasses.begin(), vecClasses.end(), [](const auto& sComponent) { return sComponent.ssName == "DummyDevice"; });
+    ASSERT_NE(itDummyDevice, vecClasses.end());
+    EXPECT_EQ(itDummyDevice->ssModulePath, "UnitTest_InstallPackageComposer_Component1.sdv");
+    itDummyService2 = std::find_if(vecClasses.begin(), vecClasses.end(), [](const auto& sComponent) { return sComponent.ssName == "DummyService #2"; });
+    ASSERT_NE(itDummyService2, vecClasses.end());
+    EXPECT_EQ(itDummyService2->ssModulePath, "UnitTest_InstallPackageComposer_Component2.sdv");
 }
 
 TEST_F(CInstallManifestTest, WriteReadFindComponents)
@@ -214,32 +227,32 @@ TEST_F(CInstallManifestTest, WriteReadFindComponents)
     EXPECT_EQ(vecModules.size(), 2);
     EXPECT_NE(std::find(vecModules.begin(), vecModules.end(), "UnitTest_InstallPackageComposer_Component1.sdv"), vecModules.end());
     EXPECT_NE(std::find(vecModules.begin(), vecModules.end(), "UnitTest_InstallPackageComposer_Component2.sdv"), vecModules.end());
-    auto vecComponents = manifestWrite.ComponentList();
-    EXPECT_EQ(vecComponents.size(), 3);
-    auto itDummyService1 = std::find_if(vecComponents.begin(),
-        vecComponents.end(),
-        [](const auto& sComponent) { return sComponent.ssClassName == "DummyService #1"; });
-    ASSERT_NE(itDummyService1, vecComponents.end());
-    EXPECT_EQ(itDummyService1->pathRelModule, "UnitTest_InstallPackageComposer_Component1.sdv");
-    EXPECT_FALSE(itDummyService1->ssManifest.empty());
-    ASSERT_EQ(itDummyService1->seqAliases.size(), 2);
-    EXPECT_EQ(itDummyService1->seqAliases[0], "Dummy1");
-    EXPECT_EQ(itDummyService1->seqAliases[1], "DummySvc1");
+    auto vecClasses = manifestWrite.ClassList();
+    EXPECT_EQ(vecClasses.size(), 3);
+    auto itDummyService1 = std::find_if(vecClasses.begin(),
+        vecClasses.end(),
+        [](const auto& sComponent) { return sComponent.ssName == "DummyService #1"; });
+    ASSERT_NE(itDummyService1, vecClasses.end());
+    EXPECT_EQ(itDummyService1->ssModulePath, "UnitTest_InstallPackageComposer_Component1.sdv");
+    //EXPECT_FALSE(itDummyService1->ssManifest.empty());
+    ASSERT_EQ(itDummyService1->seqClassAliases.size(), 2);
+    EXPECT_EQ(itDummyService1->seqClassAliases[0], "Dummy1");
+    EXPECT_EQ(itDummyService1->seqClassAliases[1], "DummySvc1");
     EXPECT_EQ(itDummyService1->ssDefaultObjectName, "MyDummy");
-    EXPECT_EQ(itDummyService1->eType, sdv::EObjectType::ComplexService);
+    EXPECT_EQ(itDummyService1->eType, sdv::EObjectType::complex_service);
     EXPECT_EQ(itDummyService1->uiFlags, static_cast<uint32_t>(sdv::EObjectFlags::singleton));
     ASSERT_EQ(itDummyService1->seqDependencies.size(), 2);
     EXPECT_EQ(itDummyService1->seqDependencies[0], "DummyDevice");
     EXPECT_EQ(itDummyService1->seqDependencies[1], "DummyService #2");
     auto itDummyDevice = std::find_if(
-        vecComponents.begin(), vecComponents.end(), [](const auto& sComponent) { return sComponent.ssClassName == "DummyDevice"; });
-    ASSERT_NE(itDummyDevice, vecComponents.end());
-    EXPECT_EQ(itDummyDevice->pathRelModule, "UnitTest_InstallPackageComposer_Component1.sdv");
-    auto itDummyService2 = std::find_if(vecComponents.begin(),
-        vecComponents.end(),
-        [](const auto& sComponent) { return sComponent.ssClassName == "DummyService #2"; });
-    ASSERT_NE(itDummyService2, vecComponents.end());
-    EXPECT_EQ(itDummyService2->pathRelModule, "UnitTest_InstallPackageComposer_Component2.sdv");
+        vecClasses.begin(), vecClasses.end(), [](const auto& sComponent) { return sComponent.ssName == "DummyDevice"; });
+    ASSERT_NE(itDummyDevice, vecClasses.end());
+    EXPECT_EQ(itDummyDevice->ssModulePath, "UnitTest_InstallPackageComposer_Component1.sdv");
+    auto itDummyService2 = std::find_if(vecClasses.begin(),
+        vecClasses.end(),
+        [](const auto& sComponent) { return sComponent.ssName == "DummyService #2"; });
+    ASSERT_NE(itDummyService2, vecClasses.end());
+    EXPECT_EQ(itDummyService2->ssModulePath, "UnitTest_InstallPackageComposer_Component2.sdv");
     std::string ssManifest = manifestWrite.Write();
     EXPECT_FALSE(ssManifest.empty());
 
@@ -408,32 +421,32 @@ TEST_F(CInstallManifestTest, SaveLoadComponents)
     EXPECT_EQ(vecModules.size(), 2);
     EXPECT_NE(std::find(vecModules.begin(), vecModules.end(), "UnitTest_InstallPackageComposer_Component1.sdv"), vecModules.end());
     EXPECT_NE(std::find(vecModules.begin(), vecModules.end(), "UnitTest_InstallPackageComposer_Component2.sdv"), vecModules.end());
-    auto vecComponents = manifestWrite.ComponentList();
-    EXPECT_EQ(vecComponents.size(), 3);
-    auto itDummyService1 = std::find_if(vecComponents.begin(),
-        vecComponents.end(),
-        [](const auto& sComponent) { return sComponent.ssClassName == "DummyService #1"; });
-    ASSERT_NE(itDummyService1, vecComponents.end());
-    EXPECT_EQ(itDummyService1->pathRelModule, "UnitTest_InstallPackageComposer_Component1.sdv");
-    EXPECT_FALSE(itDummyService1->ssManifest.empty());
-    ASSERT_EQ(itDummyService1->seqAliases.size(), 2);
-    EXPECT_EQ(itDummyService1->seqAliases[0], "Dummy1");
-    EXPECT_EQ(itDummyService1->seqAliases[1], "DummySvc1");
+    auto vecClasses = manifestWrite.ClassList();
+    EXPECT_EQ(vecClasses.size(), 3);
+    auto itDummyService1 = std::find_if(vecClasses.begin(),
+        vecClasses.end(),
+        [](const auto& sComponent) { return sComponent.ssName == "DummyService #1"; });
+    ASSERT_NE(itDummyService1, vecClasses.end());
+    EXPECT_EQ(itDummyService1->ssModulePath, "UnitTest_InstallPackageComposer_Component1.sdv");
+    //EXPECT_FALSE(itDummyService1->ssManifest.empty());
+    ASSERT_EQ(itDummyService1->seqClassAliases.size(), 2);
+    EXPECT_EQ(itDummyService1->seqClassAliases[0], "Dummy1");
+    EXPECT_EQ(itDummyService1->seqClassAliases[1], "DummySvc1");
     EXPECT_EQ(itDummyService1->ssDefaultObjectName, "MyDummy");
-    EXPECT_EQ(itDummyService1->eType, sdv::EObjectType::ComplexService);
+    EXPECT_EQ(itDummyService1->eType, sdv::EObjectType::complex_service);
     EXPECT_EQ(itDummyService1->uiFlags, static_cast<uint32_t>(sdv::EObjectFlags::singleton));
     ASSERT_EQ(itDummyService1->seqDependencies.size(), 2);
     EXPECT_EQ(itDummyService1->seqDependencies[0], "DummyDevice");
     EXPECT_EQ(itDummyService1->seqDependencies[1], "DummyService #2");
     auto itDummyDevice = std::find_if(
-        vecComponents.begin(), vecComponents.end(), [](const auto& sComponent) { return sComponent.ssClassName == "DummyDevice"; });
-    ASSERT_NE(itDummyDevice, vecComponents.end());
-    EXPECT_EQ(itDummyDevice->pathRelModule, "UnitTest_InstallPackageComposer_Component1.sdv");
-    auto itDummyService2 = std::find_if(vecComponents.begin(),
-        vecComponents.end(),
-        [](const auto& sComponent) { return sComponent.ssClassName == "DummyService #2"; });
-    ASSERT_NE(itDummyService2, vecComponents.end());
-    EXPECT_EQ(itDummyService2->pathRelModule, "UnitTest_InstallPackageComposer_Component2.sdv");
+        vecClasses.begin(), vecClasses.end(), [](const auto& sComponent) { return sComponent.ssName == "DummyDevice"; });
+    ASSERT_NE(itDummyDevice, vecClasses.end());
+    EXPECT_EQ(itDummyDevice->ssModulePath, "UnitTest_InstallPackageComposer_Component1.sdv");
+    auto itDummyService2 = std::find_if(vecClasses.begin(),
+        vecClasses.end(),
+        [](const auto& sComponent) { return sComponent.ssName == "DummyService #2"; });
+    ASSERT_NE(itDummyService2, vecClasses.end());
+    EXPECT_EQ(itDummyService2->ssModulePath, "UnitTest_InstallPackageComposer_Component2.sdv");
     EXPECT_TRUE(manifestWrite.Save(pathTgtPckDir));
     EXPECT_TRUE(std::filesystem::exists(pathTgtPckDir / "install_manifest.toml"));
 
@@ -444,32 +457,32 @@ TEST_F(CInstallManifestTest, SaveLoadComponents)
     EXPECT_EQ(vecModules.size(), 2);
     EXPECT_NE(std::find(vecModules.begin(), vecModules.end(), "UnitTest_InstallPackageComposer_Component1.sdv"), vecModules.end());
     EXPECT_NE(std::find(vecModules.begin(), vecModules.end(), "UnitTest_InstallPackageComposer_Component2.sdv"), vecModules.end());
-    vecComponents = manifestRead.ComponentList();
-    EXPECT_EQ(vecComponents.size(), 3);
-    itDummyService1 = std::find_if(vecComponents.begin(),
-        vecComponents.end(),
-        [](const auto& sComponent) { return sComponent.ssClassName == "DummyService #1"; });
-    ASSERT_NE(itDummyService1, vecComponents.end());
-    EXPECT_EQ(itDummyService1->pathRelModule, "UnitTest_InstallPackageComposer_Component1.sdv");
-    EXPECT_FALSE(itDummyService1->ssManifest.empty());
-    ASSERT_EQ(itDummyService1->seqAliases.size(), 2);
-    EXPECT_EQ(itDummyService1->seqAliases[0], "Dummy1");
-    EXPECT_EQ(itDummyService1->seqAliases[1], "DummySvc1");
+    vecClasses = manifestRead.ClassList();
+    EXPECT_EQ(vecClasses.size(), 3);
+    itDummyService1 = std::find_if(vecClasses.begin(),
+        vecClasses.end(),
+        [](const auto& sComponent) { return sComponent.ssName == "DummyService #1"; });
+    ASSERT_NE(itDummyService1, vecClasses.end());
+    EXPECT_EQ(itDummyService1->ssModulePath, "UnitTest_InstallPackageComposer_Component1.sdv");
+    //EXPECT_FALSE(itDummyService1->ssManifest.empty());
+    ASSERT_EQ(itDummyService1->seqClassAliases.size(), 2);
+    EXPECT_EQ(itDummyService1->seqClassAliases[0], "Dummy1");
+    EXPECT_EQ(itDummyService1->seqClassAliases[1], "DummySvc1");
     EXPECT_EQ(itDummyService1->ssDefaultObjectName, "MyDummy");
-    EXPECT_EQ(itDummyService1->eType, sdv::EObjectType::ComplexService);
+    EXPECT_EQ(itDummyService1->eType, sdv::EObjectType::complex_service);
     EXPECT_EQ(itDummyService1->uiFlags, static_cast<uint32_t>(sdv::EObjectFlags::singleton));
     ASSERT_EQ(itDummyService1->seqDependencies.size(), 2);
     EXPECT_EQ(itDummyService1->seqDependencies[0], "DummyDevice");
     EXPECT_EQ(itDummyService1->seqDependencies[1], "DummyService #2");
     itDummyDevice = std::find_if(
-        vecComponents.begin(), vecComponents.end(), [](const auto& sComponent) { return sComponent.ssClassName == "DummyDevice"; });
-    ASSERT_NE(itDummyDevice, vecComponents.end());
-    EXPECT_EQ(itDummyDevice->pathRelModule, "UnitTest_InstallPackageComposer_Component1.sdv");
-    itDummyService2 = std::find_if(vecComponents.begin(),
-        vecComponents.end(),
-        [](const auto& sComponent) { return sComponent.ssClassName == "DummyService #2"; });
-    ASSERT_NE(itDummyService2, vecComponents.end());
-    EXPECT_EQ(itDummyService2->pathRelModule, "UnitTest_InstallPackageComposer_Component2.sdv");
+        vecClasses.begin(), vecClasses.end(), [](const auto& sComponent) { return sComponent.ssName == "DummyDevice"; });
+    ASSERT_NE(itDummyDevice, vecClasses.end());
+    EXPECT_EQ(itDummyDevice->ssModulePath, "UnitTest_InstallPackageComposer_Component1.sdv");
+    itDummyService2 = std::find_if(vecClasses.begin(),
+        vecClasses.end(),
+        [](const auto& sComponent) { return sComponent.ssName == "DummyService #2"; });
+    ASSERT_NE(itDummyService2, vecClasses.end());
+    EXPECT_EQ(itDummyService2->ssModulePath, "UnitTest_InstallPackageComposer_Component2.sdv");
 }
 
 TEST_F(CInstallManifestTest, SaveLoadFindModules)
@@ -489,32 +502,32 @@ TEST_F(CInstallManifestTest, SaveLoadFindModules)
     EXPECT_EQ(vecModules.size(), 2);
     EXPECT_NE(std::find(vecModules.begin(), vecModules.end(), "UnitTest_InstallPackageComposer_Component1.sdv"), vecModules.end());
     EXPECT_NE(std::find(vecModules.begin(), vecModules.end(), "UnitTest_InstallPackageComposer_Component2.sdv"), vecModules.end());
-    auto vecComponents = manifestWrite.ComponentList();
-    EXPECT_EQ(vecComponents.size(), 3);
-    auto itDummyService1 = std::find_if(vecComponents.begin(),
-        vecComponents.end(),
-        [](const auto& sComponent) { return sComponent.ssClassName == "DummyService #1"; });
-    ASSERT_NE(itDummyService1, vecComponents.end());
-    EXPECT_EQ(itDummyService1->pathRelModule, "UnitTest_InstallPackageComposer_Component1.sdv");
-    EXPECT_FALSE(itDummyService1->ssManifest.empty());
-    ASSERT_EQ(itDummyService1->seqAliases.size(), 2);
-    EXPECT_EQ(itDummyService1->seqAliases[0], "Dummy1");
-    EXPECT_EQ(itDummyService1->seqAliases[1], "DummySvc1");
+    auto vecClasses = manifestWrite.ClassList();
+    EXPECT_EQ(vecClasses.size(), 3);
+    auto itDummyService1 = std::find_if(vecClasses.begin(),
+        vecClasses.end(),
+        [](const auto& sComponent) { return sComponent.ssName == "DummyService #1"; });
+    ASSERT_NE(itDummyService1, vecClasses.end());
+    EXPECT_EQ(itDummyService1->ssModulePath, "UnitTest_InstallPackageComposer_Component1.sdv");
+    //EXPECT_FALSE(itDummyService1->ssManifest.empty());
+    ASSERT_EQ(itDummyService1->seqClassAliases.size(), 2);
+    EXPECT_EQ(itDummyService1->seqClassAliases[0], "Dummy1");
+    EXPECT_EQ(itDummyService1->seqClassAliases[1], "DummySvc1");
     EXPECT_EQ(itDummyService1->ssDefaultObjectName, "MyDummy");
-    EXPECT_EQ(itDummyService1->eType, sdv::EObjectType::ComplexService);
+    EXPECT_EQ(itDummyService1->eType, sdv::EObjectType::complex_service);
     EXPECT_EQ(itDummyService1->uiFlags, static_cast<uint32_t>(sdv::EObjectFlags::singleton));
     ASSERT_EQ(itDummyService1->seqDependencies.size(), 2);
     EXPECT_EQ(itDummyService1->seqDependencies[0], "DummyDevice");
     EXPECT_EQ(itDummyService1->seqDependencies[1], "DummyService #2");
     auto itDummyDevice = std::find_if(
-        vecComponents.begin(), vecComponents.end(), [](const auto& sComponent) { return sComponent.ssClassName == "DummyDevice"; });
-    ASSERT_NE(itDummyDevice, vecComponents.end());
-    EXPECT_EQ(itDummyDevice->pathRelModule, "UnitTest_InstallPackageComposer_Component1.sdv");
-    auto itDummyService2 = std::find_if(vecComponents.begin(),
-        vecComponents.end(),
-        [](const auto& sComponent) { return sComponent.ssClassName == "DummyService #2"; });
-    ASSERT_NE(itDummyService2, vecComponents.end());
-    EXPECT_EQ(itDummyService2->pathRelModule, "UnitTest_InstallPackageComposer_Component2.sdv");
+        vecClasses.begin(), vecClasses.end(), [](const auto& sComponent) { return sComponent.ssName == "DummyDevice"; });
+    ASSERT_NE(itDummyDevice, vecClasses.end());
+    EXPECT_EQ(itDummyDevice->ssModulePath, "UnitTest_InstallPackageComposer_Component1.sdv");
+    auto itDummyService2 = std::find_if(vecClasses.begin(),
+        vecClasses.end(),
+        [](const auto& sComponent) { return sComponent.ssName == "DummyService #2"; });
+    ASSERT_NE(itDummyService2, vecClasses.end());
+    EXPECT_EQ(itDummyService2->ssModulePath, "UnitTest_InstallPackageComposer_Component2.sdv");
     EXPECT_TRUE(manifestWrite.Save(pathTgtPckDir));
     EXPECT_TRUE(std::filesystem::exists(pathTgtPckDir / "install_manifest.toml"));
 
@@ -544,32 +557,32 @@ TEST_F(CInstallManifestTest, SaveLoadFindComponents)
     EXPECT_EQ(vecModules.size(), 2);
     EXPECT_NE(std::find(vecModules.begin(), vecModules.end(), "UnitTest_InstallPackageComposer_Component1.sdv"), vecModules.end());
     EXPECT_NE(std::find(vecModules.begin(), vecModules.end(), "UnitTest_InstallPackageComposer_Component2.sdv"), vecModules.end());
-    auto vecComponents = manifestWrite.ComponentList();
-    EXPECT_EQ(vecComponents.size(), 3);
-    auto itDummyService1 = std::find_if(vecComponents.begin(),
-        vecComponents.end(),
-        [](const auto& sComponent) { return sComponent.ssClassName == "DummyService #1"; });
-    ASSERT_NE(itDummyService1, vecComponents.end());
-    EXPECT_EQ(itDummyService1->pathRelModule, "UnitTest_InstallPackageComposer_Component1.sdv");
-    EXPECT_FALSE(itDummyService1->ssManifest.empty());
-    ASSERT_EQ(itDummyService1->seqAliases.size(), 2);
-    EXPECT_EQ(itDummyService1->seqAliases[0], "Dummy1");
-    EXPECT_EQ(itDummyService1->seqAliases[1], "DummySvc1");
+    auto vecClasses = manifestWrite.ClassList();
+    EXPECT_EQ(vecClasses.size(), 3);
+    auto itDummyService1 = std::find_if(vecClasses.begin(),
+        vecClasses.end(),
+        [](const auto& sComponent) { return sComponent.ssName == "DummyService #1"; });
+    ASSERT_NE(itDummyService1, vecClasses.end());
+    EXPECT_EQ(itDummyService1->ssModulePath, "UnitTest_InstallPackageComposer_Component1.sdv");
+    //EXPECT_FALSE(itDummyService1->ssManifest.empty());
+    ASSERT_EQ(itDummyService1->seqClassAliases.size(), 2);
+    EXPECT_EQ(itDummyService1->seqClassAliases[0], "Dummy1");
+    EXPECT_EQ(itDummyService1->seqClassAliases[1], "DummySvc1");
     EXPECT_EQ(itDummyService1->ssDefaultObjectName, "MyDummy");
-    EXPECT_EQ(itDummyService1->eType, sdv::EObjectType::ComplexService);
+    EXPECT_EQ(itDummyService1->eType, sdv::EObjectType::complex_service);
     EXPECT_EQ(itDummyService1->uiFlags, static_cast<uint32_t>(sdv::EObjectFlags::singleton));
     ASSERT_EQ(itDummyService1->seqDependencies.size(), 2);
     EXPECT_EQ(itDummyService1->seqDependencies[0], "DummyDevice");
     EXPECT_EQ(itDummyService1->seqDependencies[1], "DummyService #2");
     auto itDummyDevice = std::find_if(
-        vecComponents.begin(), vecComponents.end(), [](const auto& sComponent) { return sComponent.ssClassName == "DummyDevice"; });
-    ASSERT_NE(itDummyDevice, vecComponents.end());
-    EXPECT_EQ(itDummyDevice->pathRelModule, "UnitTest_InstallPackageComposer_Component1.sdv");
-    auto itDummyService2 = std::find_if(vecComponents.begin(),
-        vecComponents.end(),
-        [](const auto& sComponent) { return sComponent.ssClassName == "DummyService #2"; });
-    ASSERT_NE(itDummyService2, vecComponents.end());
-    EXPECT_EQ(itDummyService2->pathRelModule, "UnitTest_InstallPackageComposer_Component2.sdv");
+        vecClasses.begin(), vecClasses.end(), [](const auto& sComponent) { return sComponent.ssName == "DummyDevice"; });
+    ASSERT_NE(itDummyDevice, vecClasses.end());
+    EXPECT_EQ(itDummyDevice->ssModulePath, "UnitTest_InstallPackageComposer_Component1.sdv");
+    auto itDummyService2 = std::find_if(vecClasses.begin(),
+        vecClasses.end(),
+        [](const auto& sComponent) { return sComponent.ssName == "DummyService #2"; });
+    ASSERT_NE(itDummyService2, vecClasses.end());
+    EXPECT_EQ(itDummyService2->ssModulePath, "UnitTest_InstallPackageComposer_Component2.sdv");
     EXPECT_TRUE(manifestWrite.Save(pathTgtPckDir));
     EXPECT_TRUE(std::filesystem::exists(pathTgtPckDir / "install_manifest.toml"));
 

@@ -1,3 +1,16 @@
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef SDV_APP_CONTROL_H
 #define SDV_APP_CONTROL_H
 
@@ -18,8 +31,8 @@ namespace sdv
         {
         public:
             /**
-            * @brief Default constructor; doesn't start the application control.
-            */
+             * @brief Default constructor; doesn't start the application control.
+             */
             CAppControl() = default;
 
             /**
@@ -256,7 +269,7 @@ namespace sdv
             /**
              * @brief Get the application context.
              * @return The application context.
-            */
+             */
             EAppContext GetAppContext() const
             {
                 return m_eContext;
@@ -265,7 +278,7 @@ namespace sdv
             /**
              * @brief Get the core instance ID.
              * @return The core instance ID.
-            */
+             */
             uint32_t GetInstanceID() const
             {
                 return m_uiInstanceID;
@@ -292,9 +305,9 @@ namespace sdv
             }
 
             /**
-            * @brief Set the operation to config mode.
-            * @pre The system is operating in running mode.
-            */
+             * @brief Set the operation to config mode.
+             * @pre The system is operating in running mode.
+             */
             void SetConfigMode()
             {
                 IAppOperation* pAppOperation = core::GetObject<IAppOperation>("AppControlService");
@@ -330,7 +343,7 @@ namespace sdv
              * @param[in] ssFilename Path to the file containing the configuration (TOML). The path can be absolute as well as relative.
              * In case a relative path is provided, the current directory is searched as well as all directories supplied through
              * the AddConfigSearchDir function.
-             * @return Returns 'true' on success; 'false' otherwise.
+             * @return Returns a config process result enum value.
              */
             core::EConfigProcessResult LoadConfig(/*in*/ const sdv::u8string& ssFilename)
             {
@@ -344,6 +357,52 @@ namespace sdv
                 core::EConfigProcessResult eResult = pAppConfig->LoadConfig(ssFilename);
                 if (bRunning) SetRunningMode();
                 return eResult;
+            }
+
+            /**
+             * @brief Save a configuration file pointed to by the provided file path. All components are saved that were added after
+             * the last baseline with the configuration specific settings.
+             * @remarks The function will only save when the configuration has changed.
+             * @param[in] ssConfigPath Path to the file containing the configuration (TOML). The path can be an absolute as well as
+             * a relative path. In case a relative path is provided, the configuration is stored relative to the executable
+             * directory.
+             * @return Returns 'true' on success (or no changes detected); 'false' otherwise.
+             */
+            bool SaveConfig(/*in*/ sdv::u8string ssConfigPath) const
+            {
+                const core::IConfig* pAppConfig = nullptr;
+                sdv::TInterfaceAccessPtr ptrConfigObj = core::GetObject("ConfigService");
+                if (ptrConfigObj) pAppConfig = ptrConfigObj.GetInterface<core::IConfig>();
+                if (!pAppConfig) return false;
+                return pAppConfig->SaveConfig(ssConfigPath);
+            }
+
+            /**
+             * @brief Generate the configuration TOML string.
+             * @return The generated configuration string.
+             */
+            sdv::u8string GenerateConfigString() const
+            {
+                const core::IConfig* pAppConfig = nullptr;
+                sdv::TInterfaceAccessPtr ptrConfigObj = core::GetObject("ConfigService");
+                if (ptrConfigObj) pAppConfig = ptrConfigObj.GetInterface<core::IConfig>();
+                if (!pAppConfig) return {};
+                return pAppConfig->GenerateConfigString();
+            }
+
+            /**
+             * @brief Close the current configuration.
+             * @details This will close und unload the components and modules from the current configuration as well as dependent
+             * components that builds on top of the components being closed. Components that the current configuration depends on
+             * are not closed.
+             */
+            void CloseConfig()
+            {
+                core::IConfig* pAppConfig = nullptr;
+                sdv::TInterfaceAccessPtr ptrConfigObj = core::GetObject("ConfigService");
+                if (ptrConfigObj) pAppConfig = ptrConfigObj.GetInterface<core::IConfig>();
+                if (!pAppConfig) return;
+                pAppConfig->CloseConfig();
             }
 
             /**

@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef INSTALL_MANIFEST_H
 #define INSTALL_MANIFEST_H
 
@@ -7,8 +20,36 @@
 #include <optional>
 #include <interfaces/core.h>
 #include <interfaces/config.h>
+#include "toml_parser/parser_toml.h"
 #include <map>
 #include <cstdlib>
+
+/**
+ * @brief Create a TOML string using the class information.
+ * @param[in] rsClass Reference to the class structure.
+ * @return Returns a string to the class table rray entry or an empty string when the type of class name were invalid or empty.
+ */
+std::string ClassInfo2TOML(const sdv::SClassInfo& rsClass);
+
+/**
+ * @brief Extract the class information from a TOML class configuration.
+ * @remarks The class information could be stored as a table array entry (then the index is used to extract the information). It
+ * also could be a table. Then the index parameter is ignored.
+ * @param[in] rssTOML Reference to the string containing the TOML class configuration.
+ * @param[in] nIndex The index in the table array to provide the class information for.
+ * @return Returns the class information or an empty class structure when no information is available.
+ */
+sdv::SClassInfo TOML2ClassInfo(const std::string& rssTOML, size_t nIndex = 0);
+
+/**
+ * @brief Extract the class information from a TOML class configuration.
+ * @remarks The class information could be stored as a table array entry (then the index is used to extract the information). It
+ * also could be a table. Then the index parameter is ignored.
+ * @param[in] rptrTOML Reference to the smart pointer holding the TOML class configuration.
+ * @param[in] nIndex The index in the table array to provide the class information for.
+ * @return Returns the class information or an empty class structure when no information is available.
+ */
+sdv::SClassInfo TOML2ClassInfo(const std::shared_ptr<toml_parser::CNodeCollection>& rptrTOML, size_t nIndex = 0);
 
 /**
  * @brief Check whether a relative path is directing to a parent of the base path.
@@ -87,7 +128,7 @@ inline bool RefersToRelativeParent(const std::filesystem::path& rpathRelative)
  * [[Module]]
  * Path = "mallard.sdv                  # Relative path to the module
  *
- * [[Module.Component]]                 # Component manifest
+ * [[Module.Class]]                     # Component manifest
  * Class = "Mallard class"              # The name of the class
  * Aliases = ["Duck", "Pont duck"]      # Optional list of aliases
  * DefaultName = "Duck"                 # Optional default name for the class instance
@@ -108,21 +149,6 @@ inline bool RefersToRelativeParent(const std::filesystem::path& rpathRelative)
 class CInstallManifest
 {
 public:
-    /**
-     * @brief Manifest information belonging to the component.
-     */
-    struct SComponent
-    {
-        std::filesystem::path pathRelModule;            ///< Relative module path (relative to the installation directory).
-        std::string ssManifest;                         ///< Component manifest.
-        std::string ssClassName;                        ///< String representing the class name.
-        sdv::sequence<sdv::u8string> seqAliases;        ///< Sequence containing zero or more class name aliases.
-        std::string ssDefaultObjectName;                ///< The default object name.
-        sdv::EObjectType eType;                         ///< Type of object.
-        uint32_t uiFlags;                               ///< Zero or more object flags from EObjectFlags.
-        sdv::sequence<sdv::u8string> seqDependencies;   ///< This component depends on...
-    };
-
     /**
      * @brief Default constructor.
      */
@@ -224,13 +250,13 @@ public:
      * @param[in] rssClass Reference to the class name of the component.
      * @return The component manifest information.
      */
-    std::optional<SComponent> FindComponentByClass(const std::string& rssClass) const;
+    std::optional<sdv::SClassInfo> FindComponentByClass(const std::string& rssClass) const;
 
     /**
-     * @brief Get a vector of all components stored in this installation manifest.
-     * @return The component manifest vector.
+     * @brief Get a vector of all component classes stored in this installation manifest.
+     * @return The component class list vector.
      */
-    std::vector<SComponent> ComponentList() const;
+    std::vector<sdv::SClassInfo> ClassList() const;
 
     /**
      * @brief Get the module list.
@@ -283,9 +309,9 @@ private:
          */
         SModule(const std::filesystem::path& rpathRelModule, const std::string& rssManifest, bool bBlockSystemObjects);
 
-        std::filesystem::path   pathRelModule;      ///< Relative module path (relative to the installation directory).
-        std::string             ssManifest;         ///< Manifest containing the components.
-        std::vector<SComponent> vecComponents;      ///< Vector with contained components
+        std::filesystem::path           pathRelModule;      ///< Relative module path (relative to the installation directory).
+        std::string                     ssManifest;         ///< Manifest containing the component classes.
+        std::vector<sdv::SClassInfo>    vecClasses;         ///< Vector with contained component classes.
     };
 
     std::string                         m_ssInstallName;                ///< Installation name.

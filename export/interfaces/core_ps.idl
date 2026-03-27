@@ -1,16 +1,20 @@
-/**
- * @file      core_ps.idl
- * @brief     This file provides the marshalling interface definitions of the core SDV framework.
- * @version   0.1
- * @date      2023.05.10
- * @author    erik.verhoeven@zf.com
- * @copyright Copyright ZF Friedrichshaven AG (c) 2023
- */
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
 
 #include "core.idl"
 #include "process.idl"
 
- /**
+/**
  * @brief Software Defined Vehicle framework.
  */
 module sdv

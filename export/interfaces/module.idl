@@ -1,19 +1,21 @@
-/**
- * @file module.idl
- * @author Erik Verhoeven FRD DISDS1 (mailto:erik.verhoeven@zf.com)
- * @brief This file includes all the interfaces used for module management
- * @version 1.0
- * @date 2024-05-02
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
  *
- * @copyright Copyright ZF Friedrichshafen AG (c) 2023-2025
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
- */
+ * SPDX-License-Identifier: Apache-2.0 
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
 
 #include "core.idl"
 
- /**
-  * @brief Software Defined Vehicle framework.
-  */
+/**
+ * @brief Software Defined Vehicle framework.
+ */
 module sdv
 {
     /**

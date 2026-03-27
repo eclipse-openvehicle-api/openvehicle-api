@@ -1,3 +1,17 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Martin Stimpfl - initial API and implementation
+ *   Erik Verhoeven - writing TOML and whitespace preservation
+ ********************************************************************************/
+
 #include "parser_toml.h"
 #include <iostream>
 #include "miscellaneous.h"
@@ -15,7 +29,7 @@ namespace toml_parser
     {
         m_ptrRoot.reset();
         m_ptrCurrentCollection.reset();
-        m_lexer.Reset();
+        m_lexer.Clear();
         while (!m_stackEnvironment.empty())
             m_stackEnvironment.pop();
     }
@@ -109,6 +123,13 @@ namespace toml_parser
 
     CNodeCollection& CParser::Root()
     {
+        // Create the root node if not existing.
+        if (!m_ptrRoot)
+        {
+            m_ptrRoot = std::make_shared<CRootTable>(*this);
+            m_ptrCurrentCollection = m_ptrRoot;
+        }
+
         auto ptrCollection = m_ptrRoot->Cast<CTable>();
         return *ptrCollection.get();
     }
@@ -246,7 +267,7 @@ namespace toml_parser
                 auto ptrCurrentCollectionStored = m_ptrCurrentCollection;
                 ptrNode = m_ptrCurrentCollection->Insert<CArray>(sdv::toml::npos, rrangeKeyPath);
                 m_ptrCurrentCollection = ptrNode->Cast<CNodeCollection>();
-                m_stackEnvironment.push(EEnvironment::env_array);
+                m_stackEnvironment.push(EEnvironment::array);
                 ProcessArray(rNodeRange);
                 m_stackEnvironment.pop();
                 m_ptrCurrentCollection = ptrCurrentCollectionStored;
@@ -257,7 +278,7 @@ namespace toml_parser
                 auto ptrCurrentCollectionStored = m_ptrCurrentCollection;
                 ptrNode = m_ptrCurrentCollection->Insert<CTable>(sdv::toml::npos, rrangeKeyPath, true);
                 m_ptrCurrentCollection = ptrNode->Cast<CNodeCollection>();
-                m_stackEnvironment.push(EEnvironment::env_inline_table);
+                m_stackEnvironment.push(EEnvironment::inline_table);
                 ProcessInlineTable(rNodeRange);
                 m_stackEnvironment.pop();
                 m_ptrCurrentCollection = ptrCurrentCollectionStored;
@@ -275,8 +296,9 @@ namespace toml_parser
         std::reference_wrapper<const CToken> refToken = m_lexer.Peek();
         if (!m_stackEnvironment.empty())
         {
-            // Skip newlines
-            while (refToken.get().Category() == ETokenCategory::token_syntax_new_line)
+            // Skip newlines if not an inline table
+            while (m_stackEnvironment.top() != EEnvironment::inline_table &&
+                refToken.get().Category() == ETokenCategory::token_syntax_new_line)
             {
                 m_lexer.Consume();
                 refToken = m_lexer.Peek();
@@ -284,7 +306,7 @@ namespace toml_parser
 
             switch (m_stackEnvironment.top())
             {
-            case EEnvironment::env_array:
+            case EEnvironment::array:
                 {
                     int32_t index = 1;
                     while (refToken.get() && refToken.get().Category() == ETokenCategory::token_syntax_new_line)
@@ -299,7 +321,7 @@ namespace toml_parser
                     }
                 }
                 break;
-            case EEnvironment::env_inline_table:
+            case EEnvironment::inline_table:
                 if (!refToken.get()
                     || (refToken.get().Category() != ETokenCategory::token_syntax_comma
                         && refToken.get().Category() != ETokenCategory::token_syntax_inline_table_close))
@@ -433,7 +455,7 @@ namespace toml_parser
             switch (refToken.get().Category())
             {
             case ETokenCategory::token_syntax_new_line:
-                m_lexer.Consume();
+                throw XTOMLParseException("Line break within an inline table is not allowed.");
                 break;
             case ETokenCategory::token_syntax_comma:
                 if (eExpect != EExpect::comma_or_end) throw XTOMLParseException("Expecting value or table end.");

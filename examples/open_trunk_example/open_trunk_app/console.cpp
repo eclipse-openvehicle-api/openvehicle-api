@@ -1,3 +1,13 @@
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ ********************************************************************************/
+
 #include "console.h"
 
 #ifdef _WIN32
@@ -138,10 +148,14 @@ bool CConsole::PrepareDataConsumers()
     m_pTrunkSvc = sdv::core::GetObject("Vehicle.Body.Trunk_Service").GetInterface<vss::Vehicle::Body::TrunkService::IVSS_SetOpen>();
     if (m_pTrunkSvc)
         PrintText(g_sComplexServcie1, "Basic Service available");
+    else
+        PrintText(g_sComplexServcie1, "Basic Service NOT available");    
 
-    m_pITrunkComplexService = sdv::core::GetObject("Open Trunk Service").GetInterface<ITrunkKitService>();
-    if (m_pITrunkComplexService)
+    m_pTrunkComplexService = sdv::core::GetObject("Open Trunk Service").GetInterface<ITrunkKitService>();
+    if (m_pTrunkComplexService)
         PrintText(g_sComplexServcie2, "Complex Service available");
+    else
+        PrintText(g_sComplexServcie2, "Complex Service NOT available");         
 
     return true;
 }
@@ -290,9 +304,9 @@ void CConsole::RunUntilBreak()
             }
             break;
         case '2':
-            if (m_pITrunkComplexService)
+            if (m_pTrunkComplexService)
             {
-                if (m_pITrunkComplexService->PopTrunk())
+                if (m_pTrunkComplexService->PopTrunk())
                     PrintText(g_sComplexServcie2, "Safety open trunk via complex service.");
                 else
                     PrintText(g_sComplexServcie2, "Safety open trunk via complex service failed, car is moving");
