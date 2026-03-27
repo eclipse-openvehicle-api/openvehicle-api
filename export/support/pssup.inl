@@ -1,9 +1,22 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef SDV_PS_SUPPORT_INL
 #define SDV_PS_SUPPORT_INL
 
 #ifndef SDV_PS_SUPPORT_H
-#error Do not include "pssup.inl" directly. Include "pssup.h" instead!
-#endif //!defined SDV_PS_SUPPORT_H
+#include "pssup.h"
+#endif //! defined SDV_PS_SUPPORT_H
 
 #include "../interfaces/core_ps.h"
 #include "../interfaces/serdes/core_ps_serdes.h"
@@ -23,8 +36,8 @@
 namespace serdes
 {
     /**
-    * @brief Specialization of serializer/deserializer class for sdv::interface_t.
-    */
+     * @brief Specialization of serializer/deserializer class for sdv::interface_t.
+     */
     template <>
     class CSerdes<sdv::interface_t>
     {

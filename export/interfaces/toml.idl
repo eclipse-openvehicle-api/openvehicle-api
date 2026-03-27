@@ -1,13 +1,16 @@
-/**
-*
-* @file      dispatch.idl
-* @brief     This file provides interfaces related to the data dispatch service.
-* @version   1.0
-* @date      2024.01.12
-* @author    Erik Verhoeven
-* @copyright Copyright ZF Friedrichshaven AG (c) 2024
-*
-*/
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "core.idl"
 
 /**
@@ -102,13 +105,9 @@ module sdv
             u8string GetTOML() const;
 
             /**
-             * @brief Comment access flags.
-             * @details The comment access flags contain the comment code snippet index (0..15) as well as flags to receive the
-             * comments in interpreted or raw form. For comment code snippets are defined for all nodes, the comments before and
-             * after the node not related to the node and the comments before and after the node related to the node. Comment or
-             * whitespace in between the node tokens are part of the other 11 indices (each node interprets this differently).
+             * @brief Node comment type.
              */
-            enum ECommentFlags
+            enum ECommentType
             {
                 comment_before = 0,                 ///< The comment before the node. This will insert a newline and the comment
                                                     ///< text preceded by the '#' character.
@@ -118,169 +117,47 @@ module sdv
                                                     ///< node and is separated by an extra newline.
                 out_of_scope_comment_behind = 3,    ///< An independent comment behind the node. This comment is not part of the
                                                     ///< node and is separated by an extra newline.
-                comment_index_mask = 15,            ///< Comment type mask to be used ot filter the comment type.
-                raw_comment = 8,                    ///< Store the comment exactly as provided (whitespace and comments).
-                replace_whitespace = 16,            ///< When set, the comment will replace the current whitespace as well.
-                                                    ///< Used with SetComment function. Automatically enabled for raw comments.
             };
 
             /**
              * @brief Set or replace a comment for the node.
-             * @remarks This function can also be used to insert whitespace (with or without comments) when used in raw mode.
-             * Set the comment text for the node. If a comment is proided as text (normal behavior), the comment text will be
-             * formatted automatically when generating the TOML text. If the comment is provided as raw comment, the text should
-             * contain all whitespace and the comment '#' character before the comment text.
-             * Comments inserted before the enode will be inserted on the line before the node uness the comment is provided in raw
-             * format and is ended with a newline and optionally whitespace. Comment inserted behind the node will be inserted on
+             * @details Set the comment text for the node. If a comment is provided as text (normal behavior), the comment text will
+             * be formatted automatically when generating the TOML text. If the comment text should not contain the comment
+             * character '#' before the comment text.
+             * Comments inserted before the node will be inserted on the line before the node unless the comment is provided in raw
+             * format and is ended with a line-break and optionally whitespace. Comment inserted behind the node will be inserted on
              * the same line as the node.
-             * Comments provided as text is automatically wrapped to 80 characters if possible. Newlines in the text will cause a
-             * new comment line to start.
-             * @param[in] ssComment String containing the comment text or the raw comment string to set.
-             * @param[in] uiFlags One or more ECommentFlags flags influencing the behavior of the comment.
+             * Comments provided as text is automatically wrapped to 132 characters if possible. Line-breaks in the text will cause
+             * a new comment line to start.
+             * @param[in] eType The comment type to set the comment text for.
+             * @param[in] ssComment String containing the comment text to set.
              */
-            void SetComment(in u8string ssComment, in uint32 uiFlags);
+            void SetComment(in ECommentType eType, in u8string ssComment);
 
             /**
              * Get the current comment for the node.
-             * @remarks To receive the whitespace formatting the node, use this function in raw mode.
-             * @param[in] uiFlags One or more ECommentFlags flags identifying the string format of the comment to return.
+             * @param[in] eType The comment type to get the comment text of.
              * @return String with the comment text or an empty string if no comment is available.
              */
-            u8string GetComment(in uint32 uiFlags);
+            u8string GetComment(in ECommentType eType);
 
             /**
              * @brief Format the node automatically. This will remove the whitespace between the elements within the node. Comments
              * will not be changed.
              */
             void AutomaticFormat();
-        };
-
-        /**
-         * @brief Interface allowing access to table and array nodes.
-         */
-        interface INodeCollection
-        {
-            /**
-             * @brief Returns the amount of nodes.
-             * @return The amount of nodes.
-            */
-            uint32 GetCount() const;
 
             /**
-             * @brief Get the node.
-             * @param[in] uiIndex Index of the node to get.
-             * @return Interface to the node object.
+             * @brief Is the node inline?
+             * @return Returns whether the node is defined as inline node.
              */
-            IInterfaceAccess GetNode(in uint32 uiIndex) const;
+            boolean IsInline() const;
 
             /**
-             * @brief Searches a node by its key in the parse tree
-             * @details Elements of tables can be accessed and traversed by using '.' to separated the parent name from child
-             * name. E.g. 'parent.child' would access the 'child' element of the 'parent' table. Elements of arrays can be
-             * accessed and traversed by using the index number in brackets. E.g. 'array[3]' would access the fourth element of
-             * the array 'array'. These access conventions can also be chained like 'table.array[2][1].subtable.integerElement'.
-             * @attention Array indexing starts with 0!
-             * @param[in] ssPath The path of the Node to searched for.
-             * @return Returns an interface the requested node if available.
+             * @brief Is the node defined as standard node?
+             * @return Returns whether the node is defined as standard node.
              */
-            IInterfaceAccess GetNodeDirect(in u8string ssPath) const;
-        };
-
-        /**
-         * @brief Extend the collection node with values, arrays and tables.
-         */
-        interface INodeCollectionInsert
-        {
-            /**
-             * @brief Insert a value into the collection at the location before the supplied index.
-             * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
-             * collection count to insert the node at the end of the collection. Value nodes cannot be inserted behind external
-             * tables and table arrays. If the index is referencing a position behind an external table or a table array, the index
-             * is automatically corrected.
-             * @param[in] ssName Name of the node to insert. Will be ignored for an array collection. The name must adhere to the
-             * key names defined by the TOML specification. Defining the key multiple times is not allowed. Quotation of key names
-             * is done automatically; the parser decides itself whether the key is bare-key, a literal key or a quoted key.
-             * @param[in] anyValue The value of the node, being either an integer, floating point number, boolean value or a string.
-             * Conversion is automatically done to int64, double float, bool or u8string.
-             * @return On success the interface to the newly inserted node is returned or NULL otherwise.
-             */
-            IInterfaceAccess InsertValue(in uint32 uiIndex, in u8string ssName, in any anyValue);
-
-            /**
-             * @brief Insert an array into the collection at the location before the supplied index.
-             * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
-             * collection count to insert the node at the end of the collection. Array nodes cannot be inserted behind external
-             * tables and table arrays. If the index is referencing a position behind an external table or a table array, the index
-             * is automatically corrected.
-             * @param[in] ssName Name of the array node to insert. Will be ignored if the current node is also an array collection.
-             * The name must adhere to the key names defined by the TOML specification. Defining the key multiple times is not
-             * allowed. Quotation of key names is done automatically; the parser decides itself whether the key is bare-key, a
-             * literal key or a quoted key.
-             * @return On success the interface to the newly inserted node is returned or NULL otherwise.
-             */
-            IInterfaceAccess InsertArray(in uint32 uiIndex, in u8string ssName);
-
-            /**
-             * @brief Insert a table into the collection at the location before the supplied index.
-             * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
-             * collection count to insert the node at the end of the collection. Table nodes cannot be inserted before value nodes
-             * or arrays. If the index is referencing a position before a value node or an array, the index is automatically
-             * corrected.
-             * @param[in] ssKeyName Name of the table node to insert. Will be ignored if the current node is an array collection.
-             * The name must adhere to the key names defined by the TOML specification. Defining the key multiple times is not
-             * allowed. Quotation of key names is done automatically; the parser decides itself whether the key is bare-key, a
-             * literal key or a quoted key.
-             * @return On success the interface to the newly inserted node is returned or NULL otherwise.
-             */
-            IInterfaceAccess InsertTable(in uint32 uiIndex, in u8string ssKeyName);
-
-            /**
-             * @brief Insert a table array into the collection at the location before the supplied index.
-             * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
-             * collection count to insert the node at the end of the collection. Table array nodes cannot be inserted before value
-             * nodes or arrays. If the index is referencing a position before a value node or an array, the index is automatically
-             * corrected.
-             * @param[in] ssName Name of the array node to insert. Will be ignored if the current node is also an array collection.
-             * The name must adhere to the key names defined by the TOML specification. Defining the key multiple times is not
-             * allowed. Quotation of key names is done automatically; the parser decides itself whether the key is bare-key, a
-             * literal key or a quoted key.
-             * @return On success the interface to the newly inserted node is returned or NULL otherwise.
-             */
-            IInterfaceAccess InsertTableArray(in uint32 uiIndex, in u8string ssName);
-
-            /**
-             * @brief The result of the TOML string to insert.
-             */
-            enum EInsertResult : uint32
-            {
-                invalid_TOML,           ///< The TOML string was invalid or didn't fit the collection node it was to be inserted.
-                insert_partly_success,  ///< Part, but not all nodes could be inserted (duplicate nodes are not inserted).
-                insert_success,         ///< All nodes could be inserted or the TOML didn't contain any nodes.
-            };
-
-            /**
-             * @brief Insert a TOML string as a child of the current collection node. If the collection is a table, the TOML string
-             * should contain values and inline/external/array-table nodes with names. If the collection is an array, the TOML
-             * string should contain and inline table nodes without names.
-             * @param[in] ssTOML The TOML string to insert.
-             * @param[in] bRollbackOnPartly If only part of the nodes could be inserted, no node will be inserted.
-             * @return The result of the insertion.
-             */
-            EInsertResult InsertTOML(in u8string ssTOML, in boolean bRollbackOnPartly);
-        };
-
-        /**
-         * @brief Remove the current node.
-         * @remarks The root node cannot be deleted.
-         */
-        interface INodeDelete
-        {
-            /**
-             * @brief Delete the current node.
-             * @attention A successful deletion will cause all interfaces to the current node to become inoperable.
-             * @return Returns whether the deletion was successful.
-             */
-            boolean DeleteNode();
+            boolean IsStandard() const;
         };
 
         /**
@@ -322,6 +199,176 @@ module sdv
              * @return Returns whether the move was successful.
              */
             boolean MoveDown();
+
+            /**
+             * @brief Delete the current node.
+             * @attention A successful deletion will cause all interfaces to the current node to become inoperable.
+             * @return Returns whether the deletion was successful.
+             */
+            boolean DeleteNode();
+        };
+
+        /**
+         * @brief Interface allowing access to table and array nodes.
+         */
+        interface INodeCollection
+        {
+            /**
+             * @brief Returns the amount of nodes.
+             * @return The amount of nodes.
+            */
+            uint32 GetCount() const;
+
+            /**
+             * @brief Get the node.
+             * @param[in] uiIndex Index of the node to get.
+             * @return Interface to the node object.
+             */
+            IInterfaceAccess GetNode(in uint32 uiIndex) const;
+
+            /**
+             * @brief Searches a node by its key in the parse tree
+             * @details Elements of tables can be accessed and traversed by using '.' to separated the parent name from child
+             * name. E.g. 'parent.child' would access the 'child' element of the 'parent' table. Elements of arrays can be
+             * accessed and traversed by using the index number in brackets. E.g. 'array[3]' would access the fourth element of
+             * the array 'array'. These access conventions can also be chained like 'table.array[2][1].subtable.integerElement'.
+             * @attention Array indexing starts with 0!
+             * @param[in] ssPath The path of the Node to searched for.
+             * @return Returns an interface the requested node if available.
+             */
+            IInterfaceAccess GetNodeDirect(in u8string ssPath) const;
+        };
+
+        /**
+         * @brief Convert between inline and standard definitions.
+         */
+        interface INodeCollectionConvert
+        {
+            /**
+             * @brief Can the node convert to an inline definition?
+             * @return Returns whether the conversion to inline is possible. Returns 'true' when the node is already inline.
+             */
+            boolean CanMakeInline() const;
+
+            /**
+             * @brief Convert the node to an inline node.
+             * @return Returns whether the conversion was successful. Returns 'true' when the node was already inline.
+             */
+            boolean MakeInline();
+
+            /**
+             * @brief Can the node convert to a standard definition?
+             * @return Returns whether the conversion to standard is possible. Returns 'true' when the node is already defined as
+             * standard node.
+             */
+            boolean CanMakeStandard() const;
+
+            /**
+             * @brief Convert the node to a standard node.
+             * @return Returns whether the conversion was successful. Returns 'true' when the node was already defined as standard
+             * node.
+             */
+            boolean MakeStandard();
+        };
+
+        /**
+         * @brief Extend the collection node with values, arrays and tables.
+         */
+        interface INodeCollectionInsert
+        {
+            /**
+             * @brief Insert a value into the collection at the location before the supplied index.
+             * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
+             * collection count to insert the node at the end of the collection. Value nodes cannot be inserted behind external
+             * tables and table arrays. If the index is referencing a position behind an external table or a table array, the index
+             * is automatically corrected.
+             * @param[in] ssName Name of the node to insert. Will be ignored for an array collection. The name must adhere to the
+             * key names defined by the TOML specification. Defining the key multiple times is not allowed. Quotation of key names
+             * is done automatically; the parser decides itself whether the key is bare-key, a literal key or a quoted key.
+             * @param[in] anyValue The value of the node, being either an integer, floating point number, boolean value or a string.
+             * Conversion is automatically done to int64, double float, bool or u8string.
+             * @return On success the interface to the newly inserted node is returned or NULL otherwise.
+             */
+            IInterfaceAccess InsertValue(in uint32 uiIndex, in u8string ssName, in any anyValue);
+
+            /**
+             * @brief Insert an array into the collection at the location before the supplied index.
+             * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
+             * collection count to insert the node at the end of the collection. Array nodes cannot be inserted behind external
+             * tables and table arrays. If the index is referencing a position behind an external table or a table array, the index
+             * is automatically corrected.
+             * @param[in] ssName Name of the array node to insert. Will be ignored if the current node is also an array collection.
+             * The name must adhere to the key names defined by the TOML specification. Defining the key multiple times is not
+             * allowed. Quotation of key names is done automatically; the parser decides itself whether the key is bare-key, a
+             * literal key or a quoted key.
+             * @return On success the interface to the newly inserted node is returned or NULL otherwise.
+             */
+            IInterfaceAccess InsertArray(in uint32 uiIndex, in u8string ssName);
+
+            /**
+             * @brief Insertion preference for tables and table arrays, being standard or inline.
+             */
+            enum EInsertPreference
+            {
+                prefer_standard = 0,     ///< When the parent node is not inline, the node will be inserted as standard node.
+                prefer_inline = 1,       ///< The node will be inserted as inline node.
+            };
+
+            /**
+             * @brief Insert a table into the collection at the location before the supplied index.
+             * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
+             * collection count to insert the node at the end of the collection. Table nodes cannot be inserted before value nodes
+             * or arrays. If the index is referencing a position before a value node or an array, the index is automatically
+             * corrected.
+             * @param[in] ssName Name of the table node to insert. Will be ignored if the parent node is an array collection.
+             * The name must adhere to the key names defined by the TOML specification. Defining the key multiple times is not
+             * allowed. Quotation of key names is done automatically; the parser decides itself whether the key is bare-key, a
+             * literal key or a quoted key.
+             * @param[in] ePreference The preferred form of the node to be inserted.
+             * @return On success the interface to the newly inserted node is returned or NULL otherwise.
+             */
+            IInterfaceAccess InsertTable(in uint32 uiIndex, in u8string ssName, in EInsertPreference ePreference);
+
+            /**
+             * @brief Insert a table array into the collection at the location before the supplied index.
+             * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
+             * collection count to insert the node at the end of the collection. Table array nodes cannot be inserted before value
+             * nodes or arrays. If the index is referencing a position before a value node or an array, the index is automatically
+             * corrected.
+             * @param[in] ssName Name of the array node to insert. Will be ignored if the parent node is also an array collection.
+             * The name must adhere to the key names defined by the TOML specification. Defining the key multiple times is not
+             * allowed. Quotation of key names is done automatically; the parser decides itself whether the key is bare-key, a
+             * literal key or a quoted key.
+             * @param[in] ePreference The preferred form of the node to be inserted.
+             * @return On success the interface to the newly inserted node is returned or NULL otherwise.
+             */
+            IInterfaceAccess InsertTableArray(in uint32 uiIndex, in u8string ssName, in EInsertPreference ePreference);
+
+            /**
+             * @brief The result of the TOML string to insert.
+             */
+            enum EInsertResult : uint32
+            {
+                insert_fail,            ///< The TOML string was invalid or didn't fit the collection node it was to be inserted.
+                insert_partly_success,  ///< Part, but not all nodes could be inserted (duplicate nodes are not inserted).
+                insert_success,         ///< All nodes could be inserted or the TOML didn't contain any nodes.
+            };
+
+            /**
+             * @brief Insert a TOML string as a child of the current collection node. If the collection is a table, the TOML string
+             * should contain values and inline/external/array-table nodes with names. If the collection is an array, the TOML
+             * string should contain and inline table nodes without names.
+             * @attention Even though the TOML might be defining the node(s) in standard form, if the parent node is an inline node,
+             * the node will be inserted as inline node.
+             * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
+             * collection count to insert the node at the end of the collection. Table array nodes cannot be inserted before value
+             * nodes or arrays. If the index is referencing a position before a value node or an array, the index is automatically
+             * corrected.
+             * @param[in] ssTOML The TOML string to insert. This string can hold one or more nodes that should be inserted.
+             * @param[in] bRollbackOnFailure If only part of the nodes could be inserted, no node will be inserted.
+             * @return The result of the insertion.
+             */
+            EInsertResult InsertTOML(in uint32 uiIndex, in u8string ssTOML, in boolean bRollbackOnFailure);
         };
 
         /**

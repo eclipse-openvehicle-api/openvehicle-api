@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "dispatchservice.h"
 #include "trigger.h"
 #include "signal.h"
@@ -157,7 +170,7 @@ void CTrigger::RemoveSignal(/*in*/ const sdv::u8string& ssSignalName)
 
 void CTrigger::Execute(EExecutionFlag eExecFlag /*= EExecutionFlag::spontaneous*/)
 {
-    if (m_rDispatchSvc.GetStatus() != sdv::EObjectStatus::running) return;
+    if (m_rDispatchSvc.GetObjectState() != sdv::EObjectState::running) return;
 
     // Check for allowed execution
     if (eExecFlag == EExecutionFlag::spontaneous &&

@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Thomas Pfleiderer - initial API and implementation
+ ********************************************************************************/
+
 #include "vss_vd_codingrx.h"
 
 void CVSSVDCodingRX::GetKeyWordMap(const SSignalVDDefinition& signal, CKeywordMap& mapKeywords) const
@@ -47,11 +60,6 @@ void CVSSVDCodingRX::GetKeyWordMap(const SSignalVDDefinition& signal, CKeywordMa
         sstreamVDSubscribe << Code_VD_RXSubscribeSignal(signal.className, func);
     }
     mapKeywords["rx_vd_subscribe_signals"] = std::move(sstreamVDSubscribe.str());
-
-    if (signal.vecFunctions.size() > 0)
-    {
-        mapKeywords["rx_check_subscriptions"] = Code_VD_RXCheckSignalSubscribtions(signal.vecFunctions);
-    }
 
     std::stringstream sstreamVDResetSignal;
     for (const auto& func : signal.vecFunctions)
@@ -361,32 +369,9 @@ std::string CVSSVDCodingRX::Code_VD_RXSubscribeSignal(const std::string& class_n
 	if (!m_%signal_name%Signal)
 	{
 		SDV_LOG_ERROR("Could not get signal: ", %object_prefix%::ds%start_with_uppercase%, " [CVehicleDevice%class_name%]");
+		return false;
 	}
 )code", mapKeywords);
-}
-
-std::string CVSSVDCodingRX::Code_VD_RXCheckSignalSubscribtions(const std::vector <SFunctionVDDefinition>& vecFunctions) const
-{
-    uint32_t count{ 0 };
-    std::stringstream sstreamFunctions;
-    sstreamFunctions << "    if (!";
-    for (const auto& func : vecFunctions)
-    {
-        count++;
-        sstreamFunctions << "m_" << func.signalName << "Signal";
-        if (count != vecFunctions.size())
-        {
-            sstreamFunctions << " || !";
-        }
-    }
-    sstreamFunctions << ")" << std::endl;
-    sstreamFunctions << "    {" << std::endl;
-    sstreamFunctions << "        m_status = sdv::EObjectStatus::initialization_failure;" << std::endl;
-    sstreamFunctions << "        return;" << std::endl;
-    sstreamFunctions << "    }" << std::endl;
-    sstreamFunctions << "    m_status = sdv::EObjectStatus::initialized;";
-
-    return sstreamFunctions.str();
 }
 
 std::string CVSSVDCodingRX::Code_VD_RXResetSignal(const SFunctionVDDefinition& function) const

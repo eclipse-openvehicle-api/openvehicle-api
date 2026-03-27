@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "tasktimer.h"
 #include <fstream>
 #include <functional>
@@ -96,7 +109,7 @@ CTimer::operator bool() const
 #ifdef _WIN32
 void CTimer::ExecuteCallback()
 {
-    if (m_rtimersvc.GetStatus() != sdv::EObjectStatus::running) return;
+    if (m_rtimersvc.GetObjectState() != sdv::EObjectState::running) return;
     if (!m_pExecute) return;
     if (!m_bPrioritySet)
         SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
@@ -113,53 +126,28 @@ CTaskTimerService::~CTaskTimerService()
 {
 }
 
-void CTaskTimerService::Initialize(/*in*/ const sdv::u8string& /*ssObjectConfig*/)
+bool CTaskTimerService::OnInitialize()
 {
 #ifdef _WIN32
-    m_eObjectStatus = sdv::EObjectStatus::initializing;
     SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
     // set up time resolution and maybe some other things
     timeBeginPeriod(1);
 #endif
 
-    m_eObjectStatus = sdv::EObjectStatus::initialized;
+    return true;
 }
 
-sdv::EObjectStatus CTaskTimerService::GetStatus() const
-{
-    return m_eObjectStatus;
-}
-
-void CTaskTimerService::SetOperationMode(/*in*/ sdv::EOperationMode eMode)
-{
-    switch (eMode)
-    {
-    case sdv::EOperationMode::configuring:
-        if (m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized)
-            m_eObjectStatus = sdv::EObjectStatus::configuring;
-        break;
-    case sdv::EOperationMode::running:
-        if (m_eObjectStatus == sdv::EObjectStatus::configuring || m_eObjectStatus == sdv::EObjectStatus::initialized)
-            m_eObjectStatus = sdv::EObjectStatus::running;
-        break;
-    default:
-        break;
-    }
-}
-
-void CTaskTimerService::Shutdown()
+void CTaskTimerService::OnShutdown()
 {
 #ifdef _WIN32
-    m_eObjectStatus = sdv::EObjectStatus::shutdown_in_progress;
     timeEndPeriod(1);
 #endif
-    m_eObjectStatus = sdv::EObjectStatus::destruction_pending;
 }
 
 sdv::IInterfaceAccess* CTaskTimerService::CreateTimer(uint32_t uiPeriod, sdv::IInterfaceAccess* pTask)
 {
-    if (m_eObjectStatus != sdv::EObjectStatus::configuring) return nullptr;
+    if (GetObjectState() != sdv::EObjectState::configuring) return nullptr;
 
     if (!uiPeriod) return nullptr;
     if (!pTask) return nullptr;

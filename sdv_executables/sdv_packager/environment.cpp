@@ -1,10 +1,25 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "environment.h"
 
 #include <string_view>
 
 #include "../../global/cmdlnparser/cmdlnparser.cpp"
 
-CSdvPackagerEnvironment::CSdvPackagerEnvironment() : m_cmdln(static_cast<uint32_t>(CCommandLine::EParseFlags::no_assignment_character)) {}
+CSdvPackagerEnvironment::CSdvPackagerEnvironment() :
+    m_cmdln(static_cast<uint32_t>(CCommandLine::EParseFlags::no_assignment_character))
+{}
 
 CSdvPackagerEnvironment::CSdvPackagerEnvironment(const std::vector<std::string>& rvecArgs) :
     m_cmdln(static_cast<uint32_t>(CCommandLine::EParseFlags::no_assignment_character))
@@ -25,7 +40,7 @@ bool CSdvPackagerEnvironment::Help() const
 
 void CSdvPackagerEnvironment::ShowHelp() const
 {
-    size_t            nArgumentGroup = 0;
+    size_t nArgumentGroup = 0;
     std::stringstream sstreamText;
 
     // Show default information:
@@ -33,6 +48,63 @@ void CSdvPackagerEnvironment::ShowHelp() const
                    "SDV component installations on the current machine."
                 << std::endl
                 << std::endl;
+
+    constexpr std::string_view svCollectModules = "Provide one or more files to add to the installation on the command line. "
+        "Wildcards (**, *, ?) are supported, allowing multiple files and directories to be added automatically. Regular "
+        "expressions can also be used when prefixing the paths with \"regex:\". If a specific target location (relative to the "
+        "installation directory) is required, this can be added by \"=<directory>\".\n\n"
+        "Examples:\n"
+        "    *.sdv          - This will pack all SDV files from the input directory.\n"
+        "    **/*.*         - This will pack all files from all directories.\n"
+        "    abc.sdv=mysub  - This will pack \"abc.sdv\" into target \"mysub\".\n"
+        "    regex:[^/].sdv - This will pack all SDV files from the input directory.\n\n"
+        "REMARKS: To create updatable components, use the '--set_version' option to set a version.\n";
+    constexpr std::string_view svCollectConfigFiles = "Provide one or more configuration files to merge into installed "
+        "configuration files. Wildcards (**, *, ?) are supported, allowing multiple files and directories to be added "
+        "automatically. Regular expressions can also be used when prefixing the paths with \"regex:\".\n\n"
+        "Examples:\n"
+        "    *.toml          - This will use all TOML files from the input directory.\n"
+        "    **/*.*          - This will use all files from all directories.\n"
+        "    abc.toml        - This will use \"abc.toml\".\n"
+        "    regex:[^/].toml - This will use all TOML files from the input directory.\n";
+    constexpr std::string_view svConfiguration = "The configuration uses an optional string following the option to define what to "
+        "configure. The string is separated by the '+' separator followed by a list of components (separated by a comma ',' or a "
+        "'+') to include in the configuration. If a component should be instantiated using a specific name, this can be achieved "
+        "by adding the assignment character '='. For example to update a local configuration ('--local' option) use:\n\n"
+        "    --config_fileabc.toml+my_component1,my_component2,my_component2=test21\n\n"
+        "and for a server configuration:\n\n"
+        "    --user_config+my_component1+my_component2+my_component2=test21\n\n"
+        "If the configuration file is not existing, it will be created automatically.\n\n"
+        "To provide component specific parameters, there are two options available. The first option would be to assign parameters "
+        "directly to a component instance by providing the parameter at the command line. Hereby the instance name of the "
+        "component is the assigned name of the component (if any was assigned) or the default name if known or the component class "
+        "name if one instance is available. The value assignment to the parameter is optional. If the value is omitted, a default "
+        "value is assigned. Here are two examples:\n\n"
+        "    --parametersmy_component1:param1=10,param2=20,groupA.param3=string value\n"
+        "    --parameterstest21:param5=,groupB.param6=60\n\n"
+        "The second option would be to specify a parameter file containing the parameters for the object instances. The parameter "
+        "file is a TOML file containing all the parameters for several components. Each component is present as a table containing "
+        "the instance name of the component (the assigned name, if there is any, or the default name or the class name). "
+        "Underneath the table header the parameters follow in a \"parameter_name = value\" format. Parameter names must follow the "
+        "TOML rules for keys. If they contain special characters, they need to be quoted. Furthermore, the names must follow the "
+        "grouping format of the component, whereas any group is either specified as additional TOML table, or is preceded in the "
+        "key name (the parameter name) and separated by a dot. An example for the command line to assign a configuration to the "
+        "one or more component instances is as follow:\n"
+        "    --param_fileMyComponentParams.toml\n"
+        "And an example file could be like this:\n\n"
+        "    # Parameters for my_component1\n"
+        "    [my_component1]\n"
+        "    param1 = 10\n"
+        "    param2 = 20\n"
+        "    [my_component1.groupA]     # Example with additional table for the GroupA parameters\n"
+        "    param3 = \"string value\"\n\n"
+        "    # Parameters for test21 (instance of my_component2)\n"
+        "    [test21]\n"
+        "    param5=50\n"
+        "    groupB.param6=60           # Grouping using inline table for GroupB parameters\n\n"
+        "REMARKS: Utilities cannot be added to the configuration.\n\n"
+        "REMARKS: For server based user configuration, the configuration cannot contain devices, basic services and system "
+        "objects.\n";
 
     // Show information based on the command.
     switch (m_eOperatingMode)
@@ -42,124 +114,68 @@ void CSdvPackagerEnvironment::ShowHelp() const
         sstreamText << "PACK command usage:" << std::endl
                     << "    sdv_package PACK <name> <files> [options]" << std::endl
                     << std::endl;
-        sstreamText
-            << "Provide one or more files to add to the installation onto the command line. Wildcards (**, *, ?) are "
-               "supported, allowing multiple files and directories to be added automatically. Instead regular expressions can also "
-               "be used by prefixing the paths by \"regex:\". If a specific target location (relative to the installation "
-               "directory) is required, this can be added by \"=<directory>\"."
-            << std::endl
-            << std::endl
-            << "Examples:" << std::endl
-            << "    *.sdv          - This will pack all SDV files from the input directory." << std::endl
-            << "    **/*.*         - This will pack all files from all directories." << std::endl
-            << "    abc.sdv=mysub  - This will pack \"abc.sdv\" into target \"mysub\"." << std::endl
-            << "    regex:[^/].sdv - This will pack all SDV files from the input directory." << std::endl
-            << std::endl
-            << "REMARKS: To create updatable components, use the '--set_version' option to set a version." << std::endl;
+        sstreamText << svCollectModules;
         break;
     case EOperatingMode::install:
         nArgumentGroup = 2;
-        sstreamText << "INSTALL command usage:" << std::endl
-                    << "    sdv_package INSTALL <package> [options]" << std::endl
-                    << std::endl;
-        sstreamText
-            << "Install an installation package and update the configuration if applicable." << std::endl
-            << std::endl
-            << "The configuration uses an optional string following the option to define what to configure. The string is "
-               "separated "
-               "by the '+' separator followed by a list of components (separated by a comma ',' or a '+') to include in the "
-               "configuration. For example to update a local configuration ('--local' option) use:"
-            << std::endl
-            << "    --config_fileabc.toml+my_component1,my_component2" << std::endl
-            << "and a server configuration:" << std::endl
-            << "    --user_config+my_component1+my_component2" << std::endl
-            << "If the configuration file is not existing, it will be created automatically." << std::endl
-            << std::endl
-            << "REMARKS: The server based installation can only take place when the system is offline. Use \"sdv_control\" "
-               "to install on a running server instance."
-            << std::endl;
+        sstreamText << "INSTALL command usage:" << std::endl << "    sdv_package INSTALL <package> [options]" << std::endl <<
+            std::endl;
+        sstreamText << "Install an installation package and update the configuration if applicable." << std::endl << std::endl <<
+            svConfiguration << std::endl << "REMARKS: The server based installation use sdv_packager can only take place when the "
+            "system is offline. Use \"sdv_control\" to install on a running server instance (limited installation possible) or "
+            "to shutdown and restart the server."<< std::endl;
         break;
     case EOperatingMode::direct_install:
         nArgumentGroup = 3;
-        sstreamText << "DIRECT_INSTALL command usage:" << std::endl
-                    << "    sdv_package DIRECT_INSTALL <name> <files> [options]" << std::endl
-                    << std::endl;
-        sstreamText
-            << "Provide one or more files to add to the installation onto the command line. Wildcards (**, *, ?) are "
-               "supported, allowing multiple files and directories to be added automatically. Instead regular expressions can also "
-               "used by prefixing the paths by \"regex:\". If a specific target location (relative to the installation "
-               "directory) is required, this can be added by \"=<directory>\"."
-            << std::endl
-            << std::endl
-            << "Examples:" << std::endl
-            << "    *.sdv          - This will install all SDV files from the input directory." << std::endl
-            << "    **/*.*         - This will install all files from the input directory and sub-directories." << std::endl
-            << "    abc.sdv=mysub  - This will install \"abc.sdv\" into target \"mysub\"." << std::endl
-            << "    regex:[^/].sdv - This will install all SDV files from the input directory." << std::endl
-            << std::endl
-            << "The configuration uses an optional string following the option to define what to configure. The string is "
-               "separated "
-               "by the '+' separator followed by a list of components (separated by a comma ',' or a '+') to include in the "
-               "configuration. For example to update a local configuration ('--local' option) use:"
-            << std::endl
-            << "    --config_fileabc.toml+my_component1,my_component2" << std::endl
-            << "and a server configuration:" << std::endl
-            << "    --user_config+my_component1+my_component2" << std::endl
-            << "If the configuration file is not existing, it will be created automatically." << std::endl
-            << std::endl
-            << "REMARKS: The server based installation can only take place when the system is offline. Use \"sdv_control\" to "
-               "install "
-               "on a running server instance."
-            << std::endl
-            << std::endl
-            << "REMARKS: To create updatable components, use the '--set_version' option to set a version." << std::endl;
+        sstreamText << "DIRECT_INSTALL command usage:" << std::endl << "    sdv_package DIRECT_INSTALL <name> <files> [options]" <<
+            std::endl << std::endl;
+        sstreamText << svCollectModules << std::endl << svConfiguration << std::endl << "REMARKS: The server based installation "
+            "can only take place when the system is offline. Use \"sdv_control\" to install on a running server instance (limited "
+            "installation possible) or to shutdown and restart the server." << std::endl;
+        break;
+    case EOperatingMode::configure:
+        nArgumentGroup = 4;
+        sstreamText << "CONFIGURE command usage:" << std::endl << "    sdv_package CONFIGURE <config_files> [options]" <<
+            std::endl << std::endl;
+        sstreamText << svCollectConfigFiles << std::endl << "REMARKS: The server based configuration can only take place when the "
+            "system is offline. Use \"sdv_control\" to shutdown and restart the server." << std::endl;
         break;
     case EOperatingMode::uninstall:
-        nArgumentGroup = 4;
-        sstreamText << "UNINSTALL command usage:" << std::endl
-                    << "    sdv_package UNINSTALL <name> <files> [options]" << std::endl
-                    << std::endl;
-        sstreamText
-            << "Uninstall a previously installed package with the supplied name. Update the configuration files where "
-               "applicable."
-            << std::endl
-            << std::endl
-            << "REMARKS: The server based unistallation can only take place when the system is offline. Use \"sdv_control\" to "
-               "install on a running server instance."
-            << std::endl;
+        nArgumentGroup = 5;
+        sstreamText << "UNINSTALL command usage:" << std::endl << "    sdv_package UNINSTALL <name> <files> [options]" <<
+            std::endl << std::endl;
+        sstreamText << "Uninstall a previously installed package with the supplied name. Update the configuration files where "
+            "applicable." << std::endl << std::endl << "REMARKS: The server based unistallation can only take place when the "
+            "system is offline. Use \"sdv_control\" to install on a running server instance (limited un-installation possible) or "
+            "to shutdown and restart the server." << std::endl;
         break;
     case EOperatingMode::verify:
-        nArgumentGroup = 5;
-        sstreamText << "VERIFY command usage:" << std::endl
-                    << "    sdv_package VERIFY <package> [options]" << std::endl
-                    << std::endl;
+        nArgumentGroup = 6;
+        sstreamText << "VERIFY command usage:" << std::endl << "    sdv_package VERIFY <package> [options]" << std::endl <<
+            std::endl;
         sstreamText << "Verify the package for corruption and/or tampering." << std::endl;
         break;
     case EOperatingMode::show:
-        nArgumentGroup = 6;
-        sstreamText << "SHOW command usage:" << std::endl
-                    << "    sdv_package SHOW [ALL|INFO|MODULES|COMPONENTS] <package> [options]" << std::endl
-                    << std::endl;
-        sstreamText << "Show package information. The following information can be selected (multiple selections are possible):"
-                    << std::endl
-                    << "    ALL            Show all information about the package content." << std::endl
-                    << "    INFO           Show package information." << std::endl
-                    << "    MODULES        Show the modules contained in the package." << std::endl
-                    << "    COMPONENTS     Show the components contained in the package." << std::endl;
+        nArgumentGroup = 7;
+        sstreamText << "SHOW command usage:" << std::endl << "    sdv_package SHOW [ALL|INFO|MODULES|COMPONENTS] <package> "
+            "[options]" << std::endl << std::endl;
+        sstreamText << "Show package information. The following information can be selected (multiple selections are "
+            "possible):" << std::endl << "    ALL            Show all information about the package content." << std::endl <<
+            "    INFO           Show package information." << std::endl <<
+            "    MODULES        Show the modules contained in the package." << std::endl <<
+            "    COMPONENTS     Show the components contained in the package." << std::endl;
         break;
     default:
         sstreamText << "Usage: sdv_package <command> [options]" << std::endl << std::endl;
-        sstreamText << "The following commands are available:" << std::endl
-                    << "    PACK               Create an installation package." << std::endl
-                    << "    INSTALL            Install an installation package." << std::endl
-                    << "    DIRECT_INSTALL     Install the components directly without creating an installation package."
-                    << std::endl
-                    << "    UNINSTALL          Uninstall a previously installed installation package." << std::endl
-                    << "    VERIFY             Verify the integrity of the installation package." << std::endl
-                    << "    SHOW               Show information about the installation package." << std::endl
-                    << std::endl
-                    << "For information about the options of each command, provide the '--help' option following the command."
-                    << std::endl;
+        sstreamText << "The following commands are available:" << std::endl <<
+            "    PACK               Create an installation package." << std::endl <<
+            "    INSTALL            Install an installation package." << std::endl <<
+            "    DIRECT_INSTALL     Install the components directly." << std::endl <<
+            "    CONFIGURE          Configure the target system." << std::endl <<
+            "    UNINSTALL          Uninstall a previously installed installation package." << std::endl <<
+            "    VERIFY             Verify the integrity of the installation package." << std::endl <<
+            "    SHOW               Show information about the installation package." << std::endl << std::endl <<
+            "For information about the options of each command, provide the '--help' option following the command." << std::endl;
         break;
     }
 
@@ -174,7 +190,7 @@ void CSdvPackagerEnvironment::ReportInfo() const
     // Dependable on the verbose and the silent settings, select the output stream for information.
     std::stringstream sstreamDummy;
     std::ostream& rstreamVerbose = !m_bHelp && m_bVerbose ? std::cout : sstreamDummy;
-    std::ostream& rstreamNormal  = m_bHelp || m_bSilent ? sstreamDummy : std::cout;
+    std::ostream& rstreamNormal = m_bHelp || m_bSilent ? sstreamDummy : std::cout;
 
     // Assign additional paths and report information...
     switch (m_eOperatingMode)
@@ -228,44 +244,44 @@ void CSdvPackagerEnvironment::ReportInfo() const
         else
         {
             bool bInitial = true;
-            for (const auto& rssComponent : m_vecUserConfigComponents)
+            for (const auto& rprComponent : m_vecUserConfigComponents)
             {
                 if (bInitial)
                     rstreamVerbose << "User config components: ";
                 else
                     rstreamVerbose << "                        ";
                 bInitial = false;
-                rstreamVerbose << rssComponent << std::endl;
+                rstreamVerbose << rprComponent.first << std::endl;
             }
             bInitial = true;
-            for (const auto& rssComponent : m_vecPlatformConfigComponents)
+            for (const auto& rprComponent : m_vecPlatformConfigComponents)
             {
                 if (bInitial)
                     rstreamVerbose << "Platform config components: ";
                 else
                     rstreamVerbose << "                            ";
                 bInitial = false;
-                rstreamVerbose << rssComponent << std::endl;
+                rstreamVerbose << rprComponent.first << std::endl;
             }
             bInitial = true;
-            for (const auto& rssComponent : m_vecVehIfcConfigComponents)
+            for (const auto& rprComponent : m_vecVehIfcConfigComponents)
             {
                 if (bInitial)
                     rstreamVerbose << "Vehicle interface config components: ";
                 else
                     rstreamVerbose << "                                     ";
                 bInitial = false;
-                rstreamVerbose << rssComponent << std::endl;
+                rstreamVerbose << rprComponent.first << std::endl;
             }
             bInitial = true;
-            for (const auto& rssComponent : m_vecVehAbstrConfigComponents)
+            for (const auto& rprComponent : m_vecVehAbstrConfigComponents)
             {
                 if (bInitial)
                     rstreamVerbose << "Vehicle abstraction config components: ";
                 else
                     rstreamVerbose << "                                       ";
                 bInitial = false;
-                rstreamVerbose << rssComponent << std::endl;
+                rstreamVerbose << rprComponent.first << std::endl;
             }
         }
         break;
@@ -311,44 +327,44 @@ void CSdvPackagerEnvironment::ReportInfo() const
         else
         {
             bool bInitial = true;
-            for (const auto& rssComponent : m_vecUserConfigComponents)
+            for (const auto& rprComponent : m_vecUserConfigComponents)
             {
                 if (bInitial)
                     rstreamVerbose << "User config components: ";
                 else
                     rstreamVerbose << "                        ";
                 bInitial = false;
-                rstreamVerbose << rssComponent << std::endl;
+                rstreamVerbose << rprComponent.first << std::endl;
             }
             bInitial = true;
-            for (const auto& rssComponent : m_vecPlatformConfigComponents)
+            for (const auto& rprComponent : m_vecPlatformConfigComponents)
             {
                 if (bInitial)
                     rstreamVerbose << "Platform config components: ";
                 else
                     rstreamVerbose << "                            ";
                 bInitial = false;
-                rstreamVerbose << rssComponent << std::endl;
+                rstreamVerbose << rprComponent.first << std::endl;
             }
             bInitial = true;
-            for (const auto& rssComponent : m_vecVehIfcConfigComponents)
+            for (const auto& rprComponent : m_vecVehIfcConfigComponents)
             {
                 if (bInitial)
                     rstreamVerbose << "Vehicle interface config components: ";
                 else
                     rstreamVerbose << "                                     ";
                 bInitial = false;
-                rstreamVerbose << rssComponent << std::endl;
+                rstreamVerbose << rprComponent.first << std::endl;
             }
             bInitial = true;
-            for (const auto& rssComponent : m_vecVehAbstrConfigComponents)
+            for (const auto& rprComponent : m_vecVehAbstrConfigComponents)
             {
                 if (bInitial)
                     rstreamVerbose << "Vehicle abstraction config components: ";
                 else
                     rstreamVerbose << "                                       ";
                 bInitial = false;
-                rstreamVerbose << rssComponent << std::endl;
+                rstreamVerbose << rprComponent.first << std::endl;
             }
         }
         break;
@@ -404,7 +420,6 @@ void CSdvPackagerEnvironment::ReportInfo() const
     }
 }
 
-
 bool CSdvPackagerEnvironment::Silent() const
 {
     return m_bSilent;
@@ -438,6 +453,11 @@ bool CSdvPackagerEnvironment::KeepStructure() const
 const std::vector<CSdvPackagerEnvironment::SModule>& CSdvPackagerEnvironment::ModuleList() const
 {
     return m_vecModules;
+}
+
+const std::vector<std::string>& CSdvPackagerEnvironment::ConfigFileList() const
+{
+    return m_vecConfigFiles;
 }
 
 const std::filesystem::path& CSdvPackagerEnvironment::PackagePath() const
@@ -490,7 +510,7 @@ bool CSdvPackagerEnvironment::Overwrite() const
     return m_bOverwrite;
 }
 
-const std::filesystem::path& CSdvPackagerEnvironment::LocalConfigFile(std::vector<std::string>& rvecComponents) const
+const std::filesystem::path& CSdvPackagerEnvironment::LocalConfigFile(CComponentVector& rvecComponents) const
 {
     rvecComponents = m_vecConfigLocalComponents;
     return m_pathConfigLocal;
@@ -501,33 +521,36 @@ const std::vector<std::filesystem::path>& CSdvPackagerEnvironment::LocalConfigLo
     return m_vecLocalConfigDirs;
 }
 
-bool CSdvPackagerEnvironment::ActivateLocalConfig() const
-{
-    return m_bActivateLocalConfig;
-}
-
-bool CSdvPackagerEnvironment::InsertIntoUserConfig(std::vector<std::string>& rvecComponents) const
+bool CSdvPackagerEnvironment::InsertIntoUserConfig(CComponentVector& rvecComponents) const
 {
     rvecComponents = m_vecUserConfigComponents;
     return m_bInsertIntoUserConfig;
 }
 
-bool CSdvPackagerEnvironment::InsertIntoPlatformConfig(std::vector<std::string>& rvecComponents) const
+bool CSdvPackagerEnvironment::InsertIntoPlatformConfig(CComponentVector& rvecComponents) const
 {
     rvecComponents = m_vecPlatformConfigComponents;
     return m_bInsertIntoPlatformConfig;
 }
 
-bool CSdvPackagerEnvironment::InsertIntoVehicleInterfaceConfig(std::vector<std::string>& rvecComponents) const
+bool CSdvPackagerEnvironment::InsertIntoVehicleInterfaceConfig(CComponentVector& rvecComponents) const
 {
     rvecComponents = m_vecVehIfcConfigComponents;
     return m_bInsertIntoVehIfcConfig;
 }
 
-bool CSdvPackagerEnvironment::InsertIntoVehicleAbstractionConfig(std::vector<std::string>& rvecComponents) const
+bool CSdvPackagerEnvironment::InsertIntoVehicleAbstractionConfig(CComponentVector& rvecComponents) const
 {
     rvecComponents = m_vecVehAbstrConfigComponents;
     return m_bInsertIntoVehAbstrConfig;
+}
+
+const TParameterVector& CSdvPackagerEnvironment::ObjectParameters(const std::string& rssObjectInstance) const
+{
+    static TParameterVector vecEmpty;
+    auto itParameters = m_mapParameters.find(rssObjectInstance);
+    if (itParameters == m_mapParameters.end()) return vecEmpty;
+    return itParameters->second;
 }
 
 const std::string& CSdvPackagerEnvironment::InstallName() const
@@ -585,18 +608,26 @@ const std::string& CSdvPackagerEnvironment::ArgError() const
     return m_ssArgError;
 }
 
-void CSdvPackagerEnvironment::SplitConfigString(const std::string& rssInput,
-    std::filesystem::path& rpath,
-    std::vector<std::string>& rvecComponents)
+void CSdvPackagerEnvironment::SplitConfigString(const std::string& rssInput, std::filesystem::path& rpath,
+    std::vector<std::pair<std::string, std::string>>& rvecComponents)
 {
     size_t nPos = rssInput.find('+');
-    rpath       = std::filesystem::u8path(rssInput.substr(0, nPos));
+    rpath = std::filesystem::u8path(rssInput.substr(0, nPos));
     while (nPos != std::string::npos)
     {
         size_t nNextPos = rssInput.find_first_of("+,", nPos + 1);
-        std::string ss  = rssInput.substr(nPos + 1, nNextPos);
+        std::string ss = rssInput.substr(nPos + 1, nNextPos - nPos - 1);
         if (!ss.empty())
-            rvecComponents.push_back(ss);
+        {
+            // Check for an assignment.
+            size_t nAssignment = ss.find_first_of('=');
+            std::string ssClassName = ss.substr(0, nAssignment);
+            std::string ssName;
+            if (nAssignment != std::string::npos)
+                ssName = ss.substr(nAssignment + 1);
+            if (!ssClassName.empty())
+                rvecComponents.push_back(std::make_pair(std::move(ssClassName), std::move(ssName)));
+        }
         nPos = nNextPos;
     }
 }
@@ -622,36 +653,41 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
     else if (iequals(rvecCommands[0], "PACK"))
     {
         m_eOperatingMode = EOperatingMode::pack;
-        nOptionGroup     = 1;
+        nOptionGroup = 1;
     }
     else if (iequals(rvecCommands[0], "INSTALL"))
     {
         m_eOperatingMode = EOperatingMode::install;
-        nOptionGroup     = 2;
+        nOptionGroup = 2;
     }
     else if (iequals(rvecCommands[0], "DIRECT_INSTALL"))
     {
         m_eOperatingMode = EOperatingMode::direct_install;
-        nOptionGroup     = 3;
+        nOptionGroup = 3;
+    }
+    else if (iequals(rvecCommands[0], "CONFIGURE"))
+    {
+        m_eOperatingMode = EOperatingMode::configure;
+        nOptionGroup = 4;
     }
     else if (iequals(rvecCommands[0], "UNINSTALL"))
     {
         m_eOperatingMode = EOperatingMode::uninstall;
-        nOptionGroup     = 4;
+        nOptionGroup = 5;
     }
     else if (iequals(rvecCommands[0], "VERIFY"))
     {
         m_eOperatingMode = EOperatingMode::verify;
-        nOptionGroup     = 5;
+        nOptionGroup = 6;
     }
     else if (iequals(rvecCommands[0], "SHOW"))
     {
         m_eOperatingMode = EOperatingMode::show;
-        nOptionGroup     = 6;
+        nOptionGroup = 7;
     }
     else
     {
-        m_nError     = CMDLN_ARG_ERR;
+        m_nError = CMDLN_ARG_ERR;
         m_ssArgError = "Invalid command \"" + rvecCommands[0] + "\" supplied at the command line.";
         return false;
     }
@@ -664,7 +700,7 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
     // Check for silent and verbose flags.
     if (m_bSilent && m_bVerbose)
     {
-        m_nError     = CMDLN_SILENT_VERBOSE;
+        m_nError = CMDLN_SILENT_VERBOSE;
         m_ssArgError = CMDLN_SILENT_VERBOSE_MSG;
         return false;
     }
@@ -675,7 +711,7 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
         // Expecting the installation name
         if (nCommandPos >= rvecCommands.size())
         {
-            m_nError     = CMDLN_INSTALL_NAME_MISSING;
+            m_nError = CMDLN_INSTALL_NAME_MISSING;
             m_ssArgError = CMDLN_INSTALL_NAME_MISSING_MSG;
             return false;
         }
@@ -690,7 +726,7 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
         // Expecting at least one source
         if (nCommandPos >= rvecCommands.size())
         {
-            m_nError     = CMDLN_SOURCE_FILE_MISSING;
+            m_nError = CMDLN_SOURCE_FILE_MISSING;
             m_ssArgError = CMDLN_SOURCE_FILE_MISSING_MSG;
             return false;
         }
@@ -707,12 +743,27 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
         return true;
     };
 
+    // Get the configuration files to merge into an existing configuration.
+    auto fnGetConfigFiles = [rvecCommands, &nCommandPos, this]() -> bool
+    {
+        // Expecting at least one source
+        if (nCommandPos >= rvecCommands.size())
+        {
+            m_nError = CMDLN_SOURCE_FILE_MISSING;
+            m_ssArgError = CMDLN_SOURCE_FILE_MISSING_MSG;
+            return false;
+        }
+        for (;nCommandPos < rvecCommands.size(); nCommandPos++)
+            m_vecConfigFiles.push_back(rvecCommands[nCommandPos]);
+        return true;
+    };
+
     // Cneck for no more commands
     auto fnCheckForNoMoreCommands = [rvecCommands, &nCommandPos, this]() -> bool
     {
         if (nCommandPos != rvecCommands.size())
         {
-            m_nError     = CMDLN_TOO_MANY_SOURCE_FILES;
+            m_nError = CMDLN_TOO_MANY_SOURCE_FILES;
             m_ssArgError = CMDLN_TOO_MANY_SOURCE_FILES_MSG;
             return false;
         }
@@ -726,7 +777,7 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
         // Expecting exactly one installation package
         if (nCommandPos >= rvecCommands.size())
         {
-            m_nError     = CMDLN_SOURCE_FILE_MISSING;
+            m_nError = CMDLN_SOURCE_FILE_MISSING;
             m_ssArgError = CMDLN_SOURCE_FILE_MISSING_MSG;
             return false;
         }
@@ -737,7 +788,7 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
         if (m_pathPackage.extension() != ".sdv_package" || !std::filesystem::exists(m_pathPackage)
             || !std::filesystem::is_regular_file(m_pathPackage))
         {
-            m_nError     = CMDLN_SOURCE_FILE_ERROR;
+            m_nError = CMDLN_SOURCE_FILE_ERROR;
             m_ssArgError = CMDLN_SOURCE_FILE_ERROR_MSG;
             return false;
         }
@@ -780,7 +831,7 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
                 std::filesystem::create_directories(m_pathOutputLocation);
             if (!std::filesystem::is_directory(m_pathOutputLocation))
             {
-                m_nError     = CMDLN_OUTPUT_LOCATION_ERROR;
+                m_nError = CMDLN_OUTPUT_LOCATION_ERROR;
                 m_ssArgError = std::string(CMDLN_OUTPUT_LOCATION_ERROR_MSG)
                                + "\n  Output location: " + m_pathOutputLocation.generic_u8string();
                 return false;
@@ -803,7 +854,7 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
         try
         {
             // If not locally, get the target from the environment variable
-            if (!m_bLocal)
+            if (!m_bLocal && m_pathTargetLocation.empty())
             {
 #ifdef _WIN32
                 const wchar_t* szInstallDir = _wgetenv(L"SDV_COMPONENT_INSTALL");
@@ -816,7 +867,7 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
 #endif
             }
 
-            // Is the directory existing? If not, creat ethe directory
+            // Is the directory existing? If not, create the directory
             if (!m_pathTargetLocation.empty() && !std::filesystem::is_directory(m_pathTargetLocation))
                 std::filesystem::create_directories(m_pathTargetLocation);
 
@@ -828,6 +879,9 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
                     m_pathTargetLocation.generic_u8string();
                 return false;
             }
+
+            // Make the directory absolute...
+            m_pathTargetLocation = std::filesystem::absolute(m_pathTargetLocation);
         }
         catch (const std::filesystem::filesystem_error&)
         {
@@ -846,56 +900,86 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
             m_ssProductName = m_ssInstallName;
     };
 
+    // Check configuration targets
+    auto fnConfigTargets = [this]() -> bool
+    {
+        if (m_bLocal && (m_bInsertIntoPlatformConfig || m_bInsertIntoUserConfig || m_bInsertIntoVehAbstrConfig ||
+        m_bInsertIntoVehIfcConfig))
+        {
+            m_nError = CMDLN_INCOMPATIBLE_ARGUMENTS;
+            m_ssArgError = CMDLN_INCOMPATIBLE_ARGUMENTS_MSG;
+            return false;
+        }
+        if (m_bLocal && m_pathConfigLocal.empty())
+        {
+            m_nError = CMDLN_MISSING_TARGET;
+            m_ssArgError = CMDLN_MISSING_TARGET_MSG;
+            return false;
+        }
+        if (!m_bLocal && !m_pathConfigLocal.empty())
+        {
+            m_nError = CMDLN_INCOMPATIBLE_ARGUMENTS;
+            m_ssArgError = CMDLN_INCOMPATIBLE_ARGUMENTS_MSG;
+            return false;
+        }
+        size_t nCntServerConfigs = 0;
+        if (m_bInsertIntoPlatformConfig) ++nCntServerConfigs;
+        if (m_bInsertIntoUserConfig) ++nCntServerConfigs;
+        if (m_bInsertIntoVehAbstrConfig) ++nCntServerConfigs;
+        if (m_bInsertIntoVehIfcConfig) ++nCntServerConfigs;
+        if (!m_bLocal && !nCntServerConfigs)
+        {
+            m_nError = CMDLN_MISSING_TARGET;
+            m_ssArgError = CMDLN_MISSING_TARGET_MSG;
+            return false;
+        }
+        if (!m_bLocal && nCntServerConfigs > 1)
+        {
+            m_nError = CMDLN_TOO_MANY_CONFIG_TARGETS;
+            m_ssArgError = CMDLN_TOO_MANY_CONFIG_TARGETS_MSG;
+            return false;
+        }
+        return true;
+    };
+
     // Following the initial command, several additional information must be supplied.
     switch (m_eOperatingMode)
     {
     case EOperatingMode::pack:
-        if (!fnGetInstallName())
-            return false;
-        if (!fnGetModules())
-            return false;
-        if (!fnCheckSourceLocation())
-            return false;
-        if (!fnCheckOutputLocation())
-            return false;
+        if (!fnGetInstallName()) return false;
+        if (!fnGetModules()) return false;
+        if (!fnCheckSourceLocation()) return false;
+        if (!fnCheckOutputLocation()) return false;
         fnGetProduct();
         if (m_pathOutputLocation.empty())
             m_pathPackage = std::filesystem::u8path(m_ssInstallName + ".sdv_package");
         else
             m_pathPackage = m_pathOutputLocation / std::filesystem::u8path(m_ssInstallName + ".sdv_package");
         break;
+    case EOperatingMode::install:
+        if (!fnGetPackage()) return false;
+        if (!fnCheckForNoMoreCommands()) return false;
+        if (!fnCheckTargetLocation()) return false;
+        break;
     case EOperatingMode::direct_install:
-        if (!fnGetInstallName())
-            return false;
-        if (!fnGetModules())
-            return false;
-        if (!fnCheckSourceLocation())
-            return false;
-        if (!fnCheckTargetLocation())
-            return false;
+        if (!fnGetInstallName()) return false;
+        if (!fnGetModules()) return false;
+        if (!fnCheckSourceLocation()) return false;
+        if (!fnCheckTargetLocation()) return false;
         fnGetProduct();
         break;
-    case EOperatingMode::install:
-        if (!fnGetPackage())
-            return false;
-        if (!fnCheckForNoMoreCommands())
-            return false;
-        if (!fnCheckTargetLocation())
-            return false;
+    case EOperatingMode::configure:
+        if (!fnGetConfigFiles()) return false;
+        if (!fnConfigTargets()) return false;
         break;
     case EOperatingMode::uninstall:
-        if (!fnGetInstallName())
-            return false;
-        if (!fnCheckForNoMoreCommands())
-            return false;
-        if (!fnCheckTargetLocation())
-            return false;
+        if (!fnGetInstallName()) return false;
+        if (!fnCheckForNoMoreCommands()) return false;
+        if (!fnCheckTargetLocation()) return false;
         break;
     case EOperatingMode::verify:
-        if (!fnGetPackage())
-            return false;
-        if (!fnCheckForNoMoreCommands())
-            return false;
+        if (!fnGetPackage()) return false;
+        if (!fnCheckForNoMoreCommands()) return false;
         break;
     case EOperatingMode::show:
         // Expecting one or more show commands followed by one installation package
@@ -903,7 +987,7 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
         {
             if (!m_vecModules.empty())
             {
-                m_nError     = CMDLN_TOO_MANY_SOURCE_FILES;
+                m_nError = CMDLN_TOO_MANY_SOURCE_FILES;
                 m_ssArgError = CMDLN_TOO_MANY_SOURCE_FILES_MSG;
                 return false;
             }
@@ -932,7 +1016,7 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
                 // Check whether preceded by at least one command
                 if (!(m_uiShowFlags & 0x00ff))
                 {
-                    m_nError     = CMDLN_MISSING_SHOW_COMMAND;
+                    m_nError = CMDLN_MISSING_SHOW_COMMAND;
                     m_ssArgError = CMDLN_MISSING_SHOW_COMMAND_MSG;
                     return false;
                 }
@@ -942,7 +1026,7 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
         }
         if (m_pathPackage.empty())
         {
-            m_nError     = CMDLN_SOURCE_FILE_MISSING;
+            m_nError = CMDLN_SOURCE_FILE_MISSING;
             m_ssArgError = CMDLN_SOURCE_FILE_MISSING_MSG;
             return false;
         }
@@ -955,7 +1039,7 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
     auto vecIncompatibleOptions = m_cmdln.IncompatibleArguments(nOptionGroup, false);
     if (!vecIncompatibleOptions.empty() && m_eOperatingMode != EOperatingMode::none)
     {
-        m_nError     = CMDLN_INCOMPATIBLE_ARGUMENTS;
+        m_nError = CMDLN_INCOMPATIBLE_ARGUMENTS;
         m_ssArgError = std::string("The option '" + vecIncompatibleOptions[0] + "' cannot be used with the " +
             fnMakeUpper(rvecCommands[0]) + " command.");
         return false;

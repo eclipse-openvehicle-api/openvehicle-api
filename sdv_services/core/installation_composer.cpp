@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "installation_composer.h"
 #include <ctime>
 #include <fstream>
@@ -59,18 +72,18 @@ std::vector<std::filesystem::path> CInstallComposer::AddModule(const std::filesy
     }
     else
     {
-        // If a base path is supplied, the path needs to be absolute.
-        if (!rpathBasePath.is_absolute() || !std::filesystem::exists(rpathBasePath) || !std::filesystem::is_directory(rpathBasePath))
+        // The base path needs to be absolute.
+        if (!rpathBasePath.is_absolute() || !std::filesystem::exists(rpathBasePath) ||
+            !std::filesystem::is_directory(rpathBasePath))
         {
             sdv::XInvalidPath exception;
-            exception.ssPath = rpathRelTargetDir.generic_u8string();
+            exception.ssPath = rpathBasePath.generic_u8string();
             throw exception;
         }
     }
 
     // Check for the module path
-    std::string ssModulePathCopy = rssModulePath;
-    if (ssModulePathCopy.empty())
+    if (rssModulePath.empty())
     {
         // Base path must be present
         if (rpathBasePath.empty())
@@ -114,7 +127,7 @@ std::vector<std::filesystem::path> CInstallComposer::AddModule(const std::filesy
     }
 
     // Get the list of files
-    auto vecFiles = CollectWildcardPath(rpathBasePath, ssModulePathCopy, eAlgorithm);
+    auto vecFiles = CollectWildcardPath(rpathBasePath, rssModulePath, eAlgorithm);
 
     // For each file, check whether the file is somewhere within the base path (if provided) and add the file to the module list.
     for (const std::filesystem::path& rpathFile : vecFiles)
@@ -166,6 +179,8 @@ sdv::pointer<uint8_t> CInstallComposer::Compose(const std::string& rssInstallNam
 
     // Installation manifest
     CInstallManifest manifest;
+    // cppcheck warns that the following condition is always true. This is incorrect. Suppress the warning.
+    // cppcheck-suppress knownConditionTrueFalse
     if (!manifest.Create(rssInstallName))
     {
         sdv::installation::XFailedManifestCreation exception;
@@ -228,6 +243,8 @@ bool CInstallComposer::Compose(const std::filesystem::path& rpathPackage, const 
 
     // Installation manifest
     CInstallManifest manifest;
+    // cppcheck warns that the following condition is always true. This is incorrect. Suppress the warning.
+    // cppcheck-suppress knownConditionTrueFalse
     if (!manifest.Create(rssInstallName))
     {
         sdv::installation::XFailedManifestCreation exception;
@@ -365,6 +382,8 @@ CInstallManifest CInstallComposer::ComposeDirect(const std::string& rssInstallNa
 
     // CReate the installation manifest
     CInstallManifest manifest;
+    // cppcheck warns that the following condition is always true. This is incorrect. Suppress the warning.
+    // cppcheck-suppress knownConditionTrueFalse
     if (!manifest.Create(rssInstallName))
     {
         sdv::installation::XFailedManifestCreation exception;
@@ -459,6 +478,8 @@ CInstallManifest CInstallComposer::ComposeInstallManifest(const std::string& rss
 
     // Installation manifest
     CInstallManifest manifest;
+    // cppcheck warns that the following condition is always true. This is incorrect. Suppress the warning.
+    // cppcheck-suppress knownConditionTrueFalse
     if (!manifest.Create(rssInstallName))
     {
         sdv::installation::XFailedManifestCreation exception;

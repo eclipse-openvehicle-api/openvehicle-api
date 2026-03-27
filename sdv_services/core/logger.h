@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef LOGGER_H
 #define LOGGER_H
 
@@ -95,7 +108,12 @@ private:
 #endif
 };
 
-#ifndef DO_NOT_INCLUDE_IN_UNIT_TEST
+/**
+ * @brief Return the default logger.
+ * @attention Use the logger control to access the logger.
+ * @return Reference to the default logger.
+ */
+CLogger& GetDefaultLogger();
 
 /**
 * @brief Logger service
@@ -111,18 +129,11 @@ public:
     END_SDV_INTERFACE_MAP()
 
     // Object declarations
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::SystemObject)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
     DECLARE_OBJECT_CLASS_NAME("DefaultLoggerService")
     DECLARE_OBJECT_SINGLETON()
-
-    /**
-    * @brief Get access to the repository.
-    * @return Returns a reference to the one repository of this module.
-    */
-    static CLogger& GetDefaultLogger();
 };
 
-DEFINE_SDV_OBJECT_NO_EXPORT(CLoggerService)
-#endif
+DEFINE_SDV_OBJECT(CLoggerService)
 
 #endif // !defined LOGGER_H

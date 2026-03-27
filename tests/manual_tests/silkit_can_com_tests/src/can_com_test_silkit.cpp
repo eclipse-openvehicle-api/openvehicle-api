@@ -1,3 +1,13 @@
+/********************************************************************************
+* Copyright (c) 2025-2026 ZF Friedrichshafen AG
+*
+* This program and the accompanying materials are made available under the 
+* terms of the Apache License Version 2.0 which is available at
+* https://www.apache.org/licenses/LICENSE-2.0
+*
+* SPDX-License-Identifier: Apache-2.0 
+********************************************************************************/
+
 #include <iostream>
 #include <set>
 #include <mutex>
@@ -20,7 +30,6 @@
  */
 class CDummyCANSilKit
     : public sdv::CSdvObject
-    , public sdv::IObjectControl
     , public sdv::can::IRegisterReceiver
     , public sdv::can::ISend
 {
@@ -28,46 +37,30 @@ public:
 
     // Interface map
     BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
         SDV_INTERFACE_ENTRY(sdv::can::IRegisterReceiver)
         SDV_INTERFACE_ENTRY(sdv::can::ISend)
     END_SDV_INTERFACE_MAP()
 
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::vehicle_bus)
     DECLARE_OBJECT_CLASS_NAME("Dummy_CAN_Sockets")
     DECLARE_DEFAULT_OBJECT_NAME("CAN_Communication_Object")
     DECLARE_OBJECT_SINGLETON()
 
-    virtual void Initialize(const sdv::u8string& ) override
+    /**
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
+     */
+    virtual bool OnInitialize() override
     {
         m_StopThread = false;
         //m_thSend2DatalinkThread = std::thread(&CDummyCANSockets::Send2DatalinkThread, this);
-        m_status = sdv::EObjectStatus::initialized;
+        return true;
     }
 
-    virtual sdv::EObjectStatus GetStatus() const override
-    {
-        return m_status;
-    }
-
-    void SetOperationMode(sdv::EOperationMode eMode) override
-    {
-        switch (eMode)
-        {
-        case sdv::EOperationMode::configuring:
-            if (m_status == sdv::EObjectStatus::running || m_status == sdv::EObjectStatus::initialized)
-                m_status = sdv::EObjectStatus::configuring;
-            break;
-        case sdv::EOperationMode::running:
-            if (m_status == sdv::EObjectStatus::configuring || m_status == sdv::EObjectStatus::initialized)
-                m_status = sdv::EObjectStatus::running;
-            break;
-        default:
-            break;
-        }
-    }
-
-    virtual void Shutdown() override
+    /**
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
+     */
+    virtual void OnShutdown() override
     {
         m_StopThread = true;
         if (m_thSend2DatalinkThread.joinable())
@@ -126,7 +119,6 @@ private:
     std::thread                     m_thSend2DatalinkThread;
     mutable std::mutex              m_mtxReceivers;
     std::set<sdv::can::IReceive*>   m_setReceivers;
-    std::atomic<sdv::EObjectStatus> m_status = { sdv::EObjectStatus::initialization_pending };
 };
 
 class MockCANReceiver : public sdv::can::IReceive
@@ -245,37 +237,37 @@ TEST_F(CANCommunicationTest, BasicSendAndReceiveMessageTest)
     testMsg.seqData = {0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x77, 0x88};
 
     // Configuration content as a string
-    std::string testConfigFileContent = R"(
-        [Configuration]
-        Version = 100
+    const std::string testConfigFileContent = R"toml(
+[Configuration]
+Version = )toml" + std::to_string(SDVFrameworkInterfaceVersion) + R"toml(
 
-        [[Component]]
-        Path = "task_timer.sdv"
-        Class = "TaskTimerService"
+[[Component]]
+Path = "task_timer.sdv"
+Class = "TaskTimerService"
 
-        [[Component]]
-        Path = "data_dispatch_service.sdv"
-        Class = "DataDispatchService"
+[[Component]]
+Path = "data_dispatch_service.sdv"
+Class = "DataDispatchService"
 
-        [[Component]]
-        Path = "can_com_silkit.sdv"
-        Class = "CAN_Com_SilKit"
-        DebugInfo = true
-        SyncMode = true
-        CanSilKitChannel = "CAN1"
-        CanSilKitNetwork = "PrivateCAN"
-        RegistryURI = "silkit://localhost:8500"
-        SilKitConfig = """{
-                "Logging": {
-                    "Sinks": [ { "Type": "Stdout", "Level": "Info" } ]
-                            },
-                        }"""
+[[Component]]
+Path = "can_com_silkit.sdv"
+Class = "CAN_Com_SilKit"
+DebugInfo = true
+SyncMode = true
+CanSilKitChannel = "CAN1"
+CanSilKitNetwork = "PrivateCAN"
+RegistryURI = "silkit://localhost:8500"
+SilKitConfig = """{
+        "Logging": {
+            "Sinks": [ { "Type": "Stdout", "Level": "Info" } ]
+                    },
+                }"""
 
-        [[Component]]
-        Path = "can_datalink.sdv"
-        Class = "CAN_data_link"
-        """
-    )";
+[[Component]]
+Path = "can_datalink.sdv"
+Class = "CAN_data_link"
+"""
+)toml";
 
     sdv::app::CAppControl appControl;
     auto bResult = InitializeAppControl(&appControl, "test_manual_can_com_silkit.toml");

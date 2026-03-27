@@ -1,3 +1,16 @@
+#*******************************************************************************
+# Copyright (c) 2025-2026 ZF Friedrichshafen AG
+#
+# This program and the accompanying materials are made available under the 
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0 
+#
+# Contributors:
+#   Erik Verhoeven - initial API and implementation
+#*******************************************************************************
+
 # Define project
 project(sdv_services_core VERSION 1.0 LANGUAGES CXX)
 
@@ -42,7 +55,10 @@ add_library(core_services SHARED
     "installation_composer.h"
     "installation_composer.cpp"
 
-     "toml_parser/lexer_toml_token.h" "toml_parser/lexer_toml_token.cpp" "toml_parser/miscellaneous.h" "toml_parser/miscellaneous.cpp")
+     "toml_parser/lexer_toml_token.h" "toml_parser/lexer_toml_token.cpp" "toml_parser/miscellaneous.h" "toml_parser/miscellaneous.cpp" "toml_parser/code_snippet.h" "toml_parser/code_snippet.cpp" "app_settings.h" "app_settings.cpp" "app_config_file.h" "app_config_file.cpp")
+
+# Compiler settiings
+add_compile_definitions(SDV_NO_EXPORT_DEFINITION)
 
 # Link target
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

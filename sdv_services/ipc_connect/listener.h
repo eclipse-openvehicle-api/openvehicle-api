@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef LISTENER_H
 #define LISTENER_H
 
@@ -40,7 +53,7 @@ private:
 /**
  * @brief Listener object
  */
-class CListener : public sdv::CSdvObject, public sdv::IObjectControl
+class CListener : public sdv::CSdvObject
 {
 public:
     /**
@@ -48,17 +61,22 @@ public:
      */
     CListener();
 
-    // Interface map
-    BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
-    END_SDV_INTERFACE_MAP()
-
     // Object declaration
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::SystemObject)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
     DECLARE_OBJECT_CLASS_NAME("ConnectionListenerService")
 
+    // Parameter map
+    BEGIN_SDV_PARAM_MAP()
+        SDV_PARAM_ENABLE_LOCKING()
+        SDV_PARAM_GROUP("Listener")
+        SDV_PARAM_ENTRY(m_ssType, "Type", "Local", "", "The type of listener \"Local\" or \"Remote\".")
+        SDV_PARAM_ENTRY(m_uiInstanceID, "Instance", 0, "", "The instance ID to listen for.")
+        SDV_PARAM_ENTRY(m_ssInterface, "Interface", "", "", "Interface identification.")
+        SDV_PARAM_ENTRY(m_uiPort, "Port", 0, "", "Port number for connection.")
+    END_SDV_PARAM_MAP()
+
     /**
-     * @brief Initialize the object. Overload of sdv::IObjectControl::Initialize.
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
      * @details The object configuration contains the information needed to start the listener. The following configuration is
      * available for the local listener:
      * @code
@@ -73,26 +91,14 @@ public:
      * Interface = "127.0.0.1"
      * Port = 2000
      * @endcode
-     * @param[in] ssObjectConfig Optional configuration string.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
      */
-    void Initialize(const sdv::u8string& ssObjectConfig) override;
+    virtual bool OnInitialize() override;
 
     /**
-     * @brief Get the current status of the object. Overload of sdv::IObjectControl::GetStatus.
-     * @return Return the current status of the object.
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
-    sdv::EObjectStatus GetStatus() const override;
-
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
-     */
-    void SetOperationMode(sdv::EOperationMode eMode) override;
-
-    /**
-     * @brief Shutdown called before the object is destroyed. Overload of sdv::IObjectControl::Shutdown.
-     */
-    void Shutdown() override;
+    virtual void OnShutdown() override;
 
     /**
      * @brief When set, the listener is configured to be a local listener. Otherwise the listerner is configured as remote listener.
@@ -101,7 +107,10 @@ public:
     bool IsLocalListener() const;
 
 private:
-    sdv::EObjectStatus          m_eObjectStatus = sdv::EObjectStatus::initialization_pending; ///< To update the object status when it changes.
+    sdv::u8string               m_ssType;                   ///< Listener type: "Local" or "Remote"
+    uint32_t                    m_uiInstanceID = 0;         ///< Instance ID to listen for.
+    std::string                 m_ssInterface;              ///< Interface string for remote listener.
+    uint32_t                    m_uiPort = 0;               ///< Port for remote listener.
     sdv::TObjectPtr             m_ptrConnection;            ///< The connection object.
     CChannelBroker              m_broker;                   ///< Channel broker, used to request new channels
     bool                        m_bLocalListener = true;    ///< When set, the listener is a local listener; otherwise a remote listener.

@@ -1,30 +1,32 @@
+#*******************************************************************************
+# Copyright (c) 2025-2026 ZF Friedrichshafen AG
+#
+# This program and the accompanying materials are made available under the 
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0 
+#
+# Contributors:
+#   Erik Verhoeven - initial API and implementation
+#*******************************************************************************
+
 # Define project
 project(sdv_packager VERSION 1.0 LANGUAGES CXX)
 
 # build test application
 add_executable(sdv_packager
     "main.cpp"
-    "../../sdv_services/core/installation_manifest.h"
-    "../../sdv_services/core/installation_manifest.cpp"
-    "../../sdv_services/core/installation_composer.h"
-    "../../sdv_services/core/installation_composer.cpp"
-    "../../sdv_services/core/toml_parser/parser_toml.h"
-    "../../sdv_services/core/toml_parser/parser_toml.cpp"
-    "../../sdv_services/core/toml_parser/lexer_toml.h"
-    "../../sdv_services/core/toml_parser/lexer_toml.cpp"
-    "../../sdv_services/core/toml_parser/lexer_toml_token.cpp"
-    "../../sdv_services/core/toml_parser/parser_node_toml.h"
-    "../../sdv_services/core/toml_parser/parser_node_toml.cpp"
-    "../../sdv_services/core/toml_parser/character_reader_utf_8.h"
-    "../../sdv_services/core/toml_parser/character_reader_utf_8.cpp"
-    "../../sdv_services/core/toml_parser/miscellaneous.h"
-    "../../sdv_services/core/toml_parser/miscellaneous.cpp"
-    "../../sdv_services/core/toml_parser/exception.h"
     "environment.cpp"
     "environment.h"
     "packager.cpp"
     "packager.h"
-    )
+      "core_control.cpp" "core_control.h")
+
+# Compiler settings
+add_compile_definitions(SDV_NO_CLASS_DEFINITION)
+
+# Linker settings
 if (WIN32)
     target_link_libraries(sdv_packager ${CMAKE_THREAD_LIBS_INIT} Ws2_32 Winmm Rpcrt4.lib)
 else()

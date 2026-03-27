@@ -1,3 +1,17 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Martin Stimpfl - initial API and implementation
+ *   Erik Verhoeven - writing TOML and whitespace preservation
+ ********************************************************************************/
+
 #ifndef LEXER_TOML_TOKEN_H
 #define LEXER_TOML_TOKEN_H
 
@@ -310,7 +324,7 @@ namespace toml_parser
 
         union
         {
-            std::string m_ssContentString;  ///< Token string content (used with keys, strings and errors).
+            std::string m_ssContentString;  ///< Token string contentv (used with keys, strings and errors).
             int64_t m_iContentInteger;      ///< Token integer content
             double m_dContentFloatingpoint; ///< Token floatingpoint content
             bool m_bContentBoolean;         ///< Token boolean content

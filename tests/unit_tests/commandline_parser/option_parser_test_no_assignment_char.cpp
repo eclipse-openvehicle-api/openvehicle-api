@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "../../include/gtest_custom.h"
 #include "commandline_parser_test.h"
 #include "../../../global/cmdlnparser/cmdlnparser.h"
@@ -562,22 +575,24 @@ TEST_F(CCommandLineParserTestNoAssignment, OptionParseFlags)
 TEST_F(CCommandLineParserTestNoAssignment, OptionOverlappingArg)
 {
     // Mixing up -server and -s
-    const char* rgszCommandLine1[] = {"this_exe.app", "-server"};
-    CCommandLine cl1(static_cast<uint32_t>(CCommandLine::EParseFlags::no_assignment_character));
-    bool bSilence = false; cl1.DefineOption("s", bSilence, "silence flag");
-    bool bServer = false; cl1.DefineOption("server", bServer, "server enabled");
-    EXPECT_NO_THROW(cl1.Parse(std::extent<decltype(rgszCommandLine1)>::value, rgszCommandLine1));
-    EXPECT_FALSE(bSilence);
-    EXPECT_TRUE(bServer);
+    // CHANGE EVE: 25.03.2025: This is allowed by now.
+    //const char* rgszCommandLine1[] = {"this_exe.app", "-server"};
+    //CCommandLine cl1(static_cast<uint32_t>(CCommandLine::EParseFlags::no_assignment_character));
+    //bool bSilence = false; cl1.DefineOption("s", bSilence, "silence flag");
+    //bool bServer = false; cl1.DefineOption("server", bServer, "server enabled");
+    //EXPECT_NO_THROW(cl1.Parse(std::extent<decltype(rgszCommandLine1)>::value, rgszCommandLine1));
+    //EXPECT_FALSE(bSilence);
+    //EXPECT_TRUE(bServer);
 
     // Mixing up -instance<val> and -instance_a
-    const char* rgszCommandLine2[] = {"this_exe.app", "-instance_a"};
-    CCommandLine cl2(static_cast<uint32_t>(CCommandLine::EParseFlags::no_assignment_character));
-    std::string ssInstance; cl2.DefineOption("instance", ssInstance, "Instance ID");
-    bool bInstance_a = false; cl2.DefineOption("instance_a", bInstance_a, "Instance A is activited");
-    EXPECT_NO_THROW(cl2.Parse(std::extent<decltype(rgszCommandLine2)>::value, rgszCommandLine2));
-    EXPECT_TRUE(ssInstance.empty());
-    EXPECT_TRUE(bInstance_a);
+    // CHANGE EVE: 25.03.2025: This is allowed by now.
+    //const char* rgszCommandLine2[] = {"this_exe.app", "-instance_a"};
+    //CCommandLine cl2(static_cast<uint32_t>(CCommandLine::EParseFlags::no_assignment_character));
+    //std::string ssInstance; cl2.DefineOption("instance", ssInstance, "Instance ID");
+    //bool bInstance_a = false; cl2.DefineOption("instance_a", bInstance_a, "Instance A is activited");
+    //EXPECT_NO_THROW(cl2.Parse(std::extent<decltype(rgszCommandLine2)>::value, rgszCommandLine2));
+    //EXPECT_TRUE(ssInstance.empty());
+    //EXPECT_TRUE(bInstance_a);
 
     // Mixiong up -enable_opt+ and -enable_options
     const char* rgszCommandLine3[] = {"this_exe.app", "-enable_options"};
@@ -591,9 +606,9 @@ TEST_F(CCommandLineParserTestNoAssignment, OptionOverlappingArg)
     // Mixing up -server and -s when double assignment
     const char* rgszCommandLine4[] = {"this_exe.app", "-s"};
     CCommandLine cl4(static_cast<uint32_t>(CCommandLine::EParseFlags::no_assignment_character));
-    bSilence = false; auto rSilenceOption = cl4.DefineSubOption("silence", bSilence, "silence flag");
+    bool bSilence = false; auto rSilenceOption = cl4.DefineSubOption("silence", bSilence, "silence flag");
     rSilenceOption.AddOptionName("s");
-    bServer = false; cl4.DefineOption("server", bServer, "server enabled");
+    bool bServer = false; cl4.DefineOption("server", bServer, "server enabled");
     EXPECT_NO_THROW(cl4.Parse(std::extent<decltype(rgszCommandLine4)>::value, rgszCommandLine4));
     EXPECT_TRUE(bSilence);
     EXPECT_FALSE(bServer);

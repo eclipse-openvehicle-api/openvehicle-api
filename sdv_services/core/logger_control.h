@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef LOGGER_CONTROL_H
 #define LOGGER_CONTROL_H
 
@@ -65,5 +78,11 @@ private:
     std::queue<SLogEntry>       m_queuePrematureLog;    ///< Logger queue to store messages before a logger was assigned.
     sdv::core::ILogger*         m_pLogger = nullptr;    ///< Interface for the actual logger.
 };
+
+/**
+ * @brief Return the logger control.
+ * @return Reference to the logger control.
+ */
+CLoggerControl& GetLoggerControl();
 
 #endif // !defined LOGGER_CONTROL_H

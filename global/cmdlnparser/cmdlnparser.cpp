@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "cmdlnparser.h"
 
 #ifdef _WIN32
@@ -537,11 +550,33 @@ void CCommandLine::DumpArguments(std::ostream& rstream, bool bAll /*= true*/) co
 
 std::vector<std::string> CCommandLine::IncompatibleArguments(size_t nArgumentGroup, bool bFull /*= true*/) const
 {
-    std::vector<std::string> vecIncompatible;
+    // Create a copy of the list and remove all arguments that are available and fit.
+    auto lstSuppliedCopy = m_lstSupplied;
     for (auto& prArgument : m_lstSupplied)
     {
         // Only valid for options, not for default arguments
-        if (prArgument.first.get().CheckFlag(EArgumentFlags::default_argument)) continue;
+        if (prArgument.first.get().CheckFlag(EArgumentFlags::default_argument) || 
+            prArgument.first.get().PartOfArgumentGroup(nArgumentGroup))
+        {
+            // Remove the arguments from the supplied copy list
+            auto itArgumentCopy = lstSuppliedCopy.begin();
+            while (itArgumentCopy != lstSuppliedCopy.end())
+            {
+                if (itArgumentCopy->second == prArgument.second)
+                    itArgumentCopy = lstSuppliedCopy.erase(itArgumentCopy);
+                else
+                    ++itArgumentCopy;
+            }
+        }
+    }
+
+    // Left over are the arguments that do not fit.
+    std::vector<std::string> vecIncompatible;
+    for (auto& prArgument : lstSuppliedCopy)
+    {
+        // Only valid for options, not for default arguments
+        if (prArgument.first.get().CheckFlag(EArgumentFlags::default_argument))
+            continue;
 
         // Is the argument compatible?
         if (prArgument.first.get().PartOfArgumentGroup(nArgumentGroup)) continue;

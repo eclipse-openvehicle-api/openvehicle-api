@@ -1,3 +1,13 @@
+/********************************************************************************
+* Copyright (c) 2025-2026 ZF Friedrichshafen AG
+*
+* This program and the accompanying materials are made available under the 
+* terms of the Apache License Version 2.0 which is available at
+* https://www.apache.org/licenses/LICENSE-2.0
+*
+* SPDX-License-Identifier: Apache-2.0 
+********************************************************************************/
+
 #ifndef TEST_CAN_SILKIT_HELPER_H
 #define TEST_CAN_SILKIT_HELPER_H
 
@@ -22,9 +32,9 @@ class CTestCanSilKit : public CCANSilKit
             return CCANSilKit::Initialize(ssObjectConfig);
         }
 
-        virtual sdv::EObjectStatus GetStatus() const override
+        virtual sdv::EObjectState GetObjectState() const override
         {
-            return CCANSilKit::GetStatus();
+            return CCANSilKit::GetObjectState();
         }
 
         virtual void Shutdown() override

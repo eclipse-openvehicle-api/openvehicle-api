@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "../../include/gtest_custom.h"
 #include "../../../global/ascformat/ascreader.cpp"
 #include <iostream>
@@ -413,7 +426,7 @@ TEST(CAscReaderTest, RepeatPlaybackCheckLoopExecution)
     std::this_thread::sleep_for(std::chrono::milliseconds(400));
     reader.StopPlayback();
 
-    // Second loop must run in the same speed, therfore LoopCount = 2, not mmore
+    // Second loop must run in the same speed, therefore LoopCount = 2, not mmore
     EXPECT_TRUE((readerOneLoop.GetLoopCount() + 1) == reader.GetLoopCount());
 }
 

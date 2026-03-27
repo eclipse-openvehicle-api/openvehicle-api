@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "client.h"
 #include <support/toml.h>
 #include <interfaces/com.h>
@@ -16,37 +29,13 @@ void CRepositoryProxy::DestroyObject()
     m_rClient.Disconnect(m_tConnection);
 }
 
-void CClient::Initialize(const sdv::u8string& /*ssObjectConfig*/)
+bool CClient::OnInitialize()
 {
-    m_eObjectStatus = sdv::EObjectStatus::initialized;
+    return true;
 }
 
-sdv::EObjectStatus CClient::GetStatus() const
+void CClient::OnShutdown()
 {
-    return m_eObjectStatus;
-}
-
-void CClient::SetOperationMode(sdv::EOperationMode eMode)
-{
-    switch (eMode)
-    {
-    case sdv::EOperationMode::configuring:
-        if (m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized)
-            m_eObjectStatus = sdv::EObjectStatus::configuring;
-        break;
-    case sdv::EOperationMode::running:
-        if (m_eObjectStatus == sdv::EObjectStatus::configuring || m_eObjectStatus == sdv::EObjectStatus::initialized)
-            m_eObjectStatus = sdv::EObjectStatus::running;
-        break;
-    default:
-        break;
-    }
-}
-
-void CClient::Shutdown()
-{
-    m_eObjectStatus = sdv::EObjectStatus::shutdown_in_progress;
-
     sdv::com::IConnectionControl* pConnectionControl = sdv::core::GetObject<sdv::com::IConnectionControl>("CommunicationControl");
     if (!pConnectionControl)
         SDV_LOG_ERROR("Failed to get communication control!");
@@ -60,8 +49,6 @@ void CClient::Shutdown()
         for (const auto& rvtRepository : mapRepositoryProxiesCopy)
             pConnectionControl->RemoveConnection(rvtRepository.first);
     }
-
-    m_eObjectStatus = sdv::EObjectStatus::destruction_pending;
 }
 
 sdv::IInterfaceAccess* CClient::Connect(const sdv::u8string& ssConnectString)
@@ -126,14 +113,14 @@ Port = ")code" + std::to_string(uiPort) + R"code(
         else
         {
             SDV_LOG_ERROR("Invalid or missing listener configuration for listener service!");
-            m_eObjectStatus = sdv::EObjectStatus::initialization_failure;
+            SetObjectIntoConfigErrorState();
             return nullptr;
         }
     }
     catch (const sdv::toml::XTOMLParseException& rexcept)
     {
         SDV_LOG_ERROR("Invalid service configuration for listener service: ", rexcept.what(), "!");
-        m_eObjectStatus = sdv::EObjectStatus::initialization_failure;
+        SetObjectIntoConfigErrorState();
         return nullptr;
     }
 

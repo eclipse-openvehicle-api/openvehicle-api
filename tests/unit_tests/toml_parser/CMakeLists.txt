@@ -1,3 +1,17 @@
+#*******************************************************************************
+# Copyright (c) 2025-2026 ZF Friedrichshafen AG
+#
+# This program and the accompanying materials are made available under the 
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0 
+#
+# Contributors:
+#   Martin Stimpfl - initial API and implementation
+#   Erik Verhoeven - writing TOML and whitespace preservation
+#*******************************************************************************
+
 # Character Reader executable
 add_executable(UnitTest_TOMLParser
     "character_reader_tests.cpp"
@@ -5,9 +19,13 @@ add_executable(UnitTest_TOMLParser
     "parser_tests.cpp"
     "main.cpp"
     "generate_toml_tests.cpp"
-    "content_modifications.cpp"
+    "generate_toml_delete_node.cpp"
     "statement_boundary_detection.cpp"
-    "miscellaneous_tests.cpp")
+    "miscellaneous_tests.cpp"
+    "generate_toml_with_transfer.cpp"
+    "generate_toml_switch_inline.cpp"
+    "generate_toml_getset_comment.cpp"
+    "generate_toml_insert_node.cpp" "generate_toml_miscellaneous.cpp" "generate_toml_combine_reduce.cpp")
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_libraries(UnitTest_TOMLParser GTest::GTest ${CMAKE_THREAD_LIBS_INIT})
     if (WIN32)
@@ -29,7 +47,7 @@ add_custom_command(TARGET UnitTest_TOMLParser POST_BUILD
 )
 
 # Build dependencies
-add_dependencies(UnitTest_TOMLParser core_services)
+add_dependencies(UnitTest_TOMLParser dependency_sdv_components)
 
 
 

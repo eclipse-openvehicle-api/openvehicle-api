@@ -1,13 +1,15 @@
-/**
- * @file process_control.h
- * @author Erik Verhoeven
- * @brief
- * @version 1.0
- * @date 2024-08-16
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
  *
- * @copyright Copyright ZF Friedrichshafen AG (c) 2024
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
- */
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
 
 #ifndef PROCESS_CONTROL_H
 #define PROCESS_CONTROL_H
@@ -22,8 +24,8 @@
 /**
  * @brief Process control service class
  */
-class CProcessControl : public sdv::CSdvObject, public sdv::IObjectControl, public sdv::process::IProcessInfo,
-    public sdv::process::IProcessLifetime, public sdv::process::IProcessControl
+class CProcessControl : public sdv::CSdvObject, public sdv::process::IProcessInfo, public sdv::process::IProcessLifetime,
+    public sdv::process::IProcessControl
 {
 public:
     /**
@@ -38,7 +40,6 @@ public:
 
     // Interface map
     BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
         SDV_INTERFACE_ENTRY(sdv::process::IProcessInfo)
         SDV_INTERFACE_ENTRY(sdv::process::IProcessLifetime)
         SDV_INTERFACE_CHECK_CONDITION(AllowProcessControl())
@@ -46,34 +47,22 @@ public:
     END_SDV_INTERFACE_MAP()
 
     // Object declarations
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::SystemObject)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
     DECLARE_OBJECT_CLASS_NAME("ProcessControlService")
     DECLARE_OBJECT_SINGLETON()
 
     /**
-     * @brief Initialize the object. Overload of sdv::IObjectControl::Initialize.
-     * @param[in] ssObjectConfig Optional configuration string.
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
      */
-    void Initialize(const sdv::u8string& ssObjectConfig) override;
-
-    /**
-     * @brief Get the current status of the object. Overload of sdv::IObjectControl::GetStatus.
-     * @return Return the current status of the object.
-     */
-    sdv::EObjectStatus GetStatus() const override;
-
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
-     */
-    void SetOperationMode(sdv::EOperationMode eMode) override;
+    virtual bool OnInitialize() override;
 
     // Ignore cppcheck warning for not using dynamic binding when being called through the destructor.
     // cppcheck-suppress virtualCallInConstructor
     /**
-     * @brief Shutdown called before the object is destroyed. Overload of sdv::IObjectControl::Shutdown.
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
-    void Shutdown() override;
+    virtual void OnShutdown() override;
 
     /**
      * @brief Check for the application context mode being main or standalone.
@@ -135,41 +124,39 @@ public:
      */
     void MonitorThread();
 
-    sdv::EObjectStatus      m_eObjectStatus = sdv::EObjectStatus::initialization_pending;       ///< Object status.
-    std::mutex              m_mtxProcessThreadShutdown;                                         ///< Synchronize access
-#ifdef _WIN32
-    std::map<sdv::process::TProcessID, std::pair<HANDLE,HANDLE>>    m_mapProcessThreadShutdown; ///< Map with process IDs and event handles
-#elif __unix__
-    std::set<sdv::process::TProcessID>    m_setProcessThreadShutdown;                           ///< Set with process IDs
-#else
-#error OS is not supported!
-#endif
-
     /**
      * @brief Process helper structure
      */
     struct SProcessHelper
     {
-        sdv::process::TProcessID  tProcessID = 0;             ///< Process ID
+        sdv::process::TProcessID  tProcessID = 0;               ///< Process ID
 #ifdef _WIN32
-        HANDLE                    hProcess = 0;               ///< process handle
+        HANDLE                    hProcess = 0;                 ///< process handle
 #elif defined __unix__
-        bool                      bNotAChild = false;         ///< When set, the process is not a child of the monitor process.
+        bool                      bNotAChild = false;           ///< When set, the process is not a child of the monitor process.
 #else
 #error OS is not supported!
 #endif
-        std::atomic_bool          bRunning = true;            ///< Set when the process is running and not terminated yet.
-        int64_t                   iRetVal = 0;                ///< Process return value.
-        std::map<uint32_t, sdv::process::IProcessLifetimeCallback*> mapAssociatedMonitors;    ///< Map with associated monitors.
-        std::mutex                mtxProcess;                 ///< Mutex for process access.
-        std::condition_variable   cvWaitForProcess;           ///< Condition variable to wait for process termination.
+        std::atomic_bool          bRunning = true;              ///< Set when the process is running and not terminated yet.
+        int64_t                   iRetVal = 0;                  ///< Process return value.
+        std::map<uint32_t, sdv::process::IProcessLifetimeCallback*> mapAssociatedMonitors; ///< Map with associated monitors.
+        std::mutex                mtxProcess;                   ///< Mutex for process access.
+        std::condition_variable   cvWaitForProcess;             ///< Condition variable to wait for process termination.
     };
-    mutable std::mutex            m_mtxProcesses;             ///< Access control for monitor map.
+    std::mutex m_mtxProcessThreadShutdown;                      ///< Synchronize access
+#ifdef _WIN32
+    std::map<sdv::process::TProcessID, std::pair<HANDLE, HANDLE>> m_mapProcessThreadShutdown; ///< Map with process IDs and handles
+#elif __unix__
+    std::set<sdv::process::TProcessID> m_setProcessThreadShutdown; ///< Set with process IDs
+#else
+    #error OS is not supported!
+#endif
+    mutable std::mutex            m_mtxProcesses;               ///< Access control for monitor map.
     std::map<sdv::process::TProcessID, std::shared_ptr<SProcessHelper>> m_mapProcesses;   ///< Monitor map
-    uint32_t                      m_uiNextMonCookie = 1;      ///< Next monitor cookie
-    std::map<uint32_t, std::shared_ptr<SProcessHelper>> m_mapMonitors;    ///< Map with monitors.
-    std::atomic_bool              m_bShutdown = false;        ///< Set to shutdown the monitor thread.
-    std::thread                   m_threadMonitor;            ///< Monitor thread.
+    uint32_t                      m_uiNextMonCookie = 1;        ///< Next monitor cookie
+    std::map<uint32_t, std::shared_ptr<SProcessHelper>> m_mapMonitors; ///< Map with monitors.
+    std::atomic_bool              m_bShutdown = false;          ///< Set to shutdown the monitor thread.
+    std::thread                   m_threadMonitor;              ///< Monitor thread.
 };
 DEFINE_SDV_OBJECT(CProcessControl)
 

@@ -1,11 +1,17 @@
-/**
- * @file      core.idl
- * @brief     This file provides the core interface definitions of the core SDV framework.
- * @version   0.1
- * @date      2023.04.26
- * @author    erik.verhoeven@zf.com
- * @copyright Copyright ZF Friedrichshaven AG (c) 2023
- */
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ *
+ * This file provides the core interface definitions of the core SDV framework.
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
 
 #include "core_types.idl"
 
@@ -25,8 +31,8 @@
 #verbatim_end
 
 /**
-* @brief Software Defined Vehicle framework.
-*/
+ * @brief Software Defined Vehicle framework.
+ */
 module sdv
 {
     /**
@@ -61,14 +67,20 @@ module sdv
      */
     enum EObjectType : uint32
     {
-        SystemObject = 0,       ///< System object
-        Device = 10,            ///< Abstract device
-        BasicService = 20,      ///< Basic service
-        ComplexService = 21,    ///< Complex service
-        Application = 30,       ///< Application
-        Proxy = 100,            ///< Proxy object
-        Stub = 101,             ///< Stub object
-        Utility = 1000,         ///< Utility object
+        undefined = 0,              ///< Not defined
+        system_object = 1,          ///< System object
+        device = 10,                ///< Device category 10..19
+        platform_abstraction = 11,  ///< Platform abstraction object
+        vehicle_bus = 12,           ///< Vehicle bus object
+        basic_service = 20,         ///< Basic service category 20..29
+        sensor = 21,                ///< Sensor object
+        actuator = 22,              ///< Actuator object
+        complex_service = 30,       ///< Complex service category 30..39
+        vehicle_function = 31,      ///< Vehicle function
+        application = 50,           ///< Application
+        proxy = 100,                ///< Proxy object
+        stub = 101,                 ///< Stub object
+        utility = 1000,             ///< Utility object
     };
 
     /**
@@ -85,9 +97,10 @@ module sdv
     struct SClassInfo
     {
         u8string            ssModulePath;           ///< Path to the module that contains the class.
-        u8string            ssClassName;            ///< String representing the class name.
+        u8string            ssName;                 ///< String representing the class name.
         sequence<u8string>  seqClassAliases;        ///< Sequence with class name aliases.
         u8string            ssDefaultObjectName;    ///< The default object name.
+        u8string            ssDefaultConfig;        ///< The configuration TOML. Currently only "Parameters" table is supported.
         EObjectType         eType;                  ///< Type of object.
         uint32              uiFlags;                ///< Zero or more object flags from EObjectFlags.
         sequence<u8string>  seqDependencies;        ///< Sequence with object class names this object is dependent on.
@@ -98,6 +111,19 @@ module sdv
      */
     interface IObjectFactory
     {
+        /**
+         * @brief The object class names implemented in the object.
+         * @return Sequence with object class names string.
+         */
+        sequence<u8string> GetClassNames() const;
+
+        /**
+         * @brief Get the class information.
+         * @param[in] ssClassName The name of the class object to get the class information for.
+         * @return Returns the class information struct.
+         */
+        SClassInfo GetClassInfo(in u8string ssClassName) const;
+
         /**
          * @brief Create or get the object using the name from the object class info.
          * @attention The objects lifetime is ended by a call to the DestroyObject function or the unloading of the module.
@@ -119,9 +145,9 @@ module sdv
     };
 
     /**
-    * @brief Object status enumeration
+    * @brief Object state enumeration
     */
-    enum EObjectStatus : uint32
+    enum EObjectState : uint32
     {
         initialization_pending = 0,     ///< constructor called, but no call to initialize yet
         initializing = 10,              ///< Initialize was called and is being executed.
@@ -158,10 +184,10 @@ module sdv
         void Initialize(in u8string ssObjectConfig);
 
         /**
-         * @brief Get the current status of the object.
-         * @return Return the current status of the object.
+         * @brief Get the current state of the object.
+         * @return Return the current state of the object.
          */
-        EObjectStatus GetStatus() const;
+        EObjectState GetObjectState() const;
 
         /**
          * @brief Set the component operation mode.
@@ -170,11 +196,17 @@ module sdv
         void SetOperationMode(in EOperationMode eMode);
 
         /**
+         * @brief Get the object configuration for persistence.
+         * @return The object configuration as TOML string.
+        */
+        u8string GetObjectConfig() const;
+
+        /**
          * @brief Shutdown called before the object is destroyed.
          * @attention Implement calls to other SDV objects here as this is no longer considered safe during the destructor of the object!
          * After a call to shutdown any threads/callbacks/etc that could call other SDV objects need to have been stopped.
          * The SDV object itself is to remain in a state where it can respond to calls to its interfaces as other objects may still call it during the shutdown sequence!
-         * Any subsequent call to GetStatus should return EObjectStatus::destruction_pending
+         * Any subsequent call to GetObjectState should return EObjectState::destruction_pending
          */
         void Shutdown();
     };

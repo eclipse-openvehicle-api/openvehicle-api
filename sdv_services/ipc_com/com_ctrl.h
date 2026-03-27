@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef COM_CTRL_H
 #define COM_CTRL_H
 
@@ -12,7 +25,7 @@ class CMarshallObject;
 /**
  * @brief Test object simulating an component isolation service implementation for channel implementation testing
  */
-class CCommunicationControl : public sdv::CSdvObject, public sdv::IObjectControl, public sdv::com::IConnectionControl,
+class CCommunicationControl : public sdv::CSdvObject, public sdv::com::IConnectionControl,
     public sdv::ps::IMarshallAccess
 {
 public:
@@ -30,36 +43,23 @@ public:
     BEGIN_SDV_INTERFACE_MAP()
         SDV_INTERFACE_ENTRY(sdv::ps::IMarshallAccess)
         SDV_INTERFACE_ENTRY(sdv::com::IConnectionControl)
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
     END_SDV_INTERFACE_MAP()
 
     // Component declarations
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::SystemObject)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
     DECLARE_OBJECT_SINGLETON()
     DECLARE_OBJECT_CLASS_NAME("CommunicationControl")
 
     /**
-     * @brief Initialize the object. Overload of sdv::IObjectControl::Initialize.
-     * @param[in] ssObjectConfig Optional configuration string.
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
      */
-    virtual void Initialize(const sdv::u8string& ssObjectConfig) override;
+    virtual bool OnInitialize() override;
 
     /**
-     * @brief Get the current status of the object. Overload of sdv::IObjectControl::GetStatus.
-     * @return Return the current status of the object.
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
-    virtual sdv::EObjectStatus GetStatus() const override;
-
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
-     */
-    void SetOperationMode(sdv::EOperationMode eMode) override;
-
-    /**
-     * @brief Shutdown called before the object is destroyed. Overload of sdv::IObjectControl::Shutdown.
-     */
-    virtual void Shutdown() override;
+    virtual void OnShutdown() override;
 
     /**
      * @brief Create an IPC channel endpoint and use it for SDV communication. Overload of
@@ -194,7 +194,6 @@ public:
     sdv::sequence<sdv::pointer<uint8_t>> CallStub(sdv::ps::TMarshallID tStubID, sdv::sequence<sdv::pointer<uint8_t>>& seqInputData);
 
 private:
-    sdv::EObjectStatus                              m_eObjectStatus = sdv::EObjectStatus::initialization_pending;   ///< Object status.
     std::mutex                                      m_mtxChannels;                  ///< Protect the channel map.
     std::vector<std::shared_ptr<CChannelConnector>> m_vecChannels;                  ///< Channel vector.
     std::vector<std::thread>                        m_vecInitialConnectMon;         ///< Initial connection monitor.

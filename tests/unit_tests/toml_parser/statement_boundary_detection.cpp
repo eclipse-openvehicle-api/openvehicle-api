@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include <gtest/gtest.h>
 #include <limits>
 #include <functional>
@@ -9,7 +22,7 @@ std::string DumpTokenList(toml_parser::CLexer& rLexer)
 {
     auto eNavMode = rLexer.NavigationMode();
     rLexer.NavigationMode(toml_parser::CLexer::ENavigationMode::do_not_skip_anything);
-    rLexer.Reset();
+    rLexer.ResetCursor();
     std::stringstream sstream;
     while (!rLexer.IsEnd())
     {
@@ -51,7 +64,7 @@ std::string DumpTokenList(toml_parser::CLexer& rLexer)
         }
 
     }
-    rLexer.Reset();
+    rLexer.ResetCursor();
     rLexer.NavigationMode(eNavMode);
     return sstream.str();
 }
@@ -365,7 +378,6 @@ std::string CategoryText(toml_parser::ETokenCategory eCategory)
     }
 }
 
-
 /**
  * @brief Find routine, extend the line and check for smart boundaries
  * @param[in] rlexer Reference to the lexer to search for the tokens. The position will be reset and consumed until the
@@ -378,7 +390,7 @@ bool FindAndExtendToken(toml_parser::CLexer& rlexer, const std::string& rssKey,
     const std::vector<toml_parser::ETokenCategory>& rvecCategories)
 {
     // Find the key
-    rlexer.Reset();
+    rlexer.ResetCursor();
     while (!rlexer.IsEnd())
     {
         const toml_parser::CToken& rToken = rlexer.Consume();
@@ -386,31 +398,47 @@ bool FindAndExtendToken(toml_parser::CLexer& rlexer, const std::string& rssKey,
         {
             // Determine the range boundaries and create the range
             auto prBoundaries = StatementBoundaries(rToken);
-            EXPECT_TRUE(prBoundaries.first);
-            EXPECT_TRUE(prBoundaries.second);
             if (!prBoundaries.first || !prBoundaries.second)
+            {
+                std::cout << "Invalid statent boundaries..." << std::endl;
                 return false;
+            }
             toml_parser::CNodeTokenRange range(toml_parser::CTokenRange(prBoundaries.first, prBoundaries.second.Next()));
 
             // Auto extend the boundaries
             rlexer.SmartExtendNodeRange(range);
-            EXPECT_TRUE(range.ExtendedNode().Begin());
+            if (!range.ExtendedNode().Begin())
+            {
+                std::cout << "Invalid extended node..." << std::endl;
+                return false;
+            }
             std::reference_wrapper<const toml_parser::CToken> refToken(range.ExtendedNode().Begin());
             size_t nIndex = 0;
             auto itCategory = rvecCategories.begin();
             do
             {
                 if (nIndex == rvecCategories.size())
-                    std::cout << "Find " << rssKey << " Index #" << nIndex << ": Received " << CategoryText(refToken.get().Category()) << std::endl;
-                EXPECT_LT(nIndex, rvecCategories.size());
+                {
+                    std::cout << "Find " << rssKey << " Index #" << nIndex << ": Received "
+                              << CategoryText(refToken.get().Category()) << std::endl;
+                    return false;
+                }
                 if (itCategory == rvecCategories.end()) return false;
                 if (*itCategory != refToken.get().Category())
-                    std::cout << "Find " << rssKey << " Index #" << nIndex << ": Expected " << CategoryText(*itCategory) <<
-                        ", received " << CategoryText(refToken.get().Category()) << std::endl;
-                EXPECT_EQ(*itCategory, refToken.get().Category());
+                {
+                    std::cout << "Find " << rssKey << " Index #" << nIndex << ": Expected " << CategoryText(*itCategory)
+                              << ", received " << CategoryText(refToken.get().Category()) << std::endl;
+                    return false;
+                }
                 nIndex++;
                 itCategory++;
             } while ((refToken = refToken.get().Next()).get() && refToken.get() != range.ExtendedNode().End());
+            if (itCategory != rvecCategories.end())
+            {
+                std::cout << "More items in the category vector than in the extended range: itCategory: "
+                          << CategoryText(*itCategory) << std::endl;
+                return false;
+            }
             return true; // successful
         }
     }
@@ -466,7 +494,6 @@ token_a = 10
             toml_parser::ETokenCategory::token_syntax_assignment,
             toml_parser::ETokenCategory::token_whitespace,
             toml_parser::ETokenCategory::token_integer,
-            toml_parser::ETokenCategory::token_syntax_new_line,
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
@@ -510,7 +537,6 @@ token_d = "def"
             toml_parser::ETokenCategory::token_syntax_assignment,
             toml_parser::ETokenCategory::token_whitespace,
             toml_parser::ETokenCategory::token_float,
-            toml_parser::ETokenCategory::token_syntax_new_line,
             toml_parser::ETokenCategory::token_syntax_new_line,
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
@@ -607,6 +633,71 @@ token_f = "ghi" # after
             toml_parser::ETokenCategory::token_syntax_new_line,
             toml_parser::ETokenCategory::token_whitespace,
             toml_parser::ETokenCategory::token_comment,
+            toml_parser::ETokenCategory::token_syntax_new_line}));
+}
+
+TEST(TOMLLexerStatementBoundaryTests, AssignmentWithFollowingComment2)
+{
+    std::string ssTOML = R"code(
+
+
+# This is a separate comment with several line-breaks before.
+# Followed by this text on the same line.
+  
+# Note: there was a space after the empty comment line.
+# And another separate comment on a next line.
+
+# This is a comment before the value.
+# And another comment before the value at the same line.
+# 
+# Note: there was a space after the empty comment line.
+# But that should not influence the comment lines.
+value = "this is the value text" # Comment following the value.
+                                 # More comment following the value.
+                                 # This becomes one line.
+                                 #
+                                 # But this is a separate line.
+
+# This is also a separate comment.
+# Followed by this text on the same line.
+
+# And another text on a separate line.)code";
+
+    // Process the code
+    toml_parser::CLexer lexerCode(ssTOML);
+
+    // Assignment. Extended boundary includes following comments, whitespace and newlines.
+    EXPECT_TRUE(FindAndExtendToken(lexerCode, "value",
+        {toml_parser::ETokenCategory::token_comment,
+            toml_parser::ETokenCategory::token_syntax_new_line,
+            toml_parser::ETokenCategory::token_comment,
+            toml_parser::ETokenCategory::token_syntax_new_line,
+            toml_parser::ETokenCategory::token_comment,
+            toml_parser::ETokenCategory::token_syntax_new_line,
+            toml_parser::ETokenCategory::token_comment,
+            toml_parser::ETokenCategory::token_syntax_new_line,
+            toml_parser::ETokenCategory::token_comment,
+            toml_parser::ETokenCategory::token_syntax_new_line,
+            toml_parser::ETokenCategory::token_key,
+            toml_parser::ETokenCategory::token_whitespace,
+            toml_parser::ETokenCategory::token_syntax_assignment,
+            toml_parser::ETokenCategory::token_whitespace,
+            toml_parser::ETokenCategory::token_string,
+            toml_parser::ETokenCategory::token_whitespace,
+            toml_parser::ETokenCategory::token_comment,
+            toml_parser::ETokenCategory::token_syntax_new_line,
+            toml_parser::ETokenCategory::token_whitespace,
+            toml_parser::ETokenCategory::token_comment,
+            toml_parser::ETokenCategory::token_syntax_new_line,
+            toml_parser::ETokenCategory::token_whitespace,
+            toml_parser::ETokenCategory::token_comment,
+            toml_parser::ETokenCategory::token_syntax_new_line,
+            toml_parser::ETokenCategory::token_whitespace,
+            toml_parser::ETokenCategory::token_comment,
+            toml_parser::ETokenCategory::token_syntax_new_line,
+            toml_parser::ETokenCategory::token_whitespace,
+            toml_parser::ETokenCategory::token_comment,
+            toml_parser::ETokenCategory::token_syntax_new_line,
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
@@ -962,7 +1053,7 @@ TEST(TOMLLexerStatementBoundaryTests, IndentedTableWithoutComments)
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, IndenteTableWithAndWithoutComments)
+TEST(TOMLLexerStatementBoundaryTests, IndentedTableWithAndWithoutComments)
 {
     std::string ssCode  = R"code(
     [token_s]
@@ -985,6 +1076,7 @@ token_u.token_aa.token_bb = 10     # table token_u has a table token_aa which ha
             toml_parser::ETokenCategory::token_syntax_table_open,
             toml_parser::ETokenCategory::token_key,
             toml_parser::ETokenCategory::token_syntax_table_close,
+            toml_parser::ETokenCategory::token_syntax_new_line,
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
@@ -1095,8 +1187,7 @@ token_u.token_aa.token_cc = { dd = { ee = 10, ff = 11 },    # this is the commen
             toml_parser::ETokenCategory::token_syntax_assignment,
             toml_parser::ETokenCategory::token_whitespace,
             toml_parser::ETokenCategory::token_integer,
-            toml_parser::ETokenCategory::token_syntax_comma,
-            toml_parser::ETokenCategory::token_whitespace}));
+            toml_parser::ETokenCategory::token_syntax_comma}));
     EXPECT_TRUE(FindAndExtendToken(lexerCode, "ii",
         {toml_parser::ETokenCategory::token_whitespace,
             toml_parser::ETokenCategory::token_key,

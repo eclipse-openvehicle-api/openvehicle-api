@@ -1,13 +1,16 @@
-/**
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
  *
- * @file      signal_support.h
- * @brief     This file provides base-implementations and helpers for signals and signal handling.
- * @version   0.1
- * @date      2022.11.14
- * @author    Thomas.pfleiderer@zf.com
- * @copyright Copyright ZF Friedrichshaven AG (c) 2022
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
- */
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef SIGNAL_SUPPORT_H
 #define SIGNAL_SUPPORT_H
 
@@ -409,7 +412,7 @@ namespace sdv
             template <typename TType>
             void Write(TType tVal, const CTransaction& rTransaction = CTransaction())
             {
-                if (m_pSignalWrite) m_pSignalWrite->Write(any_t(tVal), rTransaction.GetTransaction());
+                if (m_pSignalWrite) m_pSignalWrite->Write(tVal, rTransaction.GetTransaction());
             }
 
             /**
@@ -747,7 +750,7 @@ namespace sdv
             CSignal signal;
             if (pRegister)
                 signal = CSignal(*this, rssName,
-                    pRegister->RegisterTxSignal(rssName, any_t(tDefVal)),
+                    pRegister->RegisterTxSignal(rssName, tDefVal),
                     true);
             return signal;
         }

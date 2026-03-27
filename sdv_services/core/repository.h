@@ -1,6 +1,18 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
 
-#ifndef VAPI_REPOSITORY_H
-#define VAPI_REPOSITORY_H
+#ifndef REPOSITORY_H
+#define REPOSITORY_H
 
 #include <list>
 #include <map>
@@ -14,6 +26,7 @@
 #include "module.h"
 #include "object_lifetime_control.h"
 #include "iso_monitor.h"
+#include "app_config_file.h"
 
 /**
  * @brief repository service providing functionality to load modules, create objects and access exiting objects
@@ -249,6 +262,15 @@ public:
     void ResetConfigBaseline();
 
     /**
+     * @brief Start components from a configuration.
+     * @remarks If the application runs as local application, the modules are loaded before starting the components.
+     * @param[in] rconfig Reference to the configuration file.
+     * @param[in] bAllowPartialLoad When set, allow partial loading the configuration (one or more components).
+     * @return Returns the load result.
+     */
+    sdv::core::EConfigProcessResult StartFromConfig(const CAppConfigFile& rconfig, bool bAllowPartialLoad);
+
+    /**
      * @brief Save the configuration of all components.
      * @return The string containing all the components.
      */
@@ -332,9 +354,14 @@ private:
     bool                            m_bIsoObjectLoaded = false;     ///< When set, the isolated object has loaded. Do not allow
                                                                     ///< another object of type complex service or utility to be
                                                                     ///< created.
+                                                                    /// 
 };
 
-#ifndef DO_NOT_INCLUDE_IN_UNIT_TEST
+/**
+ * @brief Return the repository.
+ * @return Reference to the repository.
+ */
+CRepository& GetRepository();
 
 /**
 * @brief Repository service
@@ -362,15 +389,9 @@ public:
     END_SDV_INTERFACE_MAP()
 
     // Object declarations
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::SystemObject)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
     DECLARE_OBJECT_CLASS_NAME("RepositoryService")
     DECLARE_OBJECT_SINGLETON()
-
-    /**
-     * @brief Get access to the repository.
-     * @return Returns a reference to the one repository of this module.
-     */
-    static CRepository& GetRepository();
 
     /**
      * @brief When set, the repository object control access will be enabled.
@@ -391,7 +412,6 @@ public:
     static bool EnableRepositoryLink();
 };
 
-DEFINE_SDV_OBJECT_NO_EXPORT(CRepositoryService)
-#endif
+DEFINE_SDV_OBJECT(CRepositoryService)
 
-#endif // !define VAPI_REPOSITORY_H
+#endif // !define REPOSITORY_H

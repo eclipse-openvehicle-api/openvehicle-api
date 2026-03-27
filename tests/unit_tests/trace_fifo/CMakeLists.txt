@@ -1,3 +1,16 @@
+#*******************************************************************************
+# Copyright (c) 2025-2026 ZF Friedrichshafen AG
+#
+# This program and the accompanying materials are made available under the 
+# terms of the Apache License Version 2.0 which is available at
+# https://www.apache.org/licenses/LICENSE-2.0
+#
+# SPDX-License-Identifier: Apache-2.0 
+#
+# Contributors:
+#   Erik Verhoeven - initial API and implementation
+#*******************************************************************************
+
 # Define project
 project(UnitTest_TraceFifo VERSION 1.0 LANGUAGES CXX)
 
@@ -29,4 +42,4 @@ add_custom_command(TARGET UnitTest_TraceFifo POST_BUILD
 )
 
 # Build dependencies
-add_dependencies(UnitTest_TraceFifo core_services)
+add_dependencies(UnitTest_TraceFifo dependency_sdv_components)

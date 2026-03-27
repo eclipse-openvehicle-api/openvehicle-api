@@ -12,6 +12,7 @@ Class = "DataDispatchService"
 [[Component]]
 Path = "can_com_sockets.sdv"
 Class = "CAN_Com_Sockets"
+[Component.Parameters]
 canSockets=["llcecan0"]
 
 [[Component]]

@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include <filesystem>
 #include <fstream>
 #include <atomic>
@@ -199,7 +212,6 @@ TEST(SharedMemoryBufferTest, TriggerTestRxTx)
     std::thread threadReceiver(fnWaitForTriggerReceiver);
     cvSenderStart.wait(lockStartSender);
     lockStartSender.unlock();
-    //CHECKPOINT();
     cvReceiverStart.wait(lockStartReceiver);
     lockStartReceiver.unlock();
     std::this_thread::sleep_for(std::chrono::milliseconds(25)); // Needed for the threads to enter their loop.
@@ -211,7 +223,7 @@ TEST(SharedMemoryBufferTest, TriggerTestRxTx)
     }
 
     // Let the buffer finish its sending.
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
     bShutdown = true;
     threadSender.join();

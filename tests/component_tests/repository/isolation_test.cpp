@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include <gtest/gtest.h>
 #include <support/app_control.h>
 #include <support/sdv_core.h>
@@ -39,9 +52,8 @@ ViewFilter = "Fatal"
 Mode = "Main"
 Instance = 2005
 )code");
-
         if (!bRet)
-            std::cout << "Failed to start the application for instance 1234." << std::endl;
+            std::cout << "Failed to start the application for instance 2005." << std::endl;
     }
 
     /**
@@ -53,9 +65,7 @@ Instance = 2005
     }
 };
 
-// TODO EVE: Disabled until the implementation of configuration installation is finished. See
-// https://dev.azure.com/SW4ZF/AZP-431_DivDI_Vehicle_API/_workitems/edit/705891
-TEST_F(CIsolatedComponentTest, DISABLED_LoadNonIsolatedSystemService)
+TEST_F(CIsolatedComponentTest, LoadNonIsolatedSystemService)
 {
     // Load the hello system service
     IHello* pHello = sdv::core::GetObject<IHello>("TestObject_SystemHelloService");
@@ -67,9 +77,7 @@ TEST_F(CIsolatedComponentTest, DISABLED_LoadNonIsolatedSystemService)
     EXPECT_EQ(tPID, GetProcessID());    // Runs in main process
 }
 
-// TODO EVE: Disabled until the implementation of configuration installation is finished. See
-// https://dev.azure.com/SW4ZF/AZP-431_DivDI_Vehicle_API/_workitems/edit/705891
-TEST_F(CIsolatedComponentTest, DISABLED_LoadNonIsolatedDevice)
+TEST_F(CIsolatedComponentTest, LoadNonIsolatedDevice)
 {
     // Load the hello device
     IHello* pHello = sdv::core::GetObject<IHello>("TestObject_HelloDevice");
@@ -81,9 +89,7 @@ TEST_F(CIsolatedComponentTest, DISABLED_LoadNonIsolatedDevice)
     EXPECT_EQ(tPID, GetProcessID());    // Runs in main process
 }
 
-// TODO EVE: Disabled until the implementation of configuration installation is finished. See
-// https://dev.azure.com/SW4ZF/AZP-431_DivDI_Vehicle_API/_workitems/edit/705891
-TEST_F(CIsolatedComponentTest, DISABLED_LoadNonIsolatedBasicService)
+TEST_F(CIsolatedComponentTest, LoadNonIsolatedBasicService)
 {
     // Load the hello basic service
     IHello* pHello = sdv::core::GetObject<IHello>("TestObject_BasicHelloService");
@@ -95,9 +101,7 @@ TEST_F(CIsolatedComponentTest, DISABLED_LoadNonIsolatedBasicService)
     EXPECT_EQ(tPID, GetProcessID());    // Runs in main process
 }
 
-// TODO EVE: Disabled until the implementation of configuration installation is finished. See
-// https://dev.azure.com/SW4ZF/AZP-431_DivDI_Vehicle_API/_workitems/edit/705891
-TEST_F(CIsolatedComponentTest, DISABLED_LoadIsolatedComplexService)
+TEST_F(CIsolatedComponentTest, LoadIsolatedComplexService)
 {
     // Load the hello basic service
     IHello* pHello = sdv::core::GetObject<IHello>("TestObject_ComplexHelloService");

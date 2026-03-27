@@ -1,45 +1,23 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "channel_mgnt.h"
 #include "connection.h"
 #include <support/toml.h>
 
-void CSharedMemChannelMgnt::Initialize(const sdv::u8string& /*ssObjectConfig*/)
+void CSharedMemChannelMgnt::OnShutdown()
 {
-    if (m_eObjectStatus != sdv::EObjectStatus::initialization_pending)
-    {
-        m_eObjectStatus = sdv::EObjectStatus::initialization_failure;
-        return;
-    }
-
-    m_eObjectStatus = sdv::EObjectStatus::initialized;
-}
-
-sdv::EObjectStatus CSharedMemChannelMgnt::GetStatus() const
-{
-    return m_eObjectStatus;
-}
-
-void CSharedMemChannelMgnt::SetOperationMode(sdv::EOperationMode eMode)
-{
-    switch (eMode)
-    {
-    case sdv::EOperationMode::configuring:
-        if (m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized)
-            m_eObjectStatus = sdv::EObjectStatus::configuring;
-        break;
-    case sdv::EOperationMode::running:
-        if (m_eObjectStatus == sdv::EObjectStatus::configuring || m_eObjectStatus == sdv::EObjectStatus::initialized)
-            m_eObjectStatus = sdv::EObjectStatus::running;
-        break;
-    default:
-        break;
-    }
-}
-
-void CSharedMemChannelMgnt::Shutdown()
-{
-    m_eObjectStatus = sdv::EObjectStatus::shutdown_in_progress;
     m_watchdog.Clear();
-    m_eObjectStatus = sdv::EObjectStatus::destruction_pending;
 }
 
 sdv::ipc::SChannelEndpoint CSharedMemChannelMgnt::CreateEndpoint(/*in*/ const sdv::u8string& ssEndpointConfig)

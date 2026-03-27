@@ -8,6 +8,7 @@ Class = "Hello_Component"
 [[Component]]
 Path = "example_general_component_with_initialization.sdv"
 Class = "Hello_Component_With_Initialization"
+[Component.Parameters]
 number = 42
 
 [[Component]]

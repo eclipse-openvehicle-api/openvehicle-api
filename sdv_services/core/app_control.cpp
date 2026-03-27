@@ -1,40 +1,26 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "app_control.h"
 #include "module_control.h"
 #include "repository.h"
-#include "sdv_core.h"
-#include "../../global/exec_dir_helper.h"
 #include "../../global/base64.h"
-#include "../../global/flags.h"
 #include "../../global/tracefifo/trace_fifo.cpp"
 #include "toml_parser/parser_toml.h"
 #include "local_shutdown_request.h"
-
-const char* szSettingsTemplate = R"code(# Settings file
-[Settings]
-Version = 100
-
-# The system config array can contain zero or more configurations that are loaded at the time
-# the system ist started. It is advisable to split the configurations in:
-#  platform config     - containing all the components needed to interact with the OS,
-#                        middleware, vehicle bus, Ethernet.
-#  vehicle interface   - containing the vehicle bus interpretation components like data link
-#                        based on DBC and devices for their abstraction.
-#  vehicle abstraction - containing the basic services
-# Load the system configurations by providing the "SystemConfig" keyword as an array of strings.
-# A relative path is relative to the installation directory (being "exe_location/instance_id").
-#
-# Example:
-#   SystemConfig = [ "platform.toml", "vehicle_ifc.toml", "vehicle_abstract.toml" ]
-#
-
-# The application config contains the configuration file that can be updated when services and
-# apps are being added to the system (or being removed from the system). Load the application
-# config by providing the "AppConfig" keyword as a string value. A relative path is relative to
-# the installation directory (being "exe_location/instance_id").
-#
-# Example
-#   AppConfig = "app_config.toml"
-)code";
+#include "app_settings.h"
+#include "logger_control.h"
+#include "app_config.h"
 
 /**
  * @brief Specific exit handler helping to shut down after startup. In case the shutdown wasn't explicitly executed.
@@ -53,55 +39,10 @@ void ExitHandler()
     }
 }
 
-CAppControl::CAppControl()
-{}
-
-CAppControl::~CAppControl()
-{}
-
-bool CAppControl::IsMainApplication() const
+CAppControl& GetAppControl()
 {
-    return m_eContextMode == sdv::app::EAppContext::main;
-}
-
-bool CAppControl::IsIsolatedApplication() const
-{
-    return m_eContextMode == sdv::app::EAppContext::isolated;
-}
-
-bool CAppControl::IsStandaloneApplication() const
-{
-    return m_eContextMode == sdv::app::EAppContext::standalone;
-}
-
-bool CAppControl::IsEssentialApplication() const
-{
-    return m_eContextMode == sdv::app::EAppContext::essential;
-}
-
-bool CAppControl::IsMaintenanceApplication() const
-{
-    return m_eContextMode == sdv::app::EAppContext::maintenance;
-}
-
-bool CAppControl::IsExternalApplication() const
-{
-    return m_eContextMode == sdv::app::EAppContext::external;
-}
-
-sdv::app::EAppContext CAppControl::GetContextType() const
-{
-    return m_eContextMode;
-}
-
-uint32_t CAppControl::GetInstanceID() const
-{
-    return m_uiInstanceID;
-}
-
-uint32_t CAppControl::GetRetries() const
-{
-    return m_uiRetries;
+    static CAppControl app_control;
+    return app_control;
 }
 
 bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfaceAccess* pEventHandler)
@@ -122,7 +63,7 @@ bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfac
     BroadcastOperationState(sdv::app::EAppOperationState::initializing);
 
     // Process the application config.
-    bool bRet = ProcessAppConfig(ssConfig);
+    bool bRet = GetAppSettings().ProcessAppStartupConfig(ssConfig);
 
     // Undo logging interception
     sstreamCOUT.rdbuf()->pubsync();
@@ -138,16 +79,16 @@ bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfac
         std::cout << sstreamCOUT.str();
         std::clog << sstreamCLOG.str();
         std::cerr << sstreamCERR.str();
-        if (!m_bSilent)
+        if (!GetAppSettings().IsConsoleSilent())
             std::cerr << "ERROR: Cannot continue!" << std::endl;
         Shutdown(true);
         return false;
     }
 
     // Open the stream buffer and attach the streams if the application control is initialized as main app.
-    if (m_eContextMode == sdv::app::EAppContext::main)
+    if (GetAppSettings().IsMainApplication())
     {
-        m_fifoTraceStreamBuffer.SetInstanceID(m_uiInstanceID);
+        m_fifoTraceStreamBuffer.SetInstanceID(GetAppSettings().GetInstanceID());
         m_fifoTraceStreamBuffer.Open(1000);
         std::cout << "**********************************************" << std::endl;
     }
@@ -158,18 +99,18 @@ bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfac
     std::cerr << sstreamCERR.str();
 
     // Check for a correctly opened stream buffer
-    if (m_eContextMode == sdv::app::EAppContext::main && !m_fifoTraceStreamBuffer.IsOpened())
+    if (GetAppSettings().IsMainApplication() && !m_fifoTraceStreamBuffer.IsOpened())
     {
-        if (!m_bSilent)
+        if (!GetAppSettings().IsConsoleSilent())
             std::cerr << "ERROR: Log streaming could not be initialized; cannot continue!" << std::endl;
         Shutdown(true);
         return false;
     }
 
     // Allow only one instance if running as main application
-    if (m_eContextMode == sdv::app::EAppContext::main)
+    if (GetAppSettings().IsMainApplication())
     {
-        m_pathLockFile = GetExecDirectory() / ("sdv_core_" + std::to_string(m_uiInstanceID) + ".lock");
+        m_pathLockFile = GetExecDirectory() / ("sdv_core_" + std::to_string(GetAppSettings().GetInstanceID()) + ".lock");
 #ifdef _WIN32
         // Checkf or the existence of a lock file. If existing, do not continue.
         if (std::filesystem::exists(m_pathLockFile)) return false;
@@ -214,19 +155,19 @@ bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfac
     // Load the core services
     if (!fnLoadModule("core_services.sdv"))
     {
-        if (!m_bSilent)
+        if (!GetAppSettings().IsConsoleSilent())
             std::cerr << "ERROR: Failed to load the Core Services. Cannot continue!" << std::endl;
         Shutdown(true);
         return false;
     }
 
     // Load the logger module if one is specified
-    if (!m_pathLoggerModule.empty())
+    if (!GetAppSettings().GetLoggerModulePath().empty())
     {
-        m_tLoggerModuleID = fnLoadModule(m_pathLoggerModule.u8string());
+        m_tLoggerModuleID = fnLoadModule(GetAppSettings().GetLoggerModulePath().u8string());
         if (!m_tLoggerModuleID)
         {
-            if (!m_bSilent)
+            if (!GetAppSettings().IsConsoleSilent())
                 std::cerr << "ERROR: Failed to load the custom logger. Cannot continue!" << std::endl;
             Shutdown(true);
             return false;
@@ -234,12 +175,12 @@ bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfac
     }
 
     // Start the logger and assign it to the logger control.
-    fnCreateObject(m_ssLoggerClass, m_ssLoggerClass, "");
-    sdv::IInterfaceAccess* pLoggerObj = GetRepository().GetObject(m_ssLoggerClass);
+    fnCreateObject(GetAppSettings().GetLoggerClass(), GetAppSettings().GetLoggerClass(), "");
+    sdv::IInterfaceAccess* pLoggerObj = GetRepository().GetObject(GetAppSettings().GetLoggerClass());
     if (!pLoggerObj)
     {
-        GetRepository().DestroyObject2(m_ssLoggerClass);
-        if (!m_bSilent)
+        GetRepository().DestroyObject2(GetAppSettings().GetLoggerClass());
+        if (!GetAppSettings().IsConsoleSilent())
             std::cerr << "ERROR: Failed to start the logger. Cannot continue!" << std::endl;
         Shutdown(true);
         return false;
@@ -249,14 +190,14 @@ bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfac
     sdv::core::ILogger* pLogger = pLoggerObj->GetInterface<sdv::core::ILogger>();
     if (!pLoggerConfig || !pLogger)
     {
-        if (!m_bSilent)
+        if (!GetAppSettings().IsConsoleSilent())
             std::cerr << "ERROR: Failed to start the logger. Cannot continue!" << std::endl;
         Shutdown(true);
         return false;
     }
-    if (!m_ssProgramTag.empty())
-        pLoggerConfig->SetProgramTag(m_ssProgramTag);
-    pLoggerConfig->SetLogFilter(m_eSeverityFilter, m_eSeverityViewFilter);
+    if (!GetAppSettings().GetLoggerProgramTag().empty())
+        pLoggerConfig->SetProgramTag(GetAppSettings().GetLoggerProgramTag());
+    pLoggerConfig->SetLogFilter(GetAppSettings().GetLoggerSeverityFilter(), GetAppSettings().GetConsoleSeverityFilter());
     GetLoggerControl().SetLogger(pLogger);
 
     // Create the core service objects
@@ -266,7 +207,7 @@ bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfac
     bRet = bRet && fnCreateObject("ConfigService", "ConfigService", "");
     if (!bRet)
     {
-        if (!m_bSilent)
+        if (!GetAppSettings().IsConsoleSilent())
         {
             std::cerr << "ERROR: Failed to start the Core Services. Cannot continue!" << std::endl;
             if (!ssErrorString.empty())
@@ -278,8 +219,7 @@ bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfac
 
     // Load specific services
     bool bLoadRPCClient = false, bLoadRPCServer = false;
-    bool bLoadInstallationManifests = false;
-    switch (m_eContextMode)
+    switch (GetAppSettings().GetContextType())
     {
     case sdv::app::EAppContext::standalone:
         break;
@@ -287,11 +227,9 @@ bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfac
         bLoadRPCClient = true;
         break;
     case sdv::app::EAppContext::isolated:
-        bLoadInstallationManifests = true;
         bLoadRPCClient = true;
         break;
     case sdv::app::EAppContext::main:
-        bLoadInstallationManifests = true;
         bLoadRPCClient = true;
         bLoadRPCServer = true;
         break;
@@ -302,22 +240,28 @@ bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfac
         bLoadRPCClient = true;
         break;
     default:
-        if (!m_bSilent)
+        if (!GetAppSettings().IsConsoleSilent())
             std::cerr << "ERROR: Invalid Run-As mode. Cannot continue!" << std::endl;
         Shutdown(true);
         return false;
     }
 
-    // Load installation manifests for main and isolated applications.
-    if (bLoadInstallationManifests)
+    // Load the application settings.
+    if (!GetAppSettings().LoadSettingsFile())
     {
-        if (!GetAppConfig().LoadInstallationManifests())
-        {
-            if (!m_bSilent)
-                std::cerr << "ERROR: Failed to load installation manifests. Cannot continue!" << std::endl;
-            Shutdown(true);
-            return false;
-        }
+        if (!GetAppSettings().IsConsoleSilent())
+            std::cerr << "ERROR: Failed to load application settings file. Cannot continue!" << std::endl;
+        Shutdown(true);
+        return false;
+    }
+
+    // Load installation manifests. For standalone applications, only the core manifest is loaded.
+    if (!GetAppConfig().LoadInstallationManifests())
+    {
+        if (!GetAppSettings().IsConsoleSilent())
+            std::cerr << "ERROR: Failed to load installation manifests. Cannot continue!" << std::endl;
+        Shutdown(true);
+        return false;
     }
 
     // Load process control
@@ -360,7 +304,7 @@ Type = "Local"
 
         if (!bRet)
         {
-            if (!m_bSilent)
+            if (!GetAppSettings().IsConsoleSilent())
                 std::cerr << "ERROR: Failed to load IPC server components. Cannot continue!" << std::endl;
             if (!ssErrorString.empty())
                 std::cerr << "REASON: " << ssErrorString << std::endl;
@@ -394,7 +338,7 @@ Type = "Local"
 
         if (!bRet)
         {
-            if (!m_bSilent)
+            if (!GetAppSettings().IsConsoleSilent())
                 std::cerr << "ERROR: Failed to load IPC client components. Cannot continue!" << std::endl;
             Shutdown(true);
             return false;
@@ -403,7 +347,7 @@ Type = "Local"
 
     if (!bRet)
     {
-        if (!m_bSilent)
+        if (!GetAppSettings().IsConsoleSilent())
             std::cerr << "ERROR: Failed to start core components. Cannot continue!" << std::endl;
         if (!ssErrorString.empty())
             std::cerr << "REASON: " << ssErrorString << std::endl;
@@ -418,15 +362,15 @@ Type = "Local"
 
     SetConfigMode();
 
-    if (IsMainApplication())
+    if (GetAppSettings().IsMainApplication())
     {
         // Load system configs - they need to be present completely
-        for (const std::filesystem::path& rpathConfig : m_vecSysConfigs)
+        for (const std::filesystem::path& rpathConfig : GetAppSettings().GetSystemConfigPaths())
         {
             sdv::core::EConfigProcessResult eResult = GetAppConfig().LoadConfig(rpathConfig.generic_u8string());
             if (eResult != sdv::core::EConfigProcessResult::successful)
             {
-                if (!m_bSilent)
+                if (!GetAppSettings().IsConsoleSilent())
                     std::cerr << "ERROR: Cannot load or partly load the system configuration: " <<
                     rpathConfig.generic_u8string() << std::endl;
                 Shutdown(true);
@@ -438,22 +382,25 @@ Type = "Local"
         GetAppConfig().ResetConfigBaseline();
 
         // Load the application config - they can also be partly there
-        if (!m_pathAppConfig.empty())
+        if (!GetAppSettings().GetUserConfigPath().empty())
         {
-            sdv::core::EConfigProcessResult eResult = GetAppConfig().LoadConfig(m_pathAppConfig.generic_u8string());
+            sdv::core::EConfigProcessResult eResult =
+                GetAppConfig().LoadConfig(GetAppSettings().GetUserConfigPath().generic_u8string());
             if (eResult == sdv::core::EConfigProcessResult::failed)
             {
-                if (!m_bSilent)
-                    std::cerr << "ERROR: Cannot load application configuration: " << m_pathAppConfig.generic_u8string() << std::endl;
+                if (!GetAppSettings().IsConsoleSilent())
+                    std::cerr << "ERROR: Cannot load application configuration: " <<
+                        GetAppSettings().GetUserConfigPath().generic_u8string() << std::endl;
                 Shutdown(true);
                 return false;
             }
             else if (eResult != sdv::core::EConfigProcessResult::partially_successful)
             {
-                if (!m_bSilent)
+                if (!GetAppSettings().IsConsoleSilent())
                     std::cerr << "WARNING: Partially could not load application configuration: " <<
-                    m_pathAppConfig.generic_u8string() << std::endl;
+                        GetAppSettings().GetUserConfigPath().generic_u8string() << std::endl;
             }
+            m_bAutoSaveConfig = true;
         }
     }
 
@@ -477,7 +424,7 @@ void CAppControl::RunLoop()
     // Treat local running differently from main and isolated app running.
     // Note... Maintenance apps should not use the loop
     bool bLocal = true;
-    switch (m_eContextMode)
+    switch (GetAppSettings().GetContextType())
     {
     case sdv::app::EAppContext::main:
     case sdv::app::EAppContext::isolated:
@@ -494,12 +441,12 @@ void CAppControl::RunLoop()
     CShutdownRequestListener listener;
     if (bLocal)
     {
-        listener = std::move(CShutdownRequestListener(m_uiInstanceID));
+        listener = std::move(CShutdownRequestListener(GetAppSettings().GetInstanceID()));
         if (!listener.IsValid())
             throw sdv::XAccessDenied(); // Another instance is already running.
     }
 
-    if (m_bVerbose)
+    if (GetAppSettings().IsConsoleVerbose())
         std::cout << "Entering loop" << std::endl;
 
     m_bRunLoop = true;
@@ -520,7 +467,7 @@ void CAppControl::RunLoop()
             m_pEvent->ProcessEvent(sEvent);
         }
     }
-    if (m_bVerbose)
+    if (GetAppSettings().IsConsoleVerbose())
         std::cout << "Leaving loop" << std::endl;
 }
 
@@ -543,8 +490,11 @@ void CAppControl::Shutdown(/*in*/ bool bForce)
     // Disable automatic configuration saving.
     m_bAutoSaveConfig = false;
 
+    // Update the application settings file
+    GetAppSettings().SaveSettingsFile();
+
     // Destroy all objects... this should also remove any registered services, except the custom logger.
-    GetRepository().DestroyAllObjects(std::vector<std::string>({ m_ssLoggerClass }), bForce);
+    GetRepository().DestroyAllObjects(std::vector<std::string>({GetAppSettings().GetLoggerClass()}), bForce);
 
     // Unload all modules... this should destroy all running services, except the custom logger
     GetModuleControl().UnloadAll(std::vector<sdv::core::TModuleID>({ m_tLoggerModuleID }));
@@ -587,7 +537,7 @@ void CAppControl::Shutdown(/*in*/ bool bForce)
     }
 
     // End trace streaming
-    if (m_eContextMode == sdv::app::EAppContext::main)
+    if (GetAppSettings().IsMainApplication())
     {
         std::cout << "**********************************************" << std::endl;
 
@@ -596,22 +546,11 @@ void CAppControl::Shutdown(/*in*/ bool bForce)
     }
 
     BroadcastOperationState(sdv::app::EAppOperationState::not_started);
-    m_eContextMode = sdv::app::EAppContext::no_context;
-    m_uiInstanceID = 0u;
     m_pEvent = nullptr;
-    m_ssLoggerClass.clear();
     m_tLoggerModuleID = 0;
-    m_pathLoggerModule.clear();
-    m_ssProgramTag.clear();
-    m_eSeverityFilter = sdv::core::ELogSeverity::info;
-    m_pathInstallDir.clear();
-    m_pathRootDir.clear();
-    m_vecSysConfigs.clear();
-    m_pathAppConfig.clear();
     m_bAutoSaveConfig = false;
     m_bEnableAutoSave = false;
-    m_bSilent = false;
-    m_bVerbose = false;
+    GetAppSettings().Reset();
 }
 
 void CAppControl::RequestShutdown()
@@ -623,11 +562,6 @@ void CAppControl::RequestShutdown()
 sdv::app::EAppOperationState CAppControl::GetOperationState() const
 {
     return m_eState;
-}
-
-uint32_t CAppControl::GetInstance() const
-{
-    return m_uiInstanceID;
 }
 
 void CAppControl::SetConfigMode()
@@ -644,42 +578,6 @@ void CAppControl::SetRunningMode()
         BroadcastOperationState(sdv::app::EAppOperationState::running);
 }
 
-sdv::sequence<sdv::u8string> CAppControl::GetNames() const
-{
-    sdv::sequence<sdv::u8string> seqNames = {"app.instance_id", "console.info_level"};
-    return seqNames;
-}
-
-sdv::any_t CAppControl::Get(/*in*/ const sdv::u8string& ssAttribute) const
-{
-    if (ssAttribute == "app.instance_id") return sdv::any_t(m_uiInstanceID);
-    if (ssAttribute == "console.info_level")
-    {
-        if (m_bSilent) return "silent";
-        if (m_bVerbose) return "verbose";
-        return "normal";
-    }
-    return {};
-}
-
-bool CAppControl::Set(/*in*/ const sdv::u8string& /*ssAttribute*/, /*in*/ sdv::any_t /*anyAttribute*/)
-{
-    // Currently there are not setting attributes...
-    return false;
-}
-
-uint32_t CAppControl::GetFlags(/*in*/ const sdv::u8string& ssAttribute) const
-{
-    if (ssAttribute == "app.instance_id") return hlpr::flags<sdv::EAttributeFlags>(sdv::EAttributeFlags::read_only);
-    if (ssAttribute == "console.info_level") return hlpr::flags<sdv::EAttributeFlags>(sdv::EAttributeFlags::read_only);
-    return 0u;
-}
-
-std::filesystem::path CAppControl::GetInstallDir() const
-{
-    return m_pathInstallDir;
-}
-
 void CAppControl::DisableAutoConfigUpdate()
 {
     m_bEnableAutoSave = false;
@@ -693,20 +591,11 @@ void CAppControl::EnableAutoConfigUpdate()
 void CAppControl::TriggerConfigUpdate()
 {
     if (!m_bAutoSaveConfig || !m_bEnableAutoSave) return;
-    if (m_pathAppConfig.empty()) return;
+    if (GetAppSettings().GetUserConfigPath().empty())
+        return;
 
-    if (!GetAppConfig().SaveConfig(m_pathAppConfig.generic_u8string()))
-        SDV_LOG_ERROR("Failed to automatically save the configuration ", m_pathAppConfig.generic_u8string());
-}
-
-bool CAppControl::IsConsoleSilent() const
-{
-    return m_bSilent;
-}
-
-bool CAppControl::IsConsoleVerbose() const
-{
-    return m_bVerbose;
+    if (!GetAppConfig().SaveConfig(GetAppSettings().GetUserConfigPath().generic_u8string()))
+        SDV_LOG_ERROR("Failed to automatically save the configuration ", GetAppSettings().GetUserConfigPath().generic_u8string());
 }
 
 void CAppControl::BroadcastOperationState(sdv::app::EAppOperationState eState)
@@ -721,255 +610,7 @@ void CAppControl::BroadcastOperationState(sdv::app::EAppOperationState eState)
     }
 }
 
-bool CAppControl::ProcessAppConfig(const sdv::u8string& rssConfig)
-{
-    toml_parser::CParser parserConfig;
-    std::string ssError;
-    try
-    {
-        // Read the configuration
-        if (!parserConfig.Process(rssConfig)) return false;
-
-    } catch (const sdv::toml::XTOMLParseException& rexcept)
-    {
-        ssError = std::string("ERROR: Failed to parse application configuration: ") + rexcept.what();
-    }
-
-    // Get the reporting settings (if this succeeded at all...)
-    auto ptrReport = parserConfig.Root().Direct("Console.Report");
-    if (ptrReport && ptrReport->GetValue() == "Silent") m_bSilent = true;
-    if (ptrReport && ptrReport->GetValue() == "Verbose") m_bVerbose = true;
-
-    // Report the outstanding error (if there is one...)
-    if (!ssError.empty())
-    {
-        if (!m_bSilent)
-            std::cerr << ssError << std::endl;
-        return false;
-    }
-
-    // Allow a custom logger to be defined
-    std::filesystem::path pathLoggerModule;
-    std::string ssLoggerClass;
-    std::shared_ptr<toml_parser::CNode> ptrLogHandlerPath = parserConfig.Root().Direct("LogHandler.Path");
-    std::shared_ptr<toml_parser::CNode> ptrLogHandlerClass = parserConfig.Root().Direct("LogHandler.Class");
-    if (ptrLogHandlerPath && !ptrLogHandlerClass)
-    {
-        if (!m_bSilent)
-            std::cerr << "ERROR: Failed to process application log: custom logger handler module path supplied, but no class "
-                "defined!" << std::endl;
-        return false;
-    }
-    if (!ptrLogHandlerPath && ptrLogHandlerClass)
-    {
-        if (!m_bSilent)
-            std::cerr << "ERROR: Failed to process application log: custom logger handler class supplied, but no module "
-                "defined!" << std::endl;
-        return false;
-    }
-    if (ptrLogHandlerPath)
-    {
-        m_pathLoggerModule = static_cast<std::string>(ptrLogHandlerPath->GetValue());
-        m_ssLoggerClass = static_cast<std::string>(ptrLogHandlerClass->GetValue());
-    } else
-    {
-        // Default logger
-        m_ssLoggerClass = "DefaultLoggerService";
-    }
-
-    // Get an optional program tag for the logger
-    std::shared_ptr<toml_parser::CNode> ptrLogPogramTag = parserConfig.Root().Direct("LogHandler.Tag");
-    if (ptrLogPogramTag) m_ssProgramTag = static_cast<std::string>(ptrLogPogramTag->GetValue());
-
-    // Get the application-mode
-    std::string ssApplication = "Standalone";
-    std::shared_ptr<toml_parser::CNode> ptrApplication = parserConfig.Root().Direct("Application.Mode");
-    if (ptrApplication) ssApplication = static_cast<std::string>(ptrApplication->GetValue());
-    if (ssApplication == "Standalone") m_eContextMode = sdv::app::EAppContext::standalone;
-    else if (ssApplication == "External") m_eContextMode = sdv::app::EAppContext::external;
-    else if (ssApplication == "Isolated") m_eContextMode = sdv::app::EAppContext::isolated;
-    else if (ssApplication == "Main") m_eContextMode = sdv::app::EAppContext::main;
-    else if (ssApplication == "Essential") m_eContextMode = sdv::app::EAppContext::essential;
-    else if (ssApplication == "Maintenance") m_eContextMode = sdv::app::EAppContext::maintenance;
-    else
-    {
-        if (!m_bSilent)
-            std::cerr << "ERROR: Failed to process startup config: invalid application-mode specified for core library: " <<
-            ssApplication << std::endl;
-        return false;
-    }
-
-    // Get the severity level filter for the logger
-    auto fnTranslateSevFilter = [this](const std::string& rssLogFilter, const sdv::core::ELogSeverity eDefault)
-    {
-        sdv::core::ELogSeverity eSeverityFilter = eDefault;
-        if (rssLogFilter == "Trace") eSeverityFilter = sdv::core::ELogSeverity::trace;
-        else if (rssLogFilter == "Debug") eSeverityFilter = sdv::core::ELogSeverity::debug;
-        else if (rssLogFilter == "Info") eSeverityFilter = sdv::core::ELogSeverity::info;
-        else if (rssLogFilter == "Warning") eSeverityFilter = sdv::core::ELogSeverity::warning;
-        else if (rssLogFilter == "Error") eSeverityFilter = sdv::core::ELogSeverity::error;
-        else if (rssLogFilter == "Fatal") eSeverityFilter = sdv::core::ELogSeverity::fatal;
-        else if (!rssLogFilter.empty())
-        {
-            if (!m_bSilent)
-                std::cerr << "ERROR: Failed to process application log: invalid severity level filter: '" << rssLogFilter <<
-                "'" << std::endl;
-        }
-        return eSeverityFilter;
-    };
-    sdv::core::ELogSeverity eLogDefaultViewSeverityFilter = sdv::core::ELogSeverity::error;
-    if (IsMainApplication() || IsIsolatedApplication())
-        eLogDefaultViewSeverityFilter = sdv::core::ELogSeverity::info;
-    std::shared_ptr<toml_parser::CNode> ptrLogSeverityFilter = parserConfig.Root().Direct("LogHandler.Filter");
-    m_eSeverityFilter = fnTranslateSevFilter(ptrLogSeverityFilter ? ptrLogSeverityFilter->GetValue() : "",
-        sdv::core::ELogSeverity::info);
-    ptrLogSeverityFilter = parserConfig.Root().Direct("LogHandler.ViewFilter");
-    m_eSeverityViewFilter = fnTranslateSevFilter(ptrLogSeverityFilter ? ptrLogSeverityFilter->GetValue() : "",
-        eLogDefaultViewSeverityFilter);
-
-    // Get the optional instance ID.
-    std::shared_ptr<toml_parser::CNode> ptrInstance = parserConfig.Root().Direct("Application.Instance");
-    if (ptrInstance)
-        m_uiInstanceID = ptrInstance->GetValue();
-    else
-        m_uiInstanceID = 1000u;
-    // Number of attempts to establish a connection to a running instance.
-    std::shared_ptr<toml_parser::CNode> ptrRetries = parserConfig.Root().Direct("Application.Retries");
-    if (ptrRetries)
-    {
-        m_uiRetries = ptrRetries->GetValue();
-        if (m_uiRetries > 30)
-            m_uiRetries = 30;
-        else if (m_uiRetries < 3)
-            m_uiRetries = 3;
-    }
-
-    // Main and isolated apps specific information.
-    if (IsMainApplication() || IsIsolatedApplication())
-    {
-        // Get the optional installation directory.
-        std::shared_ptr<toml_parser::CNode> ptrInstallDir = parserConfig.Root().Direct("Application.InstallDir");
-        if (ptrInstallDir)
-        {
-            m_pathRootDir = ptrInstallDir->GetValue();
-            if (m_pathRootDir.is_relative())
-                m_pathRootDir = GetExecDirectory() / m_pathRootDir;
-        }
-        else
-            m_pathRootDir = GetExecDirectory() / std::to_string(m_uiInstanceID);
-        m_pathInstallDir = m_pathRootDir;
-        try
-        {
-            std::filesystem::create_directories(m_pathRootDir);
-        }
-        catch (const std::filesystem::filesystem_error& rexcept)
-        {
-            if (!m_bSilent)
-            {
-                std::cerr << "Cannot create root directory: " << m_pathRootDir << std::endl;
-                std::cerr << "  Reason: " << rexcept.what() << std::endl;
-            }
-            return false;
-        }
-    }
-
-    // Maintenance and isolated applications cannot load specific configs. The others can specify a configuration file, but
-    // not auto-updateable.
-    if (!IsMaintenanceApplication() && !IsIsolatedApplication())
-    {
-        auto ptrConfigFile = parserConfig.Root().Direct("Application.Config");
-        if (ptrConfigFile)
-            m_pathAppConfig = ptrConfigFile->GetValue();
-    }
-
-    // Read the settings... if existing. And only for the main application
-    if (IsMainApplication())
-    {
-        // If the template is not existing, create the template...
-        if (!std::filesystem::exists(m_pathRootDir / "settings.toml"))
-        {
-            std::ofstream fstream(m_pathRootDir / "settings.toml");
-            if (!fstream.is_open())
-            {
-                if (!m_bSilent)
-                    std::cerr << "ERROR: Failed to store application settings." << std::endl;
-                return false;
-            }
-            fstream << szSettingsTemplate;
-            fstream.close();
-        }
-        else
-        {
-            std::ifstream fstream(m_pathRootDir / "settings.toml");
-            std::string ssContent((std::istreambuf_iterator<char>(fstream)), std::istreambuf_iterator<char>());
-            try
-            {
-                // Read the configuration
-                toml_parser::CParser parserSettings(ssContent);
-
-                // Check for the version
-                auto ptrVersion = parserSettings.Root().Direct("Settings.Version");
-                if (!ptrVersion)
-                {
-                    if (!m_bSilent)
-                        std::cerr << "ERROR: Missing version in application settings file." << std::endl;
-                    return false;
-                }
-                if (ptrVersion->GetValue() != SDVFrameworkInterfaceVersion)
-                {
-                    if (!m_bSilent)
-                        std::cerr << "ERROR: Invalid version of application settings file (expected version " <<
-                            SDVFrameworkInterfaceVersion << ", but available version " <<
-                            static_cast<uint32_t>(ptrVersion->GetValue()) << ")" << std::endl;
-                    return false;
-                }
-
-                // Read the system configurations
-                auto ptrSystemConfigs = parserSettings.Root().Direct("Settings.SystemConfig");
-                if (ptrSystemConfigs && ptrSystemConfigs->Cast<toml_parser::CArray>())
-                {
-                    for (uint32_t uiIndex = 0; uiIndex < ptrSystemConfigs->Cast<toml_parser::CArray>()->GetCount(); uiIndex++)
-                    {
-                        auto ptrSystemConfig = ptrSystemConfigs->Cast<toml_parser::CArray>()->Get(uiIndex);
-                        if (!ptrSystemConfig) continue;
-                        m_vecSysConfigs.push_back(static_cast<std::string>(ptrSystemConfig->GetValue()));
-                    }
-                }
-
-                // Get the application config - but only when not specified over the app-control-config.
-                if (m_pathAppConfig.empty())
-                {
-                    auto ptrAppConfig = parserSettings.Root().Direct("Settings.AppConfig");
-                    if (ptrAppConfig)
-                    {
-                        // Path available. Enable auto-update.
-                        m_pathAppConfig = static_cast<std::string>(ptrAppConfig->GetValue());
-                        m_bAutoSaveConfig = true;
-                    }
-                }
-            }
-            catch (const sdv::toml::XTOMLParseException& rexcept)
-            {
-                if (!m_bSilent)
-                    std::cerr << "ERROR: Failed to parse application settings: " << rexcept.what() << std::endl;
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
-
-#ifndef DO_NOT_INCLUDE_IN_UNIT_TEST
-
-CAppControl& CAppControlService::GetAppControl()
-{
-    return ::GetAppControl();
-}
-
 bool CAppControlService::EnableAppShutdownRequestAccess() const
 {
-    return ::GetAppControl().IsMainApplication() || ::GetAppControl().IsIsolatedApplication();
+    return ::GetAppSettings().IsMainApplication() || ::GetAppSettings().IsIsolatedApplication();
 }
-
-#endif

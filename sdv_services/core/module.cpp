@@ -1,8 +1,23 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "module.h"
-#include "sdv_core.h"
+#include <support/component_impl.h>
 #include <support/local_service_access.h>
 #include <functional>
 #include <algorithm>
+#include "toml_parser/parser_toml.h"
+#include "repository.h"
 
 #ifdef _WIN32
 // Resolve conflict
@@ -56,7 +71,7 @@ std::string CModuleInst::GetDefaultObjectName(const std::string& ssClassName) co
 {
     auto itClass = m_mapClassInfo.find(ssClassName);
     if (itClass == m_mapClassInfo.end()) return std::string();
-    return itClass->second.ssDefaultObjectName.empty() ? itClass->second.ssClassName : itClass->second.ssDefaultObjectName;
+    return itClass->second.ssDefaultObjectName.empty() ? itClass->second.ssName : itClass->second.ssDefaultObjectName;
 }
 
 bool CModuleInst::IsSingleton(const std::string& ssClassName) const
@@ -109,13 +124,13 @@ sdv::core::TModuleID CModuleInst::GetModuleID() const
 sdv::core::SModuleInfo CModuleInst::GetModuleInfo() const
 {
     std::unique_lock<std::recursive_mutex> lock(m_mtxModule);
-    sdv::core::SModuleInfo sInfo{};
-    sInfo.tModuleID = m_tModuleID;
-    sInfo.ssPath = m_pathModule.filename().generic_u8string();
-    sInfo.ssFilename = m_pathModule.filename().generic_u8string();
-    sInfo.uiVersion = m_uiIfcVersion;
-    sInfo.bActive = m_fnActiveObjects ? m_fnActiveObjects() : false;
-    return sInfo;
+    sdv::core::SModuleInfo sClass{};
+    sClass.tModuleID = m_tModuleID;
+    sClass.ssPath = m_pathModule.filename().generic_u8string();
+    sClass.ssFilename = m_pathModule.filename().generic_u8string();
+    sClass.uiVersion = m_uiIfcVersion;
+    sClass.bActive = m_fnActiveObjects ? m_fnActiveObjects() : false;
+    return sClass;
 }
 
 std::optional<sdv::SClassInfo> CModuleInst::GetClassInfo(const std::string& rssClassName) const
@@ -230,23 +245,23 @@ bool CModuleInst::Load(const std::filesystem::path& rpathModule) noexcept
         }
 
         // Get available classes
-        auto ptrComponents = parser.Root().Direct("Component");
-        if (!ptrComponents || !ptrComponents->Cast<toml_parser::CArray>())
+        auto ptrClasses = parser.Root().Direct("Class");
+        if (!ptrClasses || !ptrClasses->Cast<toml_parser::CArray>())
         {
             SDV_LOG_ERROR("Error opening SDV module: ", rpathModule.generic_u8string(), " error: no components available");
             Unload(true);
             return false;
         }
-        for (std::uint32_t uiIndex = 0; uiIndex < ptrComponents->Cast<toml_parser::CArray>()->GetCount(); uiIndex++)
+        for (std::uint32_t uiIndex = 0; uiIndex < ptrClasses->Cast<toml_parser::CArray>()->GetCount(); uiIndex++)
         {
             // Fill in the class info.
-            sdv::SClassInfo sInfo{};
-            auto ptrComponent = ptrComponents->Cast<toml_parser::CArray>()->Get(uiIndex);
-            if (!ptrComponent) continue;
-            auto ptrClassName = ptrComponent->Direct("Class");
+            sdv::SClassInfo sClass{};
+            auto ptrClass = ptrClasses->Cast<toml_parser::CArray>()->Get(uiIndex);
+            if (!ptrClass) continue;
+            auto ptrClassName = ptrClass->Direct("Name");
             if (!ptrClassName) continue;
-            sInfo.ssClassName = static_cast<std::string>(ptrClassName->GetValue());
-            auto ptrAliases = ptrComponent->Direct("Aliases");
+            sClass.ssName = static_cast<std::string>(ptrClassName->GetValue());
+            auto ptrAliases = ptrClass->Direct("Aliases");
             if (ptrAliases)
             {
                 auto ptrAliasesArray = ptrAliases->Cast<toml_parser::CArray>();
@@ -254,28 +269,21 @@ bool CModuleInst::Load(const std::filesystem::path& rpathModule) noexcept
                 {
                     auto ptrClassAlias = ptrAliasesArray->Get(uiAliasIndex);
                     if (ptrClassAlias)
-                        sInfo.seqClassAliases.push_back(static_cast<sdv::u8string>(ptrClassAlias->GetValue()));
+                        sClass.seqClassAliases.push_back(static_cast<sdv::u8string>(ptrClassAlias->GetValue()));
                 }
             }
-            auto ptrDefaultName = ptrComponent->Direct("DefaultName");
-            if (ptrDefaultName) sInfo.ssDefaultObjectName = static_cast<std::string>(ptrDefaultName->GetValue());
-            else sInfo.ssDefaultObjectName = sInfo.ssClassName;
-            auto ptrType = ptrComponent->Direct("Type");
+            auto ptrDefaultName = ptrClass->Direct("DefaultName");
+            if (ptrDefaultName) sClass.ssDefaultObjectName = static_cast<std::string>(ptrDefaultName->GetValue());
+            else sClass.ssDefaultObjectName = sClass.ssName;
+            auto ptrType = ptrClass->Direct("Type");
             if (!ptrType) continue;
-            std::string ssType = static_cast<std::string>(ptrType->GetValue());
-            if (ssType == "System") sInfo.eType = sdv::EObjectType::SystemObject;
-            else if (ssType == "Device") sInfo.eType = sdv::EObjectType::Device;
-            else if (ssType == "BasicService") sInfo.eType = sdv::EObjectType::BasicService;
-            else if (ssType == "ComplexService") sInfo.eType = sdv::EObjectType::ComplexService;
-            else if (ssType == "App") sInfo.eType = sdv::EObjectType::Application;
-            else if (ssType == "Proxy") sInfo.eType = sdv::EObjectType::Proxy;
-            else if (ssType == "Stub") sInfo.eType = sdv::EObjectType::Stub;
-            else if (ssType == "Utility") sInfo.eType = sdv::EObjectType::Utility;
-            else continue;
-            auto ptrSingleton = ptrComponent->Direct("Singleton");
+            sClass.eType = sdv::String2ObjectType(ptrType->GetValue());
+            if (sClass.eType == sdv::EObjectType::undefined)
+                continue;
+            auto ptrSingleton = ptrClass->Direct("Singleton");
             if (ptrSingleton && static_cast<bool>(ptrSingleton->GetValue()))
-                sInfo.uiFlags = static_cast<uint32_t>(sdv::EObjectFlags::singleton);
-            auto ptrDependencies = ptrComponent->Direct("Dependencies");
+                sClass.uiFlags = static_cast<uint32_t>(sdv::EObjectFlags::singleton);
+            auto ptrDependencies = ptrClass->Direct("Dependencies");
             if (ptrDependencies)
             {
                 auto ptrDependencyArray = ptrDependencies->Cast<toml_parser::CArray>();
@@ -284,11 +292,11 @@ bool CModuleInst::Load(const std::filesystem::path& rpathModule) noexcept
                 {
                     auto ptrDependsOn = ptrDependencyArray->Get(uiDependencyIndex);
                     if (ptrDependsOn)
-                        sInfo.seqDependencies.push_back(static_cast<sdv::u8string>(ptrDependsOn->GetValue()));
+                        sClass.seqDependencies.push_back(static_cast<sdv::u8string>(ptrDependsOn->GetValue()));
                 }
             }
 
-            m_mapClassInfo[sInfo.ssClassName] = sInfo;
+            m_mapClassInfo[sClass.ssName] = sClass;
         }
     }
     catch (const sdv::toml::XTOMLParseException&)

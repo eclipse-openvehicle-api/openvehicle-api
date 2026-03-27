@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors: 
+ *   Erik Verhoeven - initial API and implementation 
+ ********************************************************************************/
+
 #include "macro.h"
 #include "exception.h"
 #include "lexer.h"
@@ -138,7 +151,7 @@ std::string CMacro::Expand(const CIdlCompilerEnvironment& renv, const CToken& rt
     // Circular references to macros within the expanded code are prevented for
     //  - each paramerer separately with the used macro list provided by the function.
     //  - macro expansion result with the used macros from all the parameters and the used macro list provided to the function.
-    // Macros used in the expansion of the paramters and the results are added to the used macro set provided to this function.
+    // Macros used in the expansion of the parameters and the results are added to the used macro set provided to this function.
 
     // Check whether the amount of provided params corresponds to the amount of param definitions.
     if (rvecParams.size() < m_vecParamDefs.size())

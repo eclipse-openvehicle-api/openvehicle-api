@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef DISPATCH_SERVICE_H
 #define DISPATCH_SERVICE_H
 
@@ -28,7 +41,7 @@
 * @brief data dispatch service to read/write and react on signal changes
 */
 class CDispatchService : public sdv::CSdvObject, public sdv::core::ISignalTransmission, public sdv::core::ISignalAccess,
-    public sdv::core::IDispatchTransaction, public sdv::IObjectControl
+    public sdv::core::IDispatchTransaction
 {
 public:
     /**
@@ -41,11 +54,10 @@ public:
         SDV_INTERFACE_ENTRY(sdv::core::ISignalTransmission)
         SDV_INTERFACE_ENTRY(sdv::core::ISignalAccess)
         SDV_INTERFACE_ENTRY(sdv::core::IDispatchTransaction)
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
     END_SDV_INTERFACE_MAP()
 
     // Object declarations
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::SystemObject)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
     DECLARE_OBJECT_CLASS_NAME("DataDispatchService")
     DECLARE_OBJECT_SINGLETON()
     DECLARE_OBJECT_DEPENDENCIES("TaskTimerService")
@@ -145,27 +157,15 @@ public:
     uint64_t GetDirectTransactionID() const;
 
     /**
-     * @brief Initialize the object. Overload of sdv::IObjectControl::Initialize.
-     * @param[in] ssObjectConfig Optional configuration string.
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
      */
-    void Initialize(const sdv::u8string& ssObjectConfig) override;
+    virtual bool OnInitialize() override;
 
     /**
-     * @brief Get the current status of the object. Overload of sdv::IObjectControl::GetStatus.
-     * @return Return the current status of the object.
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
-    sdv::EObjectStatus GetStatus() const override;
-
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
-     */
-    void SetOperationMode(sdv::EOperationMode eMode) override;
-
-    /**
-     * @brief Shutdown called before the object is destroyed. Overload of sdv::IObjectControl::Shutdown.
-     */
-    void Shutdown() override;
+    virtual void OnShutdown() override;
 
     /**
     * @brief Unregister a previously registered signal. This will render all subscriptions and provider connections invalid.
@@ -205,7 +205,6 @@ private:
     mutable std::mutex                              m_mtxSignals;                           ///< Signal object map protection.
     std::map<sdv::u8string, CSignal>                m_mapRxSignals;                         ///< Signal object map.
     std::map<sdv::u8string, CSignal>                m_mapTxSignals;                         ///< Signal object map.
-    sdv::EObjectStatus      m_eObjectStatus = sdv::EObjectStatus::initialization_pending;    ///< Object status.
     std::atomic_uint64_t                            m_uiTransactionCnt = 1ull;              ///< Transaction counter.
     std::mutex                                      m_mtxTransactions;                      ///< List with transactions access.
     std::list<CTransaction>                         m_lstTransactions;                      ///< List with transactions.

@@ -1,3 +1,14 @@
+# /********************************************************************************
+#  Copyright (c) 2025-2026 ZF Friedrichshafen AG
+# 
+#  This program and the accompanying materials are made available under the 
+#  terms of the Apache License Version 2.0 which is available at
+#  https://www.apache.org/licenses/LICENSE-2.0
+# 
+#  SPDX-License-Identifier: Apache-2.0 
+# ********************************************************************************/
+# 
+# 
 ################################## ATTENTION #################################
 # Shell Script to execute the tests on Linux                                 #
 # Adjust the permission with: chmod +x loop_test_runner_linux.sh             #
@@ -19,7 +30,7 @@ TEST_NAME="$1"
 MAX_RUNS="$2"
 
 # Build the full path to the test executable
-TARGET_TEST="../build/tests/bin/$TEST_NAME"
+TARGET_TEST="./bin/$TEST_NAME"
 
 # Check if the test executable exists
 if [ -f "$TARGET_TEST" ]; then

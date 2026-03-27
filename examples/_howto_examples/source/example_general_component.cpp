@@ -23,7 +23,7 @@ public:
 		SDV_INTERFACE_ENTRY(ISayGoodbye)
 	END_SDV_INTERFACE_MAP()
 
-	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::device)
 	DECLARE_OBJECT_CLASS_NAME("Hello_Component")
 
 	/**

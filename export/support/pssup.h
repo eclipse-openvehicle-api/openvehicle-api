@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef SDV_PS_SUPPORT_H
 #define SDV_PS_SUPPORT_H
 
@@ -330,13 +343,12 @@ namespace sdv
 
             // Interface map
             BEGIN_SDV_INTERFACE_MAP()
-                SDV_INTERFACE_CHAIN_BASE(sdv::CSdvObject)
                 SDV_INTERFACE_ENTRY(IMarshallObjectIdent)
                 SDV_INTERFACE_ENTRY(IMarshallLink)
             END_SDV_INTERFACE_MAP()
 
             // Object class type
-            DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Proxy)
+            DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::proxy)
 
             /**
              * @brief Set the identification. Overload of IMarshallObjectIdent::SetIdentification.
@@ -396,13 +408,12 @@ namespace sdv
 
             // Interface map
             BEGIN_SDV_INTERFACE_MAP()
-                SDV_INTERFACE_CHAIN_BASE(sdv::CSdvObject)
                 SDV_INTERFACE_ENTRY(IMarshallObjectIdent)
                 SDV_INTERFACE_ENTRY(IMarshall)
             END_SDV_INTERFACE_MAP()
 
             // Object class type
-            DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Stub)
+            DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::stub)
 
         protected:
             /**

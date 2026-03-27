@@ -1,98 +1,61 @@
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ ********************************************************************************/
+
 #include <iostream>
 #include <chrono>
 #include <support/component_impl.h>
 #include <support/timer.h>
 #include <support/toml.h>
 
-class DemoTimerComponent : public sdv::CSdvObject, public sdv::IObjectControl
+class DemoTimerComponent : public sdv::CSdvObject
 {
   public:
-    BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
-    END_SDV_INTERFACE_MAP()
-
-	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::device)
 	DECLARE_OBJECT_CLASS_NAME("Timer_Example")
 
+    BEGIN_SDV_PARAM_MAP()
+        SDV_PARAM_ENTRY(m_PeriodicValue, "Timer", 10, "ms", "Periodic timer duration.")
+    END_SDV_PARAM_MAP()
+
     /**
-    * @brief initialize function to register, access the task timer interface from platform abstraction.
+    * @brief initialize function to register, access the task timer interface from platform abstraction. Overload of
+    * sdv::CSdvObject::OnInitialize.
     * After initialization 'CreateTimer' function is called to execute the task periodically.
     * @param[in] ssObjectConfig An object configuration is currently not used by this demo component.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
     */
-    virtual void Initialize([[maybe_unused]] const sdv::u8string& ssObjectConfig) override
+    virtual bool OnInitialize() override
     {
-        try
-        {
-            sdv::toml::CTOMLParser config(ssObjectConfig.c_str());
-            sdv::toml::CNode timerNode = config.GetDirect("Timer");
-            if (timerNode.GetType() == sdv::toml::ENodeType::node_integer)
-            {
-                m_PeriodicValue = static_cast<uint32_t>(timerNode.GetValue());
-            }
-        }
-        catch (const sdv::toml::XTOMLParseException& e)
-        {
-            SDV_LOG_ERROR("Parser error: ", e.what());
-
-            m_status = sdv::EObjectStatus::initialization_failure;
-            return;
-        }
-
         m_Timer = sdv::core::CTaskTimer(m_PeriodicValue, [&]() {CustomerExecute(); });
         if (!m_Timer)
         {
             SDV_LOG_ERROR("Tasktimer with ", std::to_string(m_PeriodicValue), " milliseconds could not be created.");
-            m_status = sdv::EObjectStatus::initialization_failure;
-            return;
+            return false;
         }
         else
         {
             SDV_LOG_INFO("Tasktimer created with ", std::to_string(m_PeriodicValue), " milliseconds");
         }
-        m_status = sdv::EObjectStatus::initialized;
+        return true;
     };
 
     /**
-    * @brief Gets the current status of the object
-    * @return EObjectStatus The current status of the object
-    */
-    virtual sdv::EObjectStatus GetStatus() const override
-    {
-        return m_status;
-    };
-
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
-     */
-    void SetOperationMode(/*in*/ sdv::EOperationMode eMode)
-    {
-        switch (eMode)
-        {
-        case sdv::EOperationMode::configuring:
-            if (m_status == sdv::EObjectStatus::running || m_status == sdv::EObjectStatus::initialized)
-                m_status = sdv::EObjectStatus::configuring;
-            break;
-        case sdv::EOperationMode::running:
-            if (m_status == sdv::EObjectStatus::configuring || m_status == sdv::EObjectStatus::initialized)
-                m_status = sdv::EObjectStatus::running;
-            break;
-        default:
-            break;
-        }
-    }
-
-    /**
-    * @brief Shutdown function is to shutdown the execution of periodic task.
+    * @brief Shutdown function is to shutdown the execution of periodic task. Overload of sdv::CSdvObject::OnShutdown.
     * Timer ID of the task is used to shutdown the specific task.
     */
-    virtual void Shutdown() override
+    virtual void OnShutdown() override
     {
         if (m_Timer)
         {
             m_Timer.Reset();
         }
-        m_status = sdv::EObjectStatus::destruction_pending;
     }
 
     /**
@@ -105,7 +68,6 @@ class DemoTimerComponent : public sdv::CSdvObject, public sdv::IObjectControl
 	};
 
   private:
-    std::atomic<sdv::EObjectStatus> m_status = {sdv::EObjectStatus::initialization_pending}; //!< To update the object status when it changes.
     sdv::core::CTaskTimer m_Timer;             ///< timer 
     uint32_t m_PeriodicValue = 10;             ///< periodix in milliseconds
 };

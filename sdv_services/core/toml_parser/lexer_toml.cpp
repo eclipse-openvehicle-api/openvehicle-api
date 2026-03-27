@@ -1,3 +1,17 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Martin Stimpfl - initial API and implementation
+ *   Erik Verhoeven - writing TOML and whitespace preservation
+ ********************************************************************************/
+
 #include "lexer_toml.h"
 #include <interfaces/toml.h>
 #include "exception.h"
@@ -176,7 +190,15 @@ namespace toml_parser
         }
     }
 
-    void CLexer::Reset()
+    void CLexer::Clear()
+    {
+        m_lstTokens.clear();
+        m_itCursor = m_lstTokens.end();
+        while (!m_stackExpectations.empty())
+            m_stackExpectations.pop();
+    }
+
+    void CLexer::ResetCursor()
     {
         m_itCursor = m_lstTokens.begin();
     }
@@ -275,6 +297,54 @@ namespace toml_parser
 
     void CLexer::SmartExtendNodeRange(CNodeTokenRange& rTokenRange) const
     {
+        /*
+        Consider the following TOML code:
+
+        # Out of scope comment
+        
+
+          # Pre comment with spaces before
+        # Pre comment
+        [table]       # Post comment
+        # Post comment without indentation
+
+
+        # Out of scope comment
+
+        # Pre comment
+          var = "1234"  # Post comment
+                        # More post comment with indentation
+          # Pre comment of var2 due to indentation identical or smaller then var2 def indentation
+          var2 = "5678"
+          # Pre comment of var3
+        var3 = 9012     # Post comment of var3
+         # More post comment of var3 (due ot space at the beginning)
+        # Pre comment of var4 due to lesser indentation
+         # Pre comment of var4 due to previous pre comment
+        # Pre comment of var4
+        var4 = 3456
+          # Out of scope comment due to missing post comment at same line as defintion
+
+        var5 = [ 8765,      # Post comment for var5[0] (event behind the comma)
+                 # Pre comment for var[1]
+                 4321 ]     # Post comment for var5
+
+        var6 = 7890     # Post comment of var6
+        # Out of scope comment due to missing indentation
+
+        --------------------------------------------
+        The function uses as input the token range of the definition and extends the definition with comments and whitespace that
+        belong to the definition. Therefore the following rules count:
+         - Pre comments are defined on the lines before if they are covering the complete line and do not have an indentation larger
+           than the indentation of the definition.
+         - Post comments are defined at the same line following the definition.
+         - If a comment with indentation is supplied before the definition, it is a pre-comment if there is no post-comment defined
+           that connects to this comment. Otherwise the comment belongs to the definition before.
+         - If comments follow on the lines directly behind the definition, they are post-comments when the comment has started at
+           the same line as the definition and each comment has an indentation larger than the indentation of the next definition.
+         - The extended range always includes the complete line including the indentation before and the line-break behind.
+        */
+
         // Define an iterator range type.
         using TRange = std::pair<TTokenListIterator, TTokenListIterator>;
 
@@ -285,7 +355,7 @@ namespace toml_parser
         // return A pair containing the begin and one past the end of the line.
         auto fnGetLine = [this](const TTokenListIterator& rit) -> TRange
         {
-            // When the end of the list is reached, there is no more line.
+            // When the end of the list is reached, there are no more tokens in the line.
             if (rit == m_lstTokens.end())
                 return std::make_pair(m_lstTokens.end(), m_lstTokens.end());
 
@@ -390,6 +460,26 @@ namespace toml_parser
                 ++itToken;
             }
             return bComments;
+        };
+
+        // Check a range for a comment at the end (as last token or just before the line break).
+        // remarks No validity check is done for the supplied token iterator.
+        // param[in] rprRange Pair with the start position and one past the end position of a range.
+        // return Returns whether the line contains a post comment.
+        auto fnPostComment = [this](const TRange& rprRange) -> bool
+        {
+            auto itToken = rprRange.second;
+            if (itToken == rprRange.first)
+                return false;
+            --itToken;
+            if (itToken->Category() == ETokenCategory::token_comment)
+                return true;
+            if (itToken->Category() != ETokenCategory::token_syntax_new_line)
+                return false;
+            if (itToken == rprRange.first)
+                return false;
+            --itToken;
+            return itToken->Category() == ETokenCategory::token_comment;
         };
 
         // Check a range for empty line(s) only (ignore whitespace and newlines).
@@ -530,75 +620,127 @@ namespace toml_parser
         // The beginning and the end cannot be the same, except for an empty range.
         if (itTokenBegin == itTokenEnd) return;
 
-        // Determine line boundaries of the current range
+        // Determine whether there is a post comment at all
         auto itTokenBeginLine = itTokenBegin == m_lstTokens.begin() ? itTokenBegin : fnGetLine(itTokenBegin).first;
         auto itTokenEndLine = itTokenEnd;
         --itTokenEndLine;
         itTokenEndLine = fnGetLine(itTokenEndLine).second;
-
-        // Are the comments following the statement?
-        bool bCommentsSameLine = fnCommentsOnly(std::make_pair(itTokenEnd, itTokenEndLine));
+        bool bPostCommentPresent = fnCommentsOnly(std::make_pair(itTokenEnd, itTokenEndLine));
 
         // Is there only whitespace before or after the statement
-        bool bWhitespaceBefore = fnEmptyLine(std::make_pair(itTokenBeginLine, itTokenBegin)) && !bIsParent;
-        bool bWhitespaceAfter = fnEmptyLine(std::make_pair(itTokenEnd, itTokenEndLine));
+        bool bWhitespaceBefore = fnEmptyLine(TRange{itTokenBeginLine, itTokenBegin}) && !bIsParent;
+        bool bWhitespaceAfter  = fnEmptyLine(TRange{itTokenEnd, itTokenEndLine});
 
-        // Get the indentation length of the line (whether there is other comments before or not).
-        size_t nIndentLen = fnGetIndentation(std::make_pair(itTokenBeginLine, itTokenEnd));
+        // Post comments or whitespace until the end of the line definitely belongs to the extended range.
+        if (bPostCommentPresent || bWhitespaceAfter) itTokenEnd = itTokenEndLine;
 
-        // Extend the range to include the beginning of the line and the end of the line.
-        TRange prExtended = std::make_pair(bWhitespaceBefore ? itTokenBeginLine : itTokenBegin,
-            (bCommentsSameLine || bWhitespaceAfter) ? itTokenEndLine : itTokenEnd);
+        // Get the indentation length of the definition.
+        size_t nDefIndent = fnGetIndentation(std::make_pair(itTokenBeginLine, itTokenEnd));
 
-        // Deal with whitespace and optionally comments before
-        TRange prLine = prExtended;
-        bool bEmptyLineBefore = false; 
-        if (bWhitespaceBefore)
+        // Classify the lines
+        struct SCommentLine
         {
-            // Check for comments preceeding the range. If previous lines are having comments only (and optionally whitespace), and
-            // the indentation is identical or less than the indentation of the range, the comment belongs to the range.
-            while (fnGetPrevLine(prLine) && fnCommentsOnly(prLine) && fnGetIndentation(prLine) <= nIndentLen)
-                prExtended.first = prLine.first;
+            TRange tLine;
+            size_t nIndent;
+        };
+        std::list<SCommentLine> lstLinesBefore, lstLinesBehind;
 
-            // Check whether there is an empty line before the range or the range starts at the first token in the list.
-            bEmptyLineBefore = prLine.first != prExtended.first ? fnEmptyLine(prLine) : prLine.first == m_lstTokens.begin();
-        }
-
-        // Deal with whitespace and optionally comments following
-        if (bWhitespaceAfter)
+        // Classify the lines before if the definition doesn't have other definition parts before at the same line.
+        TRange tLine = {itTokenBeginLine, itTokenEndLine};
+        bool bIncludeAllBefore = false;
+        while (bWhitespaceBefore && tLine.first != m_lstTokens.begin())
         {
-            // Check for comments following the range. But only when there are comments at the same line and the indentation of the
-            // next line is larger than the range indentation or there is an empty line following.
-            TRange prPotential = prExtended;
-            bool bUsePotential = false;
-            prLine = prExtended;
-            while (bCommentsSameLine && fnGetNextLine(prLine) && fnCommentsOnly(prLine))
+            if (!fnGetPrevLine(tLine))
             {
-                if (bUsePotential || fnGetIndentation(prLine) > nIndentLen)
-                {
-                    bUsePotential = true;
-                    prPotential.second = prLine.second;
-                }
-                else
-                    prExtended.second = prLine.second;
+                bIncludeAllBefore = true;
+                break;
             }
-
-            // Check whether there is an empty line following the range or the range ends at the end of the list.
-            bool bEmptyLineBeyond = prLine.second == m_lstTokens.end() ? true : fnEmptyLine(prLine);
-
-            // If an empty line is following and a potential extension was detected, extend the range
-            if (bEmptyLineBeyond && bUsePotential)
-                prExtended.second = prPotential.second;
-
-            // If there is an empty line before, include any empty lines until the next token or the end of the list.
-            while (bEmptyLineBefore && bEmptyLineBeyond && fnGetNextLine(prLine) && fnEmptyLine(prLine))
-                prExtended.second = prLine.second;
+            if (fnEmptyLine(tLine))
+            {
+                bIncludeAllBefore = true;
+                break;
+            }
+            if (!fnCommentsOnly(tLine))
+            {
+                // Check for a post comment
+                bIncludeAllBefore = !fnPostComment(tLine);
+                break;
+            }
+            lstLinesBefore.emplace_front(SCommentLine{tLine, fnGetIndentation(tLine)});
         }
 
-        rTokenRange.ExtendedNode(CTokenRange(fnToken(prExtended.first), fnToken(prExtended.second)));
+        // Classify the lines behind (when there is a post comment or only whitespace following).
+        size_t nNextStatementIndent = 0;
+        tLine = {itTokenBeginLine, itTokenEndLine};
+        bool bIncludeAllBehind = false;
+        while ((bPostCommentPresent || bWhitespaceAfter) && tLine.second != m_lstTokens.end())
+        {
+            if (!fnGetNextLine(tLine))
+            {
+                bIncludeAllBehind = true;
+                break;
+            }
+            if (fnEmptyLine(tLine))
+            {
+                // Note: one empty line still belongs to the extended range.
+                lstLinesBehind.emplace_back(SCommentLine{tLine, 0});
+                bIncludeAllBehind = true;
+                break;
+            }
+            size_t nIndent = fnGetIndentation(tLine);
+            if (!fnCommentsOnly(tLine))
+            {
+                nNextStatementIndent = nIndent;
+                break;
+            }
+            lstLinesBehind.emplace_back(SCommentLine{tLine, fnGetIndentation(tLine)});
+        }
+
+        TRange tExtended{itTokenBegin, itTokenEnd};
+        if (!lstLinesBefore.empty())
+        {
+            // Include all comments before, or only the comments with an indentation identical or smaller than the def indentation.
+            if (bIncludeAllBefore)
+                tExtended.first = lstLinesBefore.front().tLine.first;
+            else
+            {
+                auto it = lstLinesBefore.crbegin();
+                while (it != lstLinesBefore.crend())
+                {
+                    // NOTE: Use of SCommentLine structure here, prevents unusedStruct warning of cppcheck
+                    const SCommentLine& rsLine = *it;
+                    if (rsLine.nIndent > nDefIndent)
+                        break;
+                    tExtended.first = rsLine.tLine.first;
+                    ++it;
+                }
+            }
+        }
+        if (!lstLinesBehind.empty())
+        {
+            // Include all comments behind, or only the comments with an indentation larger than the indentation of the next def.
+            // The latter only when there is a post-comment.
+            if (bIncludeAllBehind)
+                tExtended.second = lstLinesBehind.back().tLine.second;
+            else if (bPostCommentPresent)
+            {
+                auto it = lstLinesBehind.cbegin();
+                while (it != lstLinesBehind.cend())
+                {
+                    // NOTE: Use of SCommentLine structure here, prevents unusedStruct warning of cppcheck
+                    const SCommentLine& rsLine = *it;
+                    if (rsLine.nIndent <= nNextStatementIndent)
+                        break;
+                    tExtended.second = rsLine.tLine.second;
+                    ++it;
+                }
+            }
+        }
+
+        rTokenRange.ExtendedNode(CTokenRange(fnToken(tExtended.first), fnToken(tExtended.second)));
 
         // Determine if there are any more nodes before the end of the list.
-        auto itFinal = prExtended.second;
+        auto itFinal = tExtended.second;
         bool bNextNodeFound = false;
         while (itFinal != m_lstTokens.end() && !bNextNodeFound)
         {
@@ -1161,7 +1303,7 @@ namespace toml_parser
             {
                 token = CToken(ETokenCategory::token_syntax_array_close);
                 m_stackExpectations.pop();
-                if (m_stackExpectations.top() == EExpectation::expect_value_once)
+                if (!m_stackExpectations.empty() &&  m_stackExpectations.top() == EExpectation::expect_value_once)
                     m_stackExpectations.pop();
             }
             else
@@ -1184,7 +1326,7 @@ namespace toml_parser
             rReader.Consume();
             token = CToken(ETokenCategory::token_syntax_inline_table_close);
             m_stackExpectations.pop();
-            if (m_stackExpectations.top() == EExpectation::expect_value_once)
+            if (!m_stackExpectations.empty() && m_stackExpectations.top() == EExpectation::expect_value_once)
                 m_stackExpectations.pop();
             break;
         case ',':

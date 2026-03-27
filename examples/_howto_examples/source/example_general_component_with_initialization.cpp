@@ -5,7 +5,6 @@
 
 class CTestComponentWithInitialization
 	: public sdv::CSdvObject
-    , public sdv::IObjectControl
 	, public ISayHello
 	, public ISayGoodbye
 {
@@ -22,63 +21,30 @@ public:
 	BEGIN_SDV_INTERFACE_MAP()
 		SDV_INTERFACE_ENTRY(ISayHello)
 		SDV_INTERFACE_ENTRY(ISayGoodbye)
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
 	END_SDV_INTERFACE_MAP()
 
-	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::device)
 	DECLARE_OBJECT_CLASS_NAME("Hello_Component_With_Initialization")
 
-    /**
-     * @brief Initialize the object. Overload of sdv::IObjectControl::Initialize.
-     * @param[in] ssObjectConfig Optional configuration string.
-     */
-    inline virtual void Initialize(const sdv::u8string& ssObjectConfig) override
-    {
-        if (!ParseConfigurationString(ssObjectConfig))
-        {
-            m_status = sdv::EObjectStatus::initialization_failure;
-            return;
-        }
-        m_status = sdv::EObjectStatus::initialized;
-    };
+    // Parameter map
+    BEGIN_SDV_PARAM_MAP()
+        SDV_PARAM_ENTRY(m_Number, "number", -1, "", "A number")
+    END_SDV_PARAM_MAP()
 
     /**
-    * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-    * @param[in] eMode The operation mode, the component should run in.
-    */
-    void SetOperationMode(/*in*/ sdv::EOperationMode eMode) override
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
+     */
+    virtual bool OnInitialize() override
     {
-        switch (eMode)
-        {
-        case sdv::EOperationMode::configuring:
-            if (m_status == sdv::EObjectStatus::running || m_status == sdv::EObjectStatus::initialized)
-                m_status = sdv::EObjectStatus::configuring;
-            break;
-        case sdv::EOperationMode::running:
-            if (m_status == sdv::EObjectStatus::configuring || m_status == sdv::EObjectStatus::initialized)
-                m_status = sdv::EObjectStatus::running;
-            break;
-        default:
-            break;
-        }
+        return true;
     }
 
     /**
-     * @brief Get the current status of the object. Overload of sdv::IObjectControl::GetStatus.
-     * @return Return the current status of the object.
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
-    inline virtual sdv::EObjectStatus GetStatus() const override
-    {
-        return m_status;
-    };
-
-    /**
-     * @brief Shutdown called before the object is destroyed. Overload of sdv::IObjectControl::Shutdown.
-     */
-    inline virtual void Shutdown() override
-    {
-        m_status = sdv::EObjectStatus::destruction_pending;
-    }
+    virtual void OnShutdown() override
+    {}
 
     /**
     * @brief Show messages, implements the function of IShowExample
@@ -97,31 +63,7 @@ public:
 	}
 
 private:
-    bool ParseConfigurationString(const sdv::u8string& objectConfig)
-    {
-        try
-        {
-            sdv::toml::CTOMLParser config(objectConfig.c_str());
-
-            // get any settings from the configuration
-            auto nodeNumber = config.GetDirect("number");
-            if (nodeNumber.GetType() == sdv::toml::ENodeType::node_integer)
-            {
-                m_Number = static_cast<int32_t>(nodeNumber.GetValue());
-            }
-        }
-        catch (const sdv::toml::XTOMLParseException& e)
-        {
-            std::cout << "Configuration could not be read:" << e.what() << std::endl;
-            return false;
-        }
-
-        std::cout << "Initialization number: " << std::to_string(m_Number) << std::endl;
-        return true;
-    }
-
     int32_t m_Number = -1;
-    std::atomic<sdv::EObjectStatus> m_status = { sdv::EObjectStatus::initialization_pending }; //!< To update the object status when it changes.
 };
 
 DEFINE_SDV_OBJECT(CTestComponentWithInitialization)

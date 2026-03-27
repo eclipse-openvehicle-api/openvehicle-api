@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include <gtest/gtest.h>
 #include <interfaces/repository.h>
 #include <support/local_service_access.h>
@@ -29,38 +42,43 @@ public:
         SDV_INTERFACE_ENTRY(sdv::IObjectControl)
     END_SDV_INTERFACE_MAP()
 
-    virtual void Initialize([[maybe_unused]] const sdv::u8string& ssObjectConfig)
+    virtual void Initialize([[maybe_unused]] const sdv::u8string& ssObjectConfig) override
     {
         FAIL() << "Error: Initialize should not be called by Repo Service!";
-//        m_eObjectStatus = sdv::EObjectStatus::initialization_failure;
+//        m_eObjectState = sdv::EObjectState::initialization_failure;
     }
 
-    virtual sdv::EObjectStatus GetStatus() const
+    virtual sdv::EObjectState GetObjectState() const override
     {
-        return m_eObjectStatus;
+        return m_eObjectState;
     }
 
-    void SetOperationMode(sdv::EOperationMode eMode)
+    virtual void SetOperationMode(sdv::EOperationMode eMode) override
     {
         switch (eMode)
         {
         case sdv::EOperationMode::configuring:
-            m_eObjectStatus = sdv::EObjectStatus::configuring;
+            m_eObjectState = sdv::EObjectState::configuring;
             break;
         case sdv::EOperationMode::running:
-            m_eObjectStatus = sdv::EObjectStatus::running;
+            m_eObjectState = sdv::EObjectState::running;
             break;
         default:
             break;
         }
     }
 
-    virtual void Shutdown()
+    virtual sdv::u8string GetObjectConfig() const override
     {
-        m_eObjectStatus = sdv::EObjectStatus::destruction_pending;
+        return {};
     }
 
-    sdv::EObjectStatus m_eObjectStatus = sdv::EObjectStatus::initialization_pending;
+    virtual void Shutdown() override
+    {
+        m_eObjectState = sdv::EObjectState::destruction_pending;
+    }
+
+    sdv::EObjectState m_eObjectState = sdv::EObjectState::initialization_pending;
 };
 
 TEST(RepositoryTest, LoadNonexistentModule)
@@ -366,7 +384,7 @@ Mode = "Essential"
 
     ASSERT_TRUE(pModuleControl->Load((GetExecDirectory() / "ComponentTest_Repository_test_module.sdv").generic_u8string()));
 
-    bool bRes = pRepositoryControl->CreateObject("TestObject_CreateChain", nullptr, "ChainedObject");
+    bool bRes = pRepositoryControl->CreateObject("TestObject_CreateChain", nullptr, "chained_object = \"ChainedObject\"");
     EXPECT_TRUE(bRes);
     EXPECT_NE(nullptr, pObjectAccess->GetObject("TestObject_CreateChain"));
     EXPECT_NE(nullptr, pObjectAccess->GetObject("ChainedObject"));
@@ -404,7 +422,8 @@ Mode = "Essential"
             for (uint32_t i = 0; i < LoopCount; ++i)
             {
                 std::string count = std::to_string(i);
-                bool bRes = pRepositoryControl->CreateObject("TestObject_CreateChain", "Bar_" + count, "BarFoo_" + count);
+                bool bRes = pRepositoryControl->CreateObject("TestObject_CreateChain", "Bar_" + count,
+                    "chained_object = \"BarFoo_" + count + "\"");
                 EXPECT_TRUE(bRes);
                 EXPECT_NE(nullptr, pObjectAccess->GetObject("BarFoo_" + count));
             }
@@ -413,7 +432,8 @@ Mode = "Essential"
     for (uint32_t i = 0; i < LoopCount; ++i)
     {
         std::string count = std::to_string(i);
-        bool bRes = pRepositoryControl->CreateObject("TestObject_CreateChain", "Foo_" + count, "FooBar_" + count);
+        bool bRes =
+            pRepositoryControl->CreateObject("TestObject_CreateChain", "Foo_" + count, "chained_object =\"FooBar_" + count + "\"");
         EXPECT_TRUE(bRes);
         EXPECT_NE(nullptr, pObjectAccess->GetObject("FooBar_" + count));
     }
@@ -460,7 +480,8 @@ Mode = "Essential"
             {
                 std::string count = std::to_string(i);
                 //locks using TestLockService during construction
-                bRes = pRepositoryControl->CreateObject("TestObject_CreateChainLock", "Bar_" + count, "BarFoo_" + count);
+                bRes = pRepositoryControl->CreateObject("TestObject_CreateChainLock", "Bar_" + count,
+                    "chained_object = \"BarFoo_" + count + "\"");
                 EXPECT_TRUE(bRes);
                 EXPECT_NE(nullptr, pObjectAccess->GetObject("BarFoo_" + count));
             }
@@ -470,7 +491,8 @@ Mode = "Essential"
     {
         std::string count = std::to_string(i);
         pLock->Lock();
-        bRes = pRepositoryControl->CreateObject("TestObject_CreateChain", "Foo_" + count, "FooBar_" + count);
+        bRes = pRepositoryControl->CreateObject("TestObject_CreateChain", "Foo_" + count,
+            "chained_object = \"FooBar_" + count + "\"");
         EXPECT_TRUE(bRes);
         EXPECT_NE(nullptr, pObjectAccess->GetObject("FooBar_" + count));
         pLock->Unlock();
@@ -518,7 +540,8 @@ Mode = "Essential"
             {
                 std::string count = std::to_string(i);
                 //locks using TestLockService during construction in a seperate thread
-                bRes = pRepositoryControl->CreateObject("TestObject_CreateChainLockThread", "Bar_" + count, "BarFoo_" + count);
+                bRes = pRepositoryControl->CreateObject("TestObject_CreateChainLockThread", "Bar_" + count,
+                    "chained_object = \"BarFoo_" + count + "\"");
                 EXPECT_TRUE(bRes);
                 EXPECT_NE(nullptr, pObjectAccess->GetObject("BarFoo_" + count));
             }
@@ -528,7 +551,8 @@ Mode = "Essential"
     {
         std::string count = std::to_string(i);
         pLock->Lock();
-        bRes = pRepositoryControl->CreateObject("TestObject_CreateChain", "Foo_" + count, "FooBar_" + count);
+        bRes = pRepositoryControl->CreateObject("TestObject_CreateChain", "Foo_" + count,
+            "chained_object = \"FooBar_" + count + "\"");
         EXPECT_TRUE(bRes);
         EXPECT_NE(nullptr, pObjectAccess->GetObject("FooBar_" + count));
         pLock->Unlock();
@@ -593,9 +617,7 @@ Mode = "Essential"
     control.Shutdown();
 }
 
-// TODO EVE: Disabled until the implementation of configuration installation is finished. See
-// https://dev.azure.com/SW4ZF/AZP-431_DivDI_Vehicle_API/_workitems/edit/705891
-TEST(RepositoryTest, DISABLED_MainApplication_GetInstalledAndLoadedComponent)
+TEST(RepositoryTest, MainApplication_GetInstalledAndLoadedComponent)
 {
     // Start the app control. The application automatically loads the installation manifests and the application configuration,
     // starting automatically the objects.
@@ -618,9 +640,7 @@ Instance = 2005
     control.Shutdown();
 }
 
-// TODO EVE: Disabled until the implementation of configuration installation is finished. See
-// https://dev.azure.com/SW4ZF/AZP-431_DivDI_Vehicle_API/_workitems/edit/705891
-TEST(RepositoryTest, DISABLED_MainApplication_GetInstalledComponent)
+TEST(RepositoryTest, MainApplication_GetInstalledComponent)
 {
     // Start the app control. The application automatically loads the installation manifests, but since there is no application
     // configuration, it doesn't load the objects.

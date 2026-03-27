@@ -1,0 +1,177 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 Contributors to the Eclipse Foundation
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
+#include "core.idl"
+
+/**
+ * @brief Software Defined Vehicle framework.
+ */
+module sdv
+{
+    /**
+     * @brief Parameter bitmask flags.
+     */
+    enum EParamFlags : uint32
+    {
+        mask            = 0xff,     ///< Flags for the setting the parameter attributes
+        read_write      = 0x00,     ///< Read/write access to the parameter.
+        read_only       = 0x01,     ///< The parameter is read only.
+        temporary       = 0x20,     ///< The parameter is marked as a temporary parameter.
+        
+        state_mask      = 0xff00,   ///< Flags for the parameter states
+        dirty           = 0x0100,   ///< Parameter has changed.
+        locked          = 0x0400,   ///< When set, the parameter is not writable.
+    };
+    
+    /**
+     * @brief Parameter type.
+     */
+    enum EParamType
+    {
+        boolean_param,          ///< The parameter is a boolean.
+        number_param,           ///< The parameter is a number (integral or floating point).
+        string_param,           ///< The parameter is a string.
+        enum_param,             ///< The parameter is an enumeration value.
+        bitmask_param           ///< The parameter is a bitmask value.
+    };
+    
+    /**
+     * @brief Specific number information.
+     */
+    struct SNumberInfo
+    {
+        any     anyLowerLimit;          ///< Optional lower limit value.
+        boolean bIncludeLowerLinit;     ///< When set, low <= val, otherwise low < val.
+        any     anyUpperLimit;          ///< Optional upper limit value.
+        boolean bIncludeUpperLimit;     ///< When set, val >= upper, otherwise val > upper.
+    };
+    
+    /**
+     * @brief Specific string information.
+     */
+    struct SStringInfo
+    {
+        u8string ssPattern;     ///< Regular expression pattern describing the allowed pattern.
+    };
+    
+    /**
+     * @brief Specific label information for enumerations and bitmasks.
+     */
+    struct SLabelInfo
+    {
+        /**
+         * @brief Each label is described by a value and label text.
+         */
+        struct SLabel
+        {
+            any         anyValue;           ///< Label value (must be an integral number)
+            u8string    ssLabel;            ///< Label text
+        };
+        sequence<SLabel> seqLabels;         ///< Sequence of element labels
+    };
+    
+    /**
+     * @brief Structure to represent parameter information.
+     */
+    struct SParamInfo
+    {
+        EParamType  eType;          ///< Parameter type
+        uint32      uiFlags;        ///< Parameter flags containing one or more values of the EParamFlags enumeration.
+        u8string    ssName;         ///< The name of the parameter.
+        u8string    ssGroup;        ///< Optional group name for this parameter. Can contain sub-groups separated by a dot.
+        u8string    ssUnit;         ///< Optional parameter unit.
+        u8string    ssDescription;  ///< Optional parameter description.
+        any         anyDefaultVal;  ///< Default value
+    
+        /// Union holding extended parameter information.
+        union switch (eType)
+        {
+        case EParamType::number_param:
+            SNumberInfo     sNumberInfo;        ///< Additional information for number types
+        case EParamType::string_param:
+            SStringInfo     sStringInfo;        ///< Additional information for string types.
+        case EParamType::enum_param:
+            SLabelInfo      sEnumInfo;          ///< Additional information for enumeration types.
+        case EParamType::bitmask_param:
+            SLabelInfo      sBitmaskInfo;       ///< Additional information for bitmask types.
+        } uExtInfo;                             ///< Extended parameter information.
+    };
+    
+    /**
+     * @brief Interface to access parameters.
+     */
+    interface IParameters
+    {
+        /**
+         * @brief Return a sequence with parameter paths. Each path is unique and can be used to get and set the parameter value.
+         * @return Sequence containing parameter paths. Parameter paths are composed from group/sub-groups and the parameter name,
+         * separated by a dot.
+         */
+        sequence<u8string> GetParamPaths() const;
+
+        /**
+         * @brief Returns the parameter value.
+         * @param[in] ssPath Path of the parameter. The parameter path is composed from group/sub-groups and the parameter name,
+         * separated by a dot.
+         * @return Returns the parameter value. Returns an 'empty' parameter value when not successful or the parameter is not set.
+         */
+        any GetParam(in u8string ssPath) const;
+    
+        /**
+         * @brief Set the parameter value.
+         * @param[in] ssPath Path of the parameter. The parameter path is composed from group/sub-groups and the parameter name,
+         * separated by a dot.
+         * @param[in] anyValue Reference to the parameter value to set.
+         * @return Returns 'true' on success or 'false' when parameter could not be set (e.g. the parameter is read-only) or the
+         * index is larger than the amount of parameters being available.
+         */
+        boolean SetParam(in u8string ssPath, in any anyValue);
+    
+        /**
+         * @brief Get parameter information.
+         * @param[in] ssPath Path of the parameter. The parameter path is composed from group/sub-groups and the parameter name,
+         * separated by a dot.
+         * @return Return the parameter information for the requested parameter or an empty structure when no parameter information
+         * is available or the parameter is not available.
+         */
+        SParamInfo GetParamInfo(in u8string ssPath) const;
+    
+        /**
+         * @brief Is the parameter dirty (was it changed)? Checks the parameter dirty flag.
+         * @param[in] ssPath Path of the parameter. The parameter path is composed from group/sub-groups and the parameter name,
+         * separated by a dot.
+         * @return Returns whether the parameter was changed either by an explicit call to the SetParam function or internally by
+         * the
+         * object itself.
+         */
+        boolean IsParamDirty(in u8string ssPath) const;
+    
+        /**
+         * @brief Reset the dirty flag for the parameter.
+         * @param[in] ssPath Path of the parameter. The parameter path is composed from group/sub-groups and the parameter name,
+         * separated by a dot.
+         */
+        void ResetParamDirtyFlag(in u8string ssPath);
+
+        /**
+         * @brief Is there at least one parameter with a dirty flag?
+         * @return Returns whether at least one parameter has its dirty flag enabled.
+         */
+        boolean IsParamMapDirty() const;
+
+        /**
+         * @brief Reset the dirty flag for all parameters.
+         */
+        void ResetParamMapDirtyFlags();
+    };
+}; // sdv

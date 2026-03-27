@@ -1,27 +1,32 @@
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ ********************************************************************************/
+
 #include <iostream>
 #include <support/component_impl.h>
 #include <support/toml.h>
 
-class DemoConfigurationComponent : public sdv::CSdvObject, public sdv::IObjectControl
+class DemoConfigurationComponent : public sdv::CSdvObject
 {
-  public:
-    BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
-    END_SDV_INTERFACE_MAP()
-
-	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::Device)
+public:
+	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::device)
 	DECLARE_OBJECT_CLASS_NAME("Configuration_Example")
 
     /**
-    * @brief initialize function to register, access the task timer interface from platform abstraction.
-    * After initialization 'CreateTimer' function is called to execute the task periodically.
-    * @param[in] rssObjectConfig An object configuration is currently not used by this demo component.
-    */
-    virtual void Initialize([[maybe_unused]] const sdv::u8string& rssObjectConfig) override
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
+     */
+    virtual bool OnInitialize() override
     {
         try
         {
-            sdv::toml::CTOMLParser config(rssObjectConfig.c_str());
+            sdv::toml::CTOMLParser config(GetObjectConfig());
 
             sdv::toml::CNode messageNode = config.GetDirect("Message");
             if (messageNode.GetType() == sdv::toml::ENodeType::node_string)
@@ -89,53 +94,19 @@ class DemoConfigurationComponent : public sdv::CSdvObject, public sdv::IObjectCo
         {
             SDV_LOG_ERROR("Parsing error: ", e.what());
 
-            m_status = sdv::EObjectStatus::initialization_failure;
-            return;
+            return false;
         }
 
         PrintAllVariables();
 
-        m_status = sdv::EObjectStatus::initialized;
+        return true;
     };
 
     /**
-    * @brief Gets the current status of the object
-    * @return EObjectStatus The current status of the object
-    */
-    virtual sdv::EObjectStatus GetStatus() const override
-    {
-        return m_status;
-    };
-
-    /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
-    void SetOperationMode(/*in*/ sdv::EOperationMode eMode)
-    {
-        switch (eMode)
-        {
-        case sdv::EOperationMode::configuring:
-            if (m_status == sdv::EObjectStatus::running || m_status == sdv::EObjectStatus::initialized)
-                m_status = sdv::EObjectStatus::configuring;
-            break;
-        case sdv::EOperationMode::running:
-            if (m_status == sdv::EObjectStatus::configuring || m_status == sdv::EObjectStatus::initialized)
-                m_status = sdv::EObjectStatus::running;
-            break;
-        default:
-            break;
-        }
-    }
-
-    /**
-    * @brief Shutdown function is to shutdown the execution of periodic task.
-    * Timer ID of the task is used to shutdown the specific task.
-    */
-    virtual void Shutdown() override
-    {
-        m_status = sdv::EObjectStatus::destruction_pending;
-    }
+    virtual void OnShutdown() override
+    {}
 
     /**
     * @brief Print all global variables to console
@@ -160,8 +131,6 @@ class DemoConfigurationComponent : public sdv::CSdvObject, public sdv::IObjectCo
     }
 
   private:
-    std::atomic<sdv::EObjectStatus> m_status = {sdv::EObjectStatus::initialization_pending}; //!< To update the object status when it changes.
-
     std::string           m_Message { "" };
     std::string           m_JSONConfig { "" };
     int32_t               m_Id { -1 };

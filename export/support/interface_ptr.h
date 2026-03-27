@@ -1,13 +1,16 @@
-/**
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
  *
- * @file      interface_ptr.h
- * @brief     This file provides all necessary definitions to use and implement interface maps.
- * @version   0.1
- * @date      2022.11.14
- * @author    Thomas.pfleiderer@zf.com
- * @copyright Copyright ZF Friedrichshaven AG (c) 2022
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
  *
- */
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef INTERFACE_IMPL_H
 #define INTERFACE_IMPL_H
 
@@ -79,9 +82,23 @@ namespace sdv
             int m_uiUseSection = -1;        ///< The number of the section to process the interface table entries for.
             int m_uiSection    = -1;        ///< The number of the section the interface table entries belong to.
         };
+
+        /**
+         * @brief Helper struct for type reporting during static_assert.
+         * @tparam T Type to report for the always_false struct.
+         */
+        template <typename T>
+        struct always_false : std::false_type
+        {};
+
+        /**
+         * @brief Variable for the always_false struct.
+         * @tparam T Type to report for the always_false struct.
+         */
+        template <typename T>
+        constexpr bool always_false_v = always_false<T>::value;
     }
 }
-
 
 /**
  * @brief Interface map containing the supported interface definitions.
@@ -171,17 +188,16 @@ namespace sdv
 
 /**
  * @brief Conditional check; when true continue the checking for interfaces.
- * @param condition The condition to be checked. When 'false' processing will be stopped; otherwise processing
- *  continues. Example: @code SDV_INTERFACE_CHECK_CONDITION(CheckFunc()) @endcode
+ * @param condition The condition to be checked. When 'false' processing will be stopped; otherwise processing continues.
+ * Example: @code SDV_INTERFACE_CHECK_CONDITION(CheckFunc()) @endcode
  */
 #define SDV_INTERFACE_CHECK_CONDITION(condition)                                                                                   \
-            if (!(condition))                                                                                                      \
-                return nullptr;
+            if (!(condition)) return nullptr;
 
 /**
  * @brief Use the condition, to select a section to process.
  * @param condition Condition to be checked. When 'true' processing will be limited to the section.
- * Example: @code SDV_INTERFACE_PROCESS_SECTION(CheckFunc(), 1) @endcode
+ * Example: @code SDV_INTERFACE_SET_SECTION_CONDITION(CheckFunc(), 1) @endcode
  * @param section_number The section to be processed when the condition is true.
  */
 #define SDV_INTERFACE_SET_SECTION_CONDITION(condition, section_number)                                                             \
@@ -312,6 +328,26 @@ namespace sdv
         }
 
         /**
+         * @brief Compare the interface pointer with an interface.
+         * @param[in] pInterface Pointer to the interface.
+         * @return Returns whether the interfaces are equal.
+         */
+        bool operator==(const IInterfaceAccess* pInterface) const
+        {
+            return static_cast<const IInterfaceAccess*>(m_pInterface) == pInterface;
+        }
+
+        /**
+         * @brief Compare the interface pointer with an interface.
+         * @param[in] pInterface Pointer to the interface.
+         * @return Returns whether the interfaces are not equal.
+         */
+        bool operator!=(const IInterfaceAccess* pInterface) const
+        {
+            return static_cast<const IInterfaceAccess*>(m_pInterface) == pInterface;
+        }
+
+        /**
          * @brief Get a pointer to the interface
          */
         operator IInterfaceAccess*()
@@ -392,7 +428,7 @@ namespace sdv
         return rtMember.GetInterface(idInterface);
     }
 
-    // Warning of cppchgeck for a potential const variable cannot be applied due to the non-const nature of interfaces. Suppress
+    // Warning of cppcheck for a potential const variable cannot be applied due to the non-const nature of interfaces. Suppress
     // warning.
     // cppcheck-suppress constParameterReference
     /**

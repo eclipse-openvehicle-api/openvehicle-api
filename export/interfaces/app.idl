@@ -1,18 +1,22 @@
-/**
-* @file      app.idl
-* @brief     This file provides the core interface definitions SDV framework administration.
-* @version   0.1
-* @date      2024.04.11
-* @author    erik.verhoeven@zf.com
-* @copyright Copyright ZF Friedrichshaven AG (c) 2023-2025
-*/
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ *
+ * Contributors: 
+ *   Erik Verhoeven - initial API and implementation 
+ ********************************************************************************/
 
 #include "core.idl"
 #include "toml.idl"
 
 /**
-* @brief Software Defined Vehicle framework.
-*/
+ * @brief Software Defined Vehicle framework.
+ */
 module sdv
 {
     /**

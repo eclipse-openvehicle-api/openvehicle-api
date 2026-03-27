@@ -1,3 +1,13 @@
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ ********************************************************************************/
+ 
 #ifndef COMPLEX_SERVICE_EXAMPLE_H
 #define COMPLEX_SERVICE_EXAMPLE_H
 
@@ -35,7 +45,6 @@
  */
 class CAutoHeadlightService :
     public sdv::CSdvObject,
-    public sdv::IObjectControl,
     public IAutoheadlightService,
     public vss::Vehicle::Position::CurrentLatitudeService::IVSS_SetCurrentLatitude_Event,
     public vss::Vehicle::Position::CurrentLongitudeService::IVSS_SetCurrentLongitude_Event
@@ -53,39 +62,35 @@ public:
 
     // Interface map
     BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY(sdv::IObjectControl)
         SDV_INTERFACE_ENTRY(vss::Vehicle::Position::CurrentLatitudeService::IVSS_SetCurrentLatitude_Event)
         SDV_INTERFACE_ENTRY(vss::Vehicle::Position::CurrentLongitudeService::IVSS_SetCurrentLongitude_Event)
         SDV_INTERFACE_ENTRY(IAutoheadlightService)
     END_SDV_INTERFACE_MAP()
 
     // Object declarations
-    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::ComplexService)
+    DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::vehicle_function)
     DECLARE_OBJECT_CLASS_NAME("Auto Headlight Service")
     DECLARE_OBJECT_SINGLETON()
 
-    /**
-     * @brief Initialize the object. Overload of sdv::IObjectControl::Initialize.
-     * @param[in] ssObjectConfig Optional configuration string.
-     */
-    void Initialize(const sdv::u8string& ssObjectConfig) override;
+    // Parameter map
+    BEGIN_SDV_PARAM_MAP()
+        SDV_PARAM_ENABLE_LOCKING()
+        SDV_PARAM_ENTRY(m_SGPSBoundingBox.fTunnelMinLat, "tunnel_start_lat", 0.0f, u8"°", "Tunnel Start Latitude")
+        SDV_PARAM_ENTRY(m_SGPSBoundingBox.fTunnelMinLon, "tunnel_start_lon", 0.0f, u8"°", "Tunnel Start Longitude")
+        SDV_PARAM_ENTRY(m_SGPSBoundingBox.fTunnelMaxLat, "tunnel_end_lat", 0.0f, u8"°", "Tunnel End Latitude")
+        SDV_PARAM_ENTRY(m_SGPSBoundingBox.fTunnelMaxLon, "tunnel_end_lon", 0.0f, u8"°", "Tunnel End Longitude")
+    END_SDV_PARAM_MAP()
 
     /**
-     * @brief Get the current status of the object. Overload of sdv::IObjectControl::GetStatus.
-     * @return Return the current status of the object.
+     * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
+     * @return Returns 'true' when the initialization was successful, 'false' when not.
      */
-    sdv::EObjectStatus GetStatus() const override;
+    virtual bool OnInitialize() override;
 
     /**
-     * @brief Set the component operation mode. Overload of sdv::IObjectControl::SetOperationMode.
-     * @param[in] eMode The operation mode, the component should run in.
+     * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
-    void SetOperationMode(sdv::EOperationMode eMode) override;
-
-    /**
-     * @brief Shutdown called before the object is destroyed. Overload of sdv::IObjectControl::Shutdown.
-     */
-    void Shutdown() override;
+    virtual void OnShutdown() override;
 
 private:
 
@@ -129,12 +134,10 @@ private:
      */
     bool LoadGPSBounds(const sdv::u8string& rssObjectConfig);
 
-    sdv::EObjectStatus      m_eStatus = sdv::EObjectStatus::initialization_pending; ///< Current object status
     volatile float          m_fCurrentLatitude = 0.0;       ///< Current Latitude
     volatile float          m_fCurrentLongitude = 0.0;      ///< Current Longitude
     volatile bool           m_bHeadlight = false;           ///< Headlight status
     SGPSBoundBox            m_SGPSBoundingBox;              ///< Tunnel bounding box coordinates
-
 
     ///< Headlight interface.
     vss::Vehicle::Body::Light::Front::LowBeamService::IVSS_SetHeadLightLowBeam* m_pHeadlightSvc = nullptr;

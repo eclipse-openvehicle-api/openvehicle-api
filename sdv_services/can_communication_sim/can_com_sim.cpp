@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "can_com_sim.h"
 #include <support/toml.h>
 #include "../../global/ascformat/ascreader.cpp"
@@ -9,51 +22,30 @@ CCANSimulation::CCANSimulation()
 CCANSimulation::~CCANSimulation()
 {}
 
-void CCANSimulation::Initialize(const sdv::u8string& rssObjectConfig)
+bool CCANSimulation::OnInitialize()
 {
-    try
+    if (m_pathSource.empty() && m_pathTarget.empty())
     {
-        sdv::toml::CTOMLParser config(rssObjectConfig.c_str());
-        auto nodeSource = config.GetDirect("Source");
-        if (nodeSource.GetType() == sdv::toml::ENodeType::node_string)
-            m_pathSource = nodeSource.GetValue();
-        auto nodeTarget = config.GetDirect("Target");
-        if (nodeTarget.GetType() == sdv::toml::ENodeType::node_string)
-            m_pathTarget = nodeTarget.GetValue();
-        if (m_pathSource.empty() && m_pathTarget.empty())
-        {
-            SDV_LOG(sdv::core::ELogSeverity::error,
-                "At least the source or the target ASC files must be specified.");
-            m_eStatus = sdv::EObjectStatus::initialization_failure;
-        }
-        else if (m_pathSource == m_pathTarget)
-        {
-            SDV_LOG(sdv::core::ELogSeverity::error,
-                "Source and target ASC files '" + m_pathSource.generic_u8string() + "' cannot be the same.");
-            m_eStatus = sdv::EObjectStatus::initialization_failure;
-        }
-        else if (std::filesystem::exists(m_pathTarget))
-        {
-            SDV_LOG(sdv::core::ELogSeverity::warning,
-                "Target ASC file '" + m_pathSource.generic_u8string() + "' will be overwritten.");
-        }
-        else if (m_pathSource.empty() && m_pathTarget.empty())
-        {
-            SDV_LOG(sdv::core::ELogSeverity::error, "No ASC file configured for reading or writing.");
-            m_eStatus = sdv::EObjectStatus::initialization_failure;
-        }
+        SDV_LOG(sdv::core::ELogSeverity::error,
+            "At least the source or the target ASC files must be specified.");
+        return false;
     }
-    catch (const sdv::toml::XTOMLParseException& e)
+    else if (m_pathSource == m_pathTarget)
     {
-        SDV_LOG(sdv::core::ELogSeverity::error, "Configuration could not be read: ", e.what());
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
+        SDV_LOG(sdv::core::ELogSeverity::error,
+            "Source and target ASC files '" + m_pathSource.generic_u8string() + "' cannot be the same.");
+        return false;
     }
-    catch (const std::runtime_error& e)
+    else if (std::filesystem::exists(m_pathTarget))
     {
-        SDV_LOG(sdv::core::ELogSeverity::error, "Configuration could not be read: ", e.what());
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
+        SDV_LOG(sdv::core::ELogSeverity::warning,
+            "Target ASC file '" + m_pathSource.generic_u8string() + "' will be overwritten.");
     }
-    if (m_eStatus == sdv::EObjectStatus::initialization_failure) return;
+    else if (m_pathSource.empty() && m_pathTarget.empty())
+    {
+        SDV_LOG(sdv::core::ELogSeverity::error, "No ASC file configured for reading or writing.");
+        return false;
+    }
 
     // Initialize the ASC writer
     if (!m_pathTarget.empty())
@@ -69,60 +61,36 @@ void CCANSimulation::Initialize(const sdv::u8string& rssObjectConfig)
     {
         SDV_LOG(sdv::core::ELogSeverity::error,
             "Failed to read ASC file '" + m_pathSource.generic_u8string() + "' for CAN playback.");
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
     if (!m_pathSource.empty() && !m_reader.GetMessageCount())
     {
         SDV_LOG(sdv::core::ELogSeverity::error,
             "No messages in ASC file '" + m_pathSource.generic_u8string() + "' found. File must contain 'Begin TriggerBlock' and 'End TriggerBlock' line.");
-        m_eStatus = sdv::EObjectStatus::initialization_failure;
-        return;
+        return false;
     }
     if (!m_pathSource.empty())
         SDV_LOG(sdv::core::ELogSeverity::info,
             "CAN simulator ASC file '" + m_pathSource.generic_u8string() + "' contains ", m_reader.GetMessageCount(), " messages.");
 
-    // Update the status
-    m_eStatus = sdv::EObjectStatus::initialized;
+    return true;
 }
 
-sdv::EObjectStatus CCANSimulation::GetStatus() const
+void CCANSimulation::OnChangeToConfigMode()
 {
-    return m_eStatus;
+    // Stop playback
+    m_reader.StopPlayback();
 }
 
-void CCANSimulation::SetOperationMode(sdv::EOperationMode eMode)
+bool CCANSimulation::OnChangeToRunningMode()
 {
-    switch (eMode)
-    {
-    case sdv::EOperationMode::configuring:
-        if (m_eStatus == sdv::EObjectStatus::running || m_eStatus == sdv::EObjectStatus::initialized)
-        {
-            m_eStatus = sdv::EObjectStatus::configuring;
-
-            // Stop playback
-            m_reader.StopPlayback();
-        }
-        break;
-    case sdv::EOperationMode::running:
-        if (m_eStatus == sdv::EObjectStatus::configuring || m_eStatus == sdv::EObjectStatus::initialized)
-        {
-            m_eStatus = sdv::EObjectStatus::running;
-
-            // Start playback
-            m_reader.StartPlayback([&](const asc::SCanMessage& rsMsg) { PlaybackFunc(rsMsg); });
-        }
-        break;
-    default:
-        break;
-    }
+    // Start playback
+    m_reader.StartPlayback([&](const asc::SCanMessage& rsMsg) { PlaybackFunc(rsMsg); });
+    return true;
 }
 
-void CCANSimulation::Shutdown()
+void CCANSimulation::OnShutdown()
 {
-    m_eStatus = sdv::EObjectStatus::shutdown_in_progress;
-
     // Stop playback
     m_reader.StopPlayback();
 
@@ -133,14 +101,11 @@ void CCANSimulation::Shutdown()
             SDV_LOG(sdv::core::ELogSeverity::error,
                 "Failed to write ASC file '" + m_pathTarget.generic_u8string() + "' with CAN recording.");
     }
-
-    // Update the status
-    m_eStatus = sdv::EObjectStatus::destruction_pending;
 }
 
 void CCANSimulation::RegisterReceiver(/*in*/ sdv::can::IReceive* pReceiver)
 {
-    if (m_eStatus != sdv::EObjectStatus::configuring) return;
+    if (GetObjectState() != sdv::EObjectState::configuring) return;
     if (!pReceiver) return;
 
     std::unique_lock<std::mutex> lock(m_mtxReceivers);
@@ -161,7 +126,7 @@ void CCANSimulation::UnregisterReceiver(/*in*/ sdv::can::IReceive* pReceiver)
 
 void CCANSimulation::Send(/*in*/ const sdv::can::SMessage& sMsg, /*in*/ uint32_t uiIfcIndex)
 {
-    if (m_eStatus != sdv::EObjectStatus::running) return;
+    if (GetObjectState() != sdv::EObjectState::running) return;
 
     asc::SCanMessage sAscCan{};
     sAscCan.uiChannel = uiIfcIndex + 1;
@@ -177,7 +142,7 @@ void CCANSimulation::Send(/*in*/ const sdv::can::SMessage& sMsg, /*in*/ uint32_t
 sdv::sequence<sdv::u8string> CCANSimulation::GetInterfaces() const
 {
     sdv::sequence<sdv::u8string> seqIfcNames;
-    if (m_eStatus != sdv::EObjectStatus::running) return seqIfcNames;
+    if (GetObjectState() != sdv::EObjectState::running) return seqIfcNames;
     std::unique_lock<std::mutex> lock(m_mtxInterfaces);
     for (const auto& rprInterface : m_vecInterfaces)
         seqIfcNames.push_back(rprInterface.second);
@@ -186,7 +151,7 @@ sdv::sequence<sdv::u8string> CCANSimulation::GetInterfaces() const
 
 void CCANSimulation::PlaybackFunc(const asc::SCanMessage& rsMsg)
 {
-    if (m_eStatus != sdv::EObjectStatus::running) return;
+    if (GetObjectState() != sdv::EObjectState::running) return;
 
     // Create sdv CAN message
     sdv::can::SMessage sSdvCan{};

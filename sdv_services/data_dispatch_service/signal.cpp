@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "dispatchservice.h"
 #include "signal.h"
 #include "trigger.h"
@@ -159,7 +172,7 @@ void CSignal::RemoveConsumer(CConsumer* pConsumer)
 
 void CSignal::WriteFromProvider(const sdv::any_t& ranyVal, uint64_t uiTransactionID, std::set<CTrigger*>& rsetTriggers)
 {
-    if (m_rDispatchSvc.GetStatus() != sdv::EObjectStatus::running) return;
+    if (m_rDispatchSvc.GetObjectState() != sdv::EObjectState::running) return;
 
     uint64_t uiTransactionIDTemp = uiTransactionID;
     if (!uiTransactionIDTemp) uiTransactionIDTemp = m_rDispatchSvc.GetDirectTransactionID();
@@ -221,7 +234,7 @@ sdv::any_t CSignal::ReadFromConsumer(uint64_t uiTransactionID) const
 
 void CSignal::DistributeToConsumers(const sdv::any_t& ranyVal)
 {
-    if (m_rDispatchSvc.GetStatus() != sdv::EObjectStatus::running) return;
+    if (m_rDispatchSvc.GetObjectState() != sdv::EObjectState::running) return;
 
     std::unique_lock<std::mutex> lock(m_mtxSignalObjects);
     for (auto& rvtConsumer : m_mapConsumers)

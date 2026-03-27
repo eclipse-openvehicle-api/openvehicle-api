@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors: 
+ *   Erik Verhoeven - initial API and implementation 
+ ********************************************************************************/
+
 #include "definition_generator.h"
 #include "../logger.h"
 #include "../exception.h"
@@ -5,6 +18,76 @@
 #include <cctype>
 #include <thread>
 #include <chrono>
+#include <string_view>
+#include <algorithm>
+
+/**
+ * @brief Does the provided string represent a valid number - starting with a digit, 0x or 0b representing an hexa-decimal,
+ * decimal, octal or binary number comparable with C++?
+ * @remarks The original function used regular expressions. Two possible pattern came into question:
+ * @code
+ * ^(0x[0-9a-fA-F]+|0b[01]+|0[0-7]*|[1-9][0-9]*)$
+ * ^(?:0x[0-9a-fA-F]+|0b[01]+|0[0-7]*|[1-9][0-9]*)$
+ * @endcode
+ * Due to a bug in the MINGW libstd++ regex library, which hangs due to backtracing and stack-overflow issues while parsing these
+ * patterns, the implementation was replaced by a C++ function.
+ * @param[in] sv Sting view to the string to check.
+ * @return Returns whether the string view contains a valid number.
+ */
+inline bool IsValidIdlNumber(std::string_view sv)
+{
+    if (sv.empty()) return false;
+
+    // 1. Hexadecimal: 0x... or 0X...
+    if (sv.size() > 2 && sv[0] == '0' && (sv[1] == 'x' || sv[1] == 'X'))
+        return sv.substr(2).find_first_not_of("0123456789abcdefABCDEF") == std::string_view::npos;
+
+    // 2. Binary: 0b... or 0B...
+    if (sv.size() > 2 && sv[0] == '0' && (sv[1] == 'b' || sv[1] == 'B'))
+        return sv.substr(2).find_first_not_of("01") == std::string_view::npos;
+
+    // 3. Octal or a zero: 0...
+    if (sv[0] == '0')
+        return sv.find_first_not_of("01234567") == std::string_view::npos;
+
+    // 4. Decimal: starts with 1-9, followed by 0-9
+    if (sv[0] >= '1' && sv[0] <= '9')
+        return sv.find_first_not_of("0123456789") == std::string_view::npos;
+
+    // Not a valid number
+    return false;
+}
+
+
+/**
+ * @brief Add std::move to complex data types.
+ * @param rssName Reference to the variable name.
+ * @param eDeclType Declaration type.
+ * @return The string with or without std::move.
+ */
+inline std::string MoveVarDeclType(const std::string& rssName, sdv::idl::EDeclType eDeclType)
+{
+    switch (eDeclType)
+    {
+    case sdv::idl::EDeclType::decltype_string:
+    case sdv::idl::EDeclType::decltype_u8string:
+    case sdv::idl::EDeclType::decltype_u16string:
+    case sdv::idl::EDeclType::decltype_u32string:
+    case sdv::idl::EDeclType::decltype_wstring:
+    case sdv::idl::EDeclType::decltype_struct:
+    case sdv::idl::EDeclType::decltype_union:
+    case sdv::idl::EDeclType::decltype_pointer:
+    case sdv::idl::EDeclType::decltype_sequence:
+    case sdv::idl::EDeclType::decltype_map:
+    case sdv::idl::EDeclType::decltype_bitset:
+    case sdv::idl::EDeclType::decltype_bitfield:
+    case sdv::idl::EDeclType::decltype_bitmask:
+    case sdv::idl::EDeclType::decltype_any:
+        return "std::move(" + rssName + ")";
+    default:
+        return rssName;
+    }
+}
 
 CDefinitionContext::CDefinitionContext(const CGenContext& rGenContext, sdv::IInterfaceAccess* pEntity) :
     CDefEntityContext<CDefinitionContext>(rGenContext, pEntity), m_bPreface(true)
@@ -647,11 +730,24 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
             rcontext.GetDefCodeStream() << MapDeclType2CType(eBaseType);
     }
 
+    // Code streams
+    std::stringstream sstreamConstructorImpl;
+    std::stringstream sstreamCopyConstructImpl;
+    std::stringstream sstreamCopyConstructInitializers;
+    std::stringstream sstreamCopyOperatorImpl;
+    std::stringstream sstreamMoveConstructImpl;
+    std::stringstream sstreamMoveConstructInitializers;
+    std::stringstream sstreamMoveOperatorImpl;
+    std::stringstream sstreamDestructorImpl;
+    std::stringstream sstreamPrivateFunc;
+    std::stringstream sstreamPublicFunc;
+    bool bCopyMoveConstructNeeded = false;
+
     // Start content
     rcontext.GetDefCodeStream() << std::endl << rcontext.GetIndent() << "{" << std::endl;
     rcontext.IncrIndent();
 
-    // Run through the declarations and add each declaration. Add the definition before the declaration if there is one to be added.
+    // Run through the declarations and check for an exception definitions defining a description.
     sdv::idl::IEntityIterator* pChildIterator = pDefinition ? pDefinition->GetChildren() : nullptr;
     bool bContainsConstDescription = false;
     for (uint32_t uiIndex = 0; !bInline && pChildIterator && uiIndex < pChildIterator->GetCount(); uiIndex++)
@@ -673,10 +769,10 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
             // Check for const variable
             if (!pChildDeclarationEntity->IsReadOnly())
                 throw CCompileException("Exception definition declares '_description' member; this member must be a "
-                    "const-variable.");
+                                        "const-variable.");
             if (pChildDeclType->GetBaseType() != sdv::idl::EDeclType::decltype_char || !pChildDeclarationEntity->HasArray())
                 throw CCompileException("Exception definition declares '_description' member; "
-                    "this member must be of char array (char[]) type.");
+                                        "this member must be of char array (char[]) type.");
             bContainsConstDescription = true;
         }
     }
@@ -751,6 +847,127 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
     // NOTE: Compound definitions are all definitions except modules.
     if (pChildIterator && !ProcessEntities(sContentStreamContext, pChildIterator)) return;
 
+    // Get the switch code context list
+    auto vecSwitchCodeContext = sContentStreamContext.GetSwitchCodeContexts<SDefinitionSwitchCodeContext>();
+
+    // Add copy and move construction code.
+    for (uint32_t uiIndex = 0; !bInline && pChildIterator && uiIndex < pChildIterator->GetCount(); uiIndex++)
+    {
+        sdv::IInterfaceAccess* pChildEntity = pChildIterator->GetEntityByIndex(uiIndex);
+        if (!pChildEntity) continue;
+        const sdv::idl::IEntityInfo* pChildEntityInfo = pChildEntity->GetInterface<sdv::idl::IEntityInfo>();
+        if (!pChildEntityInfo) continue;
+
+        // Is the entity a declaration?
+        sdv::idl::IDeclarationEntity* pChildDeclarationEntity = pChildEntity->GetInterface<sdv::idl::IDeclarationEntity>();
+        if (!pChildDeclarationEntity) continue;
+        sdv::IInterfaceAccess* pChildDeclTypeObj = pChildDeclarationEntity->GetDeclarationType();
+        if (!pChildDeclTypeObj) continue;
+        const sdv::idl::IDeclarationType* pChildDeclType = pChildDeclTypeObj->GetInterface<sdv::idl::IDeclarationType>();
+        if (!pChildDeclType) continue;
+        if ((pChildDeclType->GetBaseType() != sdv::idl::EDeclType::decltype_union) && !pChildDeclarationEntity->IsReadOnly() &&
+            std::find_if(vecSwitchCodeContext.begin(), vecSwitchCodeContext.end(),
+                [&](const std::shared_ptr<SDefinitionSwitchCodeContext>& ptrSwitchCodeContext)
+                {
+                    return ptrSwitchCodeContext && ptrSwitchCodeContext->ssSwitchVarName == pChildEntityInfo->GetName();
+                }) == vecSwitchCodeContext.end())
+        {
+            // Is this an array?
+            if (pChildDeclarationEntity->HasArray())
+            {
+                // Automatic indentation
+                auto fnLocalIndent = [&](size_t nSteps)
+                {
+                    std::string m_ssIndent = sContentStreamContext.GetIndent();
+                    for (size_t n = 0; n < nSteps; n++)
+                        m_ssIndent += GetIndentChars();
+                    return m_ssIndent;
+                };
+
+                // Create the limiter string
+                auto fnLimiter = [&](const std::string& rssExpression)
+                {
+                    if (IsValidIdlNumber(rssExpression)) return rssExpression;
+                    return "static_cast<size_t>(" + GetRelativeScopedName(rssExpression, sContentStreamContext.GetScope()) + ")";
+                };
+
+                // Iterate through the array dimensions
+                auto seqDimensions = pChildDeclarationEntity->GetArrayDimensions();
+                std::stringstream sstreamIteration, sstreamIndexRef;
+                size_t nDepth = 0;
+                for (auto sDimension : seqDimensions)
+                {
+                    std::string ssArrayIterator = std::string("nIndex_") + pChildEntityInfo->GetName();
+                    if (seqDimensions.size() > 1) ssArrayIterator += std::to_string(nDepth++);
+                    sstreamIteration << fnLocalIndent(nDepth) << "for (size_t " << ssArrayIterator << " = 0; " <<
+                        ssArrayIterator << " < " << fnLimiter(sDimension.ssExpression) << "; ++" << ssArrayIterator << ")" <<
+                        std::endl << fnLocalIndent(nDepth) << "{" << std::endl;
+                    sstreamIndexRef << "[" << ssArrayIterator << "]";
+                    if (nDepth == seqDimensions.size())
+                    {
+                        sstreamCopyConstructImpl << sstreamIteration.str();
+                        sstreamMoveConstructImpl << sstreamIteration.str();
+                        sstreamCopyOperatorImpl << sstreamIteration.str();
+                        sstreamMoveOperatorImpl << sstreamIteration.str();
+                        ++nDepth;
+                        sstreamCopyConstructImpl << fnLocalIndent(nDepth) << pChildEntityInfo->GetName() <<
+                            sstreamIndexRef.str() << " = rvar." << pChildEntityInfo->GetName() << sstreamIndexRef.str() << ";" <<
+                            std::endl;
+                        sstreamMoveConstructImpl << fnLocalIndent(nDepth) << pChildEntityInfo->GetName() <<
+                            sstreamIndexRef.str() << " = " <<
+                            MoveVarDeclType("rvar." + pChildEntityInfo->GetName() + sstreamIndexRef.str(),
+                                pChildDeclType->GetBaseType()) << ";" << std::endl;
+                        sstreamCopyOperatorImpl << fnLocalIndent(nDepth) << pChildEntityInfo->GetName() <<
+                            sstreamIndexRef.str() << " = rvar." << pChildEntityInfo->GetName() << sstreamIndexRef.str() << ";" <<
+                            std::endl;
+                        sstreamMoveOperatorImpl << fnLocalIndent(nDepth) << pChildEntityInfo->GetName() <<
+                            sstreamIndexRef.str() << " = " <<
+                            MoveVarDeclType("rvar." + pChildEntityInfo->GetName() + sstreamIndexRef.str(),
+                                pChildDeclType->GetBaseType()) << ";" << std::endl;
+                        --nDepth;
+                    }
+                }
+
+                // Stop array iteration if the union was allocated using a single or multi dimensional array
+                while (nDepth)
+                {
+                    sstreamCopyConstructImpl << fnLocalIndent(nDepth) << "}" << std::endl;
+                    sstreamMoveConstructImpl << fnLocalIndent(nDepth) << "}" << std::endl;
+                    sstreamCopyOperatorImpl << fnLocalIndent(nDepth) << "}" << std::endl;
+                    sstreamMoveOperatorImpl << fnLocalIndent(nDepth) << "}" << std::endl;
+                    --nDepth;
+                }
+            }
+            else if (pChildEntityInfo->GetType() != sdv::idl::EEntityType::type_case_entry)
+            {
+                // Copy constructor initialization
+                if (sstreamCopyConstructInitializers.str().empty())
+                    sstreamCopyConstructInitializers << " :" << std::endl;
+                else
+                    sstreamCopyConstructInitializers << "," << std::endl;
+                sstreamCopyConstructInitializers << sContentStreamContext.GetIndent(true, true) << pChildEntityInfo->GetName()
+                    << "(rvar." << pChildEntityInfo->GetName() << ")";
+
+                // Move constructor initialization
+                if (sstreamMoveConstructInitializers.str().empty())
+                    sstreamMoveConstructInitializers << " :" << std::endl;
+                else
+                    sstreamMoveConstructInitializers << "," << std::endl;
+                sstreamMoveConstructInitializers << sContentStreamContext.GetIndent(true, true) << pChildEntityInfo->GetName() <<
+                    "(" << MoveVarDeclType("rvar." + pChildEntityInfo->GetName(), pChildDeclType->GetBaseType()) << ")";
+
+                // Copy operator
+                sstreamCopyOperatorImpl << sContentStreamContext.GetIndent(true, true) << pChildEntityInfo->GetName() <<
+                    " = rvar." << pChildEntityInfo->GetName() << ";" << std::endl;
+
+                // Move operator
+                sstreamMoveOperatorImpl << sContentStreamContext.GetIndent(true, true) << pChildEntityInfo->GetName() <<
+                    " = " << MoveVarDeclType("rvar." + pChildEntityInfo->GetName(), pChildDeclType->GetBaseType()) << ";" <<
+                    std::endl;
+            }
+        }
+    }
+
     // Add the what-function to the exception
     if (pEntityInfo->GetType() == sdv::idl::EEntityType::type_exception)
     {
@@ -780,17 +997,10 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
     }
 
     // Build the code streams from any switch variables
-    std::stringstream sstreamConstructorImpl;
-    std::stringstream sstreamCopyConstructImpl;
-    std::stringstream sstreamMoveConstructImpl;
-    std::stringstream sstreamDestructorImpl;
-	std::stringstream sstreamPrivateFunc;
-	std::stringstream sstreamPublicFunc;
-    for (const auto& rptrSwitchCodeContext : sContentStreamContext.GetSwitchCodeContexts<SDefinitionSwitchCodeContext>())
+    for (const auto& rptrSwitchCodeContext : vecSwitchCodeContext)
     {
         std::string ssSwitchVarName = rptrSwitchCodeContext->ssSwitchVarName;
         std::string ssSwitchVarType = rptrSwitchCodeContext->ptrSwitchVar->ssType;
-        //std::string ssSwitchVarValue;
 
         // Create a stream of constructor implementation code
         if (!rptrSwitchCodeContext->sstreamConstructorImpl.str().empty())
@@ -813,10 +1023,7 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
             sstreamPrivateFunc << sContentStreamContext.GetIndent(false) << "void construct_" << QualifyName(ssSwitchVarName);
             sstreamPrivateFunc << "(";
             sstreamPrivateFunc << ssSwitchVarType << " val = ";
-            //if (!ssSwitchVarValue.empty())
-            //    sstreamPrivateFunc << ssSwitchVarValue;
-            //else
-                sstreamPrivateFunc << ssSwitchVarType << "{}";
+            sstreamPrivateFunc << ssSwitchVarType << "{}";
             sstreamPrivateFunc << ")" << std::endl << sContentStreamContext.GetIndent(false) << "{" << std::endl;
             sstreamPrivateFunc << sContentStreamContext.GetIndent(false, true) << ssSwitchVarName << " = val;" << std::endl;
             sstreamPrivateFunc <<
@@ -824,28 +1031,47 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
             sstreamPrivateFunc << sContentStreamContext.GetIndent(false) << "}" << std::endl;
         }
 
-        // Create copy constructor impl for the switch type
+        // Create copy constructor/operator impl for the switch type
         if (!rptrSwitchCodeContext->sstreamCopyConstructHelperImpl.str().empty())
         {
+            // Constructor
             if (!sstreamCopyConstructImpl.str().empty())
                 sstreamCopyConstructImpl << std::endl;
             sstreamCopyConstructImpl << sContentStreamContext.GetIndent(false, true) << "// Construct content based on " <<
                 ssSwitchVarName << std::endl;
-            sstreamCopyConstructImpl <<
-                SmartIndent(rptrSwitchCodeContext->sstreamCopyConstructHelperImpl.str(),
-                    sContentStreamContext.GetIndent(false, true));
+            sstreamCopyConstructImpl << SmartIndent(rptrSwitchCodeContext->sstreamCopyConstructHelperImpl.str(),
+                sContentStreamContext.GetIndent(false, true));
+
+            // Operator
+            if (!sstreamCopyOperatorImpl.str().empty())
+                sstreamCopyOperatorImpl << std::endl;
+            sstreamCopyOperatorImpl << sContentStreamContext.GetIndent(false, true) << "// Construct content based on " <<
+                ssSwitchVarName << std::endl;
+            sstreamCopyOperatorImpl << SmartIndent(rptrSwitchCodeContext->sstreamCopyConstructHelperImpl.str(),
+                sContentStreamContext.GetIndent(false, true));
+            bCopyMoveConstructNeeded = true;
         }
 
-        // Create move constructor impl for the switch type
+        // Create move constructor/operator impl for the switch type
         if (!rptrSwitchCodeContext->sstreamMoveConstructHelperImpl.str().empty())
         {
+            // Constructor
             if (!sstreamMoveConstructImpl.str().empty())
                 sstreamMoveConstructImpl << std::endl;
             sstreamMoveConstructImpl << sContentStreamContext.GetIndent(false, true) << "// Construct content based on " <<
                 ssSwitchVarName << std::endl;
-            sstreamMoveConstructImpl <<
-                SmartIndent(rptrSwitchCodeContext->sstreamMoveConstructHelperImpl.str(),
+            sstreamMoveConstructImpl << SmartIndent(rptrSwitchCodeContext->sstreamMoveConstructHelperImpl.str(),
                     sContentStreamContext.GetIndent(false, true));
+            bCopyMoveConstructNeeded = true;
+
+            // Operator
+            if (!sstreamMoveOperatorImpl.str().empty())
+                sstreamMoveOperatorImpl << std::endl;
+            sstreamMoveOperatorImpl << sContentStreamContext.GetIndent(false, true) << "// Construct content based on " <<
+                ssSwitchVarName << std::endl;
+            sstreamMoveOperatorImpl << SmartIndent(rptrSwitchCodeContext->sstreamMoveConstructHelperImpl.str(),
+                    sContentStreamContext.GetIndent(false, true));
+            bCopyMoveConstructNeeded = true;
         }
 
         // Create destructor helper function
@@ -894,9 +1120,6 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
             sstreamPublicFunc << sContentStreamContext.GetIndent(false, true) << "// Anything to do?" << std::endl;
             sstreamPublicFunc << sContentStreamContext.GetIndent(false, true) << "if (" <<  ssSwitchVarName <<
                 " == val) return;" << std::endl;
-            //sstreamPublicFunc << sContentStreamContext.GetIndent(false, true) << "// Assign the new value..." << std::endl;
-            //sstreamPublicFunc << sContentStreamContext.GetIndent(false, true) <<
-            //    rptrSwitchCodeContext->ssSwitchVarName << " = val;" << std::endl;
             sstreamPublicFunc << SmartIndent(rptrSwitchCodeContext->sstreamCode.str(), sContentStreamContext.GetIndent(false, true));
             sstreamPublicFunc << sContentStreamContext.GetIndent(false) << "}" << std::endl << std::endl;
 
@@ -923,11 +1146,11 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
         {
             if (!ssConstructorImpl.empty())
             {
-                rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false)
-                    << "// No initialization of variables is done in the constructor; suppress cppcheck warning."
-                                            << std::endl;
-                rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false)
-                                            << "// cppcheck-suppress uninitMemberVar" << std::endl;
+                //rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false)
+                //    << "// No initialization of variables is done in the constructor; suppress cppcheck warning."
+                //                            << std::endl;
+                //rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false)
+                //                            << "// cppcheck-suppress uninitMemberVar" << std::endl;
             }
             rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "/** Constructor */" << std::endl;
             rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << pEntityInfo->GetName() << "()";
@@ -943,17 +1166,20 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
             rcontext.GetDefCodeStream() << std::endl;
         }
 
-        // Stream copy constructor function
-        std::string ssCopyConstructImpl = sstreamCopyConstructImpl.str();
+        // Stream copy constructor function (if required)
+        std::string ssCopyConstructImpl;
+        std::string ssCopyConstructInitializers = sstreamCopyConstructInitializers.str();
+        if (bCopyMoveConstructNeeded)
+            ssCopyConstructImpl = sstreamCopyConstructImpl.str();
         if (sContentStreamContext.NeedsConstruction() || !ssCopyConstructImpl.empty())
         {
             if (!ssCopyConstructImpl.empty())
             {
-                rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(
-                    false) << "// No initialization of variables is done in the constructor; suppress cppcheck warning."
-                                            << std::endl;
-                rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "// cppcheck-suppress uninitMemberVar"
-                                            << std::endl;
+                //rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(
+                //    false) << "// No initialization of variables is done in the constructor; suppress cppcheck warning."
+                //                            << std::endl;
+                //rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "// cppcheck-suppress uninitMemberVar"
+                //                            << std::endl;
             }
             rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "/**" << std::endl;
             rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << " * Copy constructor " << std::endl;
@@ -964,12 +1190,20 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
             if (ssCopyConstructImpl.empty())
                 rcontext.GetDefCodeStream() << "[[maybe_unused]] ";
             rcontext.GetDefCodeStream() << "const " << pEntityInfo->GetName() << "& rvar)";
-            if (ssCopyConstructImpl.empty())
-                rcontext.GetDefCodeStream() << " {}" << std::endl;
+            if (!ssCopyConstructInitializers.empty())
+                rcontext.GetDefCodeStream() << ssCopyConstructInitializers << std::endl << sContentStreamContext.GetIndent(false);
             else
             {
-                rcontext.GetDefCodeStream() << std::endl;
-                rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "{" << std::endl;
+                if (ssCopyConstructImpl.empty())
+                    rcontext.GetDefCodeStream() << " ";
+                else
+                    rcontext.GetDefCodeStream() << std::endl;
+            }
+            if (ssCopyConstructImpl.empty())
+                rcontext.GetDefCodeStream() << "{}" << std::endl;
+            else
+            {
+                rcontext.GetDefCodeStream() << "{" << std::endl;
                 rcontext.GetDefCodeStream() << ssCopyConstructImpl;
                 rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "}" << std::endl;
             }
@@ -977,16 +1211,19 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
         }
 
         // Stream move constructor function
-        std::string ssMoveConstructImpl = sstreamMoveConstructImpl.str();
+        std::string ssMoveConstructImpl;
+        std::string ssMoveConstructInitializers = sstreamMoveConstructInitializers.str();
+        if (bCopyMoveConstructNeeded)
+            ssMoveConstructImpl = sstreamMoveConstructImpl.str();
         if (sContentStreamContext.NeedsConstruction() || !ssMoveConstructImpl.empty())
         {
             if (!ssMoveConstructImpl.empty())
             {
-                rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(
-                    false) << "// No initialization of variables is done in the constructor; suppress cppcheck warning."
-                                            << std::endl;
-                rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "// cppcheck-suppress uninitMemberVar"
-                                            << std::endl;
+                //rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(
+                //    false) << "// No initialization of variables is done in the constructor; suppress cppcheck warning."
+                //                            << std::endl;
+                //rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "// cppcheck-suppress uninitMemberVar"
+                //                            << std::endl;
             }
             rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "/**" << std::endl;
             rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << " * Move constructor " << std::endl;
@@ -997,12 +1234,20 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
             if (ssMoveConstructImpl.empty())
                 rcontext.GetDefCodeStream() << "[[maybe_unused]] ";
             rcontext.GetDefCodeStream() << pEntityInfo->GetName() << "&& rvar) noexcept";
-            if (ssMoveConstructImpl.empty())
-                rcontext.GetDefCodeStream() << " {}" << std::endl;
+            if (!ssMoveConstructInitializers.empty())
+                rcontext.GetDefCodeStream() << ssMoveConstructInitializers << std::endl << sContentStreamContext.GetIndent(false);
             else
             {
-                rcontext.GetDefCodeStream() << std::endl;
-                rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "{" << std::endl;
+                if (ssMoveConstructImpl.empty())
+                    rcontext.GetDefCodeStream() << " ";
+                else
+                    rcontext.GetDefCodeStream() << std::endl;
+            }
+            if (ssMoveConstructImpl.empty())
+                rcontext.GetDefCodeStream() << "{}" << std::endl;
+            else
+            {
+                rcontext.GetDefCodeStream() << "{" << std::endl;
                 rcontext.GetDefCodeStream() << ssMoveConstructImpl;
                 rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "}" << std::endl;
             }
@@ -1028,16 +1273,19 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
         }
 
         // Stream assignment operator function
-        if (sContentStreamContext.NeedsConstruction() || !ssCopyConstructImpl.empty())
+        std::string ssCopyOperatorImpl;
+        if (bCopyMoveConstructNeeded)
+            ssCopyOperatorImpl = sstreamCopyOperatorImpl.str();
+        if (sContentStreamContext.NeedsConstruction() || !ssCopyOperatorImpl.empty())
         {
-            if (!ssCopyConstructImpl.empty())
-            {
-                rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(
-                    false) << "// Assignment of variables is done in a member function; suppress cppcheck warning."
-                                            << std::endl;
-                rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "// cppcheck-suppress operatorEqVarError"
-                                            << std::endl;
-            }
+            //if (!ssCopyOperatorImpl.empty())
+            //{
+            //    rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(
+            //        false) << "// Assignment of variables is done in a member function; suppress cppcheck warning."
+            //                                << std::endl;
+            //    rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "// cppcheck-suppress operatorEqVarError"
+            //                                << std::endl;
+            //}
             rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "/**" << std::endl;
             rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false)
                                         << " * Assignment operator" << std::endl;
@@ -1048,10 +1296,10 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
             rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << " */" << std::endl;
             rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << pEntityInfo->GetName() <<
                 "& operator=(";
-            if (ssCopyConstructImpl.empty())
+            if (ssCopyOperatorImpl.empty())
                 rcontext.GetDefCodeStream() << "[[maybe_unused]] ";
             rcontext.GetDefCodeStream() << "const " << pEntityInfo->GetName() << " & rvar)";
-            if (ssCopyConstructImpl.empty())
+            if (ssCopyOperatorImpl.empty())
                 rcontext.GetDefCodeStream() << " { return *this; }" << std::endl;
             else
             {
@@ -1061,7 +1309,7 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
                     std::endl;
                 rcontext.GetDefCodeStream() << ssDestructorImpl;
                 rcontext.GetDefCodeStream() << std::endl;
-                rcontext.GetDefCodeStream() << ssCopyConstructImpl;
+                rcontext.GetDefCodeStream() << ssCopyOperatorImpl;
                 rcontext.GetDefCodeStream() << std::endl;
                 rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false, true) << "return *this;" << std::endl;
                 rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "}" << std::endl;
@@ -1070,16 +1318,19 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
         }
 
         // Stream move operator function
-        if (sContentStreamContext.NeedsConstruction() || !ssMoveConstructImpl.empty())
+        std::string ssMoveOperatorImpl;
+        if (bCopyMoveConstructNeeded)
+            ssMoveOperatorImpl = sstreamMoveOperatorImpl.str();
+        if (sContentStreamContext.NeedsConstruction() || !ssMoveOperatorImpl.empty())
         {
-            if (!ssMoveConstructImpl.empty())
-            {
-                rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false)
-                                            << "// Assignment of variables is done in a member function; suppress cppcheck warning."
-                                            << std::endl;
-                rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "// cppcheck-suppress operatorEqVarError"
-                                            << std::endl;
-            }
+            //if (!ssMoveOperatorImpl.empty())
+            //{
+            //    rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false)
+            //                                << "// Assignment of variables is done in a member function; suppress cppcheck warning."
+            //                                << std::endl;
+            //    rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "// cppcheck-suppress operatorEqVarError"
+            //                                << std::endl;
+            //}
             rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "/**" << std::endl;
             rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << " * Move operator" << std::endl;
             rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << " * @param[in] rvar Reference to the " <<
@@ -1089,10 +1340,10 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
             rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << " */" << std::endl;
             rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << pEntityInfo->GetName() <<
                 "& operator=(";
-            if (ssMoveConstructImpl.empty())
+            if (ssMoveOperatorImpl.empty())
                 rcontext.GetDefCodeStream() << "[[maybe_unused]] ";
             rcontext.GetDefCodeStream() << pEntityInfo->GetName() << "&& rvar) noexcept";
-            if (ssMoveConstructImpl.empty())
+            if (ssMoveOperatorImpl.empty())
                 rcontext.GetDefCodeStream() << " { return *this; }" << std::endl;
             else
             {
@@ -1102,7 +1353,7 @@ void CDefinitionGenerator::StreamDefinition(CDefinitionContext& rcontext, sdv::I
                     std::endl;
                 rcontext.GetDefCodeStream() << ssDestructorImpl;
                 rcontext.GetDefCodeStream() << std::endl;
-                rcontext.GetDefCodeStream() << ssMoveConstructImpl;
+                rcontext.GetDefCodeStream() << ssMoveOperatorImpl;
                 rcontext.GetDefCodeStream() << std::endl;
                 rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false, true) << "return *this;" << std::endl;
                 rcontext.GetDefCodeStream() << sContentStreamContext.GetIndent(false) << "}" << std::endl;
@@ -1578,22 +1829,22 @@ void CDefinitionGenerator::ProcessUnionInContainerContext(CDefinitionContext& rc
     // Start array iteration if the union was allocated using a single or multi dimensional array
     for (const auto& rsArrayIndex : rvecArrayIndices)
     {
-        rsstreamConstructHelperImpl << fnLocalIndent() << "for (uint32_t " << rsArrayIndex.ssArrayIterator << " = 0; " <<
-            rsArrayIndex.ssArrayIterator << " < " <<
-            GetRelativeScopedName(rsArrayIndex.ssCountExpression, rcontext.GetScope()) << "; " <<
-            rsArrayIndex.ssArrayIterator << "++)" << std::endl << fnLocalIndent() << "{" << std::endl;
-        rsstreamCopyConstructHelperImpl << fnLocalIndent() << "for (uint32_t " << rsArrayIndex.ssArrayIterator << " = 0; " <<
-            rsArrayIndex.ssArrayIterator << " < " <<
-            GetRelativeScopedName(rsArrayIndex.ssCountExpression, rcontext.GetScope()) << "; " <<
-            rsArrayIndex.ssArrayIterator << "++)" << std::endl << fnLocalIndent() << "{" << std::endl;
-        rsstreamMoveConstructHelperImpl << fnLocalIndent() << "for (uint32_t " << rsArrayIndex.ssArrayIterator << " = 0; " <<
-            rsArrayIndex.ssArrayIterator << " < " <<
-            GetRelativeScopedName(rsArrayIndex.ssCountExpression, rcontext.GetScope()) << "; " <<
-            rsArrayIndex.ssArrayIterator << "++)" << std::endl << fnLocalIndent() << "{" << std::endl;
-        rsstreamDestructHelperImpl << fnLocalIndent() << "for (uint32_t " << rsArrayIndex.ssArrayIterator << " = 0; " <<
-            rsArrayIndex.ssArrayIterator << " < " <<
-            GetRelativeScopedName(rsArrayIndex.ssCountExpression, rcontext.GetScope()) << "; " <<
-            rsArrayIndex.ssArrayIterator << "++)" << std::endl << fnLocalIndent() << "{" << std::endl;
+        // Create the limiter string
+        auto fnLimiter = [&]()
+        {
+            if (IsValidIdlNumber(rsArrayIndex.ssCountExpression))
+                return rsArrayIndex.ssCountExpression;
+            return "static_cast<size_t>(" + GetRelativeScopedName(rsArrayIndex.ssCountExpression, rcontext.GetScope()) + ")";
+        };
+
+        std::stringstream sstreamInteratorCode;
+        sstreamInteratorCode << fnLocalIndent() << "for (size_t " << rsArrayIndex.ssArrayIterator << " = 0; " <<
+            rsArrayIndex.ssArrayIterator << " < " << fnLimiter() << "; ++" << rsArrayIndex.ssArrayIterator << ")" << std::endl <<
+            fnLocalIndent() << "{" << std::endl;
+        rsstreamConstructHelperImpl << sstreamInteratorCode.str();
+        rsstreamCopyConstructHelperImpl << sstreamInteratorCode.str();
+        rsstreamMoveConstructHelperImpl << sstreamInteratorCode.str();
+        rsstreamDestructHelperImpl << sstreamInteratorCode.str();
         nLocalIndent++;
     }
 

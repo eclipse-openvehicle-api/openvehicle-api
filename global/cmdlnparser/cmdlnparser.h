@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #ifndef CMDLN_PARSER_H
 #define CMDLN_PARSER_H
 
@@ -428,8 +441,8 @@ private:
     uint32_t                                        m_uiParseFlags = 0;     ///< The parse flags supplied to the parse function.
     std::shared_ptr<CArgumentDefBase>               m_ptrDefaultArg;        ///< Default argument (if available).
     std::list<std::shared_ptr<CArgumentDefBase>>    m_lstOptionArgs;        ///< List of configured option arguments (in order of definition).
-    std::map<std::string, CArgumentDefBase&, std::greater<std::string>> m_mapSortedOptions;     ///< Map with sorted options.
-    std::map<std::string, CArgumentDefBase&, std::greater<std::string>> m_mapSortedSubOptions;  ///< Map with sorted sub-options.
+    std::multimap<std::string, CArgumentDefBase&, std::greater<std::string>> m_mapSortedOptions;     ///< Map with sorted options.
+    std::multimap<std::string, CArgumentDefBase&, std::greater<std::string>> m_mapSortedSubOptions;  ///< Map with sorted sub-options.
     std::shared_ptr<SGroupDef>                      m_ptrCurrentGroup;      ///< Current group to assign the options to.
     std::list<std::pair<std::reference_wrapper<CArgumentDefBase>, std::string>> m_lstSupplied;  ///< List of supplied arguments.
     size_t                                          m_nFixedWidth = 0;      ///< Fixed with limit (or 0 for dynamic width).
@@ -2677,21 +2690,21 @@ inline void CCommandLine::Parse(size_t nArgs, const TCharType** rgszArgs)
         };
 
         // Find the argument
+        // NOTE: Multiple arguments with the same name, but different processing can be defined (based on the argument groups they
+        // might or might not have relevance). Therefore, process all and do not stop after on argument.
         bool bFound = false;
         if (bOption)
         {
             for (auto& rvtOption : m_mapSortedOptions)
             {
-                bFound = fnFindAndAssign(rvtOption.second, rvtOption.first);
-                if (bFound) break;
+                bFound |= fnFindAndAssign(rvtOption.second, rvtOption.first);
             }
         }
         else if (bSubOption)
         {
             for (auto& rvtOption : m_mapSortedSubOptions)
             {
-                bFound = fnFindAndAssign(rvtOption.second, rvtOption.first);
-                if (bFound) break;
+                bFound |= fnFindAndAssign(rvtOption.second, rvtOption.first);
             }
         } else // Default argument
             bFound = m_ptrDefaultArg ? fnFindAndAssign(*m_ptrDefaultArg.get(), {}) : false;

@@ -1,3 +1,16 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
 #include "dispatchservice.h"
 
 
@@ -9,7 +22,7 @@ CDispatchService::CDispatchService()
 sdv::IInterfaceAccess* CDispatchService::CreateTxTrigger(uint32_t uiCycleTime, uint32_t uiDelayTime, uint32_t uiBehaviorFlags,
     sdv::IInterfaceAccess* pTriggerCallback)
 {
-    if (m_eObjectStatus != sdv::EObjectStatus::configuring) return nullptr;
+    if (GetObjectState() != sdv::EObjectState::configuring) return nullptr;
 
     // Check for parameter validity
     if (!uiCycleTime && !(uiBehaviorFlags & static_cast<uint32_t>(sdv::core::ISignalTransmission::ETxTriggerBehavior::spontaneous)))
@@ -39,7 +52,7 @@ sdv::IInterfaceAccess* CDispatchService::CreateTxTrigger(uint32_t uiCycleTime, u
 
 sdv::IInterfaceAccess* CDispatchService::RegisterTxSignal(/*in*/ const sdv::u8string& ssSignalName, /*in*/ sdv::any_t anyDefVal)
 {
-    if (m_eObjectStatus != sdv::EObjectStatus::configuring) return nullptr;
+    if (GetObjectState() != sdv::EObjectState::configuring) return nullptr;
 
     std::unique_lock<std::mutex> lock(m_mtxSignals);
 
@@ -49,7 +62,7 @@ sdv::IInterfaceAccess* CDispatchService::RegisterTxSignal(/*in*/ const sdv::u8st
 
 sdv::IInterfaceAccess* CDispatchService::RegisterRxSignal(/*in*/ const sdv::u8string& ssSignalName)
 {
-    if (m_eObjectStatus != sdv::EObjectStatus::configuring) return nullptr;
+    if (GetObjectState() != sdv::EObjectState::configuring) return nullptr;
 
     std::unique_lock<std::mutex> lock(m_mtxSignals);
     auto prSignal = m_mapRxSignals.try_emplace(ssSignalName, *this, ssSignalName, sdv::core::ESignalDirection::sigdir_rx);
@@ -58,7 +71,7 @@ sdv::IInterfaceAccess* CDispatchService::RegisterRxSignal(/*in*/ const sdv::u8st
 
 sdv::IInterfaceAccess* CDispatchService::RequestSignalPublisher(/*in*/ const sdv::u8string& ssSignalName)
 {
-    if (m_eObjectStatus != sdv::EObjectStatus::configuring) return nullptr;
+    if (GetObjectState() != sdv::EObjectState::configuring) return nullptr;
 
     std::unique_lock<std::mutex> lock(m_mtxSignals);
     auto itSignal = m_mapTxSignals.find(ssSignalName);
@@ -70,7 +83,7 @@ sdv::IInterfaceAccess* CDispatchService::RequestSignalPublisher(/*in*/ const sdv
 
 sdv::IInterfaceAccess* CDispatchService::AddSignalSubscription(/*in*/ const sdv::u8string& ssSignalName, /*in*/ IInterfaceAccess* pSubscriber)
 {
-    if (m_eObjectStatus != sdv::EObjectStatus::configuring) return nullptr;
+    if (GetObjectState() != sdv::EObjectState::configuring) return nullptr;
 
     std::unique_lock<std::mutex> lock(m_mtxSignals);
     auto itSignal = m_mapRxSignals.find(ssSignalName);
@@ -118,42 +131,15 @@ uint64_t CDispatchService::GetDirectTransactionID() const
     return m_uiDirectTransactionID;
 }
 
-void CDispatchService::Initialize(const sdv::u8string& /*ssObjectConfig*/)
+bool CDispatchService::OnInitialize()
 {
-    m_eObjectStatus = sdv::EObjectStatus::initializing;
     m_scheduler.Start();
-    m_eObjectStatus = sdv::EObjectStatus::initialized;
+    return true;
 }
 
-sdv::EObjectStatus CDispatchService::GetStatus() const
+void CDispatchService::OnShutdown()
 {
-    return m_eObjectStatus;
-}
-
-void CDispatchService::SetOperationMode(sdv::EOperationMode eMode)
-{
-    switch (eMode)
-    {
-    case sdv::EOperationMode::configuring:
-        if (m_eObjectStatus == sdv::EObjectStatus::running || m_eObjectStatus == sdv::EObjectStatus::initialized)
-            m_eObjectStatus = sdv::EObjectStatus::configuring;
-        break;
-    case sdv::EOperationMode::running:
-        if (m_eObjectStatus == sdv::EObjectStatus::configuring || m_eObjectStatus == sdv::EObjectStatus::initialized)
-            m_eObjectStatus = sdv::EObjectStatus::running;
-        break;
-    default:
-        break;
-    }
-}
-
-void CDispatchService::Shutdown()
-{
-    m_eObjectStatus = sdv::EObjectStatus::shutdown_in_progress;
-
     m_scheduler.Stop();
-
-    m_eObjectStatus = sdv::EObjectStatus::initialization_pending;
 }
 
 void CDispatchService::UnregisterSignal(/*in*/ const sdv::u8string& ssSignalName, sdv::core::ESignalDirection eDirection)
