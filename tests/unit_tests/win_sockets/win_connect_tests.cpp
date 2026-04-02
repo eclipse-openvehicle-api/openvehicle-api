@@ -15,8 +15,8 @@
 #include <support/app_control.h>
 #include <interfaces/ipc.h>
 
-#include "../../../sdv_services/uds_win_sockets/channel_mgnt.cpp"
-#include "../../../sdv_services/uds_win_sockets/connection.cpp"
+#include "../../../sdv_services/uds_win_sockets/channel_mgnt.h"
+#include "../../../sdv_services/uds_win_sockets/connection.h"
 
 #include <windows.h>
 #include <afunix.h>
@@ -99,7 +99,7 @@ inline void SpinUntilServerArmed(sdv::ipc::IConnect* server, uint32_t maxWaitMs 
     using namespace std::chrono;
     auto deadline = steady_clock::now() + milliseconds(maxWaitMs);
 
-    while (server->GetStatus() == sdv::ipc::EConnectStatus::uninitialized &&
+    while (server->GetConnectState() == sdv::ipc::EConnectState::uninitialized &&
            steady_clock::now() < deadline)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -116,7 +116,7 @@ inline void SleepTiny(uint32_t ms = 20)
 
 } // namespace test_utils
 
-//  Unified test receiver (status + data)
+//  Unified test receiver (state + data)
 class CTestReceiver :
     public sdv::IInterfaceAccess,
     public sdv::ipc::IConnectEventCallback,
@@ -128,11 +128,11 @@ public:
         SDV_INTERFACE_ENTRY(sdv::ipc::IConnectEventCallback)
     END_SDV_INTERFACE_MAP()
 
-    void SetStatus(sdv::ipc::EConnectStatus s) override
+    void SetConnectState(sdv::ipc::EConnectState s) override
     {
         {
             std::lock_guard<std::mutex> lk(m_mtx);
-            m_status = s;
+            m_state = s;
         }
         m_cv.notify_all();
     }
@@ -147,11 +147,11 @@ public:
         m_cv.notify_all();
     }
 
-    bool WaitForStatus(sdv::ipc::EConnectStatus expected, uint32_t ms = 2000)
+    bool WaitForState(sdv::ipc::EConnectState expected, uint32_t ms = 2000)
     {
         std::unique_lock<std::mutex> lk(m_mtx);
         return m_cv.wait_for(lk, std::chrono::milliseconds(ms),
-                             [&]{ return m_status == expected; });
+                             [&]{ return m_state == expected; });
     }
 
     bool WaitForData(uint32_t ms = 2000)
@@ -171,7 +171,7 @@ private:
     mutable std::mutex m_mtx;
     std::condition_variable m_cv;
 
-    sdv::ipc::EConnectStatus m_status{ sdv::ipc::EConnectStatus::uninitialized };
+    sdv::ipc::EConnectState m_state{ sdv::ipc::EConnectState::uninitialized };
     sdv::sequence<sdv::pointer<uint8_t>> m_data;
     bool m_hasData{false};
 };
@@ -344,7 +344,7 @@ TEST(WindowsAFUnixIPC, ServerDisconnectPropagates)
 
     pair.server->Disconnect();
 
-    EXPECT_TRUE(cr.WaitForStatus(sdv::ipc::EConnectStatus::disconnected, 3000));
+    EXPECT_TRUE(cr.WaitForState(sdv::ipc::EConnectState::disconnected, 3000));
 
     pair.client->Disconnect();
 
@@ -713,7 +713,8 @@ TEST(WindowsAFUnixIPC, WaitForConnection_ZeroTimeout_BeforeAndAfter)
 TEST(WindowsAFUnixIPC, ClientTimeout_NoServer)
 {
     sdv::app::CAppControl app;
-    ASSERT_TRUE(app.Startup(""));
+    ASSERT_TRUE(app.Startup(R"toml([LogHandler]
+ViewFilter = "Fatal")toml"));
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
@@ -742,7 +743,7 @@ TEST(WindowsAFUnixIPC, ClientTimeout_NoServer)
     EXPECT_FALSE(client->WaitForConnection(1500));
     std::this_thread::sleep_for(std::chrono::milliseconds(800));
 
-    EXPECT_EQ(client->GetStatus(), sdv::ipc::EConnectStatus::connection_error);
+    EXPECT_EQ(client->GetConnectState(), sdv::ipc::EConnectState::connection_error);
 
     client->Disconnect();
     mgr.Shutdown();
@@ -799,7 +800,7 @@ TEST(WindowsAFUnixIPC, PeerCloseMidTransfer_ClientDetectsDisconnect)
 
     t.join();
 
-    EXPECT_TRUE(cr.WaitForStatus(sdv::ipc::EConnectStatus::disconnected, 3000));
+    EXPECT_TRUE(cr.WaitForState(sdv::ipc::EConnectState::disconnected, 3000));
 
     pair.client->Disconnect();
     mgr.Shutdown();
@@ -810,7 +811,8 @@ TEST(WindowsAFUnixIPC, PeerCloseMidTransfer_ClientDetectsDisconnect)
 TEST(WindowsAFUnixIPC, ClientCancelConnect_NoServer_Cleanup)
 {
     sdv::app::CAppControl app;
-    ASSERT_TRUE(app.Startup(""));
+    ASSERT_TRUE(app.Startup(R"toml([LogHandler]
+ViewFilter = "Fatal")toml"));
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
@@ -838,7 +840,7 @@ TEST(WindowsAFUnixIPC, ClientCancelConnect_NoServer_Cleanup)
     std::this_thread::sleep_for(std::chrono::milliseconds(150));
     client->Disconnect();
 
-    EXPECT_EQ(client->GetStatus(), sdv::ipc::EConnectStatus::disconnected);
+    EXPECT_EQ(client->GetConnectState(), sdv::ipc::EConnectState::disconnected);
 
     mgr.Shutdown();
     app.Shutdown();
@@ -848,7 +850,8 @@ TEST(WindowsAFUnixIPC, ClientCancelConnect_NoServer_Cleanup)
 TEST(WindowsAFUnixIPC, ServerStartThenImmediateDisconnect_NoClient)
 {
     sdv::app::CAppControl app;
-    ASSERT_TRUE(app.Startup(""));
+    ASSERT_TRUE(app.Startup(R"toml([LogHandler]
+ViewFilter = "Fatal")toml"));
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
@@ -872,14 +875,14 @@ TEST(WindowsAFUnixIPC, ServerStartThenImmediateDisconnect_NoClient)
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
     server->Disconnect();
-    EXPECT_EQ(server->GetStatus(), sdv::ipc::EConnectStatus::disconnected);
+    EXPECT_EQ(server->GetConnectState(), sdv::ipc::EConnectState::disconnected);
 
     mgr.Shutdown();
     app.Shutdown();
 }
 
-// UnregisterStatusEventCallback: ensure single-listener semantics
-TEST(WindowsAFUnixIPC, UnregisterStatusEventCallback_SingleListenerSemantics)
+// UnregisterStateEventCallback: ensure single-listener semantics
+TEST(WindowsAFUnixIPC, UnregisterStateEventCallback_SingleListenerSemantics)
 {
     sdv::app::CAppControl app;
     ASSERT_TRUE(app.Startup(""));
@@ -905,7 +908,7 @@ TEST(WindowsAFUnixIPC, UnregisterStatusEventCallback_SingleListenerSemantics)
     ASSERT_NE(client, nullptr);
 
     CTestReceiver regListener;
-    const uint64_t cookie = server->RegisterStatusEventCallback(&regListener);
+    const uint64_t cookie = server->RegisterStateEventCallback(&regListener);
     ASSERT_NE(cookie, 0u);
 
     CTestReceiver mainRecv;
@@ -917,15 +920,15 @@ TEST(WindowsAFUnixIPC, UnregisterStatusEventCallback_SingleListenerSemantics)
     EXPECT_TRUE(server->WaitForConnection(5000));
     EXPECT_TRUE(client->WaitForConnection(5000));
 
-    EXPECT_TRUE(mainRecv.WaitForStatus(sdv::ipc::EConnectStatus::connected, 1000));
-    EXPECT_FALSE(regListener.WaitForStatus(sdv::ipc::EConnectStatus::connected, 300)) << "The registry listener should NOT receive events while main receiver is active.";
+    EXPECT_TRUE(mainRecv.WaitForState(sdv::ipc::EConnectState::connected, 1000));
+    EXPECT_FALSE(regListener.WaitForState(sdv::ipc::EConnectState::connected, 300)) << "The registry listener should NOT receive events while main receiver is active.";
 
-    server->UnregisterStatusEventCallback(cookie);
+    server->UnregisterStateEventCallback(cookie);
 
     client->Disconnect();
-    EXPECT_TRUE(mainRecv.WaitForStatus(sdv::ipc::EConnectStatus::disconnected, 1500));
+    EXPECT_TRUE(mainRecv.WaitForState(sdv::ipc::EConnectState::disconnected, 1500));
 
-    EXPECT_FALSE(regListener.WaitForStatus(sdv::ipc::EConnectStatus::disconnected, 300));
+    EXPECT_FALSE(regListener.WaitForState(sdv::ipc::EConnectState::disconnected, 300));
 
     server->Disconnect();
     mgr.Shutdown();

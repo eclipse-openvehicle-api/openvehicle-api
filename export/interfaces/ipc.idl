@@ -72,9 +72,9 @@ module sdv
         };
 
         /**
-         * @brief Connection status enumeration
+         * @brief Connection state enumeration
          */
-        enum EConnectStatus : uint32
+        enum EConnectState : uint32
         {
             uninitialized = 0,              ///< Initialization via IConnect pending/required
             initializing = 1,               ///< Initiation channel access.
@@ -96,8 +96,8 @@ module sdv
         {
             /**
              * @brief Establish a connection and start sending/receiving messages.
-             * @param[in] pReceiver Callback interface for receiving data and connect status.
-             * @return Returns 'true' when a channel connection could be initiated. Use GetStatus or IConnectEventCallback to
+             * @param[in] pReceiver Callback interface for receiving data and connect state.
+             * @return Returns 'true' when a channel connection could be initiated. Use GetConnectState or IConnectEventCallback to
              * check the connection state.
              */
             boolean AsyncConnect(in IInterfaceAccess pReceiver);
@@ -116,33 +116,32 @@ module sdv
             void CancelWait();
 
             /**
-             * @brief Disconnect from a connection. This will set the connect status to disconnected and release the interface
-             * used for the status events.
+             * @brief Disconnect from a connection. This will set the connect state to disconnected and release the interface
+             * used for the state events.
              */
             void Disconnect();
 
             /**
              * @brief Register event callback interface.
-             * @details Register a connection status event callback interface. The exposed interface must be of type
+             * @details Register a connection state event callback interface. The exposed interface must be of type
              * IConnectEventCallback. The registration will exist until a call to the unregister function with the returned cookie
              * or until the connection is terminated.
              * @param[in] pEventCallback Pointer to the object exposing the IConnectEventCallback interface.
              * @return The cookie assigned to the registration or 0 when the registration wasn't successful.
             */
-            uint64 RegisterStatusEventCallback(in IInterfaceAccess pEventCallback);
+            uint64 RegisterStateEventCallback(in IInterfaceAccess pEventCallback);
 
             /**
-             * @brief Unregister the status event callback with the returned cookie from the registration.
+             * @brief Unregister the state event callback with the returned cookie from the registration.
              * @param[in] uiCookie The cookie returned by a previous call to the registration function.
              */
-            void UnregisterStatusEventCallback(in uint64 uiCookie);
+            void UnregisterStateEventCallback(in uint64 uiCookie);
 
             /**
-             * @brief Gets the current status of the IPC whether it is initialized/connected/disconnected or having connection
-             * error.
-             * @return Returns retrieved status of the IPC.
+             * @brief Get the current state of the IPC conection.
+             * @return Returns connection state.
              */
-            EConnectStatus GetStatus() const;
+            EConnectState GetConnectState() const;
         };
 
         /**
@@ -151,10 +150,10 @@ module sdv
         interface IConnectEventCallback
         {
             /**
-             * @brief Set the current status.
-             * @param[in] eConnectStatus The connection status.
+             * @brief Set the current connect state.
+             * @param[in] eConnectState The connection state.
             */
-            void SetStatus(in EConnectStatus eConnectStatus);
+            void SetConnectState(in EConnectState eConnectState);
         };
 
         /**

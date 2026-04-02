@@ -18,7 +18,7 @@
 #include <support/app_control.h>
 #include <support/component_impl.h>
 #include <support/timer.h>
-#include "signal_names.h"
+#include "../generated/vss_files/signal_identifier.h"
 
 #ifdef __unix__
 #include <termios.h>        // Needed for tcgetattr and fcntl

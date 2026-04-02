@@ -105,7 +105,7 @@ CUnixSocketConnection::CUnixSocketConnection(int preconfiguredFd,
     , m_UdsPath(udsPath)
     , m_StopReceiveThread(false)
     , m_StopConnectThread(false)
-    , m_eStatus(sdv::ipc::EConnectStatus::uninitialized)
+    , m_eConnectState(sdv::ipc::EConnectState::uninitialized)
     , m_pReceiver(nullptr)
     , m_pEvent(nullptr)
 {
@@ -170,10 +170,10 @@ bool CUnixSocketConnection::SendData(sdv::sequence<sdv::pointer<uint8_t>>& seqDa
 #endif
 
     // Only send when connected and FD valid
-    if (m_eStatus != sdv::ipc::EConnectStatus::connected || m_Fd < 0)
+    if (m_eConnectState != sdv::ipc::EConnectState::connected || m_Fd < 0)
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
-        SDV_LOG_WARNING("[UDS][TX] Send requested while not connected or FD invalid (status=", static_cast<int>(m_eStatus.load()), ")");
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
+        SDV_LOG_WARNING("[UDS][TX] Send requested while not connected or FD invalid (state=", static_cast<int>(m_eConnectState.load()), ")");
         return false;
     }
 
@@ -328,7 +328,7 @@ bool CUnixSocketConnection::SendData(sdv::sequence<sdv::pointer<uint8_t>>& seqDa
     return true;
 }
 
-uint64_t CUnixSocketConnection::RegisterStatusEventCallback(sdv::IInterfaceAccess* pEventCallback)
+uint64_t CUnixSocketConnection::RegisterStateEventCallback(sdv::IInterfaceAccess* pEventCallback)
 {
     if (!pEventCallback) return 0;
 
@@ -351,7 +351,7 @@ uint64_t CUnixSocketConnection::RegisterStatusEventCallback(sdv::IInterfaceAcces
     return cookie;
 }
 
-void CUnixSocketConnection::UnregisterStatusEventCallback(uint64_t uiCookie)
+void CUnixSocketConnection::UnregisterStateEventCallback(uint64_t uiCookie)
 {
     if (!uiCookie) return;
 
@@ -386,7 +386,7 @@ bool CUnixSocketConnection::AsyncConnect(sdv::IInterfaceAccess* pReceiver)
         std::lock_guard<std::mutex> lk(m_StateMtx);
         m_pReceiver = sdv::TInterfaceAccessPtr(pReceiver).GetInterface<sdv::ipc::IDataReceiveCallback>();
         m_pEvent    = sdv::TInterfaceAccessPtr(pReceiver).GetInterface<sdv::ipc::IConnectEventCallback>();
-        m_eStatus   = sdv::ipc::EConnectStatus::initializing;
+        m_eConnectState   = sdv::ipc::EConnectState::initializing;
 
         // Reset stop flags
         m_StopReceiveThread.store(false);
@@ -450,22 +450,22 @@ int CUnixSocketConnection::AcceptConnection() // deprecated
 
 bool CUnixSocketConnection::WaitForConnection(uint32_t uiWaitMs)
 {
-    if (m_eStatus.load(std::memory_order_acquire) == sdv::ipc::EConnectStatus::connected) return true;
+    if (m_eConnectState.load(std::memory_order_acquire) == sdv::ipc::EConnectState::connected) return true;
 
     std::unique_lock<std::mutex> lk(m_MtxConnect);
 
     if (uiWaitMs == 0xFFFFFFFFu)
     {
         m_CvConnect.wait(lk, [this]{
-            return m_eStatus.load(std::memory_order_acquire) == sdv::ipc::EConnectStatus::connected;
+            return m_eConnectState.load(std::memory_order_acquire) == sdv::ipc::EConnectState::connected;
         });
         return true;
     }
     if (uiWaitMs == 0u)
-        return (m_eStatus.load(std::memory_order_acquire) == sdv::ipc::EConnectStatus::connected);
+        return (m_eConnectState.load(std::memory_order_acquire) == sdv::ipc::EConnectState::connected);
 
     return m_CvConnect.wait_for(lk, std::chrono::milliseconds(uiWaitMs),
-                                [this]{ return m_eStatus.load(std::memory_order_acquire) == sdv::ipc::EConnectStatus::connected; });
+                                [this]{ return m_eConnectState.load(std::memory_order_acquire) == sdv::ipc::EConnectState::connected; });
 }
 
 void CUnixSocketConnection::CancelWait()
@@ -476,33 +476,33 @@ void CUnixSocketConnection::CancelWait()
 void CUnixSocketConnection::Disconnect()
 {
     StopThreadsAndCloseSockets(/*unlinkPath*/ false);
-    SetStatus(sdv::ipc::EConnectStatus::disconnected);
+    SetConnectState(sdv::ipc::EConnectState::disconnected);
 }
 
-sdv::ipc::EConnectStatus CUnixSocketConnection::GetStatus() const
+sdv::ipc::EConnectState CUnixSocketConnection::GetConnectState() const
 {
-    return m_eStatus;
+    return m_eConnectState;
 }
 
 void CUnixSocketConnection::DestroyObject()
 {
     m_StopReceiveThread.store(true);
-    m_eStatus = sdv::ipc::EConnectStatus::disconnected;
+    m_eConnectState = sdv::ipc::EConnectState::disconnected;
 }
 
-void CUnixSocketConnection::SetStatus(sdv::ipc::EConnectStatus eStatus)
+void CUnixSocketConnection::SetConnectState(sdv::ipc::EConnectState eConnectState)
 {
     // Update internal state atomically and wake up waiters.
     {
         std::lock_guard<std::mutex> lk(m_MtxConnect);
-        m_eStatus.store(eStatus, std::memory_order_release);
+        m_eConnectState.store(eConnectState, std::memory_order_release);
     }
     m_CvConnect.notify_all();
 
     // Notify the legacy single-listener (kept for backward compatibility).
     try
     {
-        m_pEvent->SetStatus(eStatus);
+        m_pEvent->SetConnectState(eConnectState);
     }
     catch (...) { /* swallow: user callback must not crash transport */ }
 
@@ -515,7 +515,7 @@ void CUnixSocketConnection::SetStatus(sdv::ipc::EConnectStatus eStatus)
             if (!entry.pCallback) { needCompact = true; continue; }
             try
             {
-                entry.pCallback->SetStatus(eStatus);
+                entry.pCallback->SetConnectState(eConnectState);
             }
             catch (...) { /* swallow per-listener */ }
         }
@@ -588,7 +588,7 @@ void CUnixSocketConnection::ConnectWorker()
             if (!EnsureDir(dir))
             {
                 SDV_LOG_ERROR("[UDS][Server] ensure_dir('", dir, "') failed: ", std::strerror(errno));
-                SetStatus(sdv::ipc::EConnectStatus::connection_error);
+                SetConnectState(sdv::ipc::EConnectState::connection_error);
                 return;
             }
 
@@ -596,7 +596,7 @@ void CUnixSocketConnection::ConnectWorker()
             if (m_ListenFd < 0)
             {
                 SDV_LOG_ERROR("[UDS][Server] socket() failed: ", std::strerror(errno));
-                SetStatus(sdv::ipc::EConnectStatus::connection_error);
+                SetConnectState(sdv::ipc::EConnectState::connection_error);
                 return;
             }
 
@@ -608,7 +608,7 @@ void CUnixSocketConnection::ConnectWorker()
             {
                 SDV_LOG_ERROR("[UDS][Server] bind('", m_UdsPath, "') failed: ", std::strerror(errno));
                 ::close(m_ListenFd); m_ListenFd = -1;
-                SetStatus(sdv::ipc::EConnectStatus::connection_error);
+                SetConnectState(sdv::ipc::EConnectState::connection_error);
                 return;
             }
 
@@ -618,7 +618,7 @@ void CUnixSocketConnection::ConnectWorker()
             {
                 SDV_LOG_ERROR("[UDS][Server] listen() failed: ", std::strerror(errno));
                 ::close(m_ListenFd); m_ListenFd = -1;
-                SetStatus(sdv::ipc::EConnectStatus::connection_error);
+                SetConnectState(sdv::ipc::EConnectState::connection_error);
                 return;
             }
 
@@ -670,12 +670,12 @@ void CUnixSocketConnection::ConnectWorker()
             }
             if (clientFd < 0)
             {
-                SetStatus(sdv::ipc::EConnectStatus::connection_error);
+                SetConnectState(sdv::ipc::EConnectState::connection_error);
                 return;
             }
 
             m_Fd = clientFd;
-            SetStatus(sdv::ipc::EConnectStatus::connected);
+            SetConnectState(sdv::ipc::EConnectState::connected);
             StartReceiveThread_Unsafe();
             return;
         }
@@ -686,7 +686,7 @@ void CUnixSocketConnection::ConnectWorker()
             if (m_Fd < 0)
             {
                 SDV_LOG_ERROR("[UDS][Client] socket() failed: ", std::strerror(errno));
-                SetStatus(sdv::ipc::EConnectStatus::connection_error);
+                SetConnectState(sdv::ipc::EConnectState::connection_error);
                 return;
             }
 
@@ -702,7 +702,7 @@ void CUnixSocketConnection::ConnectWorker()
             {
                 if (::connect(m_Fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) == 0)
                 {
-                    SetStatus(sdv::ipc::EConnectStatus::connected);
+                    SetConnectState(sdv::ipc::EConnectState::connected);
 #if ENABLE_REPORTING >= 1
                     TRACE("[UDS][Client] Connected");
 #endif
@@ -719,19 +719,19 @@ void CUnixSocketConnection::ConnectWorker()
             }
 
             ::close(m_Fd); m_Fd = -1;
-            SetStatus(sdv::ipc::EConnectStatus::connection_error);
+            SetConnectState(sdv::ipc::EConnectState::connection_error);
             return;
         }
     }
     catch (const std::exception& ex)
     {
         SDV_LOG_ERROR("[UDS][ConnectWorker] exception: ", ex.what());
-        SetStatus(sdv::ipc::EConnectStatus::connection_error);
+        SetConnectState(sdv::ipc::EConnectState::connection_error);
     }
     catch (...)
     {
         SDV_LOG_ERROR("[UDS][ConnectWorker] unknown exception");
-        SetStatus(sdv::ipc::EConnectStatus::connection_error);
+        SetConnectState(sdv::ipc::EConnectState::connection_error);
     }
 }
 
@@ -741,7 +741,7 @@ void CUnixSocketConnection::ReceiveSyncAnswer(const CMessage& message)
     const auto hdr = message.GetMsgHdr();
     if (hdr.uiVersion != SDVFrameworkInterfaceVersion)
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         SDV_LOG_WARNING("[UDS][RX] sync_answer with invalid version");
         return;
     }
@@ -772,13 +772,13 @@ void CUnixSocketConnection::ReceiveMessages()
 
         while (!m_StopReceiveThread.load())
         {
-            if (m_eStatus == sdv::ipc::EConnectStatus::terminating) break;
+            if (m_eConnectState == sdv::ipc::EConnectState::terminating) break;
 
             // Snapshot FD
             const int fd = m_Fd;
             if (fd < 0)
             {
-                SetStatus(sdv::ipc::EConnectStatus::disconnected);
+                SetConnectState(sdv::ipc::EConnectState::disconnected);
                 SDV_LOG_WARNING("[UDS][RX] FD invalidated -> disconnected");
                 break;
             }
@@ -789,7 +789,7 @@ void CUnixSocketConnection::ReceiveMessages()
 
             if (pr == 0)
             {
-                if (!m_AcceptConnectionRequired && (m_eStatus == sdv::ipc::EConnectStatus::initialized))
+                if (!m_AcceptConnectionRequired && (m_eConnectState == sdv::ipc::EConnectState::initialized))
                 {
                     auto now = std::chrono::high_resolution_clock::now();
                     if (std::chrono::duration<double>(now - tpStart).count() > 0.5)
@@ -805,7 +805,7 @@ void CUnixSocketConnection::ReceiveMessages()
 
             if (pr < 0 || (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) != 0)
             {
-                SetStatus(sdv::ipc::EConnectStatus::disconnected);
+                SetConnectState(sdv::ipc::EConnectState::disconnected);
                 SDV_LOG_WARNING("[UDS][RX] poll() hangup/error -> disconnected");
                 break;
             }
@@ -815,7 +815,7 @@ void CUnixSocketConnection::ReceiveMessages()
             uint32_t packetSize = 0;
             if (!ReadTransportHeader(packetSize))
             {
-                SetStatus(sdv::ipc::EConnectStatus::disconnected);
+                SetConnectState(sdv::ipc::EConnectState::disconnected);
                 SDV_LOG_WARNING("[UDS][RX] Invalid/missing transport header -> disconnected");
                 break;
             }
@@ -824,7 +824,7 @@ void CUnixSocketConnection::ReceiveMessages()
             std::vector<uint8_t> payload(packetSize);
             if (!ReadNumberOfBytes(reinterpret_cast<char*>(payload.data()), packetSize))
             {
-                SetStatus(sdv::ipc::EConnectStatus::disconnected);
+                SetConnectState(sdv::ipc::EConnectState::disconnected);
                 SDV_LOG_WARNING("[UDS][RX] Incomplete payload read -> disconnected");
                 break;
             }
@@ -832,12 +832,12 @@ void CUnixSocketConnection::ReceiveMessages()
             CMessage msg(std::move(payload));
             if (!msg.IsValid())
             {
-                SetStatus(sdv::ipc::EConnectStatus::communication_error);
+                SetConnectState(sdv::ipc::EConnectState::communication_error);
                 SDV_LOG_WARNING("[UDS][RX] Invalid SDV message (envelope)");
                 continue;
             }
 
-            if (m_eStatus == sdv::ipc::EConnectStatus::terminating) break;
+            if (m_eConnectState == sdv::ipc::EConnectState::terminating) break;
 
 #if ENABLE_REPORTING >= 1
             switch (msg.GetMsgHdr().eType)
@@ -874,12 +874,12 @@ void CUnixSocketConnection::ReceiveMessages()
     catch (const std::exception& ex)
     {
         SDV_LOG_ERROR("[UDS][RX] exception: ", ex.what());
-        SetStatus(sdv::ipc::EConnectStatus::disconnected);
+        SetConnectState(sdv::ipc::EConnectState::disconnected);
     }
     catch (...)
     {
         SDV_LOG_ERROR("[UDS][RX] unknown exception");
-        SetStatus(sdv::ipc::EConnectStatus::disconnected);
+        SetConnectState(sdv::ipc::EConnectState::disconnected);
     }
 }
 
@@ -888,7 +888,7 @@ void CUnixSocketConnection::ReceiveSyncRequest(const CMessage& message)
     const auto hdr = message.GetMsgHdr();
     if (hdr.uiVersion != SDVFrameworkInterfaceVersion)
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         SDV_LOG_WARNING("[UDS][RX] sync_request with invalid version");
         return;
     }
@@ -907,7 +907,7 @@ void CUnixSocketConnection::ReceiveConnectRequest(const CMessage& message)
     const auto hdr = message.GetConnectHdr();
     if (hdr.uiVersion != SDVFrameworkInterfaceVersion)
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         SDV_LOG_WARNING("[UDS][RX] connect_request with invalid version");
         return;
     }
@@ -927,19 +927,19 @@ void CUnixSocketConnection::ReceiveConnectAnswer(const CMessage& message)
     const auto hdr = message.GetConnectHdr();
     if (hdr.uiVersion != SDVFrameworkInterfaceVersion)
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         SDV_LOG_WARNING("[UDS][RX] connect_answer with invalid version");
         return;
     }
 
     // Fully established
-    SetStatus(sdv::ipc::EConnectStatus::connected);
+    SetConnectState(sdv::ipc::EConnectState::connected);
 }
 
 void CUnixSocketConnection::ReceiveConnectTerm(const CMessage& /*message*/)
 {
     // Peer requested termination
-    SetStatus(sdv::ipc::EConnectStatus::disconnected);
+    SetConnectState(sdv::ipc::EConnectState::disconnected);
     m_StopReceiveThread.store(true);
 }
 
@@ -999,7 +999,7 @@ void CUnixSocketConnection::ReceiveDataMessage(const CMessage& rMessage, SDataCo
     uint32_t uiOffset = ReadDataTable(rMessage, rsDataCtxt);
     if (!uiOffset) 
     { 
-        SetStatus(sdv::ipc::EConnectStatus::communication_error); 
+        SetConnectState(sdv::ipc::EConnectState::communication_error); 
         SDV_LOG_WARNING("[UDS][RX] Invalid data table"); 
         return; 
     }
@@ -1012,7 +1012,7 @@ void CUnixSocketConnection::ReceiveDataMessage(const CMessage& rMessage, SDataCo
 
     if (!ReadDataChunk(rMessage, uiOffset, rsDataCtxt))
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         SDV_LOG_WARNING("[UDS][RX] Failed to read data chunk");
         return;
     }
@@ -1034,7 +1034,7 @@ void CUnixSocketConnection::ReceiveDataFragmentMessage(const CMessage& rMessage,
         uiOffset = ReadDataTable(rMessage, rsDataCtxt);
         if (!uiOffset) 
         { 
-            SetStatus(sdv::ipc::EConnectStatus::communication_error); 
+            SetConnectState(sdv::ipc::EConnectState::communication_error); 
             SDV_LOG_WARNING("[UDS][RX] Invalid fragmented data table"); 
             return; 
         }
@@ -1048,7 +1048,7 @@ void CUnixSocketConnection::ReceiveDataFragmentMessage(const CMessage& rMessage,
 
     if (!ReadDataChunk(rMessage, uiOffset, rsDataCtxt))
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         SDV_LOG_WARNING("[UDS][RX] Failed to read fragmented chunk");
         return;
     }

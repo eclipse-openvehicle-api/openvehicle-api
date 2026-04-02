@@ -55,7 +55,7 @@ CChannelConnector::~CChannelConnector()
     sdv::ipc::IConnect* pConnection = m_ptrChannelEndpoint.GetInterface<sdv::ipc::IConnect>();
     if (pConnection)
     {
-        if (m_uiConnectionStatusCookie) pConnection->UnregisterStatusEventCallback(m_uiConnectionStatusCookie);
+        if (m_uiConnectStateCookie) pConnection->UnregisterStateEventCallback(m_uiConnectStateCookie);
         pConnection->Disconnect();
     }
 
@@ -78,8 +78,8 @@ bool CChannelConnector::ServerConnect(sdv::IInterfaceAccess* pObject, bool bAllo
     // Establish connection...
     sdv::ipc::IConnect* pConnection = m_ptrChannelEndpoint.GetInterface<sdv::ipc::IConnect>();
     if (!pConnection) return false;
-    m_uiConnectionStatusCookie = pConnection->RegisterStatusEventCallback(this);
-    return m_uiConnectionStatusCookie != 0 && pConnection->AsyncConnect(this);
+    m_uiConnectStateCookie = pConnection->RegisterStateEventCallback(this);
+    return m_uiConnectStateCookie != 0 && pConnection->AsyncConnect(this);
 }
 
 sdv::IInterfaceAccess* CChannelConnector::ClientConnect(uint32_t uiTimeoutMs)
@@ -99,8 +99,8 @@ sdv::IInterfaceAccess* CChannelConnector::ClientConnect(uint32_t uiTimeoutMs)
 
     // Establish connection...
     sdv::ipc::IConnect* pConnection = m_ptrChannelEndpoint.GetInterface<sdv::ipc::IConnect>();
-    if (pConnection) m_uiConnectionStatusCookie = pConnection->RegisterStatusEventCallback(this);
-    if (!pConnection || m_uiConnectionStatusCookie == 0 || !pConnection->AsyncConnect(this) ||
+    if (pConnection) m_uiConnectStateCookie = pConnection->RegisterStateEventCallback(this);
+    if (!pConnection || m_uiConnectStateCookie == 0 || !pConnection->AsyncConnect(this) ||
         !pConnection->WaitForConnection(uiTimeoutMs))
     {
         SDV_LOG_ERROR("Could not establish a connection!");
@@ -113,17 +113,17 @@ sdv::IInterfaceAccess* CChannelConnector::ClientConnect(uint32_t uiTimeoutMs)
 
 bool CChannelConnector::IsConnected() const
 {
-    return m_eConnectStatus == sdv::ipc::EConnectStatus::connected;
+    return m_eConnectState == sdv::ipc::EConnectState::connected;
 }
 
-void CChannelConnector::SetStatus(/*in*/ sdv::ipc::EConnectStatus eConnectStatus)
+void CChannelConnector::SetConnectState(/*in*/ sdv::ipc::EConnectState eConnectState)
 {
-    auto eConnectStatusTemp = m_eConnectStatus;
-    m_eConnectStatus = eConnectStatus;
-    switch (m_eConnectStatus)
+    auto eConnectStateTemp = m_eConnectState;
+    m_eConnectState = eConnectState;
+    switch (m_eConnectState)
     {
-    case sdv::ipc::EConnectStatus::disconnected:
-    case sdv::ipc::EConnectStatus::disconnected_forced:
+    case sdv::ipc::EConnectState::disconnected:
+    case sdv::ipc::EConnectState::disconnected_forced:
         // Invalidate the proxy objects.
         for (auto& rvtProxyObject : m_mapProxyObjects)
             rvtProxyObject.second.reset();
@@ -131,7 +131,7 @@ void CChannelConnector::SetStatus(/*in*/ sdv::ipc::EConnectStatus eConnectStatus
         if (m_eEndpointType == EEndpointType::server)
         {
             // Report information (but only once)
-            if (sdv::app::ConsoleIsVerbose() && eConnectStatusTemp != sdv::ipc::EConnectStatus::disconnected)
+            if (sdv::app::ConsoleIsVerbose() && eConnectStateTemp != sdv::ipc::EConnectState::disconnected)
                 std::cout << "Client disconnected (ID#" << m_tConnectionID.uiIdent << ")" << std::endl;
 
             // Remove the connection if reconnection is not enabled (normal case).
@@ -139,7 +139,7 @@ void CChannelConnector::SetStatus(/*in*/ sdv::ipc::EConnectStatus eConnectStatus
                 m_rcontrol.RemoveConnection(m_tConnectionID);
         }
         break;
-    case sdv::ipc::EConnectStatus::connected:
+    case sdv::ipc::EConnectState::connected:
         if (m_eEndpointType == EEndpointType::server)
         {
             // Report information

@@ -196,7 +196,7 @@ void CWatchDog::ProcessTerminated(/*in*/ sdv::process::TProcessID tProcessID, /*
     // Inform the connection about the removed process.
     for (auto& rptrConnection : vecDisconnectedConnections)
     {
-        rptrConnection->SetStatus(sdv::ipc::EConnectStatus::disconnected_forced);
+        rptrConnection->SetConnectState(sdv::ipc::EConnectState::disconnected_forced);
 
 #if ENABLE_REPORTING > 0
         TRACE("Forced disconnection for PID#", tProcessID);

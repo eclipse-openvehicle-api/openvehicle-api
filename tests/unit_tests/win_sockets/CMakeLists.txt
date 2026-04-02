@@ -7,7 +7,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0 
 #*******************************************************************************
-
+if(WIN32)
 cmake_minimum_required(VERSION 3.20)
 
 project(WinSocketCommunicationTests LANGUAGES CXX)
@@ -36,6 +36,7 @@ target_include_directories(UnitTest_WinSocketConnectTests
             Ws2_32
             Winmm
             Rpcrt4
+            uds_win_sockets
     )
 
 add_test(NAME UnitTest_WinSocketConnectTests
@@ -50,4 +51,6 @@ add_custom_command(TARGET UnitTest_WinSocketConnectTests POST_BUILD
             --gtest_output=xml:${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/UnitTest_WinSocketConnectTests.xml
     VERBATIM
 )
+endif()
+
 endif()

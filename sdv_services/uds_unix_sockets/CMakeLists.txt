@@ -13,16 +13,13 @@ if(UNIX)
 project(uds_unix_sockets VERSION 1.0 LANGUAGES CXX)
 
 # Define target
-add_library(uds_unix_sockets SHARED
-    "channel_mgnt.h"
-    "channel_mgnt.cpp"
-    "connection.h"
-    "connection.cpp"
+add_library(uds_unix_sockets STATIC
+    channel_mgnt.cpp
+    connection.cpp
     )
 
 target_link_libraries(uds_unix_sockets rt ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
-target_link_options(uds_unix_sockets PRIVATE)
 target_include_directories(uds_unix_sockets PRIVATE ./include/)
 set_target_properties(uds_unix_sockets PROPERTIES PREFIX "")
 set_target_properties(uds_unix_sockets PROPERTIES SUFFIX ".sdv")

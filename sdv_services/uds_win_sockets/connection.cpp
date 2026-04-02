@@ -10,7 +10,7 @@
 * Contributors:
 *   Denisa Ros - initial API and implementation
 ********************************************************************************/
-
+#ifdef _WIN32
 #include "connection.h"
 
 #include <numeric>
@@ -18,8 +18,8 @@
 #include <cstring>
 #include <chrono>
 
-CConnection::CConnection(SOCKET preconfiguredSocket, bool acceptConnectionRequired)
-    : m_ConnectionStatus(sdv::ipc::EConnectStatus::uninitialized)
+CWinsockConnection::CWinsockConnection(unsigned long long preconfiguredSocket, bool acceptConnectionRequired)
+    : m_ConnectionState(sdv::ipc::EConnectState::uninitialized)
     , m_AcceptConnectionRequired(acceptConnectionRequired)
     , m_CancelWait(false)
 {
@@ -30,23 +30,34 @@ CConnection::CConnection(SOCKET preconfiguredSocket, bool acceptConnectionRequir
     if (m_AcceptConnectionRequired)
     {
         // Server side: we own a listening socket, active socket is not yet accepted
-        m_ListenSocket     = preconfiguredSocket;
+        m_ListenSocket     = static_cast<SOCKET>(preconfiguredSocket);
         m_ConnectionSocket = INVALID_SOCKET;
     }
     else
     {
         // Client side: we already have a connected socket
         m_ListenSocket     = INVALID_SOCKET;
-        m_ConnectionSocket = preconfiguredSocket;
+        m_ConnectionSocket = static_cast<SOCKET>(preconfiguredSocket);
     }
 }
 
-CConnection::~CConnection()
+/*CWinsockConnection::CWinsockConnection()
+    : m_ConnectionState(sdv::ipc::EConnectState::uninitialized)
+    , m_AcceptConnectionRequired(false)
+    , m_CancelWait(false)
+{
+    m_ListenSocket     = INVALID_SOCKET;
+    m_ConnectionSocket = INVALID_SOCKET;
+    std::fill(std::begin(m_SendBuffer), std::end(m_SendBuffer), '\0');
+    std::fill(std::begin(m_ReceiveBuffer), std::end(m_ReceiveBuffer), '\0');
+}*/
+
+CWinsockConnection::~CWinsockConnection()
 {
     try
     {
         StopThreadsAndCloseSockets();
-        m_ConnectionStatus = sdv::ipc::EConnectStatus::disconnected;
+        m_ConnectionState = sdv::ipc::EConnectState::disconnected;
     }
     catch (...)
     {
@@ -54,11 +65,11 @@ CConnection::~CConnection()
     }
 }
 
-void CConnection::SetStatus(sdv::ipc::EConnectStatus status)
+void CWinsockConnection::SetConnectState(sdv::ipc::EConnectState state)
 {
     {
         std::lock_guard<std::mutex> lk(m_MtxConnect);
-        m_ConnectionStatus.store(status, std::memory_order_release);
+        m_ConnectionState.store(state, std::memory_order_release);
     }
 
     // Wake up any waiter
@@ -69,7 +80,7 @@ void CConnection::SetStatus(sdv::ipc::EConnectStatus status)
     {
         try
         {
-            m_pEvent->SetStatus(status);
+            m_pEvent->SetConnectState(state);
         }
         catch (...)
         {
@@ -78,7 +89,7 @@ void CConnection::SetStatus(sdv::ipc::EConnectStatus status)
     }
 }
 
-int32_t CConnection::Send(const char* data, int32_t dataLength)
+int32_t CWinsockConnection::Send(const char* data, int32_t dataLength)
 {
     int32_t total = 0;
 
@@ -88,7 +99,7 @@ int32_t CConnection::Send(const char* data, int32_t dataLength)
         if (n == SOCKET_ERROR)
         {
             SDV_LOG_ERROR("send failed with error: ", std::to_string(WSAGetLastError()));
-            m_ConnectionStatus = sdv::ipc::EConnectStatus::communication_error;
+            m_ConnectionState = sdv::ipc::EConnectState::communication_error;
             m_ConnectionSocket = INVALID_SOCKET;
             return (total > 0) ? total : SOCKET_ERROR;
         }
@@ -98,7 +109,7 @@ int32_t CConnection::Send(const char* data, int32_t dataLength)
     return total;
 }
 
-int CConnection::SendExact(const char* data, int len)
+int CWinsockConnection::SendExact(const char* data, int len)
 {
     int total = 0;
 
@@ -115,13 +126,13 @@ int CConnection::SendExact(const char* data, int len)
     return total;
 }
 
-bool CConnection::SendData(/*inout*/ sdv::sequence<sdv::pointer<uint8_t>>& seqData)
+bool CWinsockConnection::SendData(/*inout*/ sdv::sequence<sdv::pointer<uint8_t>>& seqData)
 {
     // Must be connected and have a valid socket
-    if (m_ConnectionStatus != sdv::ipc::EConnectStatus::connected ||
+    if (m_ConnectionState != sdv::ipc::EConnectState::connected ||
         m_ConnectionSocket == INVALID_SOCKET)
     {
-        m_ConnectionStatus = sdv::ipc::EConnectStatus::communication_error;
+        m_ConnectionState = sdv::ipc::EConnectState::communication_error;
         return false;
     }
 
@@ -288,11 +299,11 @@ bool CConnection::SendData(/*inout*/ sdv::sequence<sdv::pointer<uint8_t>>& seqDa
     return (sentOffset == required);
 }
 
-SOCKET CConnection::AcceptConnection()
+SOCKET CWinsockConnection::AcceptConnection()
 {
     if (m_ListenSocket == INVALID_SOCKET)
     {
-        SetStatus(sdv::ipc::EConnectStatus::connection_error);
+        SetConnectState(sdv::ipc::EConnectState::connection_error);
         return INVALID_SOCKET;
     }
 
@@ -310,7 +321,7 @@ SOCKET CConnection::AcceptConnection()
         if (sr == SOCKET_ERROR)
         {
             SDV_LOG_ERROR("[AF_UNIX] select(listen) FAIL, WSA=", WSAGetLastError());
-            SetStatus(sdv::ipc::EConnectStatus::connection_error);
+            SetConnectState(sdv::ipc::EConnectState::connection_error);
             return INVALID_SOCKET;
         }
 
@@ -329,7 +340,7 @@ SOCKET CConnection::AcceptConnection()
             }
 
             SDV_LOG_ERROR("[AF_UNIX] accept FAIL, WSA=", err);
-            SetStatus(sdv::ipc::EConnectStatus::connection_error);
+            SetConnectState(sdv::ipc::EConnectState::connection_error);
             return INVALID_SOCKET;
         }
 
@@ -338,11 +349,11 @@ SOCKET CConnection::AcceptConnection()
     }
 
     SDV_LOG_ERROR("[AF_UNIX] accept canceled (stop flag)");
-    SetStatus(sdv::ipc::EConnectStatus::connection_error);
+    SetConnectState(sdv::ipc::EConnectState::connection_error);
     return INVALID_SOCKET;
 }
 
-bool CConnection::AsyncConnect(sdv::IInterfaceAccess* pReceiver)
+bool CWinsockConnection::AsyncConnect(sdv::IInterfaceAccess* pReceiver)
 {
     // Store callbacks
     m_pReceiver = sdv::TInterfaceAccessPtr(pReceiver).GetInterface<sdv::ipc::IDataReceiveCallback>();
@@ -360,14 +371,14 @@ bool CConnection::AsyncConnect(sdv::IInterfaceAccess* pReceiver)
         m_ConnectThread.join();
 
     // Start the connect worker
-    m_ConnectThread = std::thread(&CConnection::ConnectWorker, this);
+    m_ConnectThread = std::thread(&CWinsockConnection::ConnectWorker, this);
     return true;
 }
 
-bool CConnection::WaitForConnection(uint32_t uiWaitMs)
+bool CWinsockConnection::WaitForConnection(uint32_t uiWaitMs)
 {
-    if (m_ConnectionStatus.load(std::memory_order_acquire) ==
-        sdv::ipc::EConnectStatus::connected)
+    if (m_ConnectionState.load(std::memory_order_acquire) ==
+        sdv::ipc::EConnectState::connected)
     {
         return true;
     }
@@ -380,16 +391,16 @@ bool CConnection::WaitForConnection(uint32_t uiWaitMs)
             lk,
             [this]
             {
-                return m_ConnectionStatus.load(std::memory_order_acquire) ==
-                       sdv::ipc::EConnectStatus::connected;
+                return m_ConnectionState.load(std::memory_order_acquire) ==
+                       sdv::ipc::EConnectState::connected;
             });
         return true;
     }
 
     if (uiWaitMs == 0u) // zero wait
     {
-        return (m_ConnectionStatus.load(std::memory_order_acquire) ==
-                sdv::ipc::EConnectStatus::connected);
+        return (m_ConnectionState.load(std::memory_order_acquire) ==
+                sdv::ipc::EConnectState::connected);
     }
 
     // finite wait
@@ -398,24 +409,24 @@ bool CConnection::WaitForConnection(uint32_t uiWaitMs)
         std::chrono::milliseconds(uiWaitMs),
         [this]
         {
-            return m_ConnectionStatus.load(std::memory_order_acquire) ==
-                   sdv::ipc::EConnectStatus::connected;
+            return m_ConnectionState.load(std::memory_order_acquire) ==
+                   sdv::ipc::EConnectState::connected;
         });
 }
 
-void CConnection::CancelWait()
+void CWinsockConnection::CancelWait()
 {
     m_CancelWait.store(true);
 }
 
-void CConnection::Disconnect()
+void CWinsockConnection::Disconnect()
 {
     m_CancelWait.store(true);
     StopThreadsAndCloseSockets();
-    SetStatus(sdv::ipc::EConnectStatus::disconnected);
+    SetConnectState(sdv::ipc::EConnectState::disconnected);
 }
 
-uint64_t CConnection::RegisterStatusEventCallback(/*in*/ sdv::IInterfaceAccess* pEventCallback)
+uint64_t CWinsockConnection::RegisterStateEventCallback(/*in*/ sdv::IInterfaceAccess* pEventCallback)
 {
     // Extract IConnectEventCallback interface
     m_pEvent = sdv::TInterfaceAccessPtr(pEventCallback).GetInterface<sdv::ipc::IConnectEventCallback>();
@@ -424,7 +435,7 @@ uint64_t CConnection::RegisterStatusEventCallback(/*in*/ sdv::IInterfaceAccess* 
     return (m_pEvent != nullptr) ? 1ULL : 0ULL;
 }
 
-void CConnection::UnregisterStatusEventCallback(/*in*/ uint64_t uiCookie)
+void CWinsockConnection::UnregisterStateEventCallback(/*in*/ uint64_t uiCookie)
 {
     // Only one callback supported -> cookie value is 1
     if (uiCookie == 1ULL)
@@ -433,21 +444,21 @@ void CConnection::UnregisterStatusEventCallback(/*in*/ uint64_t uiCookie)
     }
 }
 
-sdv::ipc::EConnectStatus CConnection::GetStatus() const
+sdv::ipc::EConnectState CWinsockConnection::GetConnectState() const
 {
-    return m_ConnectionStatus;
+    return m_ConnectionState;
 }
 
-void CConnection::DestroyObject()
+void CWinsockConnection::DestroyObject()
 {
     m_StopReceiveThread  = true;
     m_StopConnectThread  = true;
 
     StopThreadsAndCloseSockets();
-    m_ConnectionStatus = sdv::ipc::EConnectStatus::disconnected;
+    m_ConnectionState = sdv::ipc::EConnectState::disconnected;
 }
 
-void CConnection::ConnectWorker()
+void CWinsockConnection::ConnectWorker()
 {
     try
     {
@@ -456,18 +467,18 @@ void CConnection::ConnectWorker()
             // SERVER SIDE
             if (m_ListenSocket == INVALID_SOCKET)
             {
-                SetStatus(sdv::ipc::EConnectStatus::connection_error);
+                SetConnectState(sdv::ipc::EConnectState::connection_error);
                 return;
             }
 
-            SetStatus(sdv::ipc::EConnectStatus::initializing);
+            SetConnectState(sdv::ipc::EConnectState::initializing);
             SDV_LOG_INFO("[AF_UNIX] Srv ConnectWorker start: listen=%llu",
                          static_cast<uint64_t>(m_ListenSocket));
 
             SOCKET c = AcceptConnection();
-            SDV_LOG_INFO("[AF_UNIX] Srv AcceptConnection returned: sock=%llu status=%d",
+            SDV_LOG_INFO("[AF_UNIX] Srv AcceptConnection returned: sock=%llu state=%d",
                          static_cast<uint64_t>(c),
-                         static_cast<int>(m_ConnectionStatus.load()));
+                         static_cast<int>(m_ConnectionState.load()));
 
             if (c == INVALID_SOCKET)
             {
@@ -475,7 +486,7 @@ void CConnection::ConnectWorker()
                 {
                     try
                     {
-                        m_pEvent->SetStatus(m_ConnectionStatus);
+                        m_pEvent->SetConnectState(m_ConnectionState);
                     }
                     catch (...)
                     {
@@ -485,7 +496,7 @@ void CConnection::ConnectWorker()
             }
 
             m_ConnectionSocket = c;
-            SetStatus(sdv::ipc::EConnectStatus::connected);
+            SetConnectState(sdv::ipc::EConnectState::connected);
             StartReceiveThread_Unsafe();
             return;
         }
@@ -494,22 +505,22 @@ void CConnection::ConnectWorker()
             // CLIENT SIDE
             if (m_ConnectionSocket == INVALID_SOCKET)
             {
-                SetStatus(sdv::ipc::EConnectStatus::connection_error);
+                SetConnectState(sdv::ipc::EConnectState::connection_error);
                 return;
             }
         }
 
         // Client side: socket is already connected
-        SetStatus(sdv::ipc::EConnectStatus::connected);
+        SetConnectState(sdv::ipc::EConnectState::connected);
         StartReceiveThread_Unsafe();
     }
     catch (...)
     {
-        SetStatus(sdv::ipc::EConnectStatus::connection_error);
+        SetConnectState(sdv::ipc::EConnectState::connection_error);
     }
 }
 
-void CConnection::StartReceiveThread_Unsafe()
+void CWinsockConnection::StartReceiveThread_Unsafe()
 {
     if (m_ReceiveThread.joinable())
     {
@@ -517,10 +528,10 @@ void CConnection::StartReceiveThread_Unsafe()
     }
 
     m_StopReceiveThread.store(false);
-    m_ReceiveThread = std::thread(&CConnection::ReceiveMessages, this);
+    m_ReceiveThread = std::thread(&CWinsockConnection::ReceiveMessages, this);
 }
 
-void CConnection::StopThreadsAndCloseSockets()
+void CWinsockConnection::StopThreadsAndCloseSockets()
 {
     // Signal stop
     m_StopReceiveThread.store(true);
@@ -574,7 +585,7 @@ void CConnection::StopThreadsAndCloseSockets()
                  static_cast<uint64_t>(s));
 }
 
-bool CConnection::ReadNumberOfBytes(char* buffer, uint32_t length)
+bool CWinsockConnection::ReadNumberOfBytes(char* buffer, uint32_t length)
 {
     uint32_t received = 0;
 
@@ -607,7 +618,7 @@ bool CConnection::ReadNumberOfBytes(char* buffer, uint32_t length)
     return (received == length);
 }
 
-bool CConnection::ValidateHeader(const SMsgHeader& msgHeader)
+bool CWinsockConnection::ValidateHeader(const SMsgHeader& msgHeader)
 {
     // Kept only for compatibility with any legacy users (not used in SDV path)
     if ((msgHeader.msgStart == m_MsgStart) && (msgHeader.msgEnd == m_MsgEnd))
@@ -618,7 +629,7 @@ bool CConnection::ValidateHeader(const SMsgHeader& msgHeader)
 }
 
 
-uint32_t CConnection::ReadDataTable(const CMessage& message, SDataContext& dataCtx)
+uint32_t CWinsockConnection::ReadDataTable(const CMessage& message, SDataContext& dataCtx)
 {
     uint32_t offset = 0;
 
@@ -691,7 +702,7 @@ uint32_t CConnection::ReadDataTable(const CMessage& message, SDataContext& dataC
     return offset;
 }
 
-bool CConnection::ReadDataChunk(const CMessage& message, uint32_t offset, SDataContext& dataCtx)
+bool CWinsockConnection::ReadDataChunk(const CMessage& message, uint32_t offset, SDataContext& dataCtx)
 {
     if (offset < sizeof(SMsgHdr))
         return false;
@@ -743,12 +754,12 @@ bool CConnection::ReadDataChunk(const CMessage& message, uint32_t offset, SDataC
     return true;
 }
 
-void CConnection::ReceiveSyncRequest(const CMessage& message)
+void CWinsockConnection::ReceiveSyncRequest(const CMessage& message)
 {
     const auto hdr = message.GetMsgHdr();
     if (hdr.uiVersion != SDVFrameworkInterfaceVersion)
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         return;
     }
 
@@ -764,12 +775,12 @@ void CConnection::ReceiveSyncRequest(const CMessage& message)
         return;
 }
 
-void CConnection::ReceiveSyncAnswer(const CMessage& message)
+void CWinsockConnection::ReceiveSyncAnswer(const CMessage& message)
 {
     const auto hdr = message.GetMsgHdr();
     if (hdr.uiVersion != SDVFrameworkInterfaceVersion)
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         return;
     }
 
@@ -786,12 +797,12 @@ void CConnection::ReceiveSyncAnswer(const CMessage& message)
         return;
 }
 
-void CConnection::ReceiveConnectRequest(const CMessage& message)
+void CWinsockConnection::ReceiveConnectRequest(const CMessage& message)
 {
     const auto hdr = message.GetConnectHdr();
     if (hdr.uiVersion != SDVFrameworkInterfaceVersion)
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         return;
     }
 
@@ -808,42 +819,42 @@ void CConnection::ReceiveConnectRequest(const CMessage& message)
         return;
 }
 
-void CConnection::ReceiveConnectAnswer(const CMessage& message)
+void CWinsockConnection::ReceiveConnectAnswer(const CMessage& message)
 {
     const auto hdr = message.GetConnectHdr();
     if (hdr.uiVersion != SDVFrameworkInterfaceVersion)
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         return;
     }
 
     // Handshake complete (client side)
-    SetStatus(sdv::ipc::EConnectStatus::connected);
+    SetConnectState(sdv::ipc::EConnectState::connected);
 }
 
-void CConnection::ReceiveConnectTerm(const CMessage& /*message*/)
+void CWinsockConnection::ReceiveConnectTerm(const CMessage& /*message*/)
 {
-    SetStatus(sdv::ipc::EConnectStatus::disconnected);
+    SetConnectState(sdv::ipc::EConnectState::disconnected);
     m_StopReceiveThread.store(true);
 }
 
-void CConnection::ReceiveDataMessage(const CMessage& message, SDataContext& dataCtx)
+void CWinsockConnection::ReceiveDataMessage(const CMessage& message, SDataContext& dataCtx)
 {
     const uint32_t payloadOffset = ReadDataTable(message, dataCtx);
     if (payloadOffset == 0)
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         return;
     }
 
     if (!ReadDataChunk(message, payloadOffset, dataCtx))
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         return;
     }
 }
 
-void CConnection::ReceiveDataFragmentMessage(const CMessage& message, SDataContext& dataCtx)
+void CWinsockConnection::ReceiveDataFragmentMessage(const CMessage& message, SDataContext& dataCtx)
 {
     uint32_t offset = static_cast<uint32_t>(sizeof(SFragmentedMsgHdr));
 
@@ -852,19 +863,19 @@ void CConnection::ReceiveDataFragmentMessage(const CMessage& message, SDataConte
         offset = ReadDataTable(message, dataCtx);
         if (offset == 0)
         {
-            SetStatus(sdv::ipc::EConnectStatus::communication_error);
+            SetConnectState(sdv::ipc::EConnectState::communication_error);
             return;
         }
     }
 
     if (!ReadDataChunk(message, offset, dataCtx))
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         return;
     }
 }
 
-void CConnection::ReceiveMessages()
+void CWinsockConnection::ReceiveMessages()
 {
     try
     {
@@ -898,14 +909,14 @@ void CConnection::ReceiveMessages()
             if (!ReadNumberOfBytes(reinterpret_cast<char*>(&packetSize),
                                    sizeof(packetSize)))
             {
-                SetStatus(sdv::ipc::EConnectStatus::disconnected);
+                SetConnectState(sdv::ipc::EConnectState::disconnected);
                 SDV_LOG_WARNING("[UDS][RX] Incomplete payload read -> disconnected");
                 break;
             }
 
             if (packetSize == 0 || packetSize > kMaxUdsPacketSize)
             {
-                SetStatus(sdv::ipc::EConnectStatus::communication_error);
+                SetConnectState(sdv::ipc::EConnectState::communication_error);
                 break;
             }
 
@@ -914,7 +925,7 @@ void CConnection::ReceiveMessages()
             if (!ReadNumberOfBytes(reinterpret_cast<char*>(payload.data()),
                                    packetSize))
             {
-                SetStatus(sdv::ipc::EConnectStatus::communication_error);
+                SetConnectState(sdv::ipc::EConnectState::communication_error);
                 SDV_LOG_WARNING("[UDS][RX] Invalid SDV message (envelope)");
                 break;
             }
@@ -923,7 +934,7 @@ void CConnection::ReceiveMessages()
             CMessage msg(std::move(payload));
             if (!msg.IsValid())
             {
-                SetStatus(sdv::ipc::EConnectStatus::communication_error);
+                SetConnectState(sdv::ipc::EConnectState::communication_error);
                 continue;
             }
 
@@ -941,12 +952,13 @@ void CConnection::ReceiveMessages()
                 break;
             }
 
-            if (m_ConnectionStatus == sdv::ipc::EConnectStatus::terminating)
+            if (m_ConnectionState == sdv::ipc::EConnectState::terminating)
                 break;
         }
     }
     catch (...)
     {
-        SetStatus(sdv::ipc::EConnectStatus::disconnected);
+        SetConnectState(sdv::ipc::EConnectState::disconnected);
     }
 }
+#endif

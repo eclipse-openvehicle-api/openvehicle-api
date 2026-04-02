@@ -30,7 +30,7 @@ const char szRXVehicleDeviceHeaderTemplate[] = R"code(/**
 #include "../signal_identifier.h"
 
 /**
- * @brief Vehicle device %vss_original%
+ * @brief Platform abstraction %vss_original%
  */
 class CVehicleDevice%class_name%
 	: public sdv::CSdvObject
@@ -128,7 +128,7 @@ public:
 	BEGIN_SDV_INTERFACE_MAP()
 %rx_bs_interface_entry_list%    END_SDV_INTERFACE_MAP()
 
-	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::device)
+	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::sensor)
 	DECLARE_OBJECT_CLASS_NAME("%vss_original%_Service")
 
 	/**

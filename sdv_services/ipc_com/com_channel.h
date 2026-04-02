@@ -71,10 +71,10 @@ public:
     bool IsConnected() const;
 
     /**
-     * @brief Set the current status. Overload of sdv::ipc::IConnectEventCallback::SetStatus.
-     * @param[in] eConnectStatus The connection status.
+     * @brief Set the current connect statue. Overload of sdv::ipc::IConnectEventCallback::SetConnectState.
+     * @param[in] eConnectState The connection state.
      */
-    virtual void SetStatus(/*in*/ sdv::ipc::EConnectStatus eConnectStatus) override;
+    virtual void SetConnectState(/*in*/ sdv::ipc::EConnectState eConnectState) override;
 
     /**
      * @brief Callback to be called by the IPC connection when receiving a data packet. Overload of
@@ -139,14 +139,14 @@ private:
         }                                       eState = EState::initialized;   ///< Data processing state.
         sdv::sequence<sdv::pointer<uint8_t>>    seqResult;                      ///< The result data.
         std::mutex                              mtxWaitForResult;               ///< Mutex to protect result processing.
-        std::condition_variable                 cvWaitForResult;                ///< Condition variable to trigger result processing.
+        std::condition_variable                 cvWaitForResult;                ///< Condition var to trigger result processing.
     };
 
     CCommunicationControl&              m_rcontrol;                     ///< Reference to the communication control class.
     sdv::TObjectPtr                     m_ptrChannelEndpoint;           ///< Managed pointer to the channel endpoint.
-    uint64_t                            m_uiConnectionStatusCookie = 0; ///< Connection status cookie (received after registration).
+    uint64_t                            m_uiConnectStateCookie = 0;     ///< Connection state cookie (received after registration).
     std::shared_ptr<CMarshallObject>    m_ptrInitialMarshallObject;     ///< Initial marshall object used after a connect event.
-    sdv::ipc::EConnectStatus            m_eConnectStatus = sdv::ipc::EConnectStatus::uninitialized;     ///< Current connection status.
+    sdv::ipc::EConnectState             m_eConnectState = sdv::ipc::EConnectState::uninitialized;     ///< Current connection state.
     bool                                m_bAllowReconnect = false;      ///< When set, allow reconnection of the server.
     EEndpointType                       m_eEndpointType = EEndpointType::client;    ///< Endpoint type of this connector.
     std::recursive_mutex                m_mtxMarshallObjects;           ///< Synchronize access to the marshall object vector.

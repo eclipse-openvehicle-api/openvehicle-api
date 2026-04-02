@@ -19,7 +19,7 @@
 #include <support/app_control.h>
 #include <support/component_impl.h>
 #include <support/timer.h>
-#include "signal_names.h"
+#include "../../generated/vss_files/signal_identifier.h"
 #include <fcntl.h>
 #include <atomic>
 
@@ -202,7 +202,7 @@ private:
      * @param[in] sPos The location to print the value at.
      * @param[in] rssName Reference to the value.
      * @param[in] tValue The value.
-     * @param[in] rssStatus Status, becuse we have signals of type bool
+     * @param[in] rssStatus Status, because we have signals of type bool
      */
     template <typename TValue>
     void PrintValue(SConsolePos sPos, const std::string& rssName, TValue tValue, const std::string& rssStatus);
@@ -219,7 +219,6 @@ private:
     bool                m_bThreadStarted = false;           ///< Set when initialized.
     std::atomic_bool    m_bRunning = false;                 ///< When set, the application is running.
     bool                m_isExternalApp = false;            ///< True when we have an external application
-    mutable std::mutex  m_mPrintToConsole;                  ///< Mutex to print complete message
     
     std::thread         m_threadReadTxSignals;              ///< Simulation datalink thread.
 
@@ -269,7 +268,7 @@ inline void CConsole::PrintValue(SConsolePos sPos, const std::string& rssName, T
         " " << std::fixed << std::setprecision(2) << tValue << " " << rssUnits <<
         std::string(nEndNameLen - std::min(endName.size(), static_cast<size_t>(nEndNameLen - 1)) - 1, ' ');
 
-    std::lock_guard<std::mutex> lock(m_mPrintToConsole);
+    std::lock_guard<std::mutex> lock(m_mtxPrintToConsole);
     SetCursorPos(sPos);
     std::cout << sstreamValueText.str();
 }

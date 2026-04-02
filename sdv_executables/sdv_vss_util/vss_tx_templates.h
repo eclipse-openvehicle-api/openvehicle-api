@@ -30,7 +30,7 @@ const char szTXVehicleDeviceHeaderTemplate[] = R"code(/**
 
 
 /**
- * @brief Vehicle device %vss_shorten_no_dot%
+ * @brief Platform abstraction %vss_shorten_no_dot%
  */
 class CVehicleDevice%class_name%
 	: public sdv::CSdvObject
@@ -124,7 +124,7 @@ public:
 	BEGIN_SDV_INTERFACE_MAP()
 %tx_bs_interface_entry_list%	END_SDV_INTERFACE_MAP()
 
-	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::device)
+	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::actuator)
 	DECLARE_OBJECT_CLASS_NAME("%vss_original%_Service")
 
 	/**

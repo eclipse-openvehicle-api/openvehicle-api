@@ -82,7 +82,7 @@ public:
 private:
     sdv::TInterfaceAccessPtr        m_ptrObject;                    ///< Smart pointer to the object.
     sdv::IObjectControl*            m_pObjectControl = nullptr;     ///< Pointer to the object control of the application
-    sdv::EObjectState              m_eObjectState = sdv::EObjectState::initialization_pending; ///< Object status (in case there is no object control).
+    sdv::EObjectState               m_eObjectState = sdv::EObjectState::initialization_pending; ///< Object state (in case there is no object control).
 };
 
 #endif // !defined ISOLATION_OBJECT_MONITOR_H

@@ -117,14 +117,14 @@ public:
     }
 
     /**
-    * @brief Set the current status. Overload of sdv::ipc::IConnectEventCallback::SetStatus.
-    * @param[in] eConnectStatus The connection status.
+    * @brief Set the current state. Overload of sdv::ipc::IConnectEventCallback::SetConnectState.
+    * @param[in] eConnectState The connection state.
     */
-    virtual void SetStatus(/*in*/ sdv::ipc::EConnectStatus eConnectStatus) override
+    virtual void SetConnectState(/*in*/ sdv::ipc::EConnectState eConnectState) override
     {
-        switch (eConnectStatus)
+        switch (eConnectState)
         {
-        case sdv::ipc::EConnectStatus::disconnected:
+        case sdv::ipc::EConnectState::disconnected:
             // Disconnect only when connected before
             if (m_bConnected)
             {
@@ -133,7 +133,7 @@ public:
                 m_cvDisconnect.notify_all();
             }
             break;
-        case sdv::ipc::EConnectStatus::disconnected_forced:
+        case sdv::ipc::EConnectState::disconnected_forced:
             // Disconnect only when connected before
             if (m_bConnected)
             {
@@ -142,7 +142,7 @@ public:
                 m_cvDisconnect.notify_all();
             }
             break;
-        case sdv::ipc::EConnectStatus::connected:
+        case sdv::ipc::EConnectState::connected:
             m_bConnected = true;
             break;
         default:
@@ -339,11 +339,11 @@ extern "C" int main(int argc, char* argv[])
         if (!ptrControlConnection) return -12;
         pControlConnect = ptrControlConnection.GetInterface<sdv::ipc::IConnect>();
         if (!pControlConnect) return -13;
-        uiControlEventCookie = pControlConnect->RegisterStatusEventCallback(&receiverControl);
+        uiControlEventCookie = pControlConnect->RegisterStateEventCallback(&receiverControl);
         if (!uiControlEventCookie) return -20;
         if (!pControlConnect->AsyncConnect(&receiverControl)) return -14;
         if (!pControlConnect->WaitForConnection(250)) return -5;  // Note: Connection should be possible within 250ms.
-        if (pControlConnect->GetStatus() != sdv::ipc::EConnectStatus::connected) return -15;
+        if (pControlConnect->GetConnectState() != sdv::ipc::EConnectState::connected) return -15;
         TRACE(bServer ? "Server" : "Client", ": Connected to control channel...");
     }
 
@@ -393,11 +393,11 @@ Size = 1024000
     sdv::ipc::IConnect* pDataConnect = ptrDataConnection.GetInterface<sdv::ipc::IConnect>();
     uint64_t uiDataEventCookie = 0;
     if (!pDataConnect) return -3;
-    uiDataEventCookie = pDataConnect->RegisterStatusEventCallback(&receiverData);
+    uiDataEventCookie = pDataConnect->RegisterStateEventCallback(&receiverData);
     if (!uiDataEventCookie) return -21;
     if (!pDataConnect->AsyncConnect(&receiverData)) return -4;
     if (!pDataConnect->WaitForConnection(10000)) return -5;  // Note: Connection should be possible within 10000ms.
-    if (pDataConnect->GetStatus() != sdv::ipc::EConnectStatus::connected) return -5;
+    if (pDataConnect->GetConnectState() != sdv::ipc::EConnectState::connected) return -5;
 
     TRACE("Connected to data channel... waiting for data exchange");
 
@@ -430,11 +430,11 @@ Size = 1024000
     }
 
     // Initiate shutdown
-    if (pDataConnect && uiDataEventCookie) pDataConnect->UnregisterStatusEventCallback(uiDataEventCookie);
+    if (pDataConnect && uiDataEventCookie) pDataConnect->UnregisterStateEventCallback(uiDataEventCookie);
     ptrDataConnection.Clear();
     mgntDataMgntChannel.Shutdown();
     if (mgntDataMgntChannel.GetObjectState() != sdv::EObjectState::destruction_pending) return -6;
-    if (pControlConnect && uiControlEventCookie) pControlConnect->UnregisterStatusEventCallback(uiControlEventCookie);
+    if (pControlConnect && uiControlEventCookie) pControlConnect->UnregisterStateEventCallback(uiControlEventCookie);
     ptrControlConnection.Clear();
     mgntControlMgntChannel.Shutdown();
     if (mgntControlMgntChannel.GetObjectState() != sdv::EObjectState::destruction_pending) return -16;

@@ -18,7 +18,8 @@
 #include <support/app_control.h>
 #include <support/component_impl.h>
 #include <support/timer.h>
-#include "signal_names.h"
+#include "../generated/vss_files/signal_identifier.h"
+
 #include <fcntl.h>
 #include "../generated/vss_files/vss_vehiclebodytrunk_bs_tx.h"
 #include "../generated/vss_files/vss_vehiclespeed_bs_rx.h"
@@ -139,7 +140,7 @@ private:
      * @param[in] sPos The location to print the value at.
      * @param[in] rssName Reference to the value.
      * @param[in] tValue The value.
-     * @param[in] rssStatus Status, becuse we have signals of type bool
+     * @param[in] rssStatus Status, because we have signals of type bool
      */
     template <typename TValue>
     void PrintValue(SConsolePos sPos, const std::string& rssName, TValue tValue, const std::string& rssStatus);
@@ -154,7 +155,6 @@ private:
 
     mutable std::mutex  m_mtxPrintToConsole;                ///< Mutex to print complete message
     bool                m_bRunning = false;                 ///< When set, the application is running.
-    mutable std::mutex  m_mPrintToConsole;                  ///< Mutex to print complete message
 
     sdv::core::CSignal  m_SignalSpeed;                      ///< Speed
     float               m_SpeedDL = 0.0;                    ///< Speed Data Link
@@ -186,7 +186,7 @@ inline void CConsole::PrintValue(SConsolePos sPos, const std::string& rssName, T
         std::string(nValueNameLen - std::min(rssName.size(), static_cast<size_t>(nValueNameLen - 1)) - 1, '.') <<
         " " << std::fixed << std::setprecision(2) << tValue << " " << rssUnits << "  ";
 
-    std::lock_guard<std::mutex> lock(m_mPrintToConsole);
+    std::lock_guard<std::mutex> lock(m_mtxPrintToConsole);
     SetCursorPos(sPos);
     std::cout << sstreamValueText.str();
 }

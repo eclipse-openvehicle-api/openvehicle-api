@@ -82,24 +82,24 @@ public:
     /** @brief Optionally cancel WaitForConnection (no-op in current implementation). */
     void CancelWait() override;
 
-    /** @brief Disconnect and teardown threads/FDs; sets status to 'disconnected'. */
+    /** @brief Disconnect and teardown threads/FDs; sets state to 'disconnected'. */
     void Disconnect() override;
 
     // ---------- IConnect: event callbacks ----------
-    /** @brief Register a status event callback (no-op storage in UDS). */
-    uint64_t RegisterStatusEventCallback(/*in*/ sdv::IInterfaceAccess* pEventCallback) override;
+    /** @brief Register a state event callback (no-op storage in UDS). */
+    uint64_t RegisterStateEventCallback(/*in*/ sdv::IInterfaceAccess* pEventCallback) override;
 
     /** @brief Unregister a previously registered callback (no-op storage in UDS). */
-    void UnregisterStatusEventCallback(/*in*/ uint64_t uiCookie) override;
+    void UnregisterStateEventCallback(/*in*/ uint64_t uiCookie) override;
 
-    /** @brief Get current connection status. */
-    sdv::ipc::EConnectStatus GetStatus() const override;
+    /** @brief Get current connection state. */
+    sdv::ipc::EConnectState GetConnectState() const override;
 
     /** @brief Destroy object (IObjectDestroy). */
     void DestroyObject() override;
 
-    /** @brief Set status and notify listeners (callback-safe). */
-    void SetStatus(sdv::ipc::EConnectStatus eStatus);
+    /** @brief Set state and notify listeners (callback-safe). */
+    void SetConnectState(sdv::ipc::EConnectState eConnectState);
 
     /** @brief @return true if this side is server (needs accept()), false otherwise. */
     bool IsServer() const;
@@ -297,7 +297,7 @@ public:
      * @brief Handle an incoming connect_term message.
      *
      * Indicates that the peer requests immediate termination of the connection.  
-     * Sets status to disconnected and stops the RX loop.
+     * Sets state to disconnected and stops the RX loop.
      *
      * @param message SDV envelope containing the connect_term header.
      */
@@ -352,7 +352,7 @@ public:
     // ---------- Internal threading ----------
     /** @brief Connect worker (server accept loop or client connect retry). */
     void ConnectWorker();
-    /** @brief Start RX thread (precondition: status=connected, FD valid). */
+    /** @brief Start RX thread (precondition: state=connected, FD valid). */
     void StartReceiveThread_Unsafe();
     /**
      * @brief Stop workers and close sockets, then optionally unlink path.
@@ -373,9 +373,9 @@ private:
     std::thread       m_ReceiveThread;
     std::thread       m_ConnectThread;
 
-    //Status & synchronization
+    //State & synchronization
     std::condition_variable                m_StateCv;
-    std::atomic<sdv::ipc::EConnectStatus>  m_eStatus { sdv::ipc::EConnectStatus::uninitialized };
+    std::atomic<sdv::ipc::EConnectState>   m_eConnectState { sdv::ipc::EConnectState::uninitialized };
     sdv::ipc::IDataReceiveCallback*        m_pReceiver { nullptr };
     sdv::ipc::IConnectEventCallback*       m_pEvent    { nullptr };
     std::mutex                             m_MtxConnect;

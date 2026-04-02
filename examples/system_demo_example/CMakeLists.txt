@@ -30,7 +30,7 @@ include_directories(${SDV_FRAMEWORK_DEV_INCLUDE})
 # services are generated during the configuration phase of CMake. This is necessary, since CMakeFiles.txt files are generated and
 # they have to be available during the configuration phase of CMake to be taken into the build process. Requisite for the code
 # generation during the configuration time of CMake is the availability of the tools to do the generation. Hence the tools cannot be
-# created during the build process, which is executed after the configuraiton process.
+# created during the build process, which is executed after the configuration process.
 
 # Execute sdv_vss_util to create IDL files for devices and basic services.
 message("Create interface code for devices and basic services of demo example.")
@@ -46,7 +46,7 @@ execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/v
 message("Compiling vss_vehiclespeed_vd_rx.idl")
 execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclespeed_vd_rx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
 
-# We need proxies and stubs for basic services to give access to the interfaces for complex services ans applications: --ps_lib_namedemo_proxystub
+# We need proxies and stubs for basic services to give access to the interfaces for complex services and applications: --ps_lib_namedemo_proxystub
 message("Compiling vss_vehiclechassisrearaxlerowwheel_bs_tx.idl")
 execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclechassisrearaxlerowwheel_bs_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --ps_lib_namedemo_proxystub)
 message("Compiling vss_vehiclechassissteeringwheelangle_bs_rx.idl")
@@ -81,7 +81,7 @@ add_subdirectory(generated/can_dl)
 # REMARK: Proxy/stub and vehicle device and basic service code was generated during the configuration phase of CMake. Following
 # below are the build steps to build the components that were generated.
 
-message("Include: demo proxy/stub for vehicle devices and basic services")
+message("Include: demo proxy/stub for basic services")
 include_directories(${CMAKE_CURRENT_LIST_DIR}/generated/vss_files)
 add_subdirectory(generated/vss_files/ps)
 
@@ -120,7 +120,6 @@ set_target_properties(demo_complex_service PROPERTIES SUFFIX ".sdv")
 # Define the executable
 add_executable(system_extern_example
     example_app/system_extern_example.cpp
-    example_app/signal_names.h
     )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -145,7 +144,6 @@ add_executable(system_demo_example
     example_app/control.cpp
     example_app/console.h
     example_app/console.cpp
-    example_app/signal_names.h
     )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

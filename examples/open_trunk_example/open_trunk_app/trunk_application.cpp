@@ -9,7 +9,7 @@
  ********************************************************************************/
 
 #include "trunk_application.h"
-#include "signal_names.h"
+#include "../generated/vss_files/signal_identifier.h"
 
 #ifdef _WIN32
 #include <conio.h>      // Needed for _kbhit

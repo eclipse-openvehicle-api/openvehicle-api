@@ -10,9 +10,10 @@
 * Contributors:
 *   Denisa Ros - initial API and implementation
 ********************************************************************************/
+#ifdef _WIN32
 
-#ifndef CHANNEL_MGNT_H
-#define CHANNEL_MGNT_H
+#ifndef WIN_SOCKETS_CHANNEL_MGNT_H
+#define WIN_SOCKETS_CHANNEL_MGNT_H
 
 #include <support/component_impl.h>
 #include <interfaces/ipc.h>
@@ -150,6 +151,8 @@ public:
     DECLARE_DEFAULT_OBJECT_NAME("LocalChannelControl")
     DECLARE_OBJECT_SINGLETON()
 
+    virtual ~CSocketsChannelMgnt() = default;
+
     /**
      * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
      * @return Returns 'true' when the initialization was successful, 'false' when not.
@@ -169,7 +172,7 @@ public:
      * The endpoint is implemented as a local AF_UNIX server socket
      * (listen socket) on Windows. The connect string has the format:
      *
-     *   proto=uds;path=&lt;udsPath&gt;
+     *   proto=uds;path=<udsPath>;
      *
      * If no configuration is provided or no path is specified, a default
      * path is used (under %LOCALAPPDATA%/sdv)
@@ -193,7 +196,7 @@ public:
      * Overload of sdv::ipc::IChannelAccess::Access
      *
      * The connect string is expected to contain:
-     *   proto=uds;path=&lt;udsPath&gt;
+     *   proto=uds;path=<udsPath>;
      *
      * For the first Access() call with a given path, the server-side
      * connection object created by CreateEndpoint() can be returned.
@@ -206,18 +209,17 @@ public:
     sdv::IInterfaceAccess* Access(const sdv::u8string& ssConnectString) override;
 
     /**
-     * @brief Called by a CConnection instance when the server side is closed
+     * @brief Called by a CWinsockConnection instance when the server side is closed
      *
      * Used to clean up internal registries for a given UDS path
      *
-     * @param udsPath  Path to the UDS endpoint
-     * @param ptr      Pointer to the CConnection instance that was closed
+     * @param ptr      Pointer to the CWinsockConnection instance that was closed
      */
-    void OnServerClosed(const std::string& udsPath, CConnection* ptr);
+    void OnServerClosed(const std::string& udsPath, CWinsockConnection* ptr);
 
 private:
     /// @brief Registry of AF_UNIX server connections keyed by normalized UDS path
-    std::map<std::string, std::shared_ptr<CConnection>> m_udsServers;
+    std::map<std::string, std::shared_ptr<CWinsockConnection>> m_udsServers;
 
     /**
      * @brief Set of UDS paths that already returned their server-side
@@ -234,4 +236,5 @@ private:
 // SDV object factory macro
 DEFINE_SDV_OBJECT(CSocketsChannelMgnt)
 
-#endif // ! defined CHANNEL_MGNT_H
+#endif // ! defined WIN_SOCKETS_CHANNEL_MGNT_H
+#endif

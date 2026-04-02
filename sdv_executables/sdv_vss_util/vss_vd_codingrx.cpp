@@ -193,9 +193,9 @@ std::string CVSSVDCodingRX::Code_RXIDLDeviceInterface(const std::string& spaces,
 %multiple_spaces%};
 
 %multiple_spaces%/**
-%multiple_spaces%* @brief IVSS_%function_name% abstract %prefix% interface
+%multiple_spaces%* @brief IVSS_Read%function_name% abstract %prefix% interface
 %multiple_spaces%*/
-%multiple_spaces%interface IVSS_%function_name%
+%multiple_spaces%interface IVSS_Read%function_name%
 %multiple_spaces%{
 %multiple_spaces%    /**
 %multiple_spaces%    * @brief Register Write%function_name% event on signal change
@@ -276,7 +276,7 @@ std::string CVSSVDCodingRX::Code_VD_RXInterface(const std::string & functionName
     mapKeywords["function_name"] = functionName;
     mapKeywords["vss_shorten_with_colons"] = vssShortenWithColons;
 
-    return ReplaceKeywords(R"code(	, public vss::%vss_shorten_with_colons%Device::IVSS_%function_name%
+    return ReplaceKeywords(R"code(	, public vss::%vss_shorten_with_colons%Device::IVSS_Read%function_name%
 )code", mapKeywords);
 }
 
@@ -286,7 +286,7 @@ std::string CVSSVDCodingRX::Code_VD_RXInterfaceEntry(const std::string& function
     mapKeywords["function_name"] = functionName;
     mapKeywords["vssWithColons"] = vssWithColons;
 
-    return ReplaceKeywords(R"code(		SDV_INTERFACE_ENTRY(vss::%vssWithColons%Device::IVSS_%function_name%)
+    return ReplaceKeywords(R"code(		SDV_INTERFACE_ENTRY(vss::%vssWithColons%Device::IVSS_Read%function_name%)
 )code", mapKeywords);
 }
 
@@ -305,7 +305,7 @@ std::string CVSSVDCodingRX::Code_VD_RXReAndUnregisterEvent( const std::string& v
 	void Register%function_name%Event(vss::%vssWithColons%Device::IVSS_Write%function_name%_Event* event) override;
 
 	/**
-	* @brief Unregister IVSS_%function_name%_Event
+	* @brief Unregister IVSS_Read%function_name%_Event
 	* @param[in] event function
 	*/
 	void Unregister%function_name%Event(vss::%vssWithColons%Device::IVSS_Write%function_name%_Event* event) override;
@@ -339,7 +339,7 @@ std::string CVSSVDCodingRX::Code_VD_RXPrivateHeaderPart(const SFunctionVDDefinit
 	*/
 	void ExecuteAllCallBacksFor%start_with_uppercase%(sdv::any_t value);
 
-	sdv::core::CSignal m_%signal_name%Signal;                                                        ///< Signal of the vehicle device
+	sdv::core::CSignal m_%signal_name%Signal;                                                        ///< Signal of the platform abstraction
 	mutable std::mutex m_%signal_name%MutexCallbacks;                                                ///< Mutex protecting m_%signal_name%Callbacks
 	std::set<vss::%vssWithColons%Device::IVSS_Write%function_name%_Event*> m_%signal_name%Callbacks; ///< collection of events to be called
 )code", mapKeywords);
