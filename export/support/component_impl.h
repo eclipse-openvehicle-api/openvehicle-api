@@ -900,7 +900,7 @@ namespace sdv
             // Lock the parameter map - do not allow any more changes
             LockParamMap();
 
-            // Set status
+            // Set state
             m_eObjectState = EObjectState::shutdown_in_progress;
 
             // Inform derived class
@@ -1001,7 +1001,7 @@ namespace sdv
         END_SDV_INTERFACE_MAP()
 
     private:
-        std::atomic<EObjectState>   m_eObjectState = EObjectState::initialization_pending;  ///< Object status
+        std::atomic<EObjectState>   m_eObjectState = EObjectState::initialization_pending;  ///< Object state
         std::string                 m_ssObjectConfig;                                       ///< Copy of the configuration TOML.
     };
 

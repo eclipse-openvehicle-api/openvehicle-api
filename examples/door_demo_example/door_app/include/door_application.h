@@ -64,7 +64,7 @@ private:
     bool IsSDVFrameworkEnvironmentSet();
 
     /**
-     * @brief Loac config file and register vehicle device and basic service.
+     * @brief Load config file and register vehicle device and basic service.
      * @remarks It is expected that each config file has the complete door:
      * vehicle device & basic service for input and output
      * @param[in] inputMsg message string to be printed on console in case of success and failure

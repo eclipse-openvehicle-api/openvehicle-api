@@ -13,16 +13,22 @@ if(WIN32)
 project(uds_win_sockets VERSION 1.0 LANGUAGES CXX)
 
 # Define target
-add_library(uds_win_sockets SHARED
-    "channel_mgnt.h"
-    "channel_mgnt.cpp"
-    "connection.h"
-    "connection.cpp")
+add_library(uds_win_sockets STATIC
+    channel_mgnt.cpp
+    connection.cpp
+)
 
-target_link_libraries(uds_win_sockets ${CMAKE_THREAD_LIBS_INIT} Ws2_32.lib)
+target_include_directories(uds_win_sockets 
+    PUBLIC 
+         ${CMAKE_CURRENT_SOURCE_DIR}
+         ./include/
+)
 
-target_link_options(uds_win_sockets PRIVATE)
-target_include_directories(uds_win_sockets PRIVATE ./include/)
+target_link_libraries(uds_win_sockets
+    PUBLIC
+        ${CMAKE_THREAD_LIBS_INIT} 
+        Ws2_32.lib
+)
 
 set_target_properties(uds_win_sockets PROPERTIES PREFIX "")
 set_target_properties(uds_win_sockets PROPERTIES SUFFIX ".sdv")

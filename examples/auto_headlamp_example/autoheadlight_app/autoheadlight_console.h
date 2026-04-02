@@ -19,7 +19,7 @@
 #include <support/component_impl.h>
 #include <support/timer.h>
 #include <atomic>
-#include "signal_names.h"
+#include "../generated/vss_files/signal_identifier.h"
 #include <fcntl.h>
 #include "vss_vehiclepositioncurrentlatitude_vd_rx.h"
 #include "vss_vehiclepositioncurrentlongitude_vd_rx.h"
@@ -187,7 +187,7 @@ private:
      * @param[in] sPos The location to print the value at.
      * @param[in] rssName Reference to the value.
      * @param[in] tValue The value.
-     * @param[in] rssStatus Status, becuse we have signals of type bool
+     * @param[in] rssStatus Status, because we have signals of type bool
      */
     template <typename TValue>
     void PrintValue(SConsolePos sPos, const std::string& rssName, TValue tValue, const std::string& rssStatus);
@@ -204,7 +204,6 @@ private:
     std::thread         m_threadReadTxSignals;              ///< Simulation datalink thread.
     bool                m_bThreadStarted = false;           ///< Set when initialized.
     std::atomic_bool    m_bRunning = false;                 ///< When set, the application is running.
-    mutable std::mutex  m_mPrintToConsole;                  ///< Mutex to print complete message
 
     sdv::core::CSignal  m_signalCurrentLatitude;            ///< Signal Current latitude  
     sdv::core::CSignal  m_signalCurrentLongitude;		    ///< Signal Current longitude         
@@ -244,7 +243,7 @@ inline void CConsole::PrintValue(SConsolePos sPos, const std::string& rssName, T
         std::string(nValueNameLen - std::min(rssName.size(), static_cast<size_t>(nValueNameLen - 1)) - 1, '.') <<
         " " << std::fixed << std::setprecision(6) << tValue << " " << rssUnits << "  ";
 
-    std::lock_guard<std::mutex> lock(m_mPrintToConsole);
+    std::lock_guard<std::mutex> lock(m_mtxPrintToConsole);
     SetCursorPos(sPos);
     std::cout << sstreamValueText.str();
 }

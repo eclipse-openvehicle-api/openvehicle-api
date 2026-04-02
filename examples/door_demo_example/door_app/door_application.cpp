@@ -9,7 +9,7 @@
  ********************************************************************************/
 
 #include "../door_app/include/door_application.h"
-#include "../door_app/include/signal_names.h"
+#include "../generated/vss_files/signal_identifier.h"
 
 #ifdef _WIN32
 #include <conio.h>      // Needed for _kbhit

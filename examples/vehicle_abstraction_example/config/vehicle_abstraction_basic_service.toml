@@ -1,0 +1,12 @@
+[Configuration]
+Version = 100
+
+
+
+
+[[Component]]
+Path = "abstraction_bs_vehiclespeed_rx.sdv"
+Class = "Vehicle.Speed_Service"
+
+
+

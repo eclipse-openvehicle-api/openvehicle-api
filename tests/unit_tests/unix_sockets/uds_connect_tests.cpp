@@ -1,12 +1,15 @@
 /********************************************************************************
-* Copyright (c) 2025-2026 ZF Friedrichshafen AG
-*
-* This program and the accompanying materials are made available under the 
-* terms of the Apache License Version 2.0 which is available at
-* https://www.apache.org/licenses/LICENSE-2.0
-*
-* SPDX-License-Identifier: Apache-2.0 
-********************************************************************************/
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Denisa Ros - initial API and implementation
+ ********************************************************************************/
 
 #if defined __unix__
 
@@ -15,8 +18,8 @@
 #include <support/app_control.h>
 #include <interfaces/ipc.h>
 
-#include "../../../sdv_services/uds_unix_sockets/channel_mgnt.cpp"
-#include "../../../sdv_services/uds_unix_sockets/connection.cpp"
+#include "../../../sdv_services/uds_unix_sockets/channel_mgnt.h"
+#include "../../../sdv_services/uds_unix_sockets/connection.h"
 
 #include <thread>
 #include <atomic>
@@ -24,6 +27,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <cstring>
+#include <sys/un.h>
 
 #include <sstream>
 #include <iomanip>
@@ -44,24 +48,24 @@ public:
     // don't test data path yet
     void ReceiveData(sdv::sequence<sdv::pointer<uint8_t>>& /*seqData*/) override {}
 
-    void SetStatus(sdv::ipc::EConnectStatus s) override {
+    void SetConnectState(sdv::ipc::EConnectState s) override {
         {
             std::lock_guard<std::mutex> lk(m_mtx);
-            m_status = s;
+            m_state = s;
         }
         m_cv.notify_all();
     }
 
-    bool WaitForStatus(sdv::ipc::EConnectStatus expected, uint32_t ms = 2000)
+    bool WaitForState(sdv::ipc::EConnectState expected, uint32_t ms = 2000)
     {
         std::unique_lock<std::mutex> lk(m_mtx);
 
-        if (m_status == expected)
+        if (m_state == expected)
             return true;
 
         auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(ms);
 
-        while (m_status != expected)
+        while (m_state != expected)
         {
             if (m_cv.wait_until(lk, deadline) == std::cv_status::timeout)
                 return false;
@@ -69,13 +73,13 @@ public:
         return true;
     }
 
-    sdv::ipc::EConnectStatus GetStatus() const {
+    sdv::ipc::EConnectState GetConnectState() const {
         std::lock_guard<std::mutex> lk(m_mtx);
-        return m_status;
+        return m_state;
     }
 
 private:
-    sdv::ipc::EConnectStatus m_status { sdv::ipc::EConnectStatus::uninitialized };
+    sdv::ipc::EConnectState m_state { sdv::ipc::EConnectState::uninitialized };
     mutable std::mutex        m_mtx;
     std::condition_variable   m_cv;
 };
@@ -101,24 +105,24 @@ public:
         m_cv.notify_all();
     }
 
-    void SetStatus(sdv::ipc::EConnectStatus s) override {
+    void SetConnectState(sdv::ipc::EConnectState s) override {
         {
             std::lock_guard<std::mutex> lk(m_mtx);
-            m_status = s;
+            m_state = s;
         }
         m_cv.notify_all();
     }
 
-    bool WaitForStatus(sdv::ipc::EConnectStatus expected, uint32_t ms = 2000)
+    bool WaitForState(sdv::ipc::EConnectState expected, uint32_t ms = 2000)
     {
         std::unique_lock<std::mutex> lk(m_mtx);
 
-        if (m_status == expected)
+        if (m_state == expected)
             return true;
 
         auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(ms);
 
-        while (m_status != expected)
+        while (m_state != expected)
         {
             if (m_cv.wait_until(lk, deadline) == std::cv_status::timeout)
                 return false;
@@ -141,13 +145,13 @@ public:
 private:
     mutable std::mutex m_mtx;
     std::condition_variable m_cv;
-    sdv::ipc::EConnectStatus m_status{ sdv::ipc::EConnectStatus::uninitialized };
+    sdv::ipc::EConnectState m_state{ sdv::ipc::EConnectState::uninitialized };
     sdv::sequence<sdv::pointer<uint8_t>> m_lastData;
     bool m_received{ false };
 };
 
 
-// A receiver that intentionally throws from SetStatus(...) to test callback-safety.
+// A receiver that intentionally throws from SetConnectState(...) to test callback-safety.
 class CUDSThrowingReceiver :
     public sdv::IInterfaceAccess,
     public sdv::ipc::IDataReceiveCallback,
@@ -161,9 +165,9 @@ public:
 
     void ReceiveData(sdv::sequence<sdv::pointer<uint8_t>>& /*seq*/) override {}
 
-    void SetStatus(sdv::ipc::EConnectStatus s) override
+    void SetConnectState(sdv::ipc::EConnectState s) override
     {
-        // Store the last status and then throw to simulate misbehaving user code.
+        // Store the last state and then throw to simulate misbehaving user code.
         {
             std::lock_guard<std::mutex> lk(m_mtx);
             m_last = s;
@@ -172,7 +176,7 @@ public:
         throw std::runtime_error("Intentional user callback failure");
     }
 
-    bool WaitForStatus(sdv::ipc::EConnectStatus expected, uint32_t ms = 2000)
+    bool WaitForState(sdv::ipc::EConnectState expected, uint32_t ms = 2000)
     {
         std::unique_lock<std::mutex> lk(m_mtx);
 
@@ -193,7 +197,7 @@ public:
 private:
     std::mutex m_mtx;
     std::condition_variable m_cv;
-    sdv::ipc::EConnectStatus m_last{ sdv::ipc::EConnectStatus::uninitialized };
+    sdv::ipc::EConnectState m_last{ sdv::ipc::EConnectState::uninitialized };
 };
 
 
@@ -328,7 +332,7 @@ TEST(UnixSocketIPC, BasicConnectDisconnect)
 
         if (!clientConn->WaitForConnection(5000)) { clientResult = 4; return; }
 
-        if (clientConn->GetStatus() != sdv::ipc::EConnectStatus::connected) { clientResult = 5; return; }
+        if (clientConn->GetConnectState() != sdv::ipc::EConnectState::connected) { clientResult = 5; return; }
 
         // Wait for the server to be conected before disconecting the client
         while (!allowClientDisconnect.load())
@@ -339,7 +343,7 @@ TEST(UnixSocketIPC, BasicConnectDisconnect)
 
     // SERVER must also report connected 
     EXPECT_TRUE(serverConn->WaitForConnection(5000));
-    EXPECT_EQ(serverConn->GetStatus(), sdv::ipc::EConnectStatus::connected);
+    EXPECT_EQ(serverConn->GetConnectState(), sdv::ipc::EConnectState::connected);
 
     // Allow client to dissconect now, because the Server is connected
     allowClientDisconnect = true;   
@@ -348,7 +352,7 @@ TEST(UnixSocketIPC, BasicConnectDisconnect)
 
     //DISCONNECT both
     serverConn->Disconnect();
-    EXPECT_EQ(serverConn->GetStatus(), sdv::ipc::EConnectStatus::disconnected);
+    EXPECT_EQ(serverConn->GetConnectState(), sdv::ipc::EConnectState::disconnected);
 
     //  Shutdown Manager / Framework
     EXPECT_NO_THROW(mgr.Shutdown());
@@ -403,7 +407,7 @@ TEST(UnixSocketIPC, ReconnectAfterDisconnect_SamePath)
         if (!clientConn->AsyncConnect(&cRcvr)) { clientResult = 3; return; }
 
         if (!clientConn->WaitForConnection(5000)) { clientResult = 4; return; }
-        if (clientConn->GetStatus() != sdv::ipc::EConnectStatus::connected) { clientResult = 5; return; }
+        if (clientConn->GetConnectState() != sdv::ipc::EConnectState::connected) { clientResult = 5; return; }
 
         //waits for confirmation before disconect
          while (!allowClientDisconnect.load())
@@ -415,7 +419,7 @@ TEST(UnixSocketIPC, ReconnectAfterDisconnect_SamePath)
 
     // Server has to be connected (same timeout with client?)
     EXPECT_TRUE(serverConn->WaitForConnection(5000)) << "Server didn't reach 'connected' in time";
-    EXPECT_EQ(serverConn->GetStatus(), sdv::ipc::EConnectStatus::connected);
+    EXPECT_EQ(serverConn->GetConnectState(), sdv::ipc::EConnectState::connected);
 
     // Allows Client to disconnect and waits for finishing
     allowClientDisconnect = true;
@@ -424,7 +428,7 @@ TEST(UnixSocketIPC, ReconnectAfterDisconnect_SamePath)
 
     // Disconnect server
     serverConn->Disconnect();
-    EXPECT_EQ(serverConn->GetStatus(), sdv::ipc::EConnectStatus::disconnected);
+    EXPECT_EQ(serverConn->GetConnectState(), sdv::ipc::EConnectState::disconnected);
 
     // SESSION 2
     // SERVER
@@ -450,7 +454,7 @@ TEST(UnixSocketIPC, ReconnectAfterDisconnect_SamePath)
         if (!clientConn2->AsyncConnect(&cRcvr2)) { clientResult2 = 3; return; }
 
         if (!clientConn2->WaitForConnection(5000)) { clientResult2 = 4; return; }
-        if (clientConn2->GetStatus() != sdv::ipc::EConnectStatus::connected) { clientResult2 = 5; return; }
+        if (clientConn2->GetConnectState() != sdv::ipc::EConnectState::connected) { clientResult2 = 5; return; }
 
         //waits for confirmation before disconect
         while (!allowClientDisconnect2.load())
@@ -463,7 +467,7 @@ TEST(UnixSocketIPC, ReconnectAfterDisconnect_SamePath)
     // Server has to be connected
     // if unlink(path) from session 1 worked, bind/listen/accept works again
     EXPECT_TRUE(serverConn2->WaitForConnection(5000)) << "Server didn't reach 'connected' in time (session 2)";
-    EXPECT_EQ(serverConn2->GetStatus(), sdv::ipc::EConnectStatus::connected);
+    EXPECT_EQ(serverConn2->GetConnectState(), sdv::ipc::EConnectState::connected);
 
     // Allows Client to disconnect and waits for finishing
     allowClientDisconnect2 = true;
@@ -472,7 +476,7 @@ TEST(UnixSocketIPC, ReconnectAfterDisconnect_SamePath)
 
     // Disconnect server
     serverConn2->Disconnect();
-    EXPECT_EQ(serverConn2->GetStatus(), sdv::ipc::EConnectStatus::disconnected);
+    EXPECT_EQ(serverConn2->GetConnectState(), sdv::ipc::EConnectState::disconnected);
 
     //Shutdown manager/framework
     EXPECT_NO_THROW(mgr.Shutdown());
@@ -550,8 +554,8 @@ TEST(UnixSocketIPC, CreateEndpoint_WithConfigAndPathClamping)
 
     EXPECT_TRUE(serverConn->WaitForConnection(5000));
     EXPECT_TRUE(clientConn->WaitForConnection(5000));
-    EXPECT_EQ(serverConn->GetStatus(), sdv::ipc::EConnectStatus::connected);
-    EXPECT_EQ(clientConn->GetStatus(), sdv::ipc::EConnectStatus::connected);
+    EXPECT_EQ(serverConn->GetConnectState(), sdv::ipc::EConnectState::connected);
+    EXPECT_EQ(clientConn->GetConnectState(), sdv::ipc::EConnectState::connected);
 
     // Cleanup
     clientConn->Disconnect();
@@ -592,8 +596,8 @@ TEST(UnixSocketIPC, Access_DefaultPath_ServerClientConnect)
 
     EXPECT_TRUE(serverConn->WaitForConnection(5000));
     EXPECT_TRUE(clientConn->WaitForConnection(5000));
-    EXPECT_EQ(serverConn->GetStatus(), sdv::ipc::EConnectStatus::connected);
-    EXPECT_EQ(clientConn->GetStatus(), sdv::ipc::EConnectStatus::connected);
+    EXPECT_EQ(serverConn->GetConnectState(), sdv::ipc::EConnectState::connected);
+    EXPECT_EQ(clientConn->GetConnectState(), sdv::ipc::EConnectState::connected);
 
     clientConn->Disconnect();
     serverConn->Disconnect();
@@ -637,7 +641,7 @@ TEST(UnixSocketIPC, WaitForConnection_InfiniteWait_SlowClient)
 
     // INFINITE wait (0xFFFFFFFFu)
     EXPECT_TRUE(serverConn->WaitForConnection(0xFFFFFFFFu));
-    EXPECT_EQ(serverConn->GetStatus(), sdv::ipc::EConnectStatus::connected);
+    EXPECT_EQ(serverConn->GetConnectState(), sdv::ipc::EConnectState::connected);
 
     // Cleanup
     delayedClient.join();
@@ -691,7 +695,8 @@ TEST(UnixSocketIPC, WaitForConnection_ZeroTimeout_BeforeAndAfter)
 TEST(UnixSocketIPC, ClientTimeout_NoServer)
 {
     sdv::app::CAppControl app;
-    ASSERT_TRUE(app.Startup(""));
+    ASSERT_TRUE(app.Startup(R"toml([LogHandler]
+ViewFilter = "Fatal")toml"));
     app.SetRunningMode();
 
     CUnixDomainSocketsChannelMgnt mgr;
@@ -714,7 +719,7 @@ TEST(UnixSocketIPC, ClientTimeout_NoServer)
     EXPECT_FALSE(clientConn->WaitForConnection(1500));
     // after another ~1s it should be in connection_error
     std::this_thread::sleep_for(std::chrono::milliseconds(800));
-    EXPECT_EQ(clientConn->GetStatus(), sdv::ipc::EConnectStatus::connection_error);
+    EXPECT_EQ(clientConn->GetConnectState(), sdv::ipc::EConnectState::connection_error);
 
     clientConn->Disconnect(); // cleanup (joins threads)
     EXPECT_NO_THROW(mgr.Shutdown());
@@ -754,9 +759,9 @@ TEST(UnixSocketIPC, ServerDisconnectPropagatesToClient)
     serverConn->Disconnect();
    
     // Deterministic wait for client-side transition to 'disconnected'
-    EXPECT_TRUE(cRcvr.WaitForStatus(sdv::ipc::EConnectStatus::disconnected, /*ms*/ 3000)) << "Client did not observe 'disconnected' after server closed the socket.";
+    EXPECT_TRUE(cRcvr.WaitForState(sdv::ipc::EConnectState::disconnected, /*ms*/ 3000)) << "Client did not observe 'disconnected' after server closed the socket.";
 
-    EXPECT_EQ(clientConn->GetStatus(), sdv::ipc::EConnectStatus::disconnected);
+    EXPECT_EQ(clientConn->GetConnectState(), sdv::ipc::EConnectState::disconnected);
 
     clientConn->Disconnect();
     EXPECT_NO_THROW(mgr.Shutdown());
@@ -794,7 +799,7 @@ TEST(UnixSocketIPC, ReconnectOnSameServerInstance)
         ASSERT_TRUE(clientConn->WaitForConnection(5000));
         clientConn->Disconnect();
         serverConn->Disconnect();
-        EXPECT_EQ(serverConn->GetStatus(), sdv::ipc::EConnectStatus::disconnected);
+        EXPECT_EQ(serverConn->GetConnectState(), sdv::ipc::EConnectState::disconnected);
     }
 
     // Second session on the same serverConn object
@@ -1129,7 +1134,7 @@ TEST(UnixSocketIPC, PeerCloseMidTransfer_ClientSeesDisconnected_AndSendMayFailOr
     std::cout << "[Debug] SendData result = " << sendResult.load() << std::endl;
 
     // But client MUST observe disconnected:
-    EXPECT_TRUE(cRcvr.WaitForStatus(sdv::ipc::EConnectStatus::disconnected, 3000));
+    EXPECT_TRUE(cRcvr.WaitForState(sdv::ipc::EConnectState::disconnected, 3000));
 
     clientConn->Disconnect();
     EXPECT_NO_THROW(mgr.Shutdown());
@@ -1162,8 +1167,8 @@ TEST(UnixSocketIPC, ClientCancelConnect_NoServer_CleansUpPromptly)
     std::this_thread::sleep_for(std::chrono::milliseconds(150));
     clientConn->Disconnect();
 
-    // Immediately after disconnect, status should be 'disconnected' (no hangs).
-    EXPECT_EQ(clientConn->GetStatus(), sdv::ipc::EConnectStatus::disconnected);
+    // Immediately after disconnect, state should be 'disconnected' (no hangs).
+    EXPECT_EQ(clientConn->GetConnectState(), sdv::ipc::EConnectState::disconnected);
 
     EXPECT_NO_THROW(mgr.Shutdown()); app.Shutdown();
 }
@@ -1172,7 +1177,8 @@ TEST(UnixSocketIPC, ClientCancelConnect_NoServer_CleansUpPromptly)
 TEST(UnixSocketIPC, ServerStartThenImmediateDisconnect_NoClient)
 {
     sdv::app::CAppControl app; 
-    ASSERT_TRUE(app.Startup("")); 
+    ASSERT_TRUE(app.Startup(R"toml([LogHandler]
+ViewFilter = "Fatal")toml"));
     app.SetRunningMode();
     CUnixDomainSocketsChannelMgnt mgr;
     EXPECT_NO_THROW(mgr.Initialize("")); 
@@ -1192,15 +1198,15 @@ TEST(UnixSocketIPC, ServerStartThenImmediateDisconnect_NoClient)
     // The server may be still listening; ensure we can disconnect cleanly
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     serverConn->Disconnect();
-    EXPECT_EQ(serverConn->GetStatus(), sdv::ipc::EConnectStatus::disconnected);
+    EXPECT_EQ(serverConn->GetConnectState(), sdv::ipc::EConnectState::disconnected);
 
     EXPECT_NO_THROW(mgr.Shutdown()); 
     app.Shutdown();
 }
 
 
-//Callback throws in SetStatus -> transport threads keep running
-TEST(UnixSocketIPC, CallbackThrowsInSetStatus_DoesNotCrashTransport)
+//Callback throws in SetConnectState -> transport threads keep running
+TEST(UnixSocketIPC, CallbackThrowsInSetConnectState_DoesNotCrashTransport)
 {
     sdv::app::CAppControl app; 
     ASSERT_TRUE(app.Startup("")); 
@@ -1227,7 +1233,7 @@ TEST(UnixSocketIPC, CallbackThrowsInSetStatus_DoesNotCrashTransport)
     CUDSThrowingReceiver cRcvr; 
     ASSERT_TRUE(clientConn->AsyncConnect(&cRcvr));
 
-    // Despite exceptions thrown inside SetStatus, the transport should still reach connected.
+    // Despite exceptions thrown inside SetConnectState, the transport should still reach connected.
     EXPECT_TRUE(serverConn->WaitForConnection(5000));
     EXPECT_TRUE(clientConn->WaitForConnection(5000));
 
@@ -1239,8 +1245,8 @@ TEST(UnixSocketIPC, CallbackThrowsInSetStatus_DoesNotCrashTransport)
     app.Shutdown();
 }
 
-//RegisterStatusEventCallback: multiple listeners receive status updates
-TEST(UnixSocketIPC, RegisterStatusEventCallback_MultipleCallbacksReceiveStatus)
+//RegisterStateEventCallback: multiple listeners receive state updates
+TEST(UnixSocketIPC, RegisterStateEventCallback_MultipleCallbacksReceiveState)
 {
     sdv::app::CAppControl app; 
     ASSERT_TRUE(app.Startup(""));
@@ -1266,12 +1272,12 @@ TEST(UnixSocketIPC, RegisterStatusEventCallback_MultipleCallbacksReceiveStatus)
 
     // --- Callback receiver 1 ---
     CUDSConnectReceiver recv1;
-    uint64_t cookie1 = server->RegisterStatusEventCallback(&recv1);
+    uint64_t cookie1 = server->RegisterStateEventCallback(&recv1);
     EXPECT_NE(cookie1, 0u);
 
     // --- Callback receiver 2 ---
     CUDSConnectReceiver recv2;
-    uint64_t cookie2 = server->RegisterStatusEventCallback(&recv2);
+    uint64_t cookie2 = server->RegisterStateEventCallback(&recv2);
     EXPECT_NE(cookie2, 0u);
     EXPECT_NE(cookie1, cookie2);
 
@@ -1283,22 +1289,22 @@ TEST(UnixSocketIPC, RegisterStatusEventCallback_MultipleCallbacksReceiveStatus)
     ASSERT_TRUE(client->WaitForConnection(5000));
 
     // Both receivers should have received 'connected'
-    EXPECT_TRUE(recv1.WaitForStatus(sdv::ipc::EConnectStatus::connected, 1000));
-    EXPECT_TRUE(recv2.WaitForStatus(sdv::ipc::EConnectStatus::connected, 1000));
+    EXPECT_TRUE(recv1.WaitForState(sdv::ipc::EConnectState::connected, 1000));
+    EXPECT_TRUE(recv2.WaitForState(sdv::ipc::EConnectState::connected, 1000));
 
     // --- Disconnect ---
     client->Disconnect();
 
-    EXPECT_TRUE(recv1.WaitForStatus(sdv::ipc::EConnectStatus::disconnected, 1000));
-    EXPECT_TRUE(recv2.WaitForStatus(sdv::ipc::EConnectStatus::disconnected, 1000));
+    EXPECT_TRUE(recv1.WaitForState(sdv::ipc::EConnectState::disconnected, 1000));
+    EXPECT_TRUE(recv2.WaitForState(sdv::ipc::EConnectState::disconnected, 1000));
 
     server->Disconnect();
     EXPECT_NO_THROW(mgr.Shutdown());
     app.Shutdown();
 }
 
-//UnregisterStatusEventCallback: removed listener stops receiving events
-TEST(UnixSocketIPC, UnregisterStatusEventCallback_RemovedListenerStopsReceiving)
+//UnregisterStateEventCallback: removed listener stops receiving events
+TEST(UnixSocketIPC, UnregisterStateEventCallback_RemovedListenerStopsReceiving)
 {
     // Framework + Manager
     sdv::app::CAppControl app;
@@ -1328,13 +1334,13 @@ TEST(UnixSocketIPC, UnregisterStatusEventCallback_RemovedListenerStopsReceiving)
     ASSERT_NE(client, nullptr);
 
     // --------- Two distinct receivers ----------
-    // recvReg: used ONLY for the status-callback registry
+    // recvReg: used ONLY for the state-callback registry
     // recvConn: used ONLY for AsyncConnect (m_pReceiver / m_pEvent path)
     CUDSConnectReceiver recvReg;
     CUDSConnectReceiver recvConn;
 
-    // Register recvReg as a status listener (registry path)
-    uint64_t cookie = server->RegisterStatusEventCallback(&recvReg);
+    // Register recvReg as a state listener (registry path)
+    uint64_t cookie = server->RegisterStateEventCallback(&recvReg);
     ASSERT_NE(cookie, 0u) << "Cookie must be non-zero";
 
     // Start connections (server uses recvReg only for registry; recvConn is the IConnect/IDataReceive side)
@@ -1346,21 +1352,21 @@ TEST(UnixSocketIPC, UnregisterStatusEventCallback_RemovedListenerStopsReceiving)
     ASSERT_TRUE(client->WaitForConnection(5000));
 
     // Both the connection receiver (recvConn) and the registry listener (recvReg) should observe 'connected'
-    EXPECT_TRUE(recvConn.WaitForStatus(sdv::ipc::EConnectStatus::connected, 1000)) << "Connection receiver didn't see 'connected'.";
-    EXPECT_TRUE(recvReg.WaitForStatus(sdv::ipc::EConnectStatus::connected, 1000)) << "Registry listener didn't see 'connected'.";
+    EXPECT_TRUE(recvConn.WaitForState(sdv::ipc::EConnectState::connected, 1000)) << "Connection receiver didn't see 'connected'.";
+    EXPECT_TRUE(recvReg.WaitForState(sdv::ipc::EConnectState::connected, 1000)) << "Registry listener didn't see 'connected'.";
 
     // --------- Unregister the registry listener ----------
-    server->UnregisterStatusEventCallback(cookie);
+    server->UnregisterStateEventCallback(cookie);
 
-    // Trigger a disconnect on client to force status transitions
+    // Trigger a disconnect on client to force state transitions
     client->Disconnect();
 
     // The connection receiver (recvConn) still sees disconnected (normal path)
-    EXPECT_TRUE(recvConn.WaitForStatus(sdv::ipc::EConnectStatus::disconnected, 1000)) << "Connection receiver didn't see 'disconnected'.";
+    EXPECT_TRUE(recvConn.WaitForState(sdv::ipc::EConnectState::disconnected, 1000)) << "Connection receiver didn't see 'disconnected'.";
 
     // The registry listener (recvReg) MUST NOT receive 'disconnected' anymore
     // (wait a short, deterministic interval)
-    EXPECT_FALSE(recvReg.WaitForStatus(sdv::ipc::EConnectStatus::disconnected, 300)) << "Registry listener received 'disconnected' after UnregisterStatusEventCallback().";
+    EXPECT_FALSE(recvReg.WaitForState(sdv::ipc::EConnectState::disconnected, 300)) << "Registry listener received 'disconnected' after UnregisterStateEventCallback().";
 
     // Server cleanup
     server->Disconnect();

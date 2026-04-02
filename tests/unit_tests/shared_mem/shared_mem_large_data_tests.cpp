@@ -115,7 +115,7 @@ public:
         // Wait until there is no activity any more.
         std::chrono::high_resolution_clock::time_point tpTickSent = std::chrono::high_resolution_clock::now();
         std::chrono::high_resolution_clock::time_point tpTickReceive = std::chrono::high_resolution_clock::now();
-        while (m_eStatus != sdv::ipc::EConnectStatus::disconnected)
+        while (m_eConnectState != sdv::ipc::EConnectState::disconnected)
         {
             std::unique_lock<std::mutex> lock(m_mtxData);
             m_cvReceived.wait_for(lock, std::chrono::milliseconds(50));
@@ -141,33 +141,33 @@ public:
     }
 
     /**
-     * @brief Set the current status. Overload of sdv::ipc::IConnectEventCallback::SetStatus.
-     * @param[in] eConnectStatus The connection status.
+     * @brief Set the current state. Overload of sdv::ipc::IConnectEventCallback::SetConnectState.
+     * @param[in] eConnectState The connection state.
      */
-    virtual void SetStatus(/*in*/ sdv::ipc::EConnectStatus eConnectStatus) override
+    virtual void SetConnectState(/*in*/ sdv::ipc::EConnectState eConnectState) override
     {
-        switch (eConnectStatus)
+        switch (eConnectState)
         {
-        case sdv::ipc::EConnectStatus::connection_error:
+        case sdv::ipc::EConnectState::connection_error:
             m_bConnectError = true;
             break;
-        case sdv::ipc::EConnectStatus::communication_error:
+        case sdv::ipc::EConnectState::communication_error:
             m_bCommError = true;
             break;
-        case sdv::ipc::EConnectStatus::disconnected_forced:
+        case sdv::ipc::EConnectState::disconnected_forced:
             m_bForcedDisconnect = true;
             break;
         default:
             break;
         }
-        m_eStatus = eConnectStatus;
+        m_eConnectState = eConnectState;
     }
 
     /**
-    * @brief Return the received connection status.
-    * @return The received connection status.
+    * @brief Return the received connection state.
+    * @return The received connection state.
     */
-    sdv::ipc::EConnectStatus GetReceivedStatus() const { return m_eStatus; }
+    sdv::ipc::EConnectState GetReceivedState() const { return m_eConnectState; }
 
     /**
     * @brief Has a connection error occurred?
@@ -207,9 +207,9 @@ public:
     }
 
     /**
-    * @brief Reset the received status event flags.
+    * @brief Reset the received state event flags.
     */
-    void ResetStatusEvents()
+    void ResetStateEvents()
     {
         m_bConnectError = false;
         m_bCommError = false;
@@ -256,7 +256,7 @@ private:
     sdv::ipc::IDataSend*                    m_pSend = nullptr;              ///< Send interface to implement repeating function.
     mutable std::mutex                      m_mtxData;                      ///< Protect data access.
     std::queue<sdv::pointer<uint8_t>>       m_queueDataCopy;                ///< Copy of the data.
-    std::atomic<sdv::ipc::EConnectStatus>   m_eStatus = sdv::ipc::EConnectStatus::uninitialized; ///< Current received status.
+    std::atomic<sdv::ipc::EConnectState>   m_eConnectState = sdv::ipc::EConnectState::uninitialized; ///< Current received state.
     bool                                    m_bConnectError = false;        ///< Connection error ocurred.
     bool                                    m_bCommError = false;           ///< Communication error occurred.
     bool                                    m_bForcedDisconnect = false;    ///< Force disconnect.
@@ -322,8 +322,8 @@ Size = 1024000
     ASSERT_NE(pServerConnection, nullptr);
     EXPECT_TRUE(pServerConnection->AsyncConnect(&receiverServer));
     EXPECT_FALSE(pServerConnection->WaitForConnection(50));    // Note: 50ms will not get a connection.
-    EXPECT_TRUE(pServerConnection->GetStatus() == sdv::ipc::EConnectStatus::initialized ||
-        pServerConnection->GetStatus() == sdv::ipc::EConnectStatus::connecting);
+    EXPECT_TRUE(pServerConnection->GetConnectState() == sdv::ipc::EConnectState::initialized ||
+        pServerConnection->GetConnectState() == sdv::ipc::EConnectState::connecting);
 
     // Establish the client connection
     sdv::ipc::IConnect* pClientConnection = ptrClientConnection.GetInterface<sdv::ipc::IConnect>();
@@ -331,8 +331,8 @@ Size = 1024000
     EXPECT_TRUE(pClientConnection->AsyncConnect(&receiverClient));
     EXPECT_TRUE(pClientConnection->WaitForConnection(2000));  // Note: Connection should be possible within 2000ms.
     EXPECT_TRUE(pServerConnection->WaitForConnection(50));    // Note: 50ms to also receive the connection at the server.
-    EXPECT_EQ(pClientConnection->GetStatus(), sdv::ipc::EConnectStatus::connected);
-    EXPECT_EQ(pServerConnection->GetStatus(), sdv::ipc::EConnectStatus::connected);
+    EXPECT_EQ(pClientConnection->GetConnectState(), sdv::ipc::EConnectState::connected);
+    EXPECT_EQ(pServerConnection->GetConnectState(), sdv::ipc::EConnectState::connected);
     appcontrol.SetRunningMode();
 
     // Try send; should succeed, since connected
@@ -419,8 +419,8 @@ Size = 1024000
     ASSERT_NE(pServerConnection, nullptr);
     EXPECT_TRUE(pServerConnection->AsyncConnect(&receiverServer));
     EXPECT_FALSE(pServerConnection->WaitForConnection(50));    // Note: 50ms will not get a connection.
-    EXPECT_TRUE(pServerConnection->GetStatus() == sdv::ipc::EConnectStatus::initialized ||
-        pServerConnection->GetStatus() == sdv::ipc::EConnectStatus::connecting);
+    EXPECT_TRUE(pServerConnection->GetConnectState() == sdv::ipc::EConnectState::initialized ||
+        pServerConnection->GetConnectState() == sdv::ipc::EConnectState::connecting);
 
     // Establish the client connection
     sdv::ipc::IConnect* pClientConnection = ptrClientConnection.GetInterface<sdv::ipc::IConnect>();
@@ -428,8 +428,8 @@ Size = 1024000
     EXPECT_TRUE(pClientConnection->AsyncConnect(&receiverClient));
     EXPECT_TRUE(pClientConnection->WaitForConnection(2000));  // Note: Connection should be possible within 2000ms.
     EXPECT_TRUE(pServerConnection->WaitForConnection(50));    // Note: 50ms to also receive the connection at the server.
-    EXPECT_EQ(pClientConnection->GetStatus(), sdv::ipc::EConnectStatus::connected);
-    EXPECT_EQ(pServerConnection->GetStatus(), sdv::ipc::EConnectStatus::connected);
+    EXPECT_EQ(pClientConnection->GetConnectState(), sdv::ipc::EConnectState::connected);
+    EXPECT_EQ(pServerConnection->GetConnectState(), sdv::ipc::EConnectState::connected);
     appcontrol.SetRunningMode();
 
     // Try send; should succeed, since connected
@@ -551,8 +551,8 @@ Size = 1024000
     ASSERT_NE(pServerConnection, nullptr);
     EXPECT_TRUE(pServerConnection->AsyncConnect(&receiverServer));
     EXPECT_FALSE(pServerConnection->WaitForConnection(50));    // Note: 50ms will not get a connection.
-    EXPECT_TRUE(pServerConnection->GetStatus() == sdv::ipc::EConnectStatus::initialized ||
-        pServerConnection->GetStatus() == sdv::ipc::EConnectStatus::connecting);
+    EXPECT_TRUE(pServerConnection->GetConnectState() == sdv::ipc::EConnectState::initialized ||
+        pServerConnection->GetConnectState() == sdv::ipc::EConnectState::connecting);
 
     // Establish the client connection
     sdv::ipc::IConnect* pClientConnection = ptrClientConnection.GetInterface<sdv::ipc::IConnect>();
@@ -560,8 +560,8 @@ Size = 1024000
     EXPECT_TRUE(pClientConnection->AsyncConnect(&receiverClient));
     EXPECT_TRUE(pClientConnection->WaitForConnection(2000));  // Note: Connection should be possible within 2000ms.
     EXPECT_TRUE(pServerConnection->WaitForConnection(50));    // Note: 50ms to also receive the connection at the server.
-    EXPECT_EQ(pClientConnection->GetStatus(), sdv::ipc::EConnectStatus::connected);
-    EXPECT_EQ(pServerConnection->GetStatus(), sdv::ipc::EConnectStatus::connected);
+    EXPECT_EQ(pClientConnection->GetConnectState(), sdv::ipc::EConnectState::connected);
+    EXPECT_EQ(pServerConnection->GetConnectState(), sdv::ipc::EConnectState::connected);
     appcontrol.SetRunningMode();
 
     // Try send; should succeed, since connected
@@ -666,7 +666,7 @@ Size = 1024000
     ASSERT_NE(pServerConnection, nullptr);
     EXPECT_TRUE(pServerConnection->AsyncConnect(&receiverServer));
     EXPECT_TRUE(pServerConnection->WaitForConnection(2000));  // Note: Connection should be possible within 2000ms.
-    EXPECT_EQ(pServerConnection->GetStatus(), sdv::ipc::EConnectStatus::connected);
+    EXPECT_EQ(pServerConnection->GetConnectState(), sdv::ipc::EConnectState::connected);
     TRACE("Connection estabished...");
     appcontrol.SetRunningMode();
 
@@ -750,7 +750,7 @@ Size = 1024000
     ASSERT_NE(pServerConnection, nullptr);
     EXPECT_TRUE(pServerConnection->AsyncConnect(&receiverServer));
     EXPECT_TRUE(pServerConnection->WaitForConnection(2000));  // Note: Connection should be possible within 2000ms.
-    EXPECT_EQ(pServerConnection->GetStatus(), sdv::ipc::EConnectStatus::connected);
+    EXPECT_EQ(pServerConnection->GetConnectState(), sdv::ipc::EConnectState::connected);
     TRACE("Connection estabished...");
     appcontrol.SetRunningMode();
 

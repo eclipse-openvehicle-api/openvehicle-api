@@ -10,9 +10,9 @@
 * Contributors:
 *   Denisa Ros - initial API and implementation
 ********************************************************************************/
-
-#ifndef CONNECTION_H
-#define CONNECTION_H
+#ifdef _WIN32
+#ifndef WIN_SOCKETS_CONNECTION_H
+#define WIN_SOCKETS_CONNECTION_H
 
 #include <interfaces/ipc.h>
 #include <support/interface_ptr.h>
@@ -34,6 +34,7 @@
 #       pragma comment(lib, "Ws2_32.lib")
 #   endif
 #endif
+
 
 /// @brief Legacy framing markers for the old message header (not used by SDV envelope)
 constexpr uint32_t m_MsgStart = 0x01020304; ///< Value to mark the start of the legacy message header
@@ -67,10 +68,10 @@ struct SMsgHeader
  *
  * Exposes:
  *  - sdv::ipc::IDataSend   : sending SDV-framed messages
- *  - sdv::ipc::IConnect    : async connect / wait / status / events
+ *  - sdv::ipc::IConnect    : async connect / wait / state / events
  *  - sdv::IObjectDestroy   : explicit destruction hook for SDV runtime
  */
-class CConnection
+class CWinsockConnection
     : public sdv::IInterfaceAccess
     , public sdv::ipc::IDataSend
     , public sdv::ipc::IConnect
@@ -80,19 +81,19 @@ public:
     /**
      * @brief default constructor used by create endpoint - allocates new buffers m_Sender and m_Receiver
      */
-    CConnection();
+    CWinsockConnection();
 
     /**
      * @brief access existing connection
      * @param[in] preconfiguredSocket Prepared socket for the connection
      * @param[in] acceptConnectionRequired If true connection has to be accepted before receive thread can be started
      */
-    CConnection(SOCKET preconfiguredSocket, bool acceptConnectionRequired);
+    CWinsockConnection(unsigned long long preconfiguredSocket, bool acceptConnectionRequired);
 
     /**
     * @brief Virtual destructor needed for "delete this;"
     */
-    virtual ~CConnection();
+    virtual ~CWinsockConnection();
 
     BEGIN_SDV_INTERFACE_MAP()
         SDV_INTERFACE_ENTRY(sdv::ipc::IDataSend)
@@ -122,7 +123,7 @@ public:
      * @param[in] pReceiver Object that exposes IDataReceiveCallback and
      *                      optionally IConnectEventCallback
      * @return true when the connect worker was started successfully
-     *         Use GetStatus / WaitForConnection / callbacks for status
+     *         Use GetConnectState / WaitForConnection / callbacks for state
      */
     bool AsyncConnect(/*in*/ sdv::IInterfaceAccess* pReceiver) override;
 
@@ -132,7 +133,7 @@ public:
      * Overload of sdv::ipc::IConnect::WaitForConnection
      *
      * @param[in] uiWaitMs
-     *      - 0         : do not wait, just check current status
+     *      - 0         : do not wait, just check current state
      *      - 0xFFFFFFFF: wait indefinitely
      *      - otherwise : wait up to uiWaitMs milliseconds
      * @return true if the connection is in connected state when returning
@@ -149,36 +150,36 @@ public:
     /**
      * @brief Disconnect from the peer and stop I/O threads
      *
-     * This sets the status to disconnected and releases the event interface
+     * This sets the state to disconnected and releases the event interface
      */
     void Disconnect() override;
 
     /**
-     * @brief Register event callback interface for connection status updates
+     * @brief Register event callback interface for connection state updates
      *
-     * Overload of sdv::ipc::IConnect::RegisterStatusEventCallback
+     * Overload of sdv::ipc::IConnect::RegisterStateEventCallback
      *
      * @param[in] pEventCallback Pointer to an object exposing
      *            sdv::ipc::IConnectEventCallback.
      * @return A registration cookie (1 = valid, 0 = failure)
      */
-    uint64_t RegisterStatusEventCallback(/*in*/ sdv::IInterfaceAccess* pEventCallback) override;
+    uint64_t RegisterStateEventCallback(/*in*/ sdv::IInterfaceAccess* pEventCallback) override;
 
     /**
-     * @brief Unregister the status event callback using its cookie
+     * @brief Unregister the state event callback using its cookie
      *
-     * Overload of sdv::ipc::IConnect::UnregisterStatusEventCallback
+     * Overload of sdv::ipc::IConnect::UnregisterStateEventCallback
      *
-     * @param[in] uiCookie Cookie returned by RegisterStatusEventCallback
+     * @param[in] uiCookie Cookie returned by RegisterStateEventCallback
      */
-    void UnregisterStatusEventCallback(/*in*/ uint64_t uiCookie) override;
+    void UnregisterStateEventCallback(/*in*/ uint64_t uiCookie) override;
 
     /**
-     * @brief Get current status of the connection
+     * @brief Get current state of the connection
      *
-     * @return Current sdv::ipc::EConnectStatus
+     * @return Current sdv::ipc::EConnectState
      */
-    sdv::ipc::EConnectStatus GetStatus() const override;
+    sdv::ipc::EConnectState GetConnectState() const override;
 
     /**
      * @brief Destroy the object
@@ -196,7 +197,7 @@ private:
 	std::thread                         	m_ConnectThread;
 	std::atomic<bool>			 			m_StopReceiveThread{false};		///< bool variable to stop thread
 	std::atomic<bool>                   	m_StopConnectThread{false};
-	std::atomic<sdv::ipc::EConnectStatus>	m_ConnectionStatus;				///< the status of the connection
+	std::atomic<sdv::ipc::EConnectState>	m_ConnectionState;				///< the state of the connection
 	
 	sdv::ipc::IDataReceiveCallback*         m_pReceiver = nullptr;			///< Receiver to pass the messages if available
 	sdv::ipc::IConnectEventCallback*		m_pEvent = nullptr;				///< Event receiver
@@ -217,7 +218,7 @@ private:
     /// @brief Server accept loop / client connect confirmation
     void ConnectWorker();
 
-    /// @brief Start the RX thread (pre: status=connected, socket valid)
+    /// @brief Start the RX thread (pre: state=connected, socket valid)
     void StartReceiveThread_Unsafe();
 
     /// @brief Stop worker threads and close all sockets cleanly
@@ -451,7 +452,7 @@ private:
      * @brief Handle an incoming connect_term message
      *
      * Indicates that the peer requests immediate termination of the connection
-     * Sets status to disconnected and stops the RX loop
+     * Sets state to disconnected and stops the RX loop
      *
      * @param message SDV envelope containing the connect_term header
      */
@@ -503,8 +504,9 @@ private:
      */
     bool ReadDataChunk(const CMessage& rMessage, uint32_t uiOffset, SDataContext& rsDataCtxt);
 
-    /// @brief Centralized status update (notifies waiters and callbacks)
-    void SetStatus(sdv::ipc::EConnectStatus status);
+    /// @brief Centralized state update (notifies waiters and callbacks)
+    void SetConnectState(sdv::ipc::EConnectState state);
 };
 
-#endif // CONNECTION_H
+#endif // WIN_SOCKETS_CONNECTION_H
+#endif

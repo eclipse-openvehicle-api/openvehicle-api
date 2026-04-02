@@ -12,7 +12,7 @@
 #include <fstream>
 #include <support/app_control.h>
 #include <support/signal_support.h>
-#include "signal_names.h"
+#include "../generated/vss_files/signal_identifier.h"
 
 #include "autoheadlight_simulate.h"
 #include "autoheadlight_console.h"

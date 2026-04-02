@@ -132,7 +132,6 @@ add_executable(door_demo_example
         "door_app/door_application.cpp"
         "door_app/include/console.h"
         "door_app/console.cpp" 
-        "door_app/include/signal_names.h"
         "door_service/lock_doors_thread.h")
         
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -156,7 +155,6 @@ add_executable(door_external_app
         "door_app/door_extern_application.cpp"
         "door_app/include/console.h"
         "door_app/console.cpp" 
-        "door_app/include/signal_names.h"
         "door_service/lock_doors_thread.h")
         
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

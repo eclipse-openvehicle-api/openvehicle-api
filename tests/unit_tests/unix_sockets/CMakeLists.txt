@@ -6,8 +6,11 @@
 # https://www.apache.org/licenses/LICENSE-2.0
 #
 # SPDX-License-Identifier: Apache-2.0 
+#
+# Contributors:
+#   Denisa Ros - initial API and implementation
 #*******************************************************************************
-
+if(UNIX)
 cmake_minimum_required(VERSION 3.20)
 
 project(UnixSocketCommunicationTests LANGUAGES CXX)
@@ -26,11 +29,19 @@ target_include_directories(UnitTest_UnixSocketConnectTests PUBLIC
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_libraries(UnitTest_UnixSocketConnectTests
-        GTest::GTest ${CMAKE_THREAD_LIBS_INIT} stdc++fs ${CMAKE_DL_LIBS} rt
+        GTest::GTest 
+        ${CMAKE_THREAD_LIBS_INIT} 
+        stdc++fs ${CMAKE_DL_LIBS} 
+        rt
+        uds_unix_sockets
     )
 else()
     target_link_libraries(UnitTest_UnixSocketConnectTests
-        GTest::GTest Ws2_32 Winmm Rpcrt4.lib
+        GTest::GTest
+        Ws2_32 
+        Winmm 
+        Rpcrt4.lib
+        uds_unix_sockets
     )
 endif()
 
@@ -46,4 +57,6 @@ add_custom_command(TARGET UnitTest_UnixSocketConnectTests POST_BUILD
             --gtest_output=xml:${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/UnitTest_UnixSocketConnectTests.xml
     VERBATIM
 )
+endif()
+
 endif()

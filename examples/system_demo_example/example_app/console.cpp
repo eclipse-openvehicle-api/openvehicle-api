@@ -253,7 +253,7 @@ void CConsole::RunUntilBreak()
     // Set the cursor position at the end
     SetCursorPos(g_sCursor);
 
-    // Unregister the data link signalss
+    // Unregister the data link signals
     if (m_signalSteeringWheel) m_signalSteeringWheel.Reset();
     if (m_signalSpeed) m_signalSpeed.Reset();
     if (m_signalRearAxleAngle) m_signalRearAxleAngle.Reset();

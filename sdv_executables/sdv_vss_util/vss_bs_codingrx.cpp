@@ -314,10 +314,10 @@ std::string CVSSBSCodingRX::Code_BS_RXConstructor(const SSignalVDDefinition& sig
     mapKeywords["signal_name"] = function.signalName;
 
     return ReplaceKeywords(R"code(
-	auto %signal_name%Device = sdv::core::GetObject("%vd_vss_original%_Device").GetInterface<vss::%vd_vssWithColons%Device::IVSS_%vd_function_name%>();
+	auto %signal_name%Device = sdv::core::GetObject("%vd_vss_original%_Device").GetInterface<vss::%vd_vssWithColons%Device::IVSS_Read%vd_function_name%>();
 	if (!%signal_name%Device)
 	{
-		SDV_LOG_ERROR("Could not get interface 'IVSS_%vd_function_name%': [CBasicService%vd_class_name%]");
+		SDV_LOG_ERROR("Could not get interface 'IVSS_Read%vd_function_name%': [CBasicService%vd_class_name%]");
 		throw std::runtime_error("%vd_vss_original% mode device not found");
 	}
 	%signal_name%Device->Register%vd_function_name%Event(dynamic_cast<vss::%vd_vssWithColons%Device::IVSS_Write%vd_function_name%_Event*> (this));
@@ -337,7 +337,7 @@ std::string CVSSBSCodingRX::Code_BS_RXDestructor(const SSignalVDDefinition& sign
     mapKeywords["vd_function_name"] = functionVD.functionName;
 
     return ReplaceKeywords(R"code(
-	auto %vd_signal_name%Device = sdv::core::GetObject("%vd_vss_original%_Device").GetInterface<vss::%vd_vssWithColons%Device::IVSS_%vd_function_name%>();
+	auto %vd_signal_name%Device = sdv::core::GetObject("%vd_vss_original%_Device").GetInterface<vss::%vd_vssWithColons%Device::IVSS_Read%vd_function_name%>();
 	if (%vd_signal_name%Device)
 	{
 		%vd_signal_name%Device->Unregister%vd_function_name%Event(dynamic_cast<vss::%vd_vssWithColons%Device::IVSS_Write%vd_function_name%_Event*> (this));

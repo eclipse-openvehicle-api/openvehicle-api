@@ -1085,9 +1085,9 @@ ViewFilter = "Fatal"
     // Disconnect from the client
     sdv::ipc::IConnect* pClientConnect = ptrClientEndpoint.GetInterface<sdv::ipc::IConnect>();
     ASSERT_NE(pClientConnect, nullptr);
-    EXPECT_EQ(pClientConnect->GetStatus(), sdv::ipc::EConnectStatus::connected);
+    EXPECT_EQ(pClientConnect->GetConnectState(), sdv::ipc::EConnectState::connected);
     control.RemoveConnection(tConnectionID);
-    EXPECT_EQ(pClientConnect->GetStatus(), sdv::ipc::EConnectStatus::disconnected);
+    EXPECT_EQ(pClientConnect->GetConnectState(), sdv::ipc::EConnectState::disconnected);
     ptrClientEndpoint.Clear();    // Lifetime taken over by communication control.
 
     // Create another client endpoint
@@ -1155,9 +1155,9 @@ ViewFilter = "Fatal"
     // Disconnect from the client
     sdv::ipc::IConnect* pClientConnect = ptrClientEndpoint.GetInterface<sdv::ipc::IConnect>();
     ASSERT_NE(pClientConnect, nullptr);
-    EXPECT_EQ(pClientConnect->GetStatus(), sdv::ipc::EConnectStatus::connected);
+    EXPECT_EQ(pClientConnect->GetConnectState(), sdv::ipc::EConnectState::connected);
     control.RemoveConnection(tConnectionID);
-    EXPECT_EQ(pClientConnect->GetStatus(), sdv::ipc::EConnectStatus::disconnected);
+    EXPECT_EQ(pClientConnect->GetConnectState(), sdv::ipc::EConnectState::disconnected);
     ptrClientEndpoint.Clear();    // Lifetime taken over by communication control.
 
     // Create another client endpoint

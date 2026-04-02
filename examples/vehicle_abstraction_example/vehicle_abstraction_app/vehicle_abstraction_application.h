@@ -1,0 +1,60 @@
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0 
+ ********************************************************************************/
+
+#include <string>
+#include <support/app_control.h>
+#include <support/signal_support.h>
+
+/**
+* @brief Application Class of the vehicle abstraction example
+*/
+class CAbstractionControl
+{
+public:
+
+    /**
+    * @brief Start and initialize the application control and load 
+	* platform abstraction components and basic services
+    * @param[in] bSimulate If signals should be simulated or CAN input signals should be used
+    * @return Return true on success otherwise false
+    */
+    bool Initialize(bool bSimulate);
+
+    /**
+    * @brief After initialization/configuration the system mode needs to be set to running mode
+    */
+    void SetRunningMode();
+
+    /**
+    * @brief Shutdown the system.
+    */
+    void Shutdown();
+
+private:
+
+    /**
+    * @brief check if SDV_FRAMEWORK_RUNTIME environment variable exists
+    * @return Return true if environment variable is found otherwise false
+    */
+    bool IsSDVFrameworkEnvironmentSet();
+
+    /**
+     * @brief Load config file and register vehicle device and basic service.
+     * @param[in] inputMsg message string to be printed on console in case of success and failure
+     * @param[in] configFileName config toml file name
+     * @return Return true on success otherwise false
+     */
+    bool LoadConfigFile(const std::string& inputMsg, const std::string& configFileName);
+
+    sdv::app::CAppControl m_appcontrol;           ///< App-control of SDV V-API.
+    bool                  m_bInitialized = false; ///< Set when initialized.
+
+    bool m_bSimulate = false;
+};

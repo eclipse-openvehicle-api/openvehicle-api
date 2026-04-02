@@ -10,6 +10,7 @@
 * Contributors:
 *   Denisa Ros - initial API and implementation
 ********************************************************************************/
+#ifdef _WIN32
 
 #include "channel_mgnt.h"
 #include "connection.h"
@@ -323,15 +324,12 @@ static SOCKET ConnectUnixSocket(
     const auto deadline = std::chrono::steady_clock::now() +
                           std::chrono::milliseconds(totalTimeoutMs);
 
-    int lastError = 0;
-
     while (true)
     {
         SOCKET s = socket(AF_UNIX, SOCK_STREAM, 0);
         if (s == INVALID_SOCKET)
         {
-            lastError = WSAGetLastError();
-            SDV_LOG_ERROR("[AF_UNIX] socket() FAIL (client), WSA=", lastError);
+            SDV_LOG_ERROR("[AF_UNIX] socket() FAIL (client), WSA=", WSAGetLastError());
             return INVALID_SOCKET;
         }
 
@@ -341,7 +339,7 @@ static SOCKET ConnectUnixSocket(
             return s;
         }
 
-        lastError = WSAGetLastError();
+        int lastError = WSAGetLastError();
         closesocket(s);
 
         if (std::chrono::steady_clock::now() >= deadline)
@@ -364,7 +362,7 @@ bool CSocketsChannelMgnt::OnInitialize()
     return true;
 }
 
-void CSocketsChannelMgnt::OnServerClosed(const std::string& udsPath, CConnection* ptr)
+void CSocketsChannelMgnt::OnServerClosed(const std::string& udsPath, CWinsockConnection* ptr)
 {
     std::lock_guard<std::mutex> lock(m_udsMtx);
 
@@ -411,8 +409,8 @@ sdv::ipc::SChannelEndpoint CSocketsChannelMgnt::CreateEndpoint(const sdv::u8stri
         return {};
     }
 
-    // Server-side CConnection, it will accept() a client on first use
-    auto server = std::make_shared<CConnection>(listenSocket, /*acceptRequired*/ true);
+    // Server-side CWinsockConnection, it will accept() a client on first use
+    auto server = std::make_shared<CWinsockConnection>(listenSocket, /*acceptRequired*/ true);
 
     {
         std::lock_guard<std::mutex> lock(m_udsMtx);
@@ -481,5 +479,7 @@ sdv::IInterfaceAccess* CSocketsChannelMgnt::Access(const sdv::u8string& cs)
 
     // Client-side connection object (acceptRequired=false)
     // Ownership is transferred to the caller (VAPI runtime)
-    return new CConnection(s, /*acceptRequired*/ false);
+    return new CWinsockConnection(s, /*acceptRequired*/ false);
 }
+
+#endif

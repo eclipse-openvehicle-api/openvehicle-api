@@ -21,11 +21,10 @@ public:
 
     /**
     * @brief Start and initialize the application control and load vehicle devices and 
-    * basic services depending on the numerb of doors
+    * basic services depending on the number of doors
     * @return Return true on success otherwise false
     */
     bool Initialize();
-
 
     /**
     * @brief Run loop as long as user input does not exit

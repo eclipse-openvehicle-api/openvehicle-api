@@ -15,7 +15,7 @@
 #include <support/app_control.h>
 #include <support/component_impl.h>
 #include <support/timer.h>
-#include "signal_names.h"
+#include "../generated/vss_files/signal_identifier.h"
 
 // VSS interfaces - located in ../generated/vss_files/include
 #include "vss_vehiclepositioncurrentlatitude_bs_rx.h"

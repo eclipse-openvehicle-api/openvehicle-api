@@ -25,21 +25,21 @@ inline sdv::process::TProcessID GetProcessID()
     return pProcessInfo ? pProcessInfo->GetProcessID() : 0;
 }
 
-inline std::string ConnectState(sdv::ipc::EConnectStatus eState)
+inline std::string ConnectState2String(sdv::ipc::EConnectState eState)
 {
     switch (eState)
     {
-    case sdv::ipc::EConnectStatus::uninitialized:               return "uninitialized";
-    case sdv::ipc::EConnectStatus::initializing:                return "initializing";
-    case sdv::ipc::EConnectStatus::initialized:                 return "initialized";
-    case sdv::ipc::EConnectStatus::connecting:                  return "connecting";
-    case sdv::ipc::EConnectStatus::negotiating:                 return "negotiating";
-    case sdv::ipc::EConnectStatus::connection_error:            return "connection_error";
-    case sdv::ipc::EConnectStatus::connected:                   return "connected";
-    case sdv::ipc::EConnectStatus::communication_error:         return "communication_error";
-    case sdv::ipc::EConnectStatus::disconnected:                return "disconnected";
-    case sdv::ipc::EConnectStatus::disconnected_forced:         return "disconnected_forced";
-    case sdv::ipc::EConnectStatus::terminating:                 return "terminating";
+    case sdv::ipc::EConnectState::uninitialized:                return "uninitialized";
+    case sdv::ipc::EConnectState::initializing:                 return "initializing";
+    case sdv::ipc::EConnectState::initialized:                  return "initialized";
+    case sdv::ipc::EConnectState::connecting:                   return "connecting";
+    case sdv::ipc::EConnectState::negotiating:                  return "negotiating";
+    case sdv::ipc::EConnectState::connection_error:             return "connection_error";
+    case sdv::ipc::EConnectState::connected:                    return "connected";
+    case sdv::ipc::EConnectState::communication_error:          return "communication_error";
+    case sdv::ipc::EConnectState::disconnected:                 return "disconnected";
+    case sdv::ipc::EConnectState::disconnected_forced:          return "disconnected_forced";
+    case sdv::ipc::EConnectState::terminating:                  return "terminating";
     default:                                                    return "unknown";
     }
 }
@@ -86,11 +86,11 @@ CConnection::~CConnection()
 #endif
 
     // If still connected, disconnect.
-    if (m_eStatus == sdv::ipc::EConnectStatus::connected)
+    if (m_eConnectState == sdv::ipc::EConnectState::connected)
         Disconnect();
 
     // Set to terminating to allow the threads to shut down.
-    m_eStatus = sdv::ipc::EConnectStatus::terminating;
+    m_eConnectState = sdv::ipc::EConnectState::terminating;
 
     // Stop the receive thread to prevent accepting any more messages from the server.
     if (m_threadReceive.joinable())
@@ -146,19 +146,19 @@ uint32_t CConnection::Send(const void* pData, uint32_t uiDataLength)
 #if ENABLE_REPORTING >= 2
     switch (((SMsgHdr*)pData)->eType)
     {
-    case EMsgType::sync_request: TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND SYNC_REQUEST (", ConnectState(m_eStatus), ")"); break;
-    case EMsgType::sync_answer: TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND SYNC_ANSWER (", ConnectState(m_eStatus), ")"); break;
-    case EMsgType::connect_request: TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND CONNECT_REQUEST (", ConnectState(m_eStatus), ")"); break;
-    case EMsgType::connect_answer: TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND CONNECT_ANSWER (", ConnectState(m_eStatus), ")"); break;
-    case EMsgType::connect_term: TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND CONNECT_TERM (", ConnectState(m_eStatus), ")"); break;
+    case EMsgType::sync_request: TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND SYNC_REQUEST (", ConnectState2String(m_eConnectState), ")"); break;
+    case EMsgType::sync_answer: TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND SYNC_ANSWER (", ConnectState2String(m_eConnectState), ")"); break;
+    case EMsgType::connect_request: TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND CONNECT_REQUEST (", ConnectState2String(m_eConnectState), ")"); break;
+    case EMsgType::connect_answer: TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND CONNECT_ANSWER (", ConnectState2String(m_eConnectState), ")"); break;
+    case EMsgType::connect_term: TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND CONNECT_TERM (", ConnectState2String(m_eConnectState), ")"); break;
 #if ENABLE_REPORTING >= 3
-    case EMsgType::data: TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND DATA ", uiDataLength - sizeof(SMsgHdr), " bytes (", ConnectState(m_eStatus), ")"); break;
-    case EMsgType::data_fragment: TRACE(m_bServer ? "SERVER" : "CLIENT", " RECEIVE DATA FRAGMENT ", uiDataLength - sizeof(SFragmentedMsgHdr), " bytes (", ConnectState(m_eStatus), ")"); break;
+    case EMsgType::data: TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND DATA ", uiDataLength - sizeof(SMsgHdr), " bytes (", ConnectState2String(m_eConnectState), ")"); break;
+    case EMsgType::data_fragment: TRACE(m_bServer ? "SERVER" : "CLIENT", " RECEIVE DATA FRAGMENT ", uiDataLength - sizeof(SFragmentedMsgHdr), " bytes (", ConnectState2String(m_eConnectState), ")"); break;
 #else
     case EMsgType::data: break;
     case EMsgType::data_fragment: break;
 #endif
-    default: TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND UNKNOWN (", ConnectState(m_eStatus), ")"); break;
+    default: TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND UNKNOWN (", ConnectState2String(m_eConnectState), ")"); break;
     }
 #endif
 
@@ -186,10 +186,10 @@ bool CConnection::SendData(/*inout*/ sdv::sequence<sdv::pointer<uint8_t>>& seqDa
     }
     TRACE("Send a sequence of data with ", seqData.size(), " pointers with the length {", sstreamReport.str(), "} bytes");
 #endif
-    // Only allow sending messages when the status is connected
-    if (m_eStatus != sdv::ipc::EConnectStatus::connected)
+    // Only allow sending messages when the state is connected
+    if (m_eConnectState != sdv::ipc::EConnectState::connected)
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         return false;
     }
 
@@ -260,7 +260,7 @@ bool CConnection::SendData(/*inout*/ sdv::sequence<sdv::pointer<uint8_t>>& seqDa
         auto optPacket = m_sender.Reserve(uiAllocSize);
         if (!optPacket)
         {
-            if (m_eStatus == sdv::ipc::EConnectStatus::connected)
+            if (m_eConnectState == sdv::ipc::EConnectState::connected)
                 SDV_LOG_ERROR("Could not reserve a buffer to send a message of ", uiDataSize, " bytes.");
             return false;
         }
@@ -277,7 +277,7 @@ bool CConnection::SendData(/*inout*/ sdv::sequence<sdv::pointer<uint8_t>>& seqDa
             uiMsgOffset = sizeof(SFragmentedMsgHdr);
 
 #if ENABLE_REPORTING >= 3
-            TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND DATA FRAGMENT ", uiOffset, "-", uiOffset + uiDataSize - 1, " of ", uiRequiredSize, " bytes (", ConnectState(m_eStatus), ")");
+            TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND DATA FRAGMENT ", uiOffset, "-", uiOffset + uiDataSize - 1, " of ", uiRequiredSize, " bytes (", ConnectState2String(m_eConnectState), ")");
 #endif
         }
         else
@@ -288,7 +288,7 @@ bool CConnection::SendData(/*inout*/ sdv::sequence<sdv::pointer<uint8_t>>& seqDa
             uiMsgOffset = sizeof(SMsgHdr);
 
 #if ENABLE_REPORTING >= 3
-            TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND DATA ", uiRequiredSize, " bytes (", ConnectState(m_eStatus), ")");
+            TRACE(m_bServer ? "SERVER" : "CLIENT", " SEND DATA ", uiRequiredSize, " bytes (", ConnectState2String(m_eConnectState), ")");
 #endif
         }
 
@@ -352,29 +352,29 @@ bool CConnection::AsyncConnect(sdv::IInterfaceAccess* pReceiver)
     std::unique_lock<std::mutex> lock(m_mtxConnect);
 
     // Allowed to connect?
-    if (m_eStatus != sdv::ipc::EConnectStatus::uninitialized)
+    if (m_eConnectState != sdv::ipc::EConnectState::uninitialized)
     {
         for (auto& rprEventCallback : m_lstEventCallbacks)
             if (rprEventCallback.pCallback && rprEventCallback.uiCookie)
-                rprEventCallback.pCallback->SetStatus(sdv::ipc::EConnectStatus::connection_error);
+                rprEventCallback.pCallback->SetConnectState(sdv::ipc::EConnectState::connection_error);
         return false;
     }
 
-    SetStatus(sdv::ipc::EConnectStatus::initializing);
+    SetConnectState(sdv::ipc::EConnectState::initializing);
 
     // Initialized?
     if (!m_sender.IsValid() && !m_receiver.IsValid())
     {
-        SetStatus(sdv::ipc::EConnectStatus::connection_error);
+        SetConnectState(sdv::ipc::EConnectState::connection_error);
         SDV_LOG_ERROR("Could not establish connection: sender(", (m_sender.IsValid() ? "valid" : "invalid"), ") receiver(",
             (m_receiver.IsValid() ? "valid" : "invalid"), ")");
-        SetStatus(sdv::ipc::EConnectStatus::uninitialized);
+        SetConnectState(sdv::ipc::EConnectState::uninitialized);
         return false;
     }
 
     // Assign the receiver
     m_pReceiver = sdv::TInterfaceAccessPtr(pReceiver).GetInterface<sdv::ipc::IDataReceiveCallback>();
-    SetStatus(sdv::ipc::EConnectStatus::initialized);
+    SetConnectState(sdv::ipc::EConnectState::initialized);
 
     // Start the receiving thread (wait until started).
     m_threadReceive = std::thread(&CConnection::ReceiveMessages, this);
@@ -397,13 +397,13 @@ bool CConnection::AsyncConnect(sdv::IInterfaceAccess* pReceiver)
 bool CConnection::WaitForConnection(/*in*/ uint32_t uiWaitMs)
 {
 #if ENABLE_REPORTING >= 1
-    if (m_eStatus == sdv::ipc::EConnectStatus::connected)
+    if (m_eConnectState == sdv::ipc::EConnectState::connected)
         TRACE("Not waiting for a connection - already connected");
     else
         TRACE("Waiting for a connection of ", uiWaitMs, "ms");
 #endif
 
-    if (m_eStatus == sdv::ipc::EConnectStatus::connected) return true;
+    if (m_eConnectState == sdv::ipc::EConnectState::connected) return true;
 
     std::unique_lock<std::mutex> lock(m_mtxConnect);
 
@@ -413,13 +413,13 @@ bool CConnection::WaitForConnection(/*in*/ uint32_t uiWaitMs)
         m_cvConnect.wait_for(lock, std::chrono::milliseconds(uiWaitMs));
 
 #if ENABLE_REPORTING >= 1
-    if (m_eStatus == sdv::ipc::EConnectStatus::connected)
+    if (m_eConnectState == sdv::ipc::EConnectState::connected)
         TRACE("Waiting finished - connection established");
     else
         TRACE("Waiting finished - timeout occurred");
 #endif
 
-    return m_eStatus == sdv::ipc::EConnectStatus::connected;
+    return m_eConnectState == sdv::ipc::EConnectState::connected;
 }
 
 void CConnection::CancelWait()
@@ -440,19 +440,19 @@ void CConnection::Disconnect()
     // Cancel any waits, just in case
     CancelWait();
 
-    // Set the disconnect status
-    sdv::ipc::EConnectStatus eStatus = m_eStatus;
-    SetStatus(sdv::ipc::EConnectStatus::disconnected);
+    // Set the disconnect state
+    sdv::ipc::EConnectState eConnectState = m_eConnectState;
+    SetConnectState(sdv::ipc::EConnectState::disconnected);
 
     // Release the interface
     m_pReceiver = nullptr;
 
     // If connected, send termination message.
-    switch (eStatus)
+    switch (eConnectState)
     {
-    case sdv::ipc::EConnectStatus::connecting:
-    case sdv::ipc::EConnectStatus::negotiating:
-    case sdv::ipc::EConnectStatus::connected:
+    case sdv::ipc::EConnectState::connecting:
+    case sdv::ipc::EConnectState::negotiating:
+    case sdv::ipc::EConnectState::connected:
         Send(SMsgHdr{ SDVFrameworkInterfaceVersion, EMsgType::connect_term });
         break;
     default:
@@ -464,7 +464,7 @@ void CConnection::Disconnect()
 #endif
 }
 
-uint64_t CConnection::RegisterStatusEventCallback(/*in*/ sdv::IInterfaceAccess* pEventCallback)
+uint64_t CConnection::RegisterStateEventCallback(/*in*/ sdv::IInterfaceAccess* pEventCallback)
 {
     if (!pEventCallback) return 0;
     sdv::ipc::IConnectEventCallback* pCallback = pEventCallback->GetInterface<sdv::ipc::IConnectEventCallback>();
@@ -477,7 +477,7 @@ uint64_t CConnection::RegisterStatusEventCallback(/*in*/ sdv::IInterfaceAccess* 
     return uiCookie;
 }
 
-void CConnection::UnregisterStatusEventCallback(/*in*/ uint64_t uiCookie)
+void CConnection::UnregisterStateEventCallback(/*in*/ uint64_t uiCookie)
 {
     std::shared_lock<std::shared_mutex> lock(m_mtxEventCallbacks);
     auto itEventCallback = std::find_if(m_lstEventCallbacks.begin(), m_lstEventCallbacks.end(),
@@ -486,9 +486,9 @@ void CConnection::UnregisterStatusEventCallback(/*in*/ uint64_t uiCookie)
     itEventCallback->pCallback = nullptr;
 }
 
-sdv::ipc::EConnectStatus CConnection::GetStatus() const
+sdv::ipc::EConnectState CConnection::GetConnectState() const
 {
-    return m_eStatus;
+    return m_eConnectState;
 }
 
 void CConnection::DestroyObject()
@@ -500,8 +500,8 @@ void CConnection::DestroyObject()
     // Disconnect
     Disconnect();
 
-    // Set termination status.
-    SetStatus(sdv::ipc::EConnectStatus::terminating);
+    // Set termination state.
+    SetConnectState(sdv::ipc::EConnectState::terminating);
 
     // Clear all events callbacks (if not done so already)
     std::shared_lock<std::shared_mutex> lock(m_mtxEventCallbacks);
@@ -523,32 +523,32 @@ void CConnection::DestroyObject()
 #endif
 }
 
-void CConnection::SetStatus(sdv::ipc::EConnectStatus eStatus)
+void CConnection::SetConnectState(sdv::ipc::EConnectState eConnectState)
 {
 #if ENABLE_REPORTING >= 1
-    TRACE(m_bServer ? "SERVER" : "CLIENT", " Changing connect status from '", ConnectState(m_eStatus), "' to '", ConnectState(eStatus), "'");
+    TRACE(m_bServer ? "SERVER" : "CLIENT", " Changing connect state from '", ConnectState2String(m_eConnectState), "' to '", ConnectState2String(eConnectState), "'");
 #endif
 
-    // Do not change the status when terminated.
-    if (m_eStatus == sdv::ipc::EConnectStatus::terminating)
+    // Do not change the state when terminated.
+    if (m_eConnectState == sdv::ipc::EConnectState::terminating)
         return;
 
-    // Only set the member variable if the status is not communication_error
-    if (eStatus != sdv::ipc::EConnectStatus::communication_error)
-        m_eStatus = eStatus;
+    // Only set the member variable if the state is not communication_error
+    if (eConnectState != sdv::ipc::EConnectState::communication_error)
+        m_eConnectState = eConnectState;
     std::shared_lock<std::shared_mutex> lock(m_mtxEventCallbacks);
     for (auto& rprEventCallback : m_lstEventCallbacks)
     {
         if (rprEventCallback.pCallback && rprEventCallback.uiCookie)
-            rprEventCallback.pCallback->SetStatus(eStatus);
+            rprEventCallback.pCallback->SetConnectState(eConnectState);
     }
 
-    // If disconnected by force update the disconnect status.
-    if (m_eStatus == sdv::ipc::EConnectStatus::disconnected_forced)
-        m_eStatus = sdv::ipc::EConnectStatus::disconnected;
+    // If disconnected by force update the disconnect state.
+    if (m_eConnectState == sdv::ipc::EConnectState::disconnected_forced)
+        m_eConnectState = sdv::ipc::EConnectState::disconnected;
 
 #if ENABLE_REPORTING >= 1
-    TRACE("Status updated...");
+    TRACE("State updated...");
 #endif
 }
 
@@ -574,7 +574,7 @@ void CConnection::ReceiveMessages()
 
     if (!m_sender.IsValid() || !m_receiver.IsValid())
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         SDV_LOG_ERROR("No valid shared memory for receiving.");
         lock.unlock();
         m_cvStartConnect.notify_all();
@@ -590,7 +590,7 @@ void CConnection::ReceiveMessages()
     std::chrono::high_resolution_clock::time_point tpLastReceiveLoop = std::chrono::high_resolution_clock::now();
 #endif
     SDataContext sDataCtxt;
-    while (m_eStatus != sdv::ipc::EConnectStatus::terminating)
+    while (m_eConnectState != sdv::ipc::EConnectState::terminating)
     {
 #ifdef TIME_TRACKING
         std::chrono::high_resolution_clock::time_point tpTrackNow = std::chrono::high_resolution_clock::now();
@@ -604,7 +604,7 @@ void CConnection::ReceiveMessages()
         {
             // Start communication, but only if connection is client based. Server based should not start the communication. If
             // there is no client, the server would otherwise fill its send-buffer. Repeat sending every 500ms.
-            if (!m_bServer && (/*m_eStatus == sdv::ipc::EConnectStatus::disconnected ||*/ m_eStatus == sdv::ipc::EConnectStatus::initialized))
+            if (!m_bServer && (/*m_eConnectState == sdv::ipc::EConnectState::disconnected ||*/ m_eConnectState == sdv::ipc::EConnectState::initialized))
             {
                 // Send request
                 auto tpNow = std::chrono::high_resolution_clock::now();
@@ -629,7 +629,7 @@ void CConnection::ReceiveMessages()
         if (!message.IsValid())
         {
             auto ssError = m_receiver.GetError();
-            SetStatus(sdv::ipc::EConnectStatus::communication_error);
+            SetConnectState(sdv::ipc::EConnectState::communication_error);
             SDV_LOG_ERROR("The message is invalid (invalid size or invalid type).");
             continue;
         }
@@ -638,7 +638,7 @@ void CConnection::ReceiveMessages()
         message.PrintHeader(*this);
 
         // Extra check to prevent race condition.
-        if (m_eStatus == sdv::ipc::EConnectStatus::terminating) break;
+        if (m_eConnectState == sdv::ipc::EConnectState::terminating) break;
 
 #if ENABLE_REPORTING >= 1
         switch (message.GetMsgHdr().eType)
@@ -846,7 +846,7 @@ bool CConnection::ReadDataChunk(CMessage& rMessage, uint32_t uiOffset, SDataCont
                 std::unique_lock<std::mutex> lockReceive(m_mtxReceive);
                 while (m_queueReceive.size() >= 16)
                 {
-                    if (m_eStatus == sdv::ipc::EConnectStatus::terminating) return false;
+                    if (m_eConnectState == sdv::ipc::EConnectState::terminating) return false;
                     m_cvReceiveProcessed.wait_for(lockReceive, std::chrono::milliseconds(100));
                 }
 
@@ -868,7 +868,7 @@ bool CConnection::ReadDataChunk(CMessage& rMessage, uint32_t uiOffset, SDataCont
 #if ENABLE_DECOUPLING > 0
 void CConnection::DecoupleReceive()
 {
-    while (m_eStatus != sdv::ipc::EConnectStatus::terminating)
+    while (m_eConnectState != sdv::ipc::EConnectState::terminating)
     {
         // Wait for data
         std::unique_lock<std::mutex> lock(m_mtxReceive);
@@ -887,7 +887,7 @@ void CConnection::DecoupleReceive()
         size_t nSize = 0;
         for (const sdv::pointer<uint8_t>& ptrData : seqData)
             nSize += ptrData.size();
-        TRACE(m_bServer ? "SERVER" : "CLIENT", " DECOUPLED REVEICE DATA ", nSize, " bytes (", ConnectState(m_eStatus), ")");
+        TRACE(m_bServer ? "SERVER" : "CLIENT", " DECOUPLED REVEICE DATA ", nSize, " bytes (", ConnectState2String(m_eConnectState), ")");
 #endif
 
         // Process the data
@@ -903,28 +903,28 @@ void CConnection::ReceiveSyncRequest(const CMessage& rMessage)
 {
     if (rMessage.GetSize() != sizeof(SMsgHdr))
     {
-        SetStatus(sdv::ipc::EConnectStatus::connection_error);
+        SetConnectState(sdv::ipc::EConnectState::connection_error);
         SDV_LOG_ERROR("Sync request received but with incorrect structure size ", rMessage.GetSize(), " in the request, but ",
             sizeof(SMsgHdr), " needed!");
-        SetStatus(sdv::ipc::EConnectStatus::disconnected);
+        SetConnectState(sdv::ipc::EConnectState::disconnected);
         return;
     }
 
     // Check for compatibility
     if (rMessage.GetMsgHdr().uiVersion != SDVFrameworkInterfaceVersion)
     {
-        SetStatus(sdv::ipc::EConnectStatus::connection_error);
+        SetConnectState(sdv::ipc::EConnectState::connection_error);
         SDV_LOG_ERROR("Sync request received for an incompatible communication; interface version ", rMessage.GetMsgHdr().uiVersion,
             " requested, but ", SDVFrameworkInterfaceVersion, " needed!");
-        SetStatus(sdv::ipc::EConnectStatus::disconnected);
+        SetConnectState(sdv::ipc::EConnectState::disconnected);
         return;
     }
     else
     {
         // Start connecting
-        if (m_eStatus == sdv::ipc::EConnectStatus::disconnected || m_eStatus == sdv::ipc::EConnectStatus::initialized)
+        if (m_eConnectState == sdv::ipc::EConnectState::disconnected || m_eConnectState == sdv::ipc::EConnectState::initialized)
         {
-            SetStatus(sdv::ipc::EConnectStatus::connecting);
+            SetConnectState(sdv::ipc::EConnectState::connecting);
 
             // Send an answer
             Send(SMsgHdr{ SDVFrameworkInterfaceVersion, EMsgType::sync_answer });
@@ -935,18 +935,18 @@ void CConnection::ReceiveSyncRequest(const CMessage& rMessage)
 void CConnection::ReceiveConnectRequest(const CMessage& rMessage)
 {
     // Start negotiating
-    if (m_eStatus == sdv::ipc::EConnectStatus::connecting)
+    if (m_eConnectState == sdv::ipc::EConnectState::connecting)
     {
         // The connect message contains the process ID to monitor.
         m_rWatchDog.AddMonitor(rMessage.GetConnectHdr().tProcessID, this);
 
         // Replay to the request
-        SetStatus(sdv::ipc::EConnectStatus::negotiating);
+        SetConnectState(sdv::ipc::EConnectState::negotiating);
         Send(SConnectMsg{ {SDVFrameworkInterfaceVersion, EMsgType::connect_answer},
             static_cast<sdv::process::TProcessID>(GetProcessID()) });
 
         // Connected
-        SetStatus(sdv::ipc::EConnectStatus::connected);
+        SetConnectState(sdv::ipc::EConnectState::connected);
 #if ENABLE_REPORTING >= 1
         TRACE("Trigger connected");
 #endif
@@ -956,34 +956,34 @@ void CConnection::ReceiveConnectRequest(const CMessage& rMessage)
 
 void CConnection::ReceiveSyncAnswer(const CMessage& rMessage)
 {
-    if (m_eStatus != sdv::ipc::EConnectStatus::disconnected && m_eStatus != sdv::ipc::EConnectStatus::initialized)
+    if (m_eConnectState != sdv::ipc::EConnectState::disconnected && m_eConnectState != sdv::ipc::EConnectState::initialized)
         return;
 
     // Check for compatibility
     if (rMessage.GetMsgHdr().uiVersion != SDVFrameworkInterfaceVersion)
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         SDV_LOG_ERROR("Sync answer received for an incompatible communication; interface version ",
             rMessage.GetMsgHdr().uiVersion, " requested, but ", SDVFrameworkInterfaceVersion, " needed!");
-        SetStatus(sdv::ipc::EConnectStatus::disconnected);
+        SetConnectState(sdv::ipc::EConnectState::disconnected);
         return;
     }
 
     // Start negotiating
-    SetStatus(sdv::ipc::EConnectStatus::negotiating);
+    SetConnectState(sdv::ipc::EConnectState::negotiating);
     Send(SConnectMsg{ {SDVFrameworkInterfaceVersion, EMsgType::connect_request}, GetProcessID() });
 }
 
 void CConnection::ReceiveConnectAnswer(const CMessage& rMessage)
 {
     // Connection established
-    if (m_eStatus == sdv::ipc::EConnectStatus::negotiating)
+    if (m_eConnectState == sdv::ipc::EConnectState::negotiating)
     {
         // The connect message contains the process ID to monitor.
         m_rWatchDog.AddMonitor(rMessage.GetConnectHdr().tProcessID, this);
 
         // Connected
-        SetStatus(sdv::ipc::EConnectStatus::connected);
+        SetConnectState(sdv::ipc::EConnectState::connected);
 #if ENABLE_REPORTING >= 1
         TRACE("Trigger connected...");
 #endif
@@ -993,7 +993,7 @@ void CConnection::ReceiveConnectAnswer(const CMessage& rMessage)
 
 void CConnection::ReceiveConnectTerm(CMessage& /*rMessage*/)
 {
-    SetStatus(sdv::ipc::EConnectStatus::disconnected);
+    SetConnectState(sdv::ipc::EConnectState::disconnected);
     m_rWatchDog.RemoveMonitor(this);
 
     // Cancel any outstanding write... and reset the read position of the sender (otherwise any outstanding data will have
@@ -1016,7 +1016,7 @@ void CConnection::ReceiveDataMessage(CMessage& rMessage, SDataContext& rsDataCtx
     uint32_t uiOffset = ReadDataTable(rMessage, rsDataCtxt);
     if (!uiOffset)
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         return;
     }
 
@@ -1033,7 +1033,7 @@ void CConnection::ReceiveDataMessage(CMessage& rMessage, SDataContext& rsDataCtx
     // Read data
     if (!ReadDataChunk(rMessage, uiOffset, rsDataCtxt))
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         return;
     }
 #if ENABLE_REPORTING >= 1
@@ -1057,7 +1057,7 @@ void CConnection::ReceiveDataFragementMessage(CMessage& rMessage, SDataContext& 
         uiOffset = ReadDataTable(rMessage, rsDataCtxt);
         if (!uiOffset)
         {
-            SetStatus(sdv::ipc::EConnectStatus::communication_error);
+            SetConnectState(sdv::ipc::EConnectState::communication_error);
             return;
         }
 
@@ -1075,7 +1075,7 @@ void CConnection::ReceiveDataFragementMessage(CMessage& rMessage, SDataContext& 
     // Read data chunk
     if (!ReadDataChunk(rMessage, uiOffset, rsDataCtxt))
     {
-        SetStatus(sdv::ipc::EConnectStatus::communication_error);
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
         return;
     }
 }
@@ -1147,19 +1147,19 @@ void CConnection::CMessage::PrintHeader([[maybe_unused]] const CConnection& rCon
 #if ENABLE_REPORTING >= 2
     switch (GetMsgHdr().eType)
     {
-    case EMsgType::sync_request: rConnection.TRACE(rConnection.IsServer() ? "SERVER" : "CLIENT", " RECEIVE SYNC_REQUEST (", ConnectState(rConnection.GetStatus()), ")"); break;
-    case EMsgType::sync_answer: rConnection.TRACE(rConnection.IsServer() ? "SERVER" : "CLIENT", " RECEIVE SYNC_ANSWER (", ConnectState(rConnection.GetStatus()), ")"); break;
-    case EMsgType::connect_request: rConnection.TRACE(rConnection.IsServer() ? "SERVER" : "CLIENT", " RECEIVE CONNECT_REQUEST (", ConnectState(rConnection.GetStatus()), ")"); break;
-    case EMsgType::connect_answer: rConnection.TRACE(rConnection.IsServer() ? "SERVER" : "CLIENT", " RECEIVE CONNECT_ANSWER (", ConnectState(rConnection.GetStatus()), ")"); break;
-    case EMsgType::connect_term: rConnection.TRACE(rConnection.IsServer() ? "SERVER" : "CLIENT", " RECEIVE CONNECT_TERM (", ConnectState(rConnection.GetStatus()), ")"); break;
+    case EMsgType::sync_request: rConnection.TRACE(rConnection.IsServer() ? "SERVER" : "CLIENT", " RECEIVE SYNC_REQUEST (", ConnectState2String(rConnection.GetConnectState()), ")"); break;
+    case EMsgType::sync_answer: rConnection.TRACE(rConnection.IsServer() ? "SERVER" : "CLIENT", " RECEIVE SYNC_ANSWER (", ConnectState2String(rConnection.GetConnectState()), ")"); break;
+    case EMsgType::connect_request: rConnection.TRACE(rConnection.IsServer() ? "SERVER" : "CLIENT", " RECEIVE CONNECT_REQUEST (", ConnectState2String(rConnection.GetConnectState()), ")"); break;
+    case EMsgType::connect_answer: rConnection.TRACE(rConnection.IsServer() ? "SERVER" : "CLIENT", " RECEIVE CONNECT_ANSWER (", ConnectState2String(rConnection.GetConnectState()), ")"); break;
+    case EMsgType::connect_term: rConnection.TRACE(rConnection.IsServer() ? "SERVER" : "CLIENT", " RECEIVE CONNECT_TERM (", ConnectState2String(rConnection.GetConnectState()), ")"); break;
 #if ENABLE_REPORTING >= 3
-    case EMsgType::data: rConnection.TRACE(rConnection.IsServer() ? "SERVER" : "CLIENT", " RECEIVE DATA ", GetSize() - sizeof(SMsgHdr), " bytes (", ConnectState(rConnection.GetStatus()), ")"); break;
-    case EMsgType::data_fragment: rConnection.TRACE(rConnection.IsServer() ? "SERVER" : "CLIENT", " RECEIVE DATA FRAGMENT ", GetSize() - sizeof(SFragmentedMsgHdr), " bytes (", ConnectState(rConnection.GetStatus()), ")"); break;
+    case EMsgType::data: rConnection.TRACE(rConnection.IsServer() ? "SERVER" : "CLIENT", " RECEIVE DATA ", GetSize() - sizeof(SMsgHdr), " bytes (", ConnectState2String(rConnection.GetConnectState()), ")"); break;
+    case EMsgType::data_fragment: rConnection.TRACE(rConnection.IsServer() ? "SERVER" : "CLIENT", " RECEIVE DATA FRAGMENT ", GetSize() - sizeof(SFragmentedMsgHdr), " bytes (", ConnectState2String(rConnection.GetConnectState()), ")"); break;
 #else
     case EMsgType::data: break;
     case EMsgType::data_fragment: break;
 #endif
-    default: rConnection.TRACE(rConnection.IsServer() ? "SERVER" : "CLIENT", " RECEIVE UNKNOWN version=", static_cast<uint32_t>(GetMsgHdr().uiVersion), " type=", static_cast<uint32_t>(GetMsgHdr().eType), "(", ConnectState(rConnection.GetStatus()), ")"); break;
+    default: rConnection.TRACE(rConnection.IsServer() ? "SERVER" : "CLIENT", " RECEIVE UNKNOWN version=", static_cast<uint32_t>(GetMsgHdr().uiVersion), " type=", static_cast<uint32_t>(GetMsgHdr().eType), "(", ConnectState2String(rConnection.GetConnectState()), ")"); break;
     }
 #endif
 }

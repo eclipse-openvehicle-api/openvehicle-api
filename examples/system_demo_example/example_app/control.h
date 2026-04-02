@@ -29,7 +29,7 @@
 #endif
 #endif
 
-#include "signal_names.h"
+#include "../generated/vss_files/signal_identifier.h"
 
  /**
   * @brief Utility handler for example demos

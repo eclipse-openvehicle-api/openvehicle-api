@@ -65,7 +65,7 @@ execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/autoheadlig
 # REMARK: Proxy/stub and vehicle device and basic service code was generated during the configuration phase of CMake. Following
 # below are the build steps to build the components that were generated.
 
-message("Include: auto headlight proxy/stub for vehicle devices and basic services")
+message("Include: auto headlight proxy/stub for basic services")
 include_directories(${CMAKE_CURRENT_LIST_DIR}/generated/vss_files)
 add_subdirectory(generated/vss_files/ps)
 
@@ -107,7 +107,6 @@ add_executable(auto_headlight_app
     autoheadlight_app/autoheadlight_simulate.cpp
     autoheadlight_app/autoheadlight_console.h
     autoheadlight_app/autoheadlight_console.cpp
-    autoheadlight_app/signal_names.h
     )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

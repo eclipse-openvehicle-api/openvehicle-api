@@ -30,7 +30,7 @@ include_directories(${SDV_FRAMEWORK_DEV_INCLUDE})
 # services are generated during the configuration phase of CMake. This is necessary, since CMakeFiles.txt files are generated and
 # they have to be available during the configuration phase of CMake to be taken into the build process. Requisite for the code
 # generation during the configuration time of CMake is the availability of the tools to do the generation. Hence the tools cannot be
-# created during the build process, which is executed after the configuraiton process.
+# created during the build process, which is executed after the configuration process.
 
 # Execute sdv_vss_util to create IDL files for devices and basic services.
 message("Create interface code for devices and basic services of open trunk example.")
@@ -46,7 +46,7 @@ execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/v
 
 
 
-# We need proxies and stubs for basic services to give access to the interfaces for complex services ans applications: --ps_lib_namedemo_proxystub
+# We need proxies and stubs for basic services to give access to the interfaces for complex services and applications: --ps_lib_namedemo_proxystub
 message("Compiling vss_vehiclebodytrunk_bs_tx.idl")
 execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclebodytrunk_bs_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --ps_lib_nametrunk_proxystub)
 message("Compiling vss_vehiclespeed_bs_rx.idl")
@@ -78,7 +78,7 @@ add_subdirectory(generated/can_dl)
 # REMARK: Proxy/stub and vehicle device and basic service code was generated during the configuration phase of CMake. Following
 # below are the build steps to build the components that were generated.
 
-message("Include: trunk proxy/stub for vehicle devices and basic services")
+message("Include: trunk proxy/stub for basic services")
 include_directories(${CMAKE_CURRENT_LIST_DIR}/generated/vss_files)
 add_subdirectory(generated/vss_files/ps)
 
@@ -116,7 +116,6 @@ add_executable(open_trunk_example
     open_trunk_app/trunk_application.h
     open_trunk_app/console.cpp
     open_trunk_app/console.h
-    open_trunk_app/signal_names.h
     )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

@@ -34,8 +34,8 @@ const CConsole::SConsolePos g_sComment3{ 24, 1 };
 const CConsole::SConsolePos g_sComment4{ 25, 1 };
 const CConsole::SConsolePos g_sComment5{ 26, 1 };
 const CConsole::SConsolePos g_sSeparator5{ 28, 1 };
-const CConsole::SConsolePos g_sComplexServcie1{ 30, 1 };
-const CConsole::SConsolePos g_sComplexServcie2{ 31, 1 };
+const CConsole::SConsolePos g_sComplexService1{ 30, 1 };
+const CConsole::SConsolePos g_sComplexService2{ 31, 1 };
 const CConsole::SConsolePos g_sSeparator6{ 33, 1 };
 const CConsole::SConsolePos g_sControlDescription{ 35, 1 };
 const CConsole::SConsolePos g_sCursor{ 36, 1 };
@@ -111,12 +111,12 @@ void CConsole::PrintHeader(uint32_t uiInstance)
     PrintText(g_sSeparator4, "============================================================================");
     PrintText(g_sComment1, "The complex service which checks the speed of the vehicle can be seen");
     PrintText(g_sComment2, "as an ASIL A/B component and will block the call from QM.");
-    PrintText(g_sComment3, "The extern apllication can be seen as a QM function.");
+    PrintText(g_sComment3, "The extern application can be seen as a QM function.");
     PrintText(g_sComment4, "If this example would run in a mixed critical environment the connection");
     PrintText(g_sComment5, "from QM to basic service interface would be forbidden.");
     PrintText(g_sSeparator5, "============================================================================");
-    PrintText(g_sComplexServcie1, "Basic Service Interface not available.");
-    PrintText(g_sComplexServcie2, "Complex Service Interface not available.");
+    PrintText(g_sComplexService1, "Basic Service Interface not available.");
+    PrintText(g_sComplexService2, "Complex Service Interface not available.");
     PrintText(g_sSeparator6, "----------------------------------------------------------------------------");
     PrintText(g_sControlDescription, "Press 'X' to quit; 'C' to clear screen, '1' or '2' to open trunk ");
 }
@@ -130,7 +130,7 @@ bool CConsole::PrepareDataConsumers()
         PrintValue(g_sDataLinkSpeed, "Vehicle Speed RX", m_SpeedDL, "m/s");
 
     // Registrate for the vehicle device & basic service of the speed. 
-    auto vehicleDevice = sdv::core::GetObject("Vehicle.Speed_Device").GetInterface<vss::Vehicle::SpeedDevice::IVSS_Speed>();
+    auto vehicleDevice = sdv::core::GetObject("Vehicle.Speed_Device").GetInterface<vss::Vehicle::SpeedDevice::IVSS_ReadSpeed>();
     if (vehicleDevice)
     {
         PrintValue(g_sVehicleDeviceSpeed, "Vehicle Speed RX", m_SpeedVD, "m/s");        
@@ -147,15 +147,15 @@ bool CConsole::PrepareDataConsumers()
     // Request the basic service for opening the trunk.
     m_pTrunkSvc = sdv::core::GetObject("Vehicle.Body.Trunk_Service").GetInterface<vss::Vehicle::Body::TrunkService::IVSS_SetOpen>();
     if (m_pTrunkSvc)
-        PrintText(g_sComplexServcie1, "Basic Service available");
+        PrintText(g_sComplexService1, "Basic Service available");
     else
-        PrintText(g_sComplexServcie1, "Basic Service NOT available");    
+        PrintText(g_sComplexService1, "Basic Service NOT available");    
 
     m_pTrunkComplexService = sdv::core::GetObject("Open Trunk Service").GetInterface<ITrunkKitService>();
     if (m_pTrunkComplexService)
-        PrintText(g_sComplexServcie2, "Complex Service available");
+        PrintText(g_sComplexService2, "Complex Service available");
     else
-        PrintText(g_sComplexServcie2, "Complex Service NOT available");         
+        PrintText(g_sComplexService2, "Complex Service NOT available");         
 
     return true;
 }
@@ -165,7 +165,7 @@ void CConsole::ResetSignals()
     // Set the cursor position at the end
     SetCursorPos(g_sCursor);
 
-    auto vehicleDevice = sdv::core::GetObject("Vehicle.Speed_Device").GetInterface<vss::Vehicle::SpeedDevice::IVSS_Speed>();
+    auto vehicleDevice = sdv::core::GetObject("Vehicle.Speed_Device").GetInterface<vss::Vehicle::SpeedDevice::IVSS_ReadSpeed>();
     if (vehicleDevice)
         vehicleDevice->UnregisterSpeedEvent(dynamic_cast<vss::Vehicle::SpeedDevice::IVSS_WriteSpeed_Event*> (this));
 
@@ -173,7 +173,7 @@ void CConsole::ResetSignals()
     if (basicService)
         basicService->UnregisterOnSignalChangeOfVehicleSpeed(dynamic_cast<vss::Vehicle::SpeedService::IVSS_SetSpeed_Event*> (this));
 
-    // Unregister the data link signalss
+    // Unregister the data link signals
     if (m_SignalSpeed)
         m_SignalSpeed.Reset();
 }
@@ -291,25 +291,25 @@ void CConsole::RunUntilBreak()
         {
         case 'c':
         case 'C':
-            PrintText(g_sComplexServcie1, "                                        ");
-            PrintText(g_sComplexServcie2, "                                        ");
+            PrintText(g_sComplexService1, "                                        ");
+            PrintText(g_sComplexService2, "                                        ");
             break;
         case '1':
             if (m_pTrunkSvc)
             {
                 if (m_pTrunkSvc->SetOpen(true))
-                    PrintText(g_sComplexServcie1, "Open trunk via basic service - will not be available in Mixed-Critical mode!");
+                    PrintText(g_sComplexService1, "Open trunk via basic service - will not be available in Mixed-Critical mode!");
                 else
-                    PrintText(g_sComplexServcie1, "Open trunk via basic service failed.");
+                    PrintText(g_sComplexService1, "Open trunk via basic service failed.");
             }
             break;
         case '2':
             if (m_pTrunkComplexService)
             {
                 if (m_pTrunkComplexService->PopTrunk())
-                    PrintText(g_sComplexServcie2, "Safety open trunk via complex service.");
+                    PrintText(g_sComplexService2, "Safety open trunk via complex service.");
                 else
-                    PrintText(g_sComplexServcie2, "Safety open trunk via complex service failed, car is moving");
+                    PrintText(g_sComplexService2, "Safety open trunk via complex service failed, car is moving");
             }
             break;
         case 'x':

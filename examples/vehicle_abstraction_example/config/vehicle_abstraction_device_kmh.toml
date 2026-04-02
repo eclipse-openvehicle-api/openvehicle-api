@@ -1,0 +1,6 @@
+[Configuration]
+Version = 100
+
+[[Component]]
+Path = "abstraction_vd_vehiclespeedkmh_rx.sdv"
+Class = "Vehicle.Speed_Device"

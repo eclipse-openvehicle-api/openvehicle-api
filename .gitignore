@@ -19,7 +19,7 @@ DoxygenWarning.txt
 packages/
 windows_vapi/.vs
 
-#idl & dbc
+#idl & dbc & vss
 export/interfaces/*.h
 export/interfaces/ps/
 export/interfaces/serdes/
@@ -27,6 +27,7 @@ export/interfaces/serdes/
 */*/*/generated/
 */*/generated/
 */generated/
+*/*/generated2/*
 
 
 #CMake intermediate files and folders

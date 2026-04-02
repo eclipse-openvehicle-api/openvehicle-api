@@ -106,7 +106,7 @@ public:
      * @brief Establish a connection and start sending/receiving messages. Overload of
      * sdv::ipc::IConnect::AsyncConnect.
      * @param[in] pReceiver The message has to be forwarded.
-     * @return Returns 'true' when a connection could be established. Use IConnectStatus or IConnectEventCallback to check the
+     * @return Returns 'true' when a connection could be established. Use IConnect or IConnectEventCallback to check the
      * connection state.
      */
     virtual bool AsyncConnect(/*in*/ sdv::IInterfaceAccess* pReceiver) override;
@@ -127,33 +127,33 @@ public:
     // Suppress cppcheck warning. The destructor calls Disconnect without dynamic binding. This is correct so.
     // cppcheck-suppress virtualCallInConstructor
     /**
-     * @brief Disconnect from a connection. This will set the connect status to disconnected. Overload of
+     * @brief Disconnect from a connection. This will set the connect state to disconnected. Overload of
      * sdv::ipc::IConnect::Disconnect.
      */
     virtual void Disconnect() override;
 
     /**
-     * @brief Register event callback interface. Overload of sdv::ipc::IConnect::RegisterStatusEventCallback.
-     * @details Register a connection status event callback interface. The exposed interface must be of type
+     * @brief Register event callback interface. Overload of sdv::ipc::IConnect::RegisterStateEventCallback.
+     * @details Register a connection state event callback interface. The exposed interface must be of type
      * IConnectEventCallback. The registration will exist until a call to the unregister function with the returned cookie
      * or until the connection is terminated.
      * @param[in] pEventCallback Pointer to the object exposing the IConnectEventCallback interface.
      * @return The cookie assigned to the registration.
      */
-    virtual uint64_t RegisterStatusEventCallback(/*in*/ sdv::IInterfaceAccess* pEventCallback) override;
+    virtual uint64_t RegisterStateEventCallback(/*in*/ sdv::IInterfaceAccess* pEventCallback) override;
 
     /**
-     * @brief Unregister the status event callback with the returned cookie from the registration. Overload of
-     * sdv::ipc::IConnect::UnregisterStatusEventCallback.
+     * @brief Unregister the state event callback with the returned cookie from the registration. Overload of
+     * sdv::ipc::IConnect::UnregisterStateEventCallback.
      * @param[in] uiCookie The cookie returned by a previous call to the registration function.
      */
-    virtual void UnregisterStatusEventCallback(/*in*/ uint64_t uiCookie) override;
+    virtual void UnregisterStateEventCallback(/*in*/ uint64_t uiCookie) override;
 
     /**
-     * @brief Get status of the connection. Overload of sdv::ipc::IConnect::GetStatus.
-     * @return Returns the ipc::EConnectStatus struct
+     * @brief Get the current state of the IPC conection. Overload of sdv::ipc::IConnect::GetConnectState.
+     * @return Returns connection state.
      */
-    virtual sdv::ipc::EConnectStatus GetStatus() const override;
+    virtual sdv::ipc::EConnectState GetConnectState() const override;
 
     /**
      * @brief Destroy the object. Overload of IObjectDestroy::DestroyObject.
@@ -162,10 +162,10 @@ public:
     virtual void DestroyObject() override;
 
     /**
-     * @brief Set the connection status and if needed call the event callback.
-     * @param[in] eStatus The new status.
+     * @brief Set the connection state and if needed call the event callback.
+     * @param[in] eConnectState The new state.
      */
-    void SetStatus(sdv::ipc::EConnectStatus eStatus);
+    void SetConnectState(sdv::ipc::EConnectState eConnectState);
 
     /**
      * @brief Returns whether this is a server connection or a client connection.
@@ -258,14 +258,14 @@ private:
     CSharedMemBufferTx                      m_sender;                       ///< Shared buffer for sending.
     CSharedMemBufferRx                      m_receiver;                     ///< Shared buffer for receiving.
     std::thread                             m_threadReceive;                ///< Thread which receives data from the socket.
-    std::atomic<sdv::ipc::EConnectStatus>   m_eStatus = sdv::ipc::EConnectStatus::uninitialized; ///< the status of the connection
+    std::atomic<sdv::ipc::EConnectState>    m_eConnectState = sdv::ipc::EConnectState::uninitialized; ///< the state of the connection
     sdv::ipc::IDataReceiveCallback*         m_pReceiver = nullptr;          ///< Receiver to pass the messages to if available
     std::shared_mutex                       m_mtxEventCallbacks;            ///< Protect access to callback list. Only locking when
                                                                             ///< inserting.
     std::list<SEventCallback>               m_lstEventCallbacks;            ///< List containing event callbacks. New callbacks will
                                                                             ///< be inserted in front (called first). Removed
                                                                             ///< callbacks are NULL; the entry stays to allow
-                                                                            ///< removal during a SetStatus call.
+                                                                            ///< removal during a SetConnectState call.
     mutable std::mutex                      m_mtxSend;                      ///< Synchronize all packages to be sent.
     std::mutex                              m_mtxConnect;                   ///< Connection mutex.
     std::condition_variable                 m_cvConnect;                    ///< Connection variable for connecting.

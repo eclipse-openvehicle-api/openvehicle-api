@@ -108,14 +108,14 @@ void CConsole::PrintHeader()
 bool CConsole::PrepareDataConsumers()
 {
     // Vehicle Device
-    auto pVDCurrentLatitudeSvc = sdv::core::GetObject("Vehicle.Position.CurrentLatitude_Device").GetInterface<vss::Vehicle::Position::CurrentLatitudeDevice::IVSS_CurrentLatitude>();
+    auto pVDCurrentLatitudeSvc = sdv::core::GetObject("Vehicle.Position.CurrentLatitude_Device").GetInterface<vss::Vehicle::Position::CurrentLatitudeDevice::IVSS_ReadCurrentLatitude>();
     if (!pVDCurrentLatitudeSvc)
     {
         SDV_LOG_ERROR("Could not get interface 'IVSS_GetVDCurrentLatitude': [CAutoHeadlightService]");
         return false;
     }
 
-    auto pVDCurrentLongitudeSvc = sdv::core::GetObject("Vehicle.Position.CurrentLongitude_Device").GetInterface<vss::Vehicle::Position::CurrentLongitudeDevice::IVSS_CurrentLongitude>();
+    auto pVDCurrentLongitudeSvc = sdv::core::GetObject("Vehicle.Position.CurrentLongitude_Device").GetInterface<vss::Vehicle::Position::CurrentLongitudeDevice::IVSS_ReadCurrentLongitude>();
     if (!pVDCurrentLongitudeSvc)
     {
         SDV_LOG_ERROR("Could not get interface 'IVSS_GetVDCurrentLongitude': [CAutoHeadlightService]");
@@ -212,11 +212,11 @@ void CConsole::ResetSignals()
     SetCursorPos(g_sCursor);
 
     // Vehicle Device
-    auto pVDCurrentLatitudeSvc = sdv::core::GetObject("Vehicle.Position.CurrentLatitude_Device").GetInterface<vss::Vehicle::Position::CurrentLatitudeDevice::IVSS_CurrentLatitude>();
+    auto pVDCurrentLatitudeSvc = sdv::core::GetObject("Vehicle.Position.CurrentLatitude_Device").GetInterface<vss::Vehicle::Position::CurrentLatitudeDevice::IVSS_ReadCurrentLatitude>();
     if (pVDCurrentLatitudeSvc)
         pVDCurrentLatitudeSvc->UnregisterCurrentLatitudeEvent(static_cast<vss::Vehicle::Position::CurrentLatitudeDevice::IVSS_WriteCurrentLatitude_Event*> (this));
 
-    auto pVDCurrentLongitudeSvc = sdv::core::GetObject("Vehicle.Position.CurrentLongitude_Device").GetInterface<vss::Vehicle::Position::CurrentLongitudeDevice::IVSS_CurrentLongitude>();
+    auto pVDCurrentLongitudeSvc = sdv::core::GetObject("Vehicle.Position.CurrentLongitude_Device").GetInterface<vss::Vehicle::Position::CurrentLongitudeDevice::IVSS_ReadCurrentLongitude>();
     if (pVDCurrentLongitudeSvc)
         pVDCurrentLongitudeSvc->UnregisterCurrentLongitudeEvent(static_cast<vss::Vehicle::Position::CurrentLongitudeDevice::IVSS_WriteCurrentLongitude_Event*> (this));
 

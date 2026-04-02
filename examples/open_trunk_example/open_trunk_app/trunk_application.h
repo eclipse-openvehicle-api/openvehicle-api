@@ -11,7 +11,6 @@
 #include <string>
 #include <support/app_control.h>
 #include <support/signal_support.h>
-#include "vss_vehiclespeed_bs_rx.h"
 
 
 /**
@@ -47,7 +46,7 @@ private:
     bool IsSDVFrameworkEnvironmentSet();
 
     /**
-     * @brief Loac config file and register vehicle device and basic service.
+     * @brief Load config file and register vehicle device and basic service.
      * @param[in] inputMsg message string to be printed on console in case of success and failure
      * @param[in] configFileName config toml file name
      * @return Return true on success otherwise false
