@@ -64,7 +64,7 @@ module sdv
              * @post Use AsyncConnect to initiate the connection.
              * @param[in] ssConnectString Reference to the string containing the channel connection parameters returned by the
              * ICreateEndpoint::CreateEndpoint function or a TOML configuration that is provider specific and describes clearly the
-             * access to a running channel. This configuriration is identical (or similar) to the configuration supplied to the
+             * access to a running channel. This configuration is identical (or similar) to the configuration supplied to the
              * ICreateEndpoint::CreateEndpoint function.
              * @return Pointer to IInterfaceAccess interface of the connection object or NULL when the object cannot be created.
              */
@@ -138,7 +138,7 @@ module sdv
             void UnregisterStateEventCallback(in uint64 uiCookie);
 
             /**
-             * @brief Get the current state of the IPC conection.
+             * @brief Get the current state of the IPC connection.
              * @return Returns connection state.
              */
             EConnectState GetConnectState() const;

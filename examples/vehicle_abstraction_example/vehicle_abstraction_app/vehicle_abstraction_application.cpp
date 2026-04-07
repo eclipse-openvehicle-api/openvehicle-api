@@ -43,12 +43,12 @@ bool CAbstractionControl::IsSDVFrameworkEnvironmentSet()
     return false;
 }
 
-bool CAbstractionControl::Initialize(bool bSimulate)
+bool CAbstractionControl::Initialize(bool bInputDataInKmh)
 {
     if (m_bInitialized) 
         return true;
 
-    m_bSimulate = bSimulate;
+    m_bInputDataInKmh = bInputDataInKmh;
     if (!IsSDVFrameworkEnvironmentSet())
     {
         // if SDV_FRAMEWORK_RUNTIME environment variable is not set we need to set the Framework Runtime directory
@@ -62,7 +62,7 @@ bool CAbstractionControl::Initialize(bool bSimulate)
     bool bResult = LoadConfigFile("Load dispatch service: ", "data_dispatch_vehicle_abstraction.toml");
     bResult &= LoadConfigFile("Load task_timer_vehicle: ", "task_timer_vehicle.toml");
 
-    if (bSimulate)
+    if (m_bInputDataInKmh)
     {
         bResult &= LoadConfigFile("Load can_com_simulation_vehicle_abstraction_kmh: ", "can_com_simulation_vehicle_abstraction_kmh.toml");
         bResult &= LoadConfigFile("Load data_link_vehicle_abstraction: ", "data_link_vehicle_abstraction.toml"); 

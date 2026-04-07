@@ -252,6 +252,7 @@ Class = "DataDispatchService"
 [[Component]]
 Path = "can_com_silkit.sdv"
 Class = "CAN_Com_SilKit"
+[Component.Parameters]
 DebugInfo = true
 SyncMode = true
 CanSilKitChannel = "CAN1"

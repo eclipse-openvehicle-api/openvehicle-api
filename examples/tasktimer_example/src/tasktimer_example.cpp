@@ -57,11 +57,11 @@ extern "C" int main()
 
 	//run for 10 seconds - in that time task timer callbacks in the module get triggered
 	uint32_t counter = 10;
-	std::chrono::seconds sleepDurtaion (1);
+	std::chrono::seconds sleepDuration (1);
 	while (counter-- > 0)
 	{
 		std::cout << "counter: " << std::to_string(counter) << std::endl;
-		std::this_thread::sleep_for(sleepDurtaion);
+		std::this_thread::sleep_for(sleepDuration);
 	}
 
 	appcontrol.Shutdown();

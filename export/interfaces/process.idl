@@ -65,7 +65,7 @@ module sdv
             /**
              * @brief Wait for a process to finalize.
              * @param[in] tProcessID The process ID to wait for.
-             * @param[in] uiWaitMs Maximum time to wait in ms. Could be 0xffffffff to wait indefintely.
+             * @param[in] uiWaitMs Maximum time to wait in ms. Could be 0xffffffff to wait indefinitely.
              * @return Returns 'true' when the process was terminated (or isn't running), 'false' when still running and a timeout
              * has occurred.
              */
