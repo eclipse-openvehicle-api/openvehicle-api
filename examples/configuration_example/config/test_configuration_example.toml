@@ -5,6 +5,7 @@ Version = 100
 Path = "configuration_component_example.sdv"
 Class = "Configuration_Example"
 [Component.Parameters]
+updatableValue = 13
 Message = "It's me"
 ### the following is a valid JSON structure in a muliline string
 JSONConfig = """{

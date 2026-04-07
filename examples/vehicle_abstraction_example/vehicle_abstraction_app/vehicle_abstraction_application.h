@@ -22,10 +22,10 @@ public:
     /**
     * @brief Start and initialize the application control and load 
 	* platform abstraction components and basic services
-    * @param[in] bSimulate If signals should be simulated or CAN input signals should be used
+    * @param[in] bInputDataInKmh If input speed data is in km/h
     * @return Return true on success otherwise false
     */
-    bool Initialize(bool bSimulate);
+    bool Initialize(bool bInputDataInKmh);
 
     /**
     * @brief After initialization/configuration the system mode needs to be set to running mode
@@ -56,5 +56,5 @@ private:
     sdv::app::CAppControl m_appcontrol;           ///< App-control of SDV V-API.
     bool                  m_bInitialized = false; ///< Set when initialized.
 
-    bool m_bSimulate = false;
+    bool m_bInputDataInKmh = false;               ///< true if the input data is in km/h
 };

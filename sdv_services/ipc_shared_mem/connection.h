@@ -150,7 +150,7 @@ public:
     virtual void UnregisterStateEventCallback(/*in*/ uint64_t uiCookie) override;
 
     /**
-     * @brief Get the current state of the IPC conection. Overload of sdv::ipc::IConnect::GetConnectState.
+     * @brief Get the current state of the IPC connection. Overload of sdv::ipc::IConnect::GetConnectState.
      * @return Returns connection state.
      */
     virtual sdv::ipc::EConnectState GetConnectState() const override;

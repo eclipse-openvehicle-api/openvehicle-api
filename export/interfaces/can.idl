@@ -95,7 +95,7 @@ module sdv
         };
 
         /**
-         * @brief Interface to send CAN messagee.
+         * @brief Interface to send CAN message.
          */
         local interface ISend
         {

@@ -125,14 +125,14 @@ bool CConsole::PrepareDataConsumers()
     auto deviceServiceSpeed = sdv::core::GetObject("Vehicle.Speed_Device").GetInterface<vss::Vehicle::SpeedDevice::IVSS_ReadSpeed>();
     if (deviceServiceSpeed)
     {
-        PrintValue(g_sDeviceServiceSpeed, "Vehicle Speed RX", m_PlatformSpeed, "km/h  [ Output of Platform Abstraction, not accessible by application ]   ");
+        PrintValue(g_sDeviceServiceSpeed, "Vehicle Speed RX", m_SpeedPlatform, "km/h  [ Output of Platform Abstraction, not accessible by application ]   ");
         deviceServiceSpeed->RegisterSpeedEvent(dynamic_cast<vss::Vehicle::SpeedDevice::IVSS_WriteSpeed_Event*> (this));
     }     
 
     auto basicServiceSpeed = sdv::core::GetObject("Vehicle.Speed_Service").GetInterface<vss::Vehicle::SpeedService::IVSS_GetSpeed>();
     if (basicServiceSpeed)
     {
-        PrintValue(g_sBasicServiceSpeed, "Vehicle Speed RX", m_BasicSpeed, "km/h  [ Output of Speed Sensor Service, accessible by application ]   ");
+        PrintValue(g_sBasicServiceSpeed, "Vehicle Speed RX", m_SpeedbasicService, "km/h  [ Output of Speed Sensor Service, accessible by application ]   ");
         basicServiceSpeed->RegisterOnSignalChangeOfVehicleSpeed(dynamic_cast<vss::Vehicle::SpeedService::IVSS_SetSpeed_Event*> (this));
     }   
 
@@ -141,19 +141,19 @@ bool CConsole::PrepareDataConsumers()
 
 void CConsole::WriteSpeed( float value)
 {
-    if (m_PlatformSpeed != value) 
+    if (m_SpeedPlatform != value) 
     {
-        m_PlatformSpeed = value;
-        PrintValue(g_sDeviceServiceSpeed, "Vehicle Speed RX", m_PlatformSpeed, "km/h  [ Output of Platform Abstraction, not accessible by application ]   ");
+        m_SpeedPlatform = value;
+        PrintValue(g_sDeviceServiceSpeed, "Vehicle Speed RX", m_SpeedPlatform, "km/h  [ Output of Platform Abstraction, not accessible by application ]   ");
     }
 }
 
 void CConsole::SetSpeed( float value)
 {
-    if (m_BasicSpeed != value) 
+    if (m_SpeedbasicService != value) 
     {
-        m_BasicSpeed= value;
-        PrintValue(g_sBasicServiceSpeed, "Vehicle Speed RX", m_BasicSpeed, "km/h  [ Output of Speed Sensor Service, accessible by application ]   ");        
+        m_SpeedbasicService = value;
+        PrintValue(g_sBasicServiceSpeed, "Vehicle Speed RX", m_SpeedbasicService, "km/h  [ Output of Speed Sensor Service, accessible by application ]   ");        
     }
 }
 

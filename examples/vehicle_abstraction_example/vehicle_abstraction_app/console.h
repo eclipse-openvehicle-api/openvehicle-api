@@ -154,20 +154,20 @@ private:
     */
     std::string AlignString(const std::string& message, uint32_t desiredLength = 0);
 
-    mutable std::mutex  m_mtxPrintToConsole;             ///< Mutex to print complete message
-    bool                m_bRunning         = false;      ///< When set, the application is running.
-    std::string         m_DataUnit         = "[ --- Input data in m/s --- ]";
-    std::string         m_Unit             = "m/s";    
+    mutable std::mutex  m_mtxPrintToConsole;              ///< Mutex to print complete message
+    bool                m_bRunning          = false;      ///< When set, the application is running.
+    std::string         m_DataUnit          = "[ --- Input data in m/s --- ]";
+    std::string         m_Unit              = "m/s";    
 
     sdv::core::CSignal  m_SignalSpeed;                   ///< Signal to subscribe to the speed signal in dispatch service
 
-    float               m_SpeedDataLink    = 0.0;        ///< Data Link value, either km/h or m/s
-    float               m_PlatformSpeed    = 0.0;        ///< Generalized Speed 
-    float               m_BasicSpeed       = 0.0;        ///< Generalized Speed    
+    float               m_SpeedDataLink     = 0.0;        ///< Data Link value, either km/h or m/s
+    float               m_SpeedPlatform     = 0.0;        ///< Generalized Speed after platform abstraction
+    float               m_SpeedbasicService = 0.0;        ///< Generalized Speed can be used by vehicle function components    
 
 #ifdef _WIN32
-    DWORD               m_dwConsoleOutMode = 0u;         ///< The console mode before switching on ANSI support.
-    DWORD               m_dwConsoleInMode  = 0u;         ///< The console mode before switching on ANSI support.
+    DWORD               m_dwConsoleOutMode  = 0u;         ///< The console mode before switching on ANSI support.
+    DWORD               m_dwConsoleInMode   = 0u;         ///< The console mode before switching on ANSI support.
 #elif defined __unix__
     struct termios      m_sTermAttr{};                   ///< The terminal attributes before disabling echo.
     int                 m_iFileStatus = 0;               ///< The file status flags for STDIN.

@@ -81,7 +81,7 @@ module sdv
             external = 20,      ///< External application. Component isolation in client mode.
             isolated = 30,      ///< Isolated application. Component isolation in client mode.
             main = 100,         ///< Main application. Component isolation in server mode.
-            essential = 5,      ///< Bare minunum configuration. Local services loaded only. Additional configurations can be
+            essential = 5,      ///< Bare minimum configuration. Local services loaded only. Additional configurations can be
                                 ///< loaded.
             maintenance = 80,   ///< Maintenance application. Component isolation in client mode. Access to maintenance interfaces
                                 ///< only.

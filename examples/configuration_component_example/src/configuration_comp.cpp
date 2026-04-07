@@ -18,6 +18,13 @@ public:
 	DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::device)
 	DECLARE_OBJECT_CLASS_NAME("Configuration_Example")
 
+    // Parameter map
+    BEGIN_SDV_PARAM_MAP()
+        SDV_PARAM_ENABLE_LOCKING() // Parameters will be protected against writing when locked (e.g. after initialization).
+        SDV_PARAM_ENTRY(m_InitializedValue, "initializedValue", 7, "km/h", "Description for an initialized parameter.")
+        SDV_PARAM_ENTRY(m_UpdatableValue,   "updatableValue",   7, "m/s", "Description for an updatable parameter.")
+    END_SDV_PARAM_MAP()
+
     /**
      * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
      * @return Returns 'true' when the initialization was successful, 'false' when not.
@@ -113,16 +120,19 @@ public:
     */
     void PrintAllVariables()  const
     {
-        std::cout << "\nValues parsed during initialization:" << std::endl;
-        std::cout << "string: " << m_Message.c_str() << std::endl;
+        std::cout << "\n----------\nValues from the parameter map:" << std::endl;        
+        std::cout << "Expect  7,                 got " << "initialized value - not changed because not in configuration file: " << std::to_string(m_InitializedValue) << std::endl;          
+        std::cout << "Expect 13,                 got " << "updated value - changed, found in configuration file: " << std::to_string(m_UpdatableValue) << std::endl;
+        std::cout << "\n----------\nValues parsed in OnInitialize():" << std::endl;
+        std::cout << "Expect 'It's me',          got " << "string: " << m_Message.c_str() << std::endl;
         std::cout << "multiline string: " << m_JSONConfig.c_str() << std::endl;
-        std::cout << "integer: " << std::to_string(m_Id) << std::endl;
-        std::cout << "float: " << std::to_string(m_Pi) << std::endl;
-        std::cout << "bool: " << std::to_string(m_IsValid) << std::endl;
-        std::cout << "table column a: " << std::to_string(m_TableA) << "     " << std::to_string(m_DirectTableA) << std::endl;
-        std::cout << "table column b: " << std::to_string(m_TableB) << "     " << std::to_string(m_DirectTableB) << std::endl;
-        std::cout << "table column c: " << m_TableC.c_str() << "     " << m_DirectTableC.c_str() << std::endl;
-        std::cout << "array: ";
+        std::cout << "Expect 42,                 got " << "integer: " << std::to_string(m_Id) << std::endl;
+        std::cout << "Expect  3.141593,          got " << "float: " << std::to_string(m_Pi) << std::endl;
+        std::cout << "Expect  1,                 got " << "bool: " << std::to_string(m_IsValid) << std::endl;
+        std::cout << "Expect 77,                 got " << "table column a: " << std::to_string(m_TableA) << "     " << std::to_string(m_DirectTableA) << std::endl;
+        std::cout << "Expect  1.200000,          got " << "table column b: " << std::to_string(m_TableB) << "     " << std::to_string(m_DirectTableB) << std::endl;
+        std::cout << "Expect 'this is a string', got " << "table column c: " << m_TableC.c_str() << "     " << m_DirectTableC.c_str() << std::endl;
+        std::cout << "Expect 1, 2, 3, 5, 7, 11, 13, 17,\n   got ";
         for (auto counter : m_Counters)
         {
             std::cout << std::to_string(counter) << ", ";
@@ -143,6 +153,8 @@ public:
     uint32_t              m_DirectTableA { 0 };
     float                 m_DirectTableB { 0.0 };
     std::string           m_DirectTableC { "" };
+    uint32_t              m_InitializedValue { 0 };
+    uint32_t              m_UpdatableValue { 0 }; 
 };
 
 DEFINE_SDV_OBJECT(DemoConfigurationComponent)
