@@ -364,6 +364,9 @@ bool CPackager::Configure()
             }
         }
 
+        // CHANGE EVE 13.04.2026: Disabled this check. Unclear if necessary.
+        std::filesystem::path pathBaseSearch;
+
         // If the pattern is defined using an absolute path, this path needs to correspond with the base path.
         std::filesystem::path pathConfigFile(ssSearchString);
         if (pathConfigFile.is_absolute())
@@ -374,19 +377,23 @@ bool CPackager::Configure()
             {
                 if (itConfigPart == pathConfigFile.end() || *itBasePart != *itConfigPart)
                 {
-                    m_nError = CMDLN_SOURCE_LOCATION_ERROR;
-                    m_ssArgError = CMDLN_SOURCE_LOCATION_ERROR_MSG;
-                    return false;
+                    //m_nError = CMDLN_SOURCE_LOCATION_ERROR;
+                    //m_ssArgError = CMDLN_SOURCE_LOCATION_ERROR_MSG;
+                    //return false;
+                    break;
                 }
+                pathBaseSearch /= *itBasePart;
 
                 // Next part
                 itBasePart++;
                 itConfigPart++;
             }
         }
+        else
+            pathBaseSearch = pathBasePath;
 
         // Get the list of files
-        auto vecFiles = CollectWildcardPath(pathBasePath, ssSearchString, eAlgorithm);
+        auto vecFiles = CollectWildcardPath(pathBaseSearch, ssSearchString, eAlgorithm);
 
         // For each file, check whether the file is somewhere within the base path (if provided) and add the file to the file list.
         for (const std::filesystem::path& rpathFile : vecFiles)
@@ -397,7 +404,7 @@ bool CPackager::Configure()
                 continue;
 
             // Add the file
-            vecConfigFiles.push_back(rpathFile);
+            vecConfigFiles.push_back(pathBaseSearch / rpathFile);
         }
     }
 

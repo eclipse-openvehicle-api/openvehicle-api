@@ -120,18 +120,21 @@ public:
     */
     void PrintAllVariables()  const
     {
+        std::cout << "\n***************************************************" << std::endl;            
+        std::cout << "***** Component with parsing of the toml file *****" << std::endl;   
+        std::cout << "***************************************************" << std::endl;          
         std::cout << "\n----------\nValues from the parameter map:" << std::endl;        
         std::cout << "Expect  7,                 got " << "initialized value - not changed because not in configuration file: " << std::to_string(m_InitializedValue) << std::endl;          
         std::cout << "Expect 13,                 got " << "updated value - changed, found in configuration file: " << std::to_string(m_UpdatableValue) << std::endl;
         std::cout << "\n----------\nValues parsed in OnInitialize():" << std::endl;
         std::cout << "Expect 'It's me',          got " << "string: " << m_Message.c_str() << std::endl;
-        std::cout << "multiline string: " << m_JSONConfig.c_str() << std::endl;
+        std::cout << "Expect multiline string: " << m_JSONConfig.c_str() << std::endl;
         std::cout << "Expect 42,                 got " << "integer: " << std::to_string(m_Id) << std::endl;
         std::cout << "Expect  3.141593,          got " << "float: " << std::to_string(m_Pi) << std::endl;
         std::cout << "Expect  1,                 got " << "bool: " << std::to_string(m_IsValid) << std::endl;
-        std::cout << "Expect 77,                 got " << "table column a: " << std::to_string(m_TableA) << "     " << std::to_string(m_DirectTableA) << std::endl;
-        std::cout << "Expect  1.200000,          got " << "table column b: " << std::to_string(m_TableB) << "     " << std::to_string(m_DirectTableB) << std::endl;
-        std::cout << "Expect 'this is a string', got " << "table column c: " << m_TableC.c_str() << "     " << m_DirectTableC.c_str() << std::endl;
+        std::cout << "Expect 77,                 got " << "table column a: " << std::to_string(m_TableA) << ",               direct access: " << std::to_string(m_DirectTableA) << std::endl;
+        std::cout << "Expect  1.200000,          got " << "table column b: " << std::to_string(m_TableB) << ",         direct access: " << std::to_string(m_DirectTableB) << std::endl;
+        std::cout << "Expect 'this is a string', got " << "table column c: " << m_TableC.c_str() << ", direct access: " << m_DirectTableC.c_str() << std::endl;
         std::cout << "Expect 1, 2, 3, 5, 7, 11, 13, 17,\n   got ";
         for (auto counter : m_Counters)
         {
