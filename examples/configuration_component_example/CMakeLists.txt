@@ -24,9 +24,18 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 # Include link to export directory of SDV V-API development include files location
 include_directories(${SDV_FRAMEWORK_DEV_INCLUDE})
 
-# Add the dynamic library
+# This component shows how to parse a toml file
 add_library(configuration_component_example SHARED src/configuration_comp.cpp)
 
 # Set extension to .sdv
 set_target_properties(configuration_component_example PROPERTIES PREFIX "")
 set_target_properties(configuration_component_example PROPERTIES SUFFIX ".sdv")
+
+
+
+# The second component shows that parsing is not required when SDV_PARAM_MAP is used
+add_library(configuration_component_example_02 SHARED src/configuration_comp_02.cpp)
+
+# Set extension to .sdv
+set_target_properties(configuration_component_example_02 PROPERTIES PREFIX "")
+set_target_properties(configuration_component_example_02 PROPERTIES SUFFIX ".sdv")

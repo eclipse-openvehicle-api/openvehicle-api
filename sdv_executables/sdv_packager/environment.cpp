@@ -414,6 +414,10 @@ void CSdvPackagerEnvironment::ReportInfo() const
         if (!m_pathPackage.empty())
             rstreamVerbose << "Package: " << m_pathPackage.generic_u8string() << std::endl;
         break;
+    case EOperatingMode::configure:
+        rstreamNormal << "Configure system..." << std::endl;
+        break;
+
     default:
         rstreamNormal << "Nothing to do..." << std::endl;
         break;
@@ -969,6 +973,7 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
         fnGetProduct();
         break;
     case EOperatingMode::configure:
+        if (!fnCheckSourceLocation()) return false;
         if (!fnGetConfigFiles()) return false;
         if (!fnConfigTargets()) return false;
         break;

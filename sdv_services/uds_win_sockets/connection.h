@@ -35,7 +35,6 @@
 #   endif
 #endif
 
-
 /// @brief Legacy framing markers for the old message header (not used by SDV envelope)
 constexpr uint32_t m_MsgStart = 0x01020304; ///< Value to mark the start of the legacy message header
 constexpr uint32_t m_MsgEnd   = 0x05060708; ///< Value to mark the end of the legacy message header
