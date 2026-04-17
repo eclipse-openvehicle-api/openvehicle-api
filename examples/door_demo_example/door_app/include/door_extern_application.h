@@ -20,11 +20,11 @@ class CDoorExternControl
 public:
 
     /**
-    * @brief Start and initialize the application control and load vehicle devices and 
-    * basic services depending on the number of doors
+    * @brief Start and initialize the application control and load vehicle devices and basic services depending on the number of doors
+    * @param[in] uiInstance Instance number the application will connect to. 3002 is default  
     * @return Return true on success otherwise false
     */
-    bool Initialize();
+    bool Initialize(uint32_t uiInstance);
 
     /**
     * @brief Run loop as long as user input does not exit

@@ -12,10 +12,39 @@
 #include "../door_app/include/door_extern_application.h"
 #include "../door_app/include/console.h"
 
-int main()
+#if defined(_WIN32) && defined(_UNICODE)
+extern "C" int wmain(int argc, wchar_t* argv[])
 {
+    uint32_t uiInstance = 3002;
+    if (argc >= 2)
+    {
+        try
+        {
+            uiInstance = std::stoi(argv[1]);
+        }
+        catch (const std::exception& )
+        {
+        }
+    }
+
+#else
+extern "C" int main(int argc, char* argv[])
+{
+    uint32_t uiInstance = 3002;
+    if (argc < 2) 
+    {
+        try 
+        {
+            uiInstance = std::stoi(argv[1]);
+        }
+        catch (const std::exception& )
+        {
+        }
+    }        
+#endif
+
     CDoorExternControl appobj;
-    if (!appobj.Initialize())
+    if (!appobj.Initialize(uiInstance))
     {
         std::cout << "ERROR: Failed to initialize application control." << std::endl;
         return 0;

@@ -57,10 +57,6 @@ execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/v
 message("Create data link for open trunk example")
 execute_process(COMMAND ${SDV_DBC_UTIL} "${PROJECT_SOURCE_DIR}/open_trunk_example.dbc" "-O${PROJECT_SOURCE_DIR}/generated/" --nodestrunk --version1.0.0.1 --moduleTrunkExampleFMU --dl_lib_namecan_dl_trunk)
 
-# Execute the IDL compiler for the complex service to digest interface code.
-message("Compiling trunkkit.idl")
-execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/trunk_service/trunkkit.idl" "-O${PROJECT_SOURCE_DIR}/generated/trunk_service/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Itrunk_service/ --ps_lib_nametrunk_service_proxystub)
-
 ######################################################################################################################################################################
 #                                                                   data link component
 ######################################################################################################################################################################
@@ -84,26 +80,16 @@ add_subdirectory(generated/vss_files/ps)
 
 add_subdirectory(generated/vss_files/vd_vehicletrunk)
 add_subdirectory(generated/vss_files/vd_vehiclespeed)
-
-add_subdirectory(generated/vss_files/bs_vehicletrunk)
 add_subdirectory(generated/vss_files/bs_vehiclespeed)
 
-######################################################################################################################################################################
-#                                                                     complex service
-######################################################################################################################################################################
+message("Include: basic service enhanced by safety function.")
+set(TARGET_NAME trunk_bs_vehicletrunk_tx)
+add_library(${TARGET_NAME} SHARED
+    bs_vehicletrunk/bs_vehicletrunk.h
+    bs_vehicletrunk/bs_vehicletrunk.cpp)
 
-message("Include: proxy/stub for complex trunk service")
-include_directories(${CMAKE_CURRENT_LIST_DIR}/generated/trunk_service)
-add_subdirectory(generated/trunk_service/ps)
-
-message("Include: example component trunk_complex_service")
-add_library(trunk_complex_service SHARED
-    trunk_service/complex_service.h
-    trunk_service/complex_service.cpp
-    )
-set_target_properties(trunk_complex_service PROPERTIES OUTPUT_NAME "trunk_complex_service")
-set_target_properties(trunk_complex_service PROPERTIES PREFIX "")
-set_target_properties(trunk_complex_service PROPERTIES SUFFIX ".sdv")
+set_target_properties(trunk_bs_vehicletrunk_tx PROPERTIES PREFIX "")
+set_target_properties(trunk_bs_vehicletrunk_tx PROPERTIES SUFFIX ".sdv")
 
 ######################################################################################################################################################################
 #                                                                   open trunk application
@@ -130,7 +116,6 @@ endif()
 
 # Copy the config files
 file (COPY ${PROJECT_SOURCE_DIR}/config/can_com_simulation_trunk.toml DESTINATION ${CMAKE_BINARY_DIR}/bin/config)
-file (COPY ${PROJECT_SOURCE_DIR}/config/complex_service_trunk.toml DESTINATION ${CMAKE_BINARY_DIR}/bin/config)
 file (COPY ${PROJECT_SOURCE_DIR}/config/data_dispatch_trunk.toml DESTINATION ${CMAKE_BINARY_DIR}/bin/config)
 file (COPY ${PROJECT_SOURCE_DIR}/config/data_link_trunk.toml DESTINATION ${CMAKE_BINARY_DIR}/bin/config)
 file (COPY ${PROJECT_SOURCE_DIR}/config/task_timer_trunk.toml DESTINATION ${CMAKE_BINARY_DIR}/bin/config)
@@ -172,21 +157,9 @@ add_custom_target(trunk_abstract_config
     VERBATIM
 )
 
-add_custom_target(trunk_user_config
-    ALL
-    DEPENDS
-        trunk_complex_service
-        trunk_service_proxystub
-    COMMAND "${SDV_PACKAGER}" DIRECT_INSTALL TrunkApplication --instance3005 trunk_complex_service.sdv trunk_service_proxystub.sdv "-I${CMAKE_RUNTIME_OUTPUT_DIRECTORY}" --user_config   --overwrite
-    VERBATIM
-)
-
 add_custom_target(trunk_platform_config
     ALL
     COMMAND "${SDV_PACKAGER}" CONFIGURE ${PROJECT_SOURCE_DIR}/coreconfig/platform.toml --instance3005 --platform_config
     VERBATIM
 )
-
-
-
 

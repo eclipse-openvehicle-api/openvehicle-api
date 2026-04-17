@@ -211,6 +211,11 @@ add_custom_target(platform_doors_config
 )
 
 
+# used for a sdv_packager example in the documentation
+file (COPY ${PROJECT_SOURCE_DIR}/coreconfig/platform.toml  DESTINATION ${CMAKE_BINARY_DIR}/bin/new_instance)
+
+
+
 ######################################################################################################################################################################
 # the FMU files have been created via the dbc file
 #    ..\\..\\build\\<configurePreset>\\bin\\sdv_dbc_util datalink_2doors_example.dbc -Ogenerated\\ --nodesdoors --version1.0.0.1 --moduleDoors2ExampleFMU --dl_lib_namecan_dl_door
