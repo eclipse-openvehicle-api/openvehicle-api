@@ -1,6 +1,0 @@
-[Configuration]
-Version = 100
-
-[[Component]]
-Path = "trunk_complex_service.sdv"
-Class = "Open Trunk Service"

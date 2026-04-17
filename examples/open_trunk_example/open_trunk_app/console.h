@@ -21,12 +21,13 @@
 #include "../generated/vss_files/signal_identifier.h"
 
 #include <fcntl.h>
+#include "../generated/vss_files/vss_vehiclebodytrunk_vd_tx.h"
 #include "../generated/vss_files/vss_vehiclebodytrunk_bs_tx.h"
 #include "../generated/vss_files/vss_vehiclespeed_bs_rx.h"
 #include "../generated/vss_files/vss_vehiclespeed_vd_rx.h"
 
 // Complex service trunk interface - located in ../generated/trunk_service
-#include "trunkkit.h"
+//#include "trunkkit.h"
 
 #ifdef __unix__
 #include <termios.h>        // Needed for tcgetattr and fcntl
@@ -158,12 +159,11 @@ private:
 
     sdv::core::CSignal  m_SignalSpeed;                      ///< Speed
     float               m_SpeedDL = 0.0;                    ///< Speed Data Link
-    float               m_SpeedVD = 0.0;                    ///< Speed Data Link
-    float               m_SpeedBS = 0.0;                    ///< Speed Data Link
+    float               m_SpeedVD = 0.0;                    ///< Speed Vehicle Device
+    float               m_SpeedBS = 0.0;                    ///< Speed Basic Service
 
-    vss::Vehicle::Body::TrunkService::IVSS_SetOpen* m_pTrunkSvc = nullptr;  ///< Front Left Door
-    ITrunkKitService*   m_pTrunkComplexService                  = nullptr;  ///< Trunk Service interface pointer.
-
+    vss::Vehicle::Body::TrunkService::IVSS_SetOpen* m_pTrunkService = nullptr;  ///< trunk (basic service)
+    vss::Vehicle::Body::TrunkDevice::IVSS_WriteOpen* m_pTrunkDevice = nullptr; ///< trunk (vehicle device)
 
 #ifdef _WIN32
     DWORD               m_dwConsoleOutMode = 0u;            ///< The console mode before switching on ANSI support.

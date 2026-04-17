@@ -80,7 +80,7 @@ bool CTrunkControl::Initialize(uint32_t uiInstance)
         bResult &= LoadConfigFile("Load data_link_trunk: ", "data_link_trunk.toml");
 
         bResult &= LoadConfigFile("Load trunk_vehicle_device_and_basic_service: ", "trunk_vehicle_device_and_basic_service.toml");
-        bResult &= LoadConfigFile("Load trunk service (complex service): ", "complex_service_trunk.toml");
+        //bResult &= LoadConfigFile("Load trunk service (complex service): ", "complex_service_trunk.toml");
 
         if (!bResult) 
         {

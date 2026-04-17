@@ -31,14 +31,12 @@ const CConsole::SConsolePos g_sSeparator4{ 20, 1 };
 const CConsole::SConsolePos g_sComment1{ 22, 1 };
 const CConsole::SConsolePos g_sComment2{ 23, 1 };
 const CConsole::SConsolePos g_sComment3{ 24, 1 };
-const CConsole::SConsolePos g_sComment4{ 25, 1 };
-const CConsole::SConsolePos g_sComment5{ 26, 1 };
-const CConsole::SConsolePos g_sSeparator5{ 28, 1 };
-const CConsole::SConsolePos g_sComplexService1{ 30, 1 };
-const CConsole::SConsolePos g_sComplexService2{ 31, 1 };
-const CConsole::SConsolePos g_sSeparator6{ 33, 1 };
-const CConsole::SConsolePos g_sControlDescription{ 35, 1 };
-const CConsole::SConsolePos g_sCursor{ 36, 1 };
+const CConsole::SConsolePos g_sSeparator5{ 26, 1 };
+const CConsole::SConsolePos g_sOpenViaDevice{ 28, 1 };
+const CConsole::SConsolePos g_sOpenViaService{ 29, 1 };
+const CConsole::SConsolePos g_sSeparator6{ 31, 1 };
+const CConsole::SConsolePos g_sControlDescription{ 33, 1 };
+const CConsole::SConsolePos g_sCursor{ 34, 1 };
 
 CConsole::CConsole()
 {
@@ -89,12 +87,11 @@ void CConsole::PrintHeader(uint32_t uiInstance)
     // Clear the screen...
     std::cout << "\x1b[2J";
 
-    std::string subTtitle = "Standalone application, this is not Mixed-Critical mode!";
+    std::string subTtitle = "Standalone application!";
     if (uiInstance != 0)
     {
         subTtitle = "Connected to core instance ";
         subTtitle.append(std::to_string(uiInstance));
-        subTtitle.append(", this is NOT Mixed-Critical mode yet!");
     }
     // Print the titles
     PrintText(g_sTitle, "Open Trunk example: Open trunk when vehicle is not moving");
@@ -109,16 +106,14 @@ void CConsole::PrintHeader(uint32_t uiInstance)
     PrintText(g_sBasicService, "Basic Service:");
     PrintText(g_sBasicServiceSpeed, "Basic Service Interface not available.");
     PrintText(g_sSeparator4, "============================================================================");
-    PrintText(g_sComment1, "The complex service which checks the speed of the vehicle can be seen");
-    PrintText(g_sComment2, "as an ASIL A/B component and will block the call from QM.");
-    PrintText(g_sComment3, "The extern application can be seen as a QM function.");
-    PrintText(g_sComment4, "If this example would run in a mixed critical environment the connection");
-    PrintText(g_sComment5, "from QM to basic service interface would be forbidden.");
+    PrintText(g_sComment1, "The Open Trunk  signal has a safety request.");
+    PrintText(g_sComment2, "Therefore the speed value is required and must be checked.");
+    PrintText(g_sComment3, "If the car is moving the open trunk is blocked.");
     PrintText(g_sSeparator5, "============================================================================");
-    PrintText(g_sComplexService1, "Basic Service Interface not available.");
-    PrintText(g_sComplexService2, "Complex Service Interface not available.");
+    PrintText(g_sOpenViaDevice, "Vehicle Device Interface not available.");
+    PrintText(g_sOpenViaService, "Basic Service Interface not available.");    
     PrintText(g_sSeparator6, "----------------------------------------------------------------------------");
-    PrintText(g_sControlDescription, "Press 'X' to quit; 'C' to clear screen, '1' or '2' to open trunk ");
+    PrintText(g_sControlDescription, "Press 'X' to quit; 'C' to clear screen, 'O' or 'D' to open trunk ");
 }
 
 bool CConsole::PrepareDataConsumers()
@@ -145,17 +140,18 @@ bool CConsole::PrepareDataConsumers()
     }
 
     // Request the basic service for opening the trunk.
-    m_pTrunkSvc = sdv::core::GetObject("Vehicle.Body.Trunk_Service").GetInterface<vss::Vehicle::Body::TrunkService::IVSS_SetOpen>();
-    if (m_pTrunkSvc)
-        PrintText(g_sComplexService1, "Basic Service available");
+    m_pTrunkService = sdv::core::GetObject("Vehicle.Body.Trunk_Service").GetInterface<vss::Vehicle::Body::TrunkService::IVSS_SetOpen>();
+    if (m_pTrunkService)
+        PrintText(g_sOpenViaService, "Basic Service available");
     else
-        PrintText(g_sComplexService1, "Basic Service NOT available");    
+        PrintText(g_sOpenViaService, "Basic Service NOT available");    
 
-    m_pTrunkComplexService = sdv::core::GetObject("Open Trunk Service").GetInterface<ITrunkKitService>();
-    if (m_pTrunkComplexService)
-        PrintText(g_sComplexService2, "Complex Service available");
+    // Request the VEHICLE DEVICE service for opening the trunk.
+    m_pTrunkDevice = sdv::core::GetObject("Vehicle.Body.Trunk_Device").GetInterface<vss::Vehicle::Body::TrunkDevice::IVSS_WriteOpen>();
+    if (m_pTrunkDevice)
+        PrintText(g_sOpenViaDevice, "Trunk Device available");
     else
-        PrintText(g_sComplexService2, "Complex Service NOT available");         
+        PrintText(g_sOpenViaDevice, "Trunk Device NOT available");   
 
     return true;
 }
@@ -291,25 +287,32 @@ void CConsole::RunUntilBreak()
         {
         case 'c':
         case 'C':
-            PrintText(g_sComplexService1, "                                        ");
-            PrintText(g_sComplexService2, "                                        ");
+            PrintText(g_sOpenViaDevice, "                                        ");        
+            PrintText(g_sOpenViaService, "                                        ");
             break;
-        case '1':
-            if (m_pTrunkSvc)
+        case 'd':
+        case 'D':
+            if (m_pTrunkDevice)
             {
-                if (m_pTrunkSvc->SetOpen(true))
-                    PrintText(g_sComplexService1, "Open trunk via basic service - will not be available in Mixed-Critical mode!");
+                if (m_pTrunkDevice->WriteOpen(true))
+                {
+                    if (m_SpeedVD || m_SpeedBS)
+                        PrintText(g_sOpenViaDevice, "Trunk opened directly although car was moving, not safe.");                          
+                    else
+                        PrintText(g_sOpenViaDevice, "Trunk opened directly, not safe.");                  
+                }
                 else
-                    PrintText(g_sComplexService1, "Open trunk via basic service failed.");
+                    PrintText(g_sOpenViaDevice, "Trunk opened directly, failed.");
             }
-            break;
-        case '2':
-            if (m_pTrunkComplexService)
+            break;            
+        case 'o':
+        case 'O':
+            if (m_pTrunkService)
             {
-                if (m_pTrunkComplexService->PopTrunk())
-                    PrintText(g_sComplexService2, "Safety open trunk via complex service.");
+                if (m_pTrunkService->SetOpen(true))
+                    PrintText(g_sOpenViaService, "Trunk opened safely.");
                 else
-                    PrintText(g_sComplexService2, "Safety open trunk via complex service failed, car is moving");
+                    PrintText(g_sOpenViaService, "Open trunk failed, car is moving.");
             }
             break;
         case 'x':

@@ -17,7 +17,7 @@
 #include <fcntl.h>
 #endif
 
-bool CDoorExternControl::Initialize()
+bool CDoorExternControl::Initialize(uint32_t uiInstance)
 {
     if (m_bInitialized) 
         return true;
@@ -31,7 +31,7 @@ bool CDoorExternControl::Initialize()
     std::stringstream sstreamAppConfig;
     sstreamAppConfig << "[Application]" << std::endl;
     sstreamAppConfig << "Mode=\"External\"" << std::endl;
-    sstreamAppConfig << "Instance=\"3002\"" << std::endl;
+    sstreamAppConfig << "Instance="  << uiInstance << std::endl;
     sstreamAppConfig << "Retries=" << 6 << std::endl;
     sstreamAppConfig << "[Console]" << std::endl;
     sstreamAppConfig << "Report=\"Silent\"" << std::endl;
