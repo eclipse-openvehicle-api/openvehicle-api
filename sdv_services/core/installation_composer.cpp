@@ -1246,7 +1246,7 @@ sdv::installation::SPackageBLOB CInstallComposer::DeserializeBLOB(std::ifstream&
 
     // Extend the buffer and read the BLOB data (after the resize, the psPartialBLOB pointer could be invalidated).
     uint32_t uiBLOBSize = psPartialBLOB->uiBLOBSize;
-    if (uiBLOBSize > 24*1024*1024)
+    if (uiBLOBSize > 26*1024*1024)  // 26 instead of 24 becasue of door example
         throw sdv::installation::XIncompatiblePackage();    // Safety
     ptrBLOB.resize(uiBLOBSize);
     if (!ptrBLOB)

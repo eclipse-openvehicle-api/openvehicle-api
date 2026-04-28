@@ -11,6 +11,11 @@
 #include <iostream>
 #include "bs_vehicletrunk.h"
 
+namespace
+{
+constexpr float kMovingSpeedThresholdKmh = 0.0F;
+}
+
 /**
  * @brief Constructor
  */
@@ -41,7 +46,8 @@ CBasicServiceVehicleTrunk::CBasicServiceVehicleTrunk()
  */
 bool CBasicServiceVehicleTrunk::SetOpen(bool value)
 {
-	if (m_Speed)
+	// Block only opening requests while vehicle is moving; closing must always be allowed.
+	if (value && (m_Speed > kMovingSpeedThresholdKmh))
 		return false;
 	return m_ptrOpen->WriteOpen(value);
 }
@@ -49,4 +55,10 @@ bool CBasicServiceVehicleTrunk::SetOpen(bool value)
 void CBasicServiceVehicleTrunk::SetSpeed(float value)
 {
     m_Speed = value;
+
+    // Safety fallback: if vehicle starts moving, force trunk to closed state.
+    if (m_Speed > kMovingSpeedThresholdKmh)
+    {
+        (void)m_ptrOpen->WriteOpen(false);
+    }
 }

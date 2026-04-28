@@ -161,6 +161,7 @@ private:
     float               m_SpeedDL = 0.0;                    ///< Speed Data Link
     float               m_SpeedVD = 0.0;                    ///< Speed Vehicle Device
     float               m_SpeedBS = 0.0;                    ///< Speed Basic Service
+    bool                m_bWasMovingBS = false;             ///< Transition flag for movement status.
 
     vss::Vehicle::Body::TrunkService::IVSS_SetOpen* m_pTrunkService = nullptr;  ///< trunk (basic service)
     vss::Vehicle::Body::TrunkDevice::IVSS_WriteOpen* m_pTrunkDevice = nullptr; ///< trunk (vehicle device)
