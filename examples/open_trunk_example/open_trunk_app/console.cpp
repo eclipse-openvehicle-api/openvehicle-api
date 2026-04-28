@@ -108,7 +108,7 @@ void CConsole::PrintHeader(uint32_t uiInstance)
     PrintText(g_sSeparator4, "============================================================================");
     PrintText(g_sComment1, "The Open Trunk  signal has a safety request.");
     PrintText(g_sComment2, "Therefore the speed value is required and must be checked.");
-    PrintText(g_sComment3, "If the car is moving the open trunk is blocked.");
+    PrintText(g_sComment3, "If the car is moving, open is blocked and trunk is closed automatically.");
     PrintText(g_sSeparator5, "============================================================================");
     PrintText(g_sOpenViaDevice, "Vehicle Device Interface not available.");
     PrintText(g_sOpenViaService, "Basic Service Interface not available.");    
@@ -237,11 +237,18 @@ void CConsole::WriteSpeed(float value)
 
 void CConsole::SetSpeed(float value)
 {
+    const bool bIsMoving = (value > 0.0F);
     if (m_SpeedBS != value)
     {
         m_SpeedBS = value;
         PrintValue(g_sBasicServiceSpeed, "Vehicle Speed RX", m_SpeedBS, "km/h");
     }
+
+    if (bIsMoving && !m_bWasMovingBS)
+    {
+        PrintText(g_sOpenViaService, "Safety active: speed > 0, trunk close command sent.");
+    }
+    m_bWasMovingBS = bIsMoving;
 }
 
 bool CConsole::KeyHit()
@@ -310,7 +317,7 @@ void CConsole::RunUntilBreak()
             if (m_pTrunkService)
             {
                 if (m_pTrunkService->SetOpen(true))
-                    PrintText(g_sOpenViaService, "Trunk opened safely.");
+                    PrintText(g_sOpenViaService, "Trunk opened safely (auto-close if vehicle starts moving).");
                 else
                     PrintText(g_sOpenViaService, "Open trunk failed, car is moving.");
             }
