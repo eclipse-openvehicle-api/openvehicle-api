@@ -16,18 +16,15 @@
 
 #include <support/component_impl.h>
 #include <interfaces/ipc.h>
-#include "../sdv_services/uds_win_sockets/channel_mgnt.h"              
-#include "../sdv_services/uds_win_sockets/connection.h"
 #include "connection.h"   
+#include "watchdog.h"
 
-#include <mutex>
+#include <algorithm>
 #include <map>
-#include <memory>
-#include <set>
+#include <mutex>
 #include <string>
 
 // Winsock headers are required for SOCKET / AF_UNIX / WSAStartup
-// NOTE: The actual initialization is done via StartUpWinSock()
 #include <ws2tcpip.h>
 
 class CWinTunnelConnection;
@@ -56,8 +53,8 @@ public:
 
     DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
     DECLARE_OBJECT_CLASS_NAME("WinTunnelChannelControl")
-    DECLARE_OBJECT_CLASS_ALIAS("LocalChannelControl")
-    DECLARE_DEFAULT_OBJECT_NAME("LocalChannelControl")
+    DECLARE_OBJECT_CLASS_ALIAS("unix_domain_sockets_tunnel")
+    DECLARE_DEFAULT_OBJECT_NAME("unix_domain_sockets_tunnel")
     DECLARE_OBJECT_SINGLETON()
 
     virtual ~CSocketsTunnelChannelMgnt() = default;
@@ -74,6 +71,11 @@ public:
     virtual void OnShutdown() override;
 
     /**
+     * @brief Last function called before destruction. Overload of sdv::CSdvObject::OnDestroy.
+     */
+    virtual void OnDestroy() override;
+
+    /**
      * @brief Creates a tunnel endpoint (server side) and returns endpoint info.
      * @param[in] cfgStr Optional config string (TOML or connect string).
      * @return The channel endpoint structure.
@@ -87,17 +89,10 @@ public:
      */
     sdv::IInterfaceAccess* Access(const sdv::u8string& cs) override;
 
-    /**
-     * @brief Called by server tunnel when closing (bookkeeping).
-     * @param[in] udsPath The UDS path for the server.
-     * @param[in] ptr Pointer to the tunnel connection being closed.
-     */
-    void OnServerClosed(const std::string& udsPath, CWinTunnelConnection* ptr);
-
 private:
-    std::mutex m_udsMtx;
-    std::map<std::string, std::shared_ptr<CWinTunnelConnection>> m_udsServers;
-    std::set<std::string> m_udsServerClaimed;
+    CWinTunnelConnectionWatchDog m_watchdog;
+    std::map<const void*, std::shared_ptr<CWinTunnelConnection>> m_ptrConnections;  ///< Retain shared_ptr for all connections
+    mutable std::mutex m_ConnectionsMutex;  ///< Protect concurrent access to m_ptrConnections
 };
 
 DEFINE_SDV_OBJECT(CSocketsTunnelChannelMgnt)

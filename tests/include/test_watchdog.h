@@ -64,7 +64,7 @@ public:
      */
     CProcessWatchdog(int64_t iWatchdogTimeS = 300ll)
     {
-        m_threadWatchdog = std::thread(&CProcessWatchdog::WatchdogThreadFunc, this, iWatchdogTimeS );
+        m_threadWatchdog = sdv::core::secure_thread(&CProcessWatchdog::WatchdogThreadFunc, this, iWatchdogTimeS );
     }
 
     /**
@@ -110,8 +110,8 @@ private:
         }
     }
 
-    std::atomic_bool    m_bTerminateWatchdog = false;       ///< When set, allows the thread to terminate.
-    std::thread         m_threadWatchdog;                   ///< The watchdog thread.
+    std::atomic_bool            m_bTerminateWatchdog = false;       ///< When set, allows the thread to terminate.
+    sdv::core::secure_thread    m_threadWatchdog;                   ///< The watchdog thread.
 };
 
 #endif // !defined TEST_WATCHDOG_H

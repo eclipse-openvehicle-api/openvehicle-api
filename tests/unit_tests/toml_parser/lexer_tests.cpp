@@ -15,6 +15,7 @@
 #include <gtest/gtest.h>
 #include <limits>
 #include <functional>
+#include "../../../global/localmemmgr.h"
 #include "../../../sdv_services/core/toml_parser/lexer_toml.h"
 #include "../../../sdv_services/core/toml_parser/exception.h"
 
@@ -114,7 +115,7 @@
  * + Exceptions thrown by the CharacterReaderare caught and result in a token_terminated-Token and no further lexing will be done
  */
 
-TEST(TOMLLexerTest, Keys)
+TEST(Lexer, Keys)
 {
     using namespace std::string_literals;
     // U+1F92B is the Finger-On-Lips Shushing emoji with UTF-8 byte representation 0xF09FA4AB
@@ -169,7 +170,7 @@ TEST(TOMLLexerTest, Keys)
     EXPECT_EQ("1234", key8.StringValue());
 }
 
-TEST(TOMLLexerTest, SyntaxToken_NewLine)
+TEST(Lexer, SyntaxToken_NewLine)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -187,7 +188,7 @@ TEST(TOMLLexerTest, SyntaxToken_NewLine)
     EXPECT_EQ(toml_parser::ETokenCategory::token_syntax_new_line, newLine2.Category());
 }
 
-TEST(TOMLLexerTest, SyntaxToken_Bracket)
+TEST(Lexer, SyntaxToken_Bracket)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -240,7 +241,7 @@ TEST(TOMLLexerTest, SyntaxToken_Bracket)
     EXPECT_EQ(toml_parser::ETokenCategory::token_syntax_table_array_close, tableArrayBracketClose.Category());
 }
 
-TEST(TOMLLexerTest, SyntaxToken_Assignment)
+TEST(Lexer, SyntaxToken_Assignment)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexerNormal(R"(
@@ -279,7 +280,7 @@ TEST(TOMLLexerTest, SyntaxToken_Assignment)
     EXPECT_EQ(rValueNoSpace.StringValue(), "value");
 }
 
-TEST(TOMLLexerTest, Comments)
+TEST(Lexer, Comments)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexerNormal(R"(
@@ -414,7 +415,7 @@ TEST(TOMLLexerTest, Comments)
     EXPECT_EQ(toml_parser::ETokenCategory::token_comment, rNoSpaceTableClose.Next().Category());
 }
 
-TEST(TOMLLexerTest, SyntaxToken_Dot)
+TEST(Lexer, SyntaxToken_Dot)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -451,7 +452,7 @@ TEST(TOMLLexerTest, SyntaxToken_Dot)
     EXPECT_EQ(toml_parser::ETokenCategory::token_syntax_dot, dot6.Category());
 }
 
-TEST(TOMLLexerTest, SyntaxToken_Braces)
+TEST(Lexer, SyntaxToken_Braces)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -511,7 +512,7 @@ TEST(TOMLLexerTest, SyntaxToken_Braces)
     EXPECT_EQ(toml_parser::ETokenCategory::token_key, emptyTable.Category());
 }
 
-TEST(TOMLLexerTest, SyntaxToken_ArrayTable)
+TEST(Lexer, SyntaxToken_ArrayTable)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -588,7 +589,7 @@ TEST(TOMLLexerTest, SyntaxToken_ArrayTable)
     EXPECT_EQ(toml_parser::ETokenCategory::token_syntax_table_array_close, tableArrayClose5.Category());
 }
 
-TEST(TOMLLexerTest, Datatype_Integer)
+TEST(Lexer, Datatype_Integer)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -758,7 +759,7 @@ TEST(TOMLLexerTest, Datatype_Integer)
     EXPECT_EQ(toml_parser::ETokenCategory::token_error, intErr10.Category());
 }
 
-TEST(TOMLLexerTest, Datatype_Float)
+TEST(Lexer, Datatype_Float)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -945,7 +946,7 @@ TEST(TOMLLexerTest, Datatype_Float)
     EXPECT_EQ(toml_parser::ETokenCategory::token_error, errFloat28.Category());
 }
 
-TEST(TOMLLexerTest, Datatype_Boolean)
+TEST(Lexer, Datatype_Boolean)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -966,7 +967,7 @@ TEST(TOMLLexerTest, Datatype_Boolean)
     EXPECT_FALSE(falseToken.BooleanValue());
 }
 
-TEST(TOMLLexerTest, Datatype_String_BasicString)
+TEST(Lexer, Datatype_String_BasicString)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -1045,7 +1046,7 @@ TEST(TOMLLexerTest, Datatype_String_BasicString)
     EXPECT_EQ("Musical eighth note: 𝅘𝅥𝅮", string_esc9.StringValue());
 }
 
-TEST(TOMLLexerTest, Datatype_String_BasicStringMultiline)
+TEST(Lexer, Datatype_String_BasicStringMultiline)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -1170,7 +1171,7 @@ multiline string"""
     EXPECT_EQ("Musical eighth note: 𝅘𝅥𝅮 multiline", string_esc9.StringValue());
 }
 
-TEST(TOMLLexerTest, Datatype_String_LiteralString)
+TEST(Lexer, Datatype_String_LiteralString)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -1208,7 +1209,7 @@ TEST(TOMLLexerTest, Datatype_String_LiteralString)
     EXPECT_EQ("<\\i\\c*\\s*>", regex.StringValue());
 }
 
-TEST(TOMLLexerTest, Datatype_String_LiteralStringMultiline)
+TEST(Lexer, Datatype_String_LiteralStringMultiline)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -1257,27 +1258,27 @@ str = ''''That,' she said, 'is still pointless.''''
     EXPECT_EQ("'That,' she said, 'is still pointless.'", str.StringValue());
 }
 
-// TEST(TOMLLexerTest, Datatype_OffsetDateTime)
+// TEST(Lexer, Datatype_OffsetDateTime)
 // {
 //     ASSERT_TRUE(false);
 // }
 
-// TEST(TOMLLexerTest, Datatype_DateTime)
+// TEST(Lexer, Datatype_DateTime)
 // {
 //     ASSERT_TRUE(false);
 // }
 
-// TEST(TOMLLexerTest, Datatype_LocalDate)
+// TEST(Lexer, Datatype_LocalDate)
 // {
 //     ASSERT_TRUE(false);
 // }
 
-// TEST(TOMLLexerTest, Datatype_LocalTime)
+// TEST(Lexer, Datatype_LocalTime)
 // {
 //     ASSERT_TRUE(false);
 // }
 
-TEST(TOMLLexerTest, Invalid_Key)
+TEST(Lexer, Invalid_Key)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -1306,7 +1307,7 @@ TEST(TOMLLexerTest, Invalid_Key)
     EXPECT_EQ(toml_parser::ETokenCategory::token_error, invQuotedKey3.Category());
 }
 
-TEST(TOMLLexerTest, Invalid_String)
+TEST(Lexer, Invalid_String)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer1(R"(key1 = "invalid escape sequence \h)"s);
@@ -1332,7 +1333,7 @@ TEST(TOMLLexerTest, Invalid_String)
     EXPECT_EQ(toml_parser::ETokenCategory::token_error, invString4.Category());
 }
 
-TEST(TOMLLexerTest, Invalid_Integer)
+TEST(Lexer, Invalid_Integer)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -1406,7 +1407,7 @@ TEST(TOMLLexerTest, Invalid_Integer)
     EXPECT_EQ(toml_parser::ETokenCategory::token_error, invInteger15.Category());
 }
 
-TEST(TOMLLexerTest, Invalid_Float)
+TEST(Lexer, Invalid_Float)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -1440,7 +1441,7 @@ TEST(TOMLLexerTest, Invalid_Float)
     EXPECT_EQ(toml_parser::ETokenCategory::token_error, invFloat5.Category());
 }
 
-TEST(TOMLLexerTest, Invalid_Boolean)
+TEST(Lexer, Invalid_Boolean)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -1459,27 +1460,27 @@ TEST(TOMLLexerTest, Invalid_Boolean)
     EXPECT_EQ(toml_parser::ETokenCategory::token_error, invBool2.Category());
 }
 
-// TEST(TOMLLexerTest, Invalid_OffsetDateTime)
+// TEST(Lexer, Invalid_OffsetDateTime)
 // {
 //     ASSERT_TRUE(false);
 // }
 
-// TEST(TOMLLexerTest, Invalid_LocalDateTime)
+// TEST(Lexer, Invalid_LocalDateTime)
 // {
 //     ASSERT_TRUE(false);
 // }
 
-// TEST(TOMLLexerTest, Invalid_LocalDate)
+// TEST(Lexer, Invalid_LocalDate)
 // {
 //     ASSERT_TRUE(false);
 // }
 
-// TEST(TOMLLexerTest, Invalid_LocalTime)
+// TEST(Lexer, Invalid_LocalTime)
 // {
 //     ASSERT_TRUE(false);
 // }
 
-TEST(TOMLLexerTest, Peek_NoAdvance)
+TEST(Lexer, Peek_NoAdvance)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -1500,7 +1501,7 @@ TEST(TOMLLexerTest, Peek_NoAdvance)
     EXPECT_EQ(toml_parser::ETokenCategory::token_key, lexer.Peek(1).Category());
 }
 
-TEST(TOMLLexerTest, Consume_Advance)
+TEST(Lexer, Consume_Advance)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -1525,7 +1526,7 @@ TEST(TOMLLexerTest, Consume_Advance)
     EXPECT_EQ(toml_parser::ETokenCategory::token_syntax_assignment, ptr.Category());
 }
 
-TEST(TOMLLexerTest, PeekConsume_BoundsCheck)
+TEST(Lexer, PeekConsume_BoundsCheck)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"(
@@ -1544,7 +1545,7 @@ TEST(TOMLLexerTest, PeekConsume_BoundsCheck)
     EXPECT_FALSE(lexer.Consume(0));
 }
 
-TEST(TOMLLexerTest, PeekConsume_EmptyInput)
+TEST(Lexer, PeekConsume_EmptyInput)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer(R"()"s);
@@ -1555,7 +1556,7 @@ TEST(TOMLLexerTest, PeekConsume_EmptyInput)
     EXPECT_FALSE(lexer.Consume(1));
 }
 
-TEST(TOMLLexerTest, ExceptionHandling)
+TEST(Lexer, ExceptionHandling)
 {
     using namespace std::string_literals;
     toml_parser::CLexer lexer;
@@ -1577,7 +1578,7 @@ TEST(TOMLLexerTest, ExceptionHandling)
     EXPECT_FALSE(lexer.Consume(0));
 }
 
-TEST(TOMLLexerTest, DISABLED_RegenerateTOML)
+TEST(Lexer, DISABLED_RegenerateTOML)
 {
     using namespace std::string_literals;
     std::string ssOrginal = R"(

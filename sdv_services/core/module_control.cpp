@@ -250,7 +250,7 @@ std::shared_ptr<CModuleInst> CModuleControl::FindModuleByClass(const std::string
         }
     }
 
-    // For main and isolated applications, check whether the module is in one of the installation manifests.
+    // For main, isolated and maintenance applications, check whether the module is in one of the installation manifests.
     auto optManifest = GetAppConfig().FindInstalledComponent(rssClass);
     if (!optManifest) return nullptr;
     std::filesystem::path pathModule = std::filesystem::u8path(static_cast<std::string>(optManifest->ssModulePath));
@@ -378,8 +378,6 @@ std::string CModuleControl::SaveConfig(const std::set<std::filesystem::path>& /*
 
 sdv::core::TModuleID CModuleControl::ContextLoad(const std::filesystem::path& rpathModule, const std::string& rssManifest)
 {
-    if (GetAppSettings().IsMaintenanceApplication()) return 0;   // Not allowed
-
     // Run through the manifest and check for complex services, applications and utilities.
     // TODO EVE: Temporary suppression of cppcheck warning.
     // cppcheck-suppress variableScope
@@ -462,7 +460,7 @@ void CModuleControl::AddCurrentPath()
     if (!m_lstSearchPaths.empty()) return;
 
     // Add the core directory
-    std::filesystem::path pathCoreDir = GetCoreDirectory().lexically_normal();
+    std::filesystem::path pathCoreDir = GetAppSettings().GetFrameworkDir().lexically_normal();
     m_lstSearchPaths.push_back(pathCoreDir);
 
     // Add the exe dir

@@ -15,7 +15,8 @@ int main()
     sdv::app::CAppControl appControl;
     appControl.Startup("");
 
-    sdv::u8string config = R"(
+    sdv::SObjectInfo sObjectInfo{};
+    sObjectInfo.ssConfig = R"(
         DebugInfo = true
         SyncMode = true
         SilKitParticipantName = "can_writer"
@@ -29,7 +30,7 @@ int main()
     )"; 
 
     CTestCanSilKit canComObj;
-    canComObj.Initialize(config.c_str());
+    canComObj.Initialize(sObjectInfo);
     canComObj.SetOperationMode(sdv::EOperationMode::running);
 
     uint8_t msgId = 65;

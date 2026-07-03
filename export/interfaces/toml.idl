@@ -142,10 +142,10 @@ module sdv
             u8string GetComment(in ECommentType eType);
 
             /**
-             * @brief Format the node automatically. This will remove the whitespace between the elements within the node. Comments
-             * will not be changed.
+             * @brief Format the node automatically, remove redundant whitespace.
+             * @param[in] bRemoveComments When set, the comments are removed from the node.
              */
-            void AutomaticFormat();
+            void AutomaticFormat(in boolean bRemoveComments);
 
             /**
              * @brief Is the node inline?
@@ -265,10 +265,21 @@ module sdv
 
             /**
              * @brief Convert the node to a standard node.
+             * @param[in] bIncludeChildren When set, applicable child nodes are made are converted to standard nodes as well (only
+             * tables and table-arrays can be defined as standard).
              * @return Returns whether the conversion was successful. Returns 'true' when the node was already defined as standard
              * node.
              */
-            boolean MakeStandard();
+            boolean MakeStandard(in boolean bIncludeChildren);
+        };
+
+        /**
+         * @brief Insertion preference for tables and table arrays, being standard or inline.
+         */
+        enum EInsertPreference
+        {
+            prefer_standard = 0, ///< When the parent node is not inline, the node will be inserted as standard node.
+            prefer_inline   = 1, ///< The node will be inserted as inline node.
         };
 
         /**
@@ -278,71 +289,67 @@ module sdv
         {
             /**
              * @brief Insert a value into the collection at the location before the supplied index.
-             * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
-             * collection count to insert the node at the end of the collection. Value nodes cannot be inserted behind external
-             * tables and table arrays. If the index is referencing a position behind an external table or a table array, the index
-             * is automatically corrected.
-             * @param[in] ssName Name of the node to insert. Will be ignored for an array collection. The name must adhere to the
-             * key names defined by the TOML specification. Defining the key multiple times is not allowed. Quotation of key names
-             * is done automatically; the parser decides itself whether the key is bare-key, a literal key or a quoted key.
+             * @remarks In TOML, inline nodes are located before standard nodes. Since values are presented as inline node, they
+             * will be inserted before any standard node (table or table array if defined as standard node).
+             * @param[in] ssInsertBefore Name of the node to insert the value before. In case of an array, can be an index between
+             * square brackets. Can be empty, causing the node to be inserted at the end.
+             * @param[in] ssName Name of the node to insert. This name can contain parent nodes, which are automatically created if
+             * not existing. With arrays, since the value in TOML doesn't have a name, the name of the value must be an empty
+             * string and any names provided are considered parent nodes. The name must adhere to the key names defined by the TOML
+             * specification. Defining the key multiple times is not allowed. Quotation of key names is done automatically; the
+             * parser decides itself whether the key is bare-key, a literal key or a quoted key.
              * @param[in] anyValue The value of the node, being either an integer, floating point number, boolean value or a string.
              * Conversion is automatically done to int64, double float, bool or u8string.
              * @return On success the interface to the newly inserted node is returned or NULL otherwise.
              */
-            IInterfaceAccess InsertValue(in uint32 uiIndex, in u8string ssName, in any anyValue);
+            IInterfaceAccess InsertValue(in u8string ssInsertBefore, in u8string ssName, in any anyValue);
 
             /**
              * @brief Insert an array into the collection at the location before the supplied index.
-             * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
-             * collection count to insert the node at the end of the collection. Array nodes cannot be inserted behind external
-             * tables and table arrays. If the index is referencing a position behind an external table or a table array, the index
-             * is automatically corrected.
-             * @param[in] ssName Name of the array node to insert. Will be ignored if the current node is also an array collection.
-             * The name must adhere to the key names defined by the TOML specification. Defining the key multiple times is not
-             * allowed. Quotation of key names is done automatically; the parser decides itself whether the key is bare-key, a
-             * literal key or a quoted key.
+             * @remarks In TOML, inline nodes are located before standard nodes. Since arrays are presented as inline node, they
+             * will be inserted before any standard node (table or table array if defined as standard node).
+             * @param[in] ssInsertBefore Name of the node to insert the value before. In case of an array, can be an index between
+             * square brackets. Can be empty, causing the node to be inserted at the end.
+             * @param[in] ssName Name of the node to insert. This name can contain parent nodes, which are automatically created if
+             * not existing. With arrays, since the value in TOML doesn't have a name, the name of the value must be an empty
+             * string and any names provided are considered parent nodes. The name must adhere to the key names defined by the TOML
+             * specification. Defining the key multiple times is not allowed. Quotation of key names is done automatically; the
+             * parser decides itself whether the key is bare-key, a literal key or a quoted key.
              * @return On success the interface to the newly inserted node is returned or NULL otherwise.
              */
-            IInterfaceAccess InsertArray(in uint32 uiIndex, in u8string ssName);
-
-            /**
-             * @brief Insertion preference for tables and table arrays, being standard or inline.
-             */
-            enum EInsertPreference
-            {
-                prefer_standard = 0,     ///< When the parent node is not inline, the node will be inserted as standard node.
-                prefer_inline = 1,       ///< The node will be inserted as inline node.
-            };
+            IInterfaceAccess InsertArray(in u8string ssInsertBefore, in u8string ssName);
 
             /**
              * @brief Insert a table into the collection at the location before the supplied index.
-             * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
-             * collection count to insert the node at the end of the collection. Table nodes cannot be inserted before value nodes
-             * or arrays. If the index is referencing a position before a value node or an array, the index is automatically
-             * corrected.
-             * @param[in] ssName Name of the table node to insert. Will be ignored if the parent node is an array collection.
-             * The name must adhere to the key names defined by the TOML specification. Defining the key multiple times is not
-             * allowed. Quotation of key names is done automatically; the parser decides itself whether the key is bare-key, a
-             * literal key or a quoted key.
+             * @remarks In TOML, inline nodes are located before standard nodes. Tables can be inserted as inline node, in which
+             * case they will be inserted before any standard node (table or table array if defined as standard node).
+             * @param[in] ssInsertBefore Name of the node to insert the value before. In case of an array, can be an index between
+             * square brackets. Can be empty, causing the node to be inserted at the end.
+             * @param[in] ssName Name of the node to insert. This name can contain parent nodes, which are automatically created if
+             * not existing. With arrays, since the value in TOML doesn't have a name, the name of the value must be an empty
+             * string and any names provided are considered parent nodes. The name must adhere to the key names defined by the TOML
+             * specification. Defining the key multiple times is not allowed. Quotation of key names is done automatically; the
+             * parser decides itself whether the key is bare-key, a literal key or a quoted key.
              * @param[in] ePreference The preferred form of the node to be inserted.
              * @return On success the interface to the newly inserted node is returned or NULL otherwise.
              */
-            IInterfaceAccess InsertTable(in uint32 uiIndex, in u8string ssName, in EInsertPreference ePreference);
+            IInterfaceAccess InsertTable(in u8string ssInsertBefore, in u8string ssName, in EInsertPreference ePreference);
 
             /**
              * @brief Insert a table array into the collection at the location before the supplied index.
-             * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
-             * collection count to insert the node at the end of the collection. Table array nodes cannot be inserted before value
-             * nodes or arrays. If the index is referencing a position before a value node or an array, the index is automatically
-             * corrected.
-             * @param[in] ssName Name of the array node to insert. Will be ignored if the parent node is also an array collection.
-             * The name must adhere to the key names defined by the TOML specification. Defining the key multiple times is not
-             * allowed. Quotation of key names is done automatically; the parser decides itself whether the key is bare-key, a
-             * literal key or a quoted key.
+             * @remarks In TOML, inline nodes are located before standard nodes. Table arrays can be inserted as inline node, in
+             * which case they will be inserted before any standard node (table or table array if defined as standard node).
+             * @param[in] ssInsertBefore Name of the node to insert the value before. In case of an array, can be an index between
+             * square brackets. Can be empty, causing the node to be inserted at the end.
+             * @param[in] ssName Name of the node to insert. This name can contain parent nodes, which are automatically created if
+             * not existing. With arrays, since the value in TOML doesn't have a name, the name of the value must be an empty
+             * string and any names provided are considered parent nodes. The name must adhere to the key names defined by the TOML
+             * specification. Defining the key multiple times is not allowed. Quotation of key names is done automatically; the
+             * parser decides itself whether the key is bare-key, a literal key or a quoted key.
              * @param[in] ePreference The preferred form of the node to be inserted.
              * @return On success the interface to the newly inserted node is returned or NULL otherwise.
              */
-            IInterfaceAccess InsertTableArray(in uint32 uiIndex, in u8string ssName, in EInsertPreference ePreference);
+            IInterfaceAccess InsertTableArray(in u8string ssInsertBefore, in u8string ssName, in EInsertPreference ePreference);
 
             /**
              * @brief The result of the TOML string to insert.
@@ -358,17 +365,15 @@ module sdv
              * @brief Insert a TOML string as a child of the current collection node. If the collection is a table, the TOML string
              * should contain values and inline/external/array-table nodes with names. If the collection is an array, the TOML
              * string should contain and inline table nodes without names.
-             * @attention Even though the TOML might be defining the node(s) in standard form, if the parent node is an inline node,
-             * the node will be inserted as inline node.
-             * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
-             * collection count to insert the node at the end of the collection. Table array nodes cannot be inserted before value
-             * nodes or arrays. If the index is referencing a position before a value node or an array, the index is automatically
-             * corrected.
+             * @remarks In TOML, inline nodes are located before standard nodes. Dependable on the nodes defined in the TOML they
+             * might be transferred to inline or they might be inserted at a different location.
+             * @param[in] ssInsertBefore Name of the node to insert the value before. In case of an array, can be an index between
+             * square brackets. Can be empty, causing the node to be inserted at the end.
              * @param[in] ssTOML The TOML string to insert. This string can hold one or more nodes that should be inserted.
              * @param[in] bRollbackOnFailure If only part of the nodes could be inserted, no node will be inserted.
              * @return The result of the insertion.
              */
-            EInsertResult InsertTOML(in uint32 uiIndex, in u8string ssTOML, in boolean bRollbackOnFailure);
+            EInsertResult InsertTOML(in u8string ssInsertBefore, in u8string ssTOML, in boolean bRollbackOnFailure);
         };
 
         /**

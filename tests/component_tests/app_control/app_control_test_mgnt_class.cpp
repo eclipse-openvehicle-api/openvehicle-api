@@ -77,8 +77,8 @@ TEST(AppControl, Startup_Standalone_NoConfig)
     EXPECT_EQ(control.GetInstanceID(), 0u);
 }
 
-// Testing the external application requires a process running that was initialized as main with the same instance ID. This process
-// needs to be started before and shutdown after the execution of this test.
+// Currently disabled due to absence of server accepting connections.
+// https://dev.azure.com/SW4ZF/AZP-431_DivDI_Vehicle_API/_workitems/edit/800643
 TEST(AppControl, DISABLED_Startup_External_NoConfig)
 {
     sdv::app::CAppControl control;
@@ -105,13 +105,13 @@ TEST(AppControl, Startup_Isolated_NoConfig)
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(control.GetInstanceID(), 0u);
 
-    bool bResult = control.Startup(R"code(
+    bool bResult = control.Startup(R"toml(
 [Application]
 Mode = "Isolated"
 
 [Console]
 Report = "Silent"
-)code");
+)toml");
     EXPECT_TRUE(bResult);
     EXPECT_TRUE(control.IsRunning());
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::isolated);
@@ -187,11 +187,11 @@ TEST(AppControl, Startup_Default_DefineInstance)
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(control.GetInstanceID(), 0u);
 
-    bool bResult = control.Startup("[Application]\nInstance=2005");
+    bool bResult = control.Startup("[Application]\nInstance=2009");
     EXPECT_TRUE(bResult);
     EXPECT_TRUE(control.IsRunning());
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::standalone);
-    EXPECT_EQ(control.GetInstanceID(), 2005u);
+    EXPECT_EQ(control.GetInstanceID(), 2009u);
 
     control.Shutdown();
     EXPECT_FALSE(control.IsRunning());
@@ -206,11 +206,11 @@ TEST(AppControl, Startup_Standalone_DefineInstance)
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(control.GetInstanceID(), 0u);
 
-    bool bResult = control.Startup("[Application]\nMode=\"Standalone\"\nInstance=2005");
+    bool bResult = control.Startup("[Application]\nMode=\"Standalone\"\nInstance=2009");
     EXPECT_TRUE(bResult);
     EXPECT_TRUE(control.IsRunning());
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::standalone);
-    EXPECT_EQ(control.GetInstanceID(), 2005u);
+    EXPECT_EQ(control.GetInstanceID(), 2009u);
 
     control.Shutdown();
     EXPECT_FALSE(control.IsRunning());
@@ -218,8 +218,8 @@ TEST(AppControl, Startup_Standalone_DefineInstance)
     EXPECT_EQ(control.GetInstanceID(), 0u);
 }
 
-// Testing the external application requires a process running that was initialized as main with the same instance ID. This process
-// needs to be started before and shutdown after the execution of this test.
+// Currently disabled due to absence of server accepting connections.
+// https://dev.azure.com/SW4ZF/AZP-431_DivDI_Vehicle_API/_workitems/edit/800643
 TEST(AppControl, DISABLED_Startup_External_DefineInstance)
 {
     sdv::app::CAppControl control;
@@ -227,11 +227,11 @@ TEST(AppControl, DISABLED_Startup_External_DefineInstance)
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(control.GetInstanceID(), 0u);
 
-    bool bResult = control.Startup("[Application]\nMode=\"External\"\nInstance=2005");
+    bool bResult = control.Startup("[Application]\nMode=\"External\"\nInstance=2009");
     EXPECT_TRUE(bResult);
     EXPECT_TRUE(control.IsRunning());
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::external);
-    EXPECT_EQ(control.GetInstanceID(), 2005u);
+    EXPECT_EQ(control.GetInstanceID(), 2009u);
 
     control.Shutdown();
     EXPECT_FALSE(control.IsRunning());
@@ -246,16 +246,16 @@ TEST(AppControl, Startup_Isolated_DefineInstance)
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(control.GetInstanceID(), 0u);
 
-    std::string ssConfig = R"code([Application]
+    std::string ssConfig = R"toml([Application]
 Mode = "Isolated"
-Instance = 2005
-Connection = ")code";
+Instance = 2009
+Connection = ")toml";
     ssConfig += Base64EncodePlainText("test") + "\"";
     bool bResult = control.Startup(ssConfig);
     EXPECT_TRUE(bResult);
     EXPECT_TRUE(control.IsRunning());
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::isolated);
-    EXPECT_EQ(control.GetInstanceID(), 2005u);
+    EXPECT_EQ(control.GetInstanceID(), 2009u);
 
     control.Shutdown();
     EXPECT_FALSE(control.IsRunning());
@@ -270,11 +270,11 @@ TEST(AppControl, Startup_Main_DefineInstance)
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(control.GetInstanceID(), 0u);
 
-    bool bResult = control.Startup("[Application]\nMode=\"Main\"\nInstance=2005");
+    bool bResult = control.Startup("[Application]\nMode=\"Main\"\nInstance=2009");
     EXPECT_TRUE(bResult);
     EXPECT_TRUE(control.IsRunning());
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::main);
-    EXPECT_EQ(control.GetInstanceID(), 2005u);
+    EXPECT_EQ(control.GetInstanceID(), 2009u);
 
     control.Shutdown();
     EXPECT_FALSE(control.IsRunning());
@@ -289,11 +289,11 @@ TEST(AppControl, Startup_Essential_DefineInstance)
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(control.GetInstanceID(), 0u);
 
-    bool bResult = control.Startup("[Application]\nMode=\"Essential\"\nInstance=2005");
+    bool bResult = control.Startup("[Application]\nMode=\"Essential\"\nInstance=2009");
     EXPECT_TRUE(bResult);
     EXPECT_TRUE(control.IsRunning());
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::essential);
-    EXPECT_EQ(control.GetInstanceID(), 2005u);
+    EXPECT_EQ(control.GetInstanceID(), 2009u);
 
     control.Shutdown();
     EXPECT_FALSE(control.IsRunning());
@@ -308,11 +308,11 @@ TEST(AppControl, Startup_Maintenance_DefineInstance)
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(control.GetInstanceID(), 0u);
 
-    bool bResult = control.Startup("[Application]\nMode=\"Maintenance\"\nInstance=2005");
+    bool bResult = control.Startup("[Application]\nMode=\"Maintenance\"\nInstance=2009");
     EXPECT_TRUE(bResult);
     EXPECT_TRUE(control.IsRunning());
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::maintenance);
-    EXPECT_EQ(control.GetInstanceID(), 2005u);
+    EXPECT_EQ(control.GetInstanceID(), 2009u);
 
     control.Shutdown();
     EXPECT_FALSE(control.IsRunning());
@@ -334,8 +334,10 @@ TEST(AppControl, RunLoop_Default)
     EXPECT_EQ(control.GetInstanceID(), 2007u);
 
     auto tpStart = std::chrono::high_resolution_clock::now();
-    std::thread threadShutdownRequest([]()
+    sdv::core::secure_thread threadShutdownRequest([&]()
         {
+            while (!control.IsRunning())
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             std::this_thread::sleep_for(std::chrono::milliseconds(250));
             RequestShutdown(2007u);
         });
@@ -363,8 +365,10 @@ TEST(AppControl, RunLoop_Standalone)
     EXPECT_EQ(control.GetInstanceID(), 2007u);
 
     auto tpStart = std::chrono::high_resolution_clock::now();
-    std::thread threadShutdownRequest([]()
+    sdv::core::secure_thread threadShutdownRequest([&]()
         {
+            while (!control.IsRunning())
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             std::this_thread::sleep_for(std::chrono::milliseconds(250));
             RequestShutdown(2007u);
         });
@@ -378,8 +382,8 @@ TEST(AppControl, RunLoop_Standalone)
     EXPECT_EQ(control.GetInstanceID(), 0u);
 }
 
-// Testing the external application requires a process running that was initialized as main with the same instance ID. This process
-// needs to be started before and shutdown after the execution of this test.
+// Currently disabled due to absence of server accepting connections.
+// https://dev.azure.com/SW4ZF/AZP-431_DivDI_Vehicle_API/_workitems/edit/800643
 TEST(AppControl, DISABLED_RunLoop_External)
 {
     sdv::app::CAppControl control;
@@ -394,8 +398,10 @@ TEST(AppControl, DISABLED_RunLoop_External)
     EXPECT_EQ(control.GetInstanceID(), 2007u);
 
     auto tpStart = std::chrono::high_resolution_clock::now();
-    std::thread threadShutdownRequest([]()
+    sdv::core::secure_thread threadShutdownRequest([&]()
         {
+            while (!control.IsRunning())
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             std::this_thread::sleep_for(std::chrono::milliseconds(250));
             RequestShutdown(2007u);
         });
@@ -416,10 +422,10 @@ TEST(AppControl, RunLoop_Isolated)
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(control.GetInstanceID(), 0u);
 
-    std::string ssConfig = R"code([Application]
+    std::string ssConfig = R"toml([Application]
 Mode = "Isolated"
 Instance = 2007
-Connection = ")code";
+Connection = ")toml";
     ssConfig += Base64EncodePlainText("test") + "\"";
     bool bResult = control.Startup(ssConfig);
     EXPECT_TRUE(bResult);
@@ -428,8 +434,10 @@ Connection = ")code";
     EXPECT_EQ(control.GetInstanceID(), 2007u);
 
     auto tpStart = std::chrono::high_resolution_clock::now();
-    std::thread threadShutdownRequest([]()
+    sdv::core::secure_thread threadShutdownRequest([&]()
         {
+            while (!control.IsRunning())
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             std::this_thread::sleep_for(std::chrono::milliseconds(250));
             sdv::app::IAppShutdownRequest* pShutdownRequest = sdv::core::GetObject<sdv::app::IAppShutdownRequest>("AppControlService");
             ASSERT_NE(pShutdownRequest, nullptr);
@@ -459,8 +467,10 @@ TEST(AppControl, RunLoop_Main)
     EXPECT_EQ(control.GetInstanceID(), 2007u);
 
     auto tpStart = std::chrono::high_resolution_clock::now();
-    std::thread threadShutdownRequest([]()
+    sdv::core::secure_thread threadShutdownRequest([&]()
         {
+            while (!control.IsRunning())
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             std::this_thread::sleep_for(std::chrono::milliseconds(250));
             sdv::app::IAppShutdownRequest* pShutdownRequest = sdv::core::GetObject<sdv::app::IAppShutdownRequest>("AppControlService");
             ASSERT_NE(pShutdownRequest, nullptr);
@@ -490,8 +500,10 @@ TEST(AppControl, RunLoop_Essential)
     EXPECT_EQ(control.GetInstanceID(), 2007u);
 
     auto tpStart = std::chrono::high_resolution_clock::now();
-    std::thread threadShutdownRequest([]()
+    sdv::core::secure_thread threadShutdownRequest([&]()
         {
+            while (!control.IsRunning())
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             std::this_thread::sleep_for(std::chrono::milliseconds(250));
             RequestShutdown(2007u);
         });
@@ -526,4 +538,3 @@ TEST(AppControl, RunLoop_Maintenance)
     EXPECT_EQ(control.GetAppContext(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(control.GetInstanceID(), 0u);
 }
-

@@ -57,7 +57,7 @@ set_target_properties(ComponentTest_Repository_test_module PROPERTIES SUFFIX ".s
 
 # Execute the installation helper utility to create an installation manifest for the core files.
 add_custom_target(ComponentTest_Repository_install_manifest
-    COMMAND "$<TARGET_FILE:sdv_packager>" DIRECT_INSTALL ComponentTest_Repository -T. --instance2005 "$<TARGET_FILE:ComponentTest_Repository_test_module>" "$<TARGET_FILE:ComponentTest_Repository_ps>" "-I$<TARGET_FILE_DIR:ComponentTest_Repository_test_module>" --overwrite --user_config+TestObject_ComplexHelloService+TestObject_HelloUtility --interface_config+Example_Object+Example_Object_2+TestObject_HelloDevice+TestObject_BasicHelloService+TestObject_SystemHelloService
+    COMMAND "$<TARGET_FILE:sdv_packager>" DIRECT_INSTALL ComponentTest_Repository --instance2005 "$<TARGET_FILE:ComponentTest_Repository_test_module>" "$<TARGET_FILE:ComponentTest_Repository_ps>" "-I$<TARGET_FILE_DIR:ComponentTest_Repository_test_module>" --overwrite --user_config+TestObject_ComplexHelloService+TestObject_HelloUtility --interface_config+Example_Object+Example_Object_2+TestObject_HelloDevice+TestObject_BasicHelloService+TestObject_SystemHelloService
     DEPENDS ComponentTest_Repository_test_module ComponentTest_Repository_ps
     WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
 )

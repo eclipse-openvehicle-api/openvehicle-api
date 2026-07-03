@@ -353,7 +353,7 @@ void CConsole::StartUpdateDataThread()
     m_bThreadStarted = true;
 
     m_bRunning = true;
-    m_threadReadTxSignals = std::thread(&CConsole::UpdateDataThreadFunc, this);
+    m_threadReadTxSignals = sdv::core::secure_thread(&CConsole::UpdateDataThreadFunc, this);
 }
 
 void CConsole::StopUpdateDataThread()

@@ -42,7 +42,7 @@ public:
      */
     CReceiver()
     {
-        m_threadSender = std::thread(&CReceiver::SendThreadFunc, this);
+        m_threadSender = sdv::core::secure_thread(&CReceiver::SendThreadFunc, this);
     }
 
     /**
@@ -236,7 +236,7 @@ private:
     std::queue<sdv::sequence<sdv::pointer<uint8_t>>>    m_queueSendData;                 ///< Queue for sending data.
     std::condition_variable                             m_cvDisconnect;                 ///< Disconnect event.
     std::condition_variable                             m_cvReceived;                   ///< Receive event.
-    std::thread                                         m_threadSender;                 ///< Thread to send data.
+    sdv::core::secure_thread                                         m_threadSender;                 ///< Thread to send data.
     std::atomic_bool                                    m_bConnected = false;           ///< Set when connected was triggered.
     std::atomic_bool                                    m_bDisconnect = false;          ///< Set when shutdown was triggered.
     std::atomic_bool                                    m_bShutdown = false;            ///< Set when shutdown is processed.
@@ -320,9 +320,9 @@ extern "C" int main(int argc, char* argv[])
     TRACE("Forced termination of app ", bServer ? "server" : "client", " process is ", bForceTerminate ? "enabled" : "disabled");
     TRACE("Long life of app ",bServer ? "server" : "client", " process is ", bLongLife ? "enabled" : "disabled");
 
-    // Create an control management channel (if required).
+    // Create a control management channel (if required).
     CSharedMemChannelMgnt mgntControlMgntChannel;
-    mgntControlMgntChannel.Initialize("");
+    mgntControlMgntChannel.Initialize(sdv::SObjectInfo());
     if (mgntControlMgntChannel.GetObjectState() != sdv::EObjectState::initialized) return -11;
     mgntControlMgntChannel.SetOperationMode(sdv::EOperationMode::running);
     if (mgntControlMgntChannel.GetObjectState() != sdv::EObjectState::running) return -11;
@@ -349,7 +349,7 @@ extern "C" int main(int argc, char* argv[])
 
     // Create the data management channel.
     CSharedMemChannelMgnt mgntDataMgntChannel;
-    mgntDataMgntChannel.Initialize("");
+    mgntDataMgntChannel.Initialize(sdv::SObjectInfo());
     if (mgntDataMgntChannel.GetObjectState() != sdv::EObjectState::initialized) return -1;
     mgntDataMgntChannel.SetOperationMode(sdv::EOperationMode::running);
     if (mgntDataMgntChannel.GetObjectState() != sdv::EObjectState::running) return -1;
@@ -360,10 +360,10 @@ extern "C" int main(int argc, char* argv[])
     if (bServer)
     {
         TRACE("Server: Create data endpoint...");
-        sdv::ipc::SChannelEndpoint sEndpoint = mgntDataMgntChannel.CreateEndpoint(R"code(
+        sdv::ipc::SChannelEndpoint sEndpoint = mgntDataMgntChannel.CreateEndpoint(R"toml(
 [IpcChannel]
 Size = 1024000
-)code");
+)toml");
         ptrDataConnection = sEndpoint.pConnection;
         sdv::pointer<uint8_t> ptrConnectInfoData;
         ptrConnectInfoData.resize(sEndpoint.ssConnectString.size());

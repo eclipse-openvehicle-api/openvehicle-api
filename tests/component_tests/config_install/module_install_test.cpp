@@ -69,35 +69,26 @@ public:
     std::filesystem::path GetDefaultInstallDir();
 };
 
-inline std::filesystem::path CModuleControl_Install::GetDefaultInstallDir()
+std::filesystem::path CModuleControl_Install::GetDefaultInstallDir()
 {
-//    // The default directory for Windows is located at $ProgramData/ and for Posix at the executable.
-    std::filesystem::path pathInstallDir;
-//#ifdef _WIN32
-//    wchar_t* szPath = nullptr;
-//    HRESULT hr = SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_DEFAULT, 0, &szPath);
-//    if (SUCCEEDED(hr) && szPath)
-//        pathInstallDir = szPath;
-//    if (szPath) CoTaskMemFree(szPath);
-//#elif defined __unix__
-    pathInstallDir = GetExecDirectory();
-//#else
-//#error OS is not supported!
-//#endif
     // Append the installation directory with /<instance_ID>/.
-    pathInstallDir /= "2006";
-
-    return pathInstallDir;
+    return (GetExecDirectory() / "../../bin/2006").lexically_normal();
 }
 
 TEST_F(CModuleControl_Install, MainApp_DefaultInstallDir)
 {
     sdv::app::CAppControl control;
-    bool bResult = control.Startup("[Application]\nMode=\"Main\"\nInstance=2006");
+    bool bResult = control.Startup(R"toml([Application]
+Mode = "Main"
+Instance = 2006
+
+[Console]
+RedirectMon = true
+)toml");
     EXPECT_TRUE(bResult);
 
     // The default installation directory should be created.
-    EXPECT_TRUE(std::filesystem::exists(GetDefaultInstallDir()));
+    EXPECT_TRUE(std::filesystem::exists(control.GetComponentInstallDirectory()));
 
     control.Shutdown();
 }
@@ -106,10 +97,10 @@ TEST_F(CModuleControl_Install, IsolatedApp_DefaultInstallDir)
 {
     sdv::app::CAppControl control;
     std::string ssConnectionString = Base64EncodePlainText("");
-    std::string ssConfig = R"code([Application]
+    std::string ssConfig = R"toml([Application]
 Mode = "Isolated"
 Instance = 2006
-Connection = ")code";
+Connection = ")toml";
     ssConfig += Base64EncodePlainText("test") + "\"";
     bool bResult = control.Startup(ssConfig);
     EXPECT_TRUE(bResult);
@@ -146,7 +137,13 @@ TEST_F(CModuleControl_Install, MainApp_BlockDefaultInstallDir)
     fstream.close();
 
     sdv::app::CAppControl control;
-    bool bResult = control.Startup("[Application]\nMode=\"Main\"\nInstance=2006");
+    bool bResult = control.Startup(R"toml([Application]
+Mode = "Main"
+Instance = 2006
+
+[Console]
+RedirectMon = true
+)toml");
     EXPECT_FALSE(bResult);
 
     // The default installation directory should be created.
@@ -168,7 +165,9 @@ TEST_F(CModuleControl_Install, IsolatedApp_BlockDefaultInstallDir)
     fstream.close();
 
     sdv::app::CAppControl control;
-    bool bResult = control.Startup("[Application]\nMode=\"Isolated\"\nInstance=2006");
+    bool bResult = control.Startup(R"toml([Application]
+Mode = "Isolated"
+Instance = 2006)toml");
     EXPECT_FALSE(bResult);
 
     // The default installation directory should be created.
@@ -197,12 +196,12 @@ TEST_F(CModuleControl_Install, OtherApp_BlockDefaultInstallDir)
 TEST_F(CModuleControl_Install, MainApp_CustomInstallDirRelative)
 {
     sdv::app::CAppControl control;
-    bool bResult = control.Startup(R"code(
+    bool bResult = control.Startup(R"toml(
 [Application]
 Mode="Main"
 Instance=2006
 InstallDir = "module_test1"
-)code");
+)toml");
     EXPECT_TRUE(bResult);
 
     // The default installation directory should be created.
@@ -214,12 +213,12 @@ InstallDir = "module_test1"
 TEST_F(CModuleControl_Install, IsolatedApp_CustomInstallDirRelative)
 {
     sdv::app::CAppControl control;
-    bool bResult = control.Startup(std::string(R"code(
+    bool bResult = control.Startup(std::string(R"toml(
 [Application]
 Mode="Isolated"
 Instance=2006
 InstallDir = "module_test1"
-Connection = ")code") + Base64EncodePlainText("test") + "\"");
+Connection = ")toml") + Base64EncodePlainText("test") + "\"");
     EXPECT_TRUE(bResult);
 
     // The default installation directory should be created.
@@ -231,9 +230,9 @@ Connection = ")code") + Base64EncodePlainText("test") + "\"");
 TEST_F(CModuleControl_Install, OtherApp_CustomInstallDirRelative)
 {
     sdv::app::CAppControl control;
-    bool bResult = control.Startup(R"code([Application]
+    bool bResult = control.Startup(R"toml([Application]
 Install.Dir = "module_test1"
-)code");
+)toml");
     EXPECT_TRUE(bResult);
 
     // The default installation directory should be created.
@@ -245,11 +244,11 @@ Install.Dir = "module_test1"
 TEST_F(CModuleControl_Install, MainApp_CustomInstallDirAbsolute)
 {
     sdv::app::CAppControl control;
-    bool bResult = control.Startup(std::string(R"code(
+    bool bResult = control.Startup(std::string(R"toml(
 [Application]
 Mode="Main"
 Instance=2006
-InstallDir = ")code") + (GetExecDirectory() / "module_test2").generic_u8string() + "\"");
+InstallDir = ")toml") + (GetExecDirectory() / "module_test2").generic_u8string() + "\"");
     EXPECT_TRUE(bResult);
 
     // The default installation directory should be created.
@@ -261,12 +260,12 @@ InstallDir = ")code") + (GetExecDirectory() / "module_test2").generic_u8string()
 TEST_F(CModuleControl_Install, IsolatedApp_CustomInstallDirAbsolute)
 {
     sdv::app::CAppControl control;
-    bool bResult = control.Startup(std::string(R"code(
+    bool bResult = control.Startup(std::string(R"toml(
 [Application]
 Mode="Isolated"
 Instance=2006
-InstallDir = ")code") + (GetExecDirectory() / "module_test2").generic_u8string() + "\"" + R"code(
-Connection = ")code" + Base64EncodePlainText("test") + "\"");
+InstallDir = ")toml") + (GetExecDirectory() / "module_test2").generic_u8string() + "\"" + R"toml(
+Connection = ")toml" + Base64EncodePlainText("test") + "\"");
     EXPECT_TRUE(bResult);
 
     // The default installation directory should be created.
@@ -278,8 +277,8 @@ Connection = ")code" + Base64EncodePlainText("test") + "\"");
 TEST_F(CModuleControl_Install, OtherApp_CustomInstallDirAbsolute)
 {
     sdv::app::CAppControl control;
-    bool bResult = control.Startup(std::string(R"code([Application]
-InstallDir = ")code") + (GetExecDirectory() / "module_test2").generic_u8string() + "\"");
+    bool bResult = control.Startup(std::string(R"toml([Application]
+InstallDir = ")toml") + (GetExecDirectory() / "module_test2").generic_u8string() + "\"");
     EXPECT_TRUE(bResult);
 
     // The default installation directory should be created.

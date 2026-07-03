@@ -59,7 +59,7 @@ TEST(InProcessMemoryBufferTest, TriggerTestRx)
     };
 
     std::unique_lock<std::mutex> lockStart(mtxStart);
-    std::thread thread(fnWaitForTrigger);
+    sdv::core::secure_thread thread(fnWaitForTrigger);
     cvStart.wait(lockStart);
 
     for (size_t n = 0; n < 20; n++)
@@ -108,7 +108,7 @@ TEST(InProcessMemoryBufferTest, TriggerTestTx)
     };
 
     std::unique_lock<std::mutex> lockStart(mtxStart);
-    std::thread thread(fnWaitForTrigger);
+    sdv::core::secure_thread thread(fnWaitForTrigger);
     cvStart.wait(lockStart);
 
     for (size_t n = 0; n < 20; n++)
@@ -170,8 +170,8 @@ TEST(InProcessMemoryBufferTest, TriggerTestRxTx)
 
     std::unique_lock<std::mutex> lockStartSender(mtxSenderStart);
     std::unique_lock<std::mutex> lockStartReceiver(mtxReceiverStart);
-    std::thread threadSender(fnWaitForTriggerSender);
-    std::thread threadReceiver(fnWaitForTriggerReceiver);
+    sdv::core::secure_thread threadSender(fnWaitForTriggerSender);
+    sdv::core::secure_thread threadReceiver(fnWaitForTriggerReceiver);
     cvSenderStart.wait(lockStartSender);
     lockStartSender.unlock();
     cvReceiverStart.wait(lockStartReceiver);
@@ -340,8 +340,8 @@ TEST(InProcessMemoryBufferTest, ReserveCommitAccessReleaseNonChronologicalOrder)
 
     // Reserve buffers for strings
     // The buffer header has 16 bytes
-	// Each allocation is 8 bytes header, 5 bytes data and 3 bytes alignment
-	CAccessorTxPacket rgTxPackets[32] = {};
+    // Each allocation is 8 bytes header, 5 bytes data and 3 bytes alignment
+    CAccessorTxPacket rgTxPackets[32] = {};
     for (int32_t iIndex = 0; iIndex < 15; iIndex++)
     {
         auto optTxPacket = sender.Reserve(5);
@@ -373,8 +373,8 @@ TEST(InProcessMemoryBufferTest, ReserveCommitAccessReleaseNonChronologicalOrder)
         {
             // The text should contain the number 0
             EXPECT_TRUE(optRxPacket);
-			EXPECT_NE(optRxPacket->GetData(), nullptr);
-			EXPECT_EQ(std::to_string(0), optRxPacket->GetData<char>());
+            EXPECT_NE(optRxPacket->GetData(), nullptr);
+            EXPECT_EQ(std::to_string(0), optRxPacket->GetData<char>());
             optRxPacket->Accept();
         }
         else
@@ -414,7 +414,7 @@ TEST(InProcessMemoryBufferTest, ReserveCommitAccessReleaseNonChronologicalOrder)
             EXPECT_NE(rgRxPackets[iIndex].GetData(), nullptr);
             EXPECT_NE(rgRxPackets[iIndex].GetSize(), 0u);
         }
-		if (rgRxPackets[iIndex])
+        if (rgRxPackets[iIndex])
         {
             EXPECT_EQ(std::to_string(iIndex), rgRxPackets[iIndex].GetData<char>());
         }
@@ -442,33 +442,33 @@ TEST(InProcessMemoryBufferTest, SendReceivePattern)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CInProcMemBufferTx sender;
-	EXPECT_TRUE(sender.IsValid());
+    EXPECT_TRUE(sender.IsValid());
 
-	CInProcMemBufferRx receiver(sender.GetConnectionString());
-	EXPECT_TRUE(receiver.IsValid());
+    CInProcMemBufferRx receiver(sender.GetConnectionString());
+    EXPECT_TRUE(receiver.IsValid());
 
-	CPatternReceiver pattern_inspector(receiver);
+    CPatternReceiver pattern_inspector(receiver);
     CPatternSender pattern_generator(sender);
 
     // Wait for 2 seconds
-	std::this_thread::sleep_for(std::chrono::seconds(PATTERN_TEST_TIME_S));
+    std::this_thread::sleep_for(std::chrono::seconds(PATTERN_TEST_TIME_S));
 
     // Shutdown
     pattern_generator.Shutdown();
-	pattern_inspector.Shutdown();
+    pattern_inspector.Shutdown();
 
     std::cout << "Pattern generator: " << pattern_generator.GetCycleCnt() << " cyles, " << pattern_generator.GetPacketCnt()
-			  << " packets, " << pattern_generator.GetByteCnt() << " bytes" << std::endl;
-	std::cout << "Pattern inspector: " << pattern_inspector.GetCycleCnt() << " cyles, " << pattern_inspector.GetPacketCnt()
+              << " packets, " << pattern_generator.GetByteCnt() << " bytes" << std::endl;
+    std::cout << "Pattern inspector: " << pattern_inspector.GetCycleCnt() << " cyles, " << pattern_inspector.GetPacketCnt()
               << " packets, " << pattern_inspector.GetByteCnt() << " bytes, " << pattern_inspector.GetErrorCnt()
               << " errors, " << std::endl;
-	EXPECT_NE(pattern_generator.GetCycleCnt(), 0u);
-	EXPECT_NE(pattern_generator.GetPacketCnt(), 0u);
-	EXPECT_NE(pattern_generator.GetByteCnt(), 0ull);
-	EXPECT_NE(pattern_inspector.GetCycleCnt(), 0u);
-	EXPECT_EQ(pattern_inspector.GetErrorCnt(), 0u);
-	EXPECT_NE(pattern_inspector.GetPacketCnt(), 0u);
-	EXPECT_NE(pattern_inspector.GetByteCnt(), 0ull);
+    EXPECT_NE(pattern_generator.GetCycleCnt(), 0u);
+    EXPECT_NE(pattern_generator.GetPacketCnt(), 0u);
+    EXPECT_NE(pattern_generator.GetByteCnt(), 0ull);
+    EXPECT_NE(pattern_inspector.GetCycleCnt(), 0u);
+    EXPECT_EQ(pattern_inspector.GetErrorCnt(), 0u);
+    EXPECT_NE(pattern_inspector.GetPacketCnt(), 0u);
+    EXPECT_NE(pattern_inspector.GetByteCnt(), 0ull);
 }
 
 TEST(InProcessMemoryBufferTest, DelayedSendReceivePattern)
@@ -477,33 +477,33 @@ TEST(InProcessMemoryBufferTest, DelayedSendReceivePattern)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CInProcMemBufferTx sender;
-	EXPECT_TRUE(sender.IsValid());
+    EXPECT_TRUE(sender.IsValid());
 
-	CInProcMemBufferRx receiver(sender.GetConnectionString());
-	EXPECT_TRUE(receiver.IsValid());
+    CInProcMemBufferRx receiver(sender.GetConnectionString());
+    EXPECT_TRUE(receiver.IsValid());
 
-	CPatternReceiver pattern_inspector(receiver);
-	CPatternSender	 pattern_generator(sender, 10);
+    CPatternReceiver pattern_inspector(receiver);
+    CPatternSender	 pattern_generator(sender, 10);
 
-	// Wait for 2 seconds
-	std::this_thread::sleep_for(std::chrono::seconds(PATTERN_TEST_TIME_S));
+    // Wait for 2 seconds
+    std::this_thread::sleep_for(std::chrono::seconds(PATTERN_TEST_TIME_S));
 
-	// Shutdown
-	pattern_generator.Shutdown();
-	pattern_inspector.Shutdown();
+    // Shutdown
+    pattern_generator.Shutdown();
+    pattern_inspector.Shutdown();
 
     std::cout << "Pattern generator: " << pattern_generator.GetCycleCnt() << " cyles, " << pattern_generator.GetPacketCnt()
-			  << " packets, " << pattern_generator.GetByteCnt() << " bytes" << std::endl;
-	std::cout << "Pattern inspector: " << pattern_inspector.GetCycleCnt() << " cyles, " << pattern_inspector.GetPacketCnt()
+              << " packets, " << pattern_generator.GetByteCnt() << " bytes" << std::endl;
+    std::cout << "Pattern inspector: " << pattern_inspector.GetCycleCnt() << " cyles, " << pattern_inspector.GetPacketCnt()
               << " packets, " << pattern_inspector.GetByteCnt() << " bytes, " << pattern_inspector.GetErrorCnt()
               << " errors, " << std::endl;
-	EXPECT_NE(pattern_generator.GetCycleCnt(), 0u);
-	EXPECT_NE(pattern_generator.GetPacketCnt(), 0u);
-	EXPECT_NE(pattern_generator.GetByteCnt(), 0ull);
-	EXPECT_NE(pattern_inspector.GetCycleCnt(), 0u);
-	EXPECT_EQ(pattern_inspector.GetErrorCnt(), 0u);
-	EXPECT_NE(pattern_inspector.GetPacketCnt(), 0u);
-	EXPECT_NE(pattern_inspector.GetByteCnt(), 0ull);
+    EXPECT_NE(pattern_generator.GetCycleCnt(), 0u);
+    EXPECT_NE(pattern_generator.GetPacketCnt(), 0u);
+    EXPECT_NE(pattern_generator.GetByteCnt(), 0ull);
+    EXPECT_NE(pattern_inspector.GetCycleCnt(), 0u);
+    EXPECT_EQ(pattern_inspector.GetErrorCnt(), 0u);
+    EXPECT_NE(pattern_inspector.GetPacketCnt(), 0u);
+    EXPECT_NE(pattern_inspector.GetByteCnt(), 0ull);
 }
 
 TEST(InProcessMemoryBufferTest, SendDelayedReceivePattern)
@@ -512,33 +512,33 @@ TEST(InProcessMemoryBufferTest, SendDelayedReceivePattern)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CInProcMemBufferTx sender;
-	EXPECT_TRUE(sender.IsValid());
+    EXPECT_TRUE(sender.IsValid());
 
-	CInProcMemBufferRx receiver(sender.GetConnectionString());
-	EXPECT_TRUE(receiver.IsValid());
+    CInProcMemBufferRx receiver(sender.GetConnectionString());
+    EXPECT_TRUE(receiver.IsValid());
 
-	CPatternReceiver pattern_inspector(receiver, 10);
-	CPatternSender	 pattern_generator(sender);
+    CPatternReceiver pattern_inspector(receiver, 10);
+    CPatternSender	 pattern_generator(sender);
 
-	// Wait for 2 seconds
-	std::this_thread::sleep_for(std::chrono::seconds(PATTERN_TEST_TIME_S));
+    // Wait for 2 seconds
+    std::this_thread::sleep_for(std::chrono::seconds(PATTERN_TEST_TIME_S));
 
-	// Shutdown
-	pattern_generator.Shutdown();
-	pattern_inspector.Shutdown();
+    // Shutdown
+    pattern_generator.Shutdown();
+    pattern_inspector.Shutdown();
 
     std::cout << "Pattern generator: " << pattern_generator.GetCycleCnt() << " cyles, " << pattern_generator.GetPacketCnt()
-			  << " packets, " << pattern_generator.GetByteCnt() << " bytes" << std::endl;
-	std::cout << "Pattern inspector: " << pattern_inspector.GetCycleCnt() << " cyles, " << pattern_inspector.GetPacketCnt()
+              << " packets, " << pattern_generator.GetByteCnt() << " bytes" << std::endl;
+    std::cout << "Pattern inspector: " << pattern_inspector.GetCycleCnt() << " cyles, " << pattern_inspector.GetPacketCnt()
               << " packets, " << pattern_inspector.GetByteCnt() << " bytes, " << pattern_inspector.GetErrorCnt()
               << " errors, " << std::endl;
-	EXPECT_NE(pattern_generator.GetCycleCnt(), 0u);
-	EXPECT_NE(pattern_generator.GetPacketCnt(), 0u);
-	EXPECT_NE(pattern_generator.GetByteCnt(), 0ull);
-	EXPECT_NE(pattern_inspector.GetCycleCnt(), 0u);
-	EXPECT_EQ(pattern_inspector.GetErrorCnt(), 0u);
-	EXPECT_NE(pattern_inspector.GetPacketCnt(), 0u);
-	EXPECT_NE(pattern_inspector.GetByteCnt(), 0ull);
+    EXPECT_NE(pattern_generator.GetCycleCnt(), 0u);
+    EXPECT_NE(pattern_generator.GetPacketCnt(), 0u);
+    EXPECT_NE(pattern_generator.GetByteCnt(), 0ull);
+    EXPECT_NE(pattern_inspector.GetCycleCnt(), 0u);
+    EXPECT_EQ(pattern_inspector.GetErrorCnt(), 0u);
+    EXPECT_NE(pattern_inspector.GetPacketCnt(), 0u);
+    EXPECT_NE(pattern_inspector.GetByteCnt(), 0ull);
 }
 
 TEST(InProcessMemoryBufferTest, SendRepeatReceivePattern)
@@ -547,50 +547,50 @@ TEST(InProcessMemoryBufferTest, SendRepeatReceivePattern)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     // The first process creates a sender and receiver
-	CInProcMemBufferTx bufferTX;
-	EXPECT_TRUE(bufferTX.IsValid());
-	CInProcMemBufferRx bufferRX;
-	EXPECT_TRUE(bufferRX.IsValid());
+    CInProcMemBufferTx bufferTX;
+    EXPECT_TRUE(bufferTX.IsValid());
+    CInProcMemBufferRx bufferRX;
+    EXPECT_TRUE(bufferRX.IsValid());
 
     // The connection string containing the RX and TX strings for the repeater
     std::string ssConnectionString = bufferTX.GetConnectionString() + "\n" + bufferRX.GetConnectionString();
 
     // The repeater process creates a receiver and sender
-	CInProcMemBufferRx bufferRepeaterRX(ssConnectionString);
-	EXPECT_TRUE(bufferRepeaterRX.IsValid());
-	CInProcMemBufferTx bufferRepeaterTX(ssConnectionString);
-	EXPECT_TRUE(bufferRepeaterTX.IsValid());
+    CInProcMemBufferRx bufferRepeaterRX(ssConnectionString);
+    EXPECT_TRUE(bufferRepeaterRX.IsValid());
+    CInProcMemBufferTx bufferRepeaterTX(ssConnectionString);
+    EXPECT_TRUE(bufferRepeaterTX.IsValid());
 
     // Connect the pattern generator and inspector
     CPatternReceiver pattern_inspector(bufferRX);
-	CPatternRepeater pattern_repeater(bufferRepeaterRX, bufferRepeaterTX);
-	CPatternSender	 pattern_generator(bufferTX);
+    CPatternRepeater pattern_repeater(bufferRepeaterRX, bufferRepeaterTX);
+    CPatternSender	 pattern_generator(bufferTX);
 
-	// Wait for 2 seconds
-	std::this_thread::sleep_for(std::chrono::seconds(PATTERN_TEST_TIME_S));
+    // Wait for 2 seconds
+    std::this_thread::sleep_for(std::chrono::seconds(PATTERN_TEST_TIME_S));
 
-	// Shutdown
-	pattern_generator.Shutdown();
-	pattern_repeater.Shutdown();
-	pattern_inspector.Shutdown();
+    // Shutdown
+    pattern_generator.Shutdown();
+    pattern_repeater.Shutdown();
+    pattern_inspector.Shutdown();
 
     std::cout << "Pattern generator: " << pattern_generator.GetCycleCnt() << " cyles, " << pattern_generator.GetPacketCnt()
-			  << " packets, " << pattern_generator.GetByteCnt() << " bytes" << std::endl;
-	std::cout << "Pattern inspector: " << pattern_inspector.GetCycleCnt() << " cyles, " << pattern_inspector.GetPacketCnt()
+              << " packets, " << pattern_generator.GetByteCnt() << " bytes" << std::endl;
+    std::cout << "Pattern inspector: " << pattern_inspector.GetCycleCnt() << " cyles, " << pattern_inspector.GetPacketCnt()
               << " packets, " << pattern_inspector.GetByteCnt() << " bytes, " << pattern_inspector.GetErrorCnt()
               << " errors, " << std::endl;
-	std::cout << "Pattern repeater: " << pattern_repeater.GetCycleCnt() << " cyles, " << pattern_repeater.GetPacketCnt()
+    std::cout << "Pattern repeater: " << pattern_repeater.GetCycleCnt() << " cyles, " << pattern_repeater.GetPacketCnt()
               << " packets, " << pattern_repeater.GetByteCnt() << " bytes, " << pattern_repeater.GetErrorCnt()
               << " errors, " << std::endl;
-	EXPECT_NE(pattern_generator.GetCycleCnt(), 0u);
-	EXPECT_NE(pattern_generator.GetPacketCnt(), 0u);
-	EXPECT_NE(pattern_generator.GetByteCnt(), 0ull);
-	EXPECT_NE(pattern_inspector.GetCycleCnt(), 0u);
-	EXPECT_EQ(pattern_inspector.GetErrorCnt(), 0u);
-	EXPECT_NE(pattern_inspector.GetPacketCnt(), 0u);
-	EXPECT_NE(pattern_inspector.GetByteCnt(), 0ull);
-	EXPECT_NE(pattern_repeater.GetCycleCnt(), 0u);
-	EXPECT_EQ(pattern_repeater.GetErrorCnt(), 0u);
-	EXPECT_NE(pattern_repeater.GetPacketCnt(), 0u);
-	EXPECT_NE(pattern_repeater.GetByteCnt(), 0ull);
+    EXPECT_NE(pattern_generator.GetCycleCnt(), 0u);
+    EXPECT_NE(pattern_generator.GetPacketCnt(), 0u);
+    EXPECT_NE(pattern_generator.GetByteCnt(), 0ull);
+    EXPECT_NE(pattern_inspector.GetCycleCnt(), 0u);
+    EXPECT_EQ(pattern_inspector.GetErrorCnt(), 0u);
+    EXPECT_NE(pattern_inspector.GetPacketCnt(), 0u);
+    EXPECT_NE(pattern_inspector.GetByteCnt(), 0ull);
+    EXPECT_NE(pattern_repeater.GetCycleCnt(), 0u);
+    EXPECT_EQ(pattern_repeater.GetErrorCnt(), 0u);
+    EXPECT_NE(pattern_repeater.GetPacketCnt(), 0u);
+    EXPECT_NE(pattern_repeater.GetByteCnt(), 0ull);
 }

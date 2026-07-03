@@ -59,7 +59,7 @@ CProcessControl::~CProcessControl()
 bool CProcessControl::OnInitialize()
 {
     // Without monitor no trigger...
-    m_threadMonitor = std::thread(&CProcessControl::MonitorThread, this);
+    m_threadMonitor = sdv::core::secure_thread(&CProcessControl::MonitorThread, this);
 
     return true;
 }
@@ -76,6 +76,7 @@ void CProcessControl::OnShutdown()
 
 bool CProcessControl::AllowProcessControl() const
 {
+    if (m_bEnableBypass) return true;
     const sdv::app::IAppContext* pAppContext = sdv::core::GetCore<sdv::app::IAppContext>();
     return pAppContext && (pAppContext->GetContextType() == sdv::app::EAppContext::main ||
         pAppContext->GetContextType() == sdv::app::EAppContext::maintenance ||
@@ -574,3 +575,7 @@ void CProcessControl::MonitorThread()
     }
 }
 
+void CProcessControl::EnableProcessControlAccessBypass()
+{
+    m_bEnableBypass = true;
+}

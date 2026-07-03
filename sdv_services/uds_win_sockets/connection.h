@@ -27,6 +27,8 @@
 #include <vector>
 #include <cstdint>
 #include <cstddef>
+#include <functional>
+#include <string>
 
 #ifdef _WIN32
 #   include <WinSock2.h>
@@ -70,11 +72,12 @@ struct SMsgHeader
  *  - sdv::ipc::IConnect    : async connect / wait / state / events
  *  - sdv::IObjectDestroy   : explicit destruction hook for SDV runtime
  */
-class CWinsockConnection
-    : public sdv::IInterfaceAccess
-    , public sdv::ipc::IDataSend
-    , public sdv::ipc::IConnect
-    , public sdv::IObjectDestroy
+class CWinsockConnection :
+    //public sdv::CSharedLifetimeControlImpl<CWinsockConnection>, public sdv::ipc::IDataSend, public sdv::ipc::IConnect
+    public sdv::IInterfaceAccess,
+    public sdv::ipc::IDataSend,
+    public sdv::ipc::IConnect,
+    public sdv::IObjectDestroy
 {
 public:
     /**
@@ -90,6 +93,12 @@ public:
     CWinsockConnection(unsigned long long preconfiguredSocket, bool acceptConnectionRequired);
 
     /**
+     * @brief Create a client endpoint that connects lazily in AsyncConnect.
+     * @param[in] udsPath Normalized path for AF_UNIX connection.
+     */
+    explicit CWinsockConnection(const std::string& udsPath);
+
+    /**
     * @brief Virtual destructor needed for "delete this;"
     */
     virtual ~CWinsockConnection();
@@ -98,6 +107,7 @@ public:
         SDV_INTERFACE_ENTRY(sdv::ipc::IDataSend)
         SDV_INTERFACE_ENTRY(sdv::ipc::IConnect)
         SDV_INTERFACE_ENTRY(sdv::IObjectDestroy)
+        //SDV_INTERFACE_CHAIN_BASE(sdv::CSharedLifetimeControlImpl<CWinsockConnection>)
     END_SDV_INTERFACE_MAP()
 
     /**
@@ -188,23 +198,28 @@ public:
      */
     void DestroyObject() override;
 
+    /** @brief Register callback used to remove this connection from manager watchdog storage. */
+    void SetWatchDogRemoveCallback(std::function<void(const void*)> callback);
+
 private:
 
 	std::mutex              m_MtxConnect;
 	std::condition_variable m_CvConnect;
-	std::thread					 			m_ReceiveThread;				///< Thread which receives data from the socket
-	std::thread                         	m_ConnectThread;
+    sdv::core::secure_thread                m_ReceiveThread;            ///< Thread which receives data from the socket
+    sdv::core::secure_thread                m_ConnectThread;
 	std::atomic<bool>			 			m_StopReceiveThread{false};		///< bool variable to stop thread
 	std::atomic<bool>                   	m_StopConnectThread{false};
 	std::atomic<sdv::ipc::EConnectState>	m_ConnectionState;				///< the state of the connection
 	
-	sdv::ipc::IDataReceiveCallback*         m_pReceiver = nullptr;			///< Receiver to pass the messages if available
-	sdv::ipc::IConnectEventCallback*		m_pEvent = nullptr;				///< Event receiver
+	sdv::ipc::IDataReceiveCallback*         m_pReceiver{nullptr};			///< Receiver to pass the messages if available
+	sdv::ipc::IConnectEventCallback*		m_pMainEvent{nullptr};			///< Event receiver
+    sdv::ipc::IConnectEventCallback*        m_pRegisteredEvent{nullptr};
 	bool						 			m_AcceptConnectionRequired;		///< if true connection has to be accepted before receive thread can be started
 	mutable std::recursive_mutex 			m_SendMutex;					///< Synchronize all packages to be send
 
 	SOCKET                              	m_ListenSocket{INVALID_SOCKET}; 			///< Server-side listening socket
 	SOCKET                              	m_ConnectionSocket{INVALID_SOCKET}; 		///< Active connected socket (client <-> server)
+    std::string                             m_UdsPath;                                  ///< Client-side AF_UNIX path (lazy connect)
 
 	static constexpr uint32_t	 			m_SendMessageSize{ 1024 };									///< size for the message to be send
 	static constexpr uint32_t    			m_SendBufferSize = sizeof(SMsgHeader) + m_SendMessageSize;	///< Initial size of the send buffer
@@ -213,6 +228,9 @@ private:
 	uint32_t	                 			m_ReceiveBufferLength = sizeof(SMsgHeader);					///< receive buffer length
 
 	std::atomic<bool> m_CancelWait{false};   
+    std::mutex m_WatchdogMtx;
+    std::function<void(const void*)> m_WatchdogRemoveCallback;
+    std::atomic<bool> m_DestroyObjectCalled{false};
 
     /// @brief Server accept loop / client connect confirmation
     void ConnectWorker();

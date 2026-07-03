@@ -14,6 +14,7 @@
 
 #include <gtest/gtest.h>
 #include "../../../global/process_watchdog.h"
+#include "../../../global/localmemmgr.h"
 #include "../../../sdv_services/core/toml_parser/character_reader_utf_8.cpp"
 #include "../../../sdv_services/core/toml_parser/lexer_toml.cpp"
 #include "../../../sdv_services/core/toml_parser/lexer_toml_token.cpp"
@@ -21,6 +22,8 @@
 #include "../../../sdv_services/core/toml_parser/parser_node_toml.cpp"
 #include "../../../sdv_services/core/toml_parser/miscellaneous.cpp"
 #include "../../../sdv_services/core/toml_parser/code_snippet.cpp"
+#include "../../../sdv_services/core/toml_parser/parser_node_indexer.cpp"
+
 
 #if defined(_WIN32) && defined(_UNICODE)
 extern "C" int wmain(int argc, wchar_t* argv[])
@@ -30,6 +33,7 @@ extern "C" int main(int argc, char* argv[])
 {
     CProcessWatchdog watchdog;
 
+    CLocalMemMgr memmgr;
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

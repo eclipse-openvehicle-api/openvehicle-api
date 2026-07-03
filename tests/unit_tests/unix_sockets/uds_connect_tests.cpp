@@ -204,6 +204,25 @@ private:
 // Small helper: convert server connectString to client connectString
 static std::string MakeClientCS(std::string cs)
 {
+    const std::string providerKey = "ConnectString = \"";
+    auto p = cs.find(providerKey);
+    if (p != std::string::npos)
+    {
+        p += providerKey.size();
+        auto e = cs.find('"', p);
+        if (e != std::string::npos)
+        {
+            std::string inner = cs.substr(p, e - p);
+            const std::string fromIn = "role=server";
+            const std::string toIn   = "role=client";
+            auto posIn = inner.find(fromIn);
+            if (posIn != std::string::npos)
+                inner.replace(posIn, fromIn.size(), toIn);
+            cs.replace(p, e - p, inner);
+            return cs;
+        }
+    }
+
     const std::string from = "role=server";
     const std::string to   = "role=client";
     auto pos = cs.find(from);
@@ -215,6 +234,27 @@ static std::string MakeClientCS(std::string cs)
 
 static std::string ExtractPathFromCS(const std::string& cs) 
 {
+    const std::string providerKey = "ConnectString = \"";
+    auto pProvider = cs.find(providerKey);
+    if (pProvider != std::string::npos)
+    {
+        pProvider += providerKey.size();
+        auto eProvider = cs.find('"', pProvider);
+        if (eProvider != std::string::npos)
+        {
+            std::string inner = cs.substr(pProvider, eProvider - pProvider);
+            const std::string keyInner = "path=";
+            auto pInner = inner.find(keyInner);
+            if (pInner != std::string::npos)
+            {
+                auto startInner = pInner + keyInner.size();
+                auto endInner = inner.find(';', startInner);
+                if (endInner == std::string::npos) endInner = inner.size();
+                return inner.substr(startInner, endInner - startInner);
+            }
+        }
+    }
+
     // search "path=" in connect-string
     const std::string key = "path=";
     auto p = cs.find(key);
@@ -223,6 +263,21 @@ static std::string ExtractPathFromCS(const std::string& cs)
     auto end = cs.find(';', start);
     if (end == std::string::npos) end = cs.size();
     return cs.substr(start, end - start);
+}
+
+static std::string MakeServerCS(const std::string& cs)
+{
+    const std::string path = ExtractPathFromCS(cs);
+    if (!path.empty())
+        return "proto=uds;role=server;path=" + path + ";";
+
+    std::string raw = cs;
+    const std::string from = "role=client";
+    const std::string to = "role=server";
+    auto pos = raw.find(from);
+    if (pos != std::string::npos)
+        raw.replace(pos, from.size(), to);
+    return raw;
 }
 
 static std::string MakeRandomSuffix() 
@@ -241,7 +296,7 @@ TEST(UnixSocketIPC, Instantiate)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
 
     EXPECT_EQ(mgr.GetObjectState(), sdv::EObjectState::initialized);
 
@@ -258,7 +313,7 @@ TEST(UnixSocketIPC, ChannelConfigString)
     ASSERT_TRUE(appcontrol.Startup(""));
 
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
 
     EXPECT_EQ(mgr.GetObjectState(), sdv::EObjectState::initialized);
 
@@ -275,7 +330,7 @@ TEST(UnixSocketIPC, CreateRandomEndpoint)
     CUnixDomainSocketsChannelMgnt mgr;
 
     // Create an endpoint.
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     EXPECT_EQ(mgr.GetObjectState(), sdv::EObjectState::initialized);
     sdv::ipc::SChannelEndpoint sChannelEndpoint = mgr.CreateEndpoint("");
     EXPECT_NE(sChannelEndpoint.pConnection, nullptr);
@@ -297,7 +352,7 @@ TEST(UnixSocketIPC, BasicConnectDisconnect)
 
     // Create and initialize UDS manager
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     EXPECT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
@@ -305,7 +360,7 @@ TEST(UnixSocketIPC, BasicConnectDisconnect)
     auto ep = mgr.CreateEndpoint("");
     ASSERT_FALSE(ep.ssConnectString.empty());
 
-    std::string serverCS = ep.ssConnectString;
+    std::string serverCS = MakeServerCS(ep.ssConnectString);
     std::string clientCS = MakeClientCS(serverCS);
 
     // SERVER SIDE
@@ -321,7 +376,7 @@ TEST(UnixSocketIPC, BasicConnectDisconnect)
     // CLIENT SIDE (thread)
     std::atomic<int> clientResult{0};
     std::atomic<bool> allowClientDisconnect{false};
-    std::thread clientThread([&]{
+    sdv::core::secure_thread clientThread([&]{
         sdv::TObjectPtr clientObj = mgr.Access(clientCS);
         if (!clientObj) { clientResult = 1; return; }
         auto* clientConn = clientObj.GetInterface<sdv::ipc::IConnect>();
@@ -354,6 +409,9 @@ TEST(UnixSocketIPC, BasicConnectDisconnect)
     serverConn->Disconnect();
     EXPECT_EQ(serverConn->GetConnectState(), sdv::ipc::EConnectState::disconnected);
 
+    // Release object wrappers before shutting down the manager/framework.
+    serverObj.Clear();
+
     //  Shutdown Manager / Framework
     EXPECT_NO_THROW(mgr.Shutdown());
     EXPECT_EQ(mgr.GetObjectState(), sdv::EObjectState::destruction_pending);
@@ -372,7 +430,7 @@ TEST(UnixSocketIPC, ReconnectAfterDisconnect_SamePath)
 
     //UDS manager
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     EXPECT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
@@ -380,7 +438,7 @@ TEST(UnixSocketIPC, ReconnectAfterDisconnect_SamePath)
     auto ep = mgr.CreateEndpoint("");
     ASSERT_FALSE(ep.ssConnectString.empty());
 
-    const std::string serverCS = ep.ssConnectString;
+    const std::string serverCS = MakeServerCS(ep.ssConnectString);
     const std::string clientCS = MakeClientCS(serverCS);
 
     // SESSION 1
@@ -397,7 +455,7 @@ TEST(UnixSocketIPC, ReconnectAfterDisconnect_SamePath)
     std::atomic<int>  clientResult{0};
     std::atomic<bool> allowClientDisconnect{false};
 
-    std::thread clientThread([&]{
+    sdv::core::secure_thread clientThread([&]{
         sdv::TObjectPtr clientObj = mgr.Access(clientCS);
         if (!clientObj) { clientResult = 1; return; }
         auto* clientConn = clientObj.GetInterface<sdv::ipc::IConnect>();
@@ -444,7 +502,7 @@ TEST(UnixSocketIPC, ReconnectAfterDisconnect_SamePath)
      std::atomic<int>  clientResult2{0};
     std::atomic<bool> allowClientDisconnect2{false};
 
-    std::thread clientThread2([&]{
+    sdv::core::secure_thread clientThread2([&]{
         sdv::TObjectPtr clientObj2 = mgr.Access(clientCS);
         if (!clientObj2) { clientResult2 = 1; return; }
         auto* clientConn2 = clientObj2.GetInterface<sdv::ipc::IConnect>();
@@ -490,7 +548,7 @@ TEST(UnixSocketIPC, OperationModeTransitions)
     sdv::app::CAppControl app;
     ASSERT_TRUE(app.Startup(""));
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     EXPECT_EQ(mgr.GetObjectState(), sdv::EObjectState::initialized);
 
     // configuring and then running
@@ -514,7 +572,7 @@ TEST(UnixSocketIPC, CreateEndpoint_WithConfigAndPathClamping)
     app.SetRunningMode();
 
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     EXPECT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
@@ -531,7 +589,7 @@ TEST(UnixSocketIPC, CreateEndpoint_WithConfigAndPathClamping)
     ASSERT_FALSE(ep.ssConnectString.empty());
 
     // Checking if endpoint is server type and has an ok path
-    std::string serverCS = ep.ssConnectString;
+    std::string serverCS = MakeServerCS(ep.ssConnectString);
     std::string clientCS = MakeClientCS(serverCS);
     auto clampedPath = ExtractPathFromCS(serverCS);
     ASSERT_FALSE(clampedPath.empty());
@@ -572,7 +630,7 @@ TEST(UnixSocketIPC, Access_DefaultPath_ServerClientConnect)
     app.SetRunningMode();
 
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     EXPECT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
@@ -613,13 +671,13 @@ TEST(UnixSocketIPC, WaitForConnection_InfiniteWait_SlowClient)
     app.SetRunningMode();
 
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     EXPECT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
     auto ep = mgr.CreateEndpoint("");
     ASSERT_FALSE(ep.ssConnectString.empty());
-    const std::string serverCS = ep.ssConnectString;
+    const std::string serverCS = MakeServerCS(ep.ssConnectString);
     const std::string clientCS = MakeClientCS(serverCS);
 
     sdv::TObjectPtr serverObj = mgr.Access(serverCS);
@@ -629,7 +687,7 @@ TEST(UnixSocketIPC, WaitForConnection_InfiniteWait_SlowClient)
     CUDSConnectReceiver sRcvr;
     ASSERT_TRUE(serverConn->AsyncConnect(&sRcvr));
 
-    std::thread delayedClient([&]{
+    sdv::core::secure_thread delayedClient([&]{
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         sdv::TObjectPtr clientObj = mgr.Access(clientCS);
         auto* clientConn = clientObj.GetInterface<sdv::ipc::IConnect>();
@@ -658,13 +716,13 @@ TEST(UnixSocketIPC, WaitForConnection_ZeroTimeout_BeforeAndAfter)
     app.SetRunningMode();
 
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     EXPECT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
     auto ep = mgr.CreateEndpoint("");
     ASSERT_FALSE(ep.ssConnectString.empty());
-    const std::string serverCS = ep.ssConnectString;
+    const std::string serverCS = MakeServerCS(ep.ssConnectString);
     const std::string clientCS = MakeClientCS(serverCS);
 
     sdv::TObjectPtr serverObj = mgr.Access(serverCS);
@@ -700,7 +758,7 @@ ViewFilter = "Fatal")toml"));
     app.SetRunningMode();
 
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     EXPECT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
@@ -734,12 +792,12 @@ TEST(UnixSocketIPC, ServerDisconnectPropagatesToClient)
     app.SetRunningMode();
 
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     EXPECT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
     auto ep = mgr.CreateEndpoint("");
-    const std::string serverCS = ep.ssConnectString;
+    const std::string serverCS = MakeServerCS(ep.ssConnectString);
     const std::string clientCS = MakeClientCS(serverCS);
 
     sdv::TObjectPtr serverObj = mgr.Access(serverCS);
@@ -776,12 +834,12 @@ TEST(UnixSocketIPC, ReconnectOnSameServerInstance)
     app.SetRunningMode();
 
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     EXPECT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
     auto ep = mgr.CreateEndpoint("");
-    const std::string serverCS = ep.ssConnectString;
+    const std::string serverCS = MakeServerCS(ep.ssConnectString);
     const std::string clientCS = MakeClientCS(serverCS);
 
     sdv::TObjectPtr serverObj = mgr.Access(serverCS);
@@ -827,14 +885,14 @@ TEST(UnixSocketIPC, DataPath_SimpleHello)
     app.SetRunningMode();
 
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     EXPECT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
     // Endpoint
     auto ep = mgr.CreateEndpoint("");
     ASSERT_FALSE(ep.ssConnectString.empty());
-    const std::string serverCS = ep.ssConnectString;
+    const std::string serverCS = MakeServerCS(ep.ssConnectString);
     const std::string clientCS = MakeClientCS(serverCS);
 
     // Server
@@ -894,13 +952,13 @@ TEST(UnixSocketIPC, DataPath_MultiChunk_TwoBuffers)
     app.SetRunningMode();
 
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     EXPECT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
     auto ep = mgr.CreateEndpoint("");
     ASSERT_FALSE(ep.ssConnectString.empty());
-    const std::string serverCS = ep.ssConnectString;
+    const std::string serverCS = MakeServerCS(ep.ssConnectString);
     const std::string clientCS = MakeClientCS(serverCS);
 
     sdv::TObjectPtr serverObj = mgr.Access(serverCS);
@@ -955,14 +1013,14 @@ TEST(UnixSocketIPC, DataPath_LargePayload_Fragmentation_Reassembly)
     ASSERT_TRUE(app.Startup("")); 
     app.SetRunningMode();
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize("")); 
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo())); 
     EXPECT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
     // Endpoint
     auto ep = mgr.CreateEndpoint("");
     ASSERT_FALSE(ep.ssConnectString.empty());
-    const std::string serverCS = ep.ssConnectString;
+    const std::string serverCS = MakeServerCS(ep.ssConnectString);
     const std::string clientCS = MakeClientCS(serverCS);
 
     // Server
@@ -1023,12 +1081,12 @@ TEST(UnixSocketIPC, DataPath_ZeroLengthChunks_ArePreserved)
     ASSERT_TRUE(app.Startup("")); 
     app.SetRunningMode();
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize("")); 
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo())); 
     EXPECT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
     auto ep = mgr.CreateEndpoint("");
-    const std::string serverCS = ep.ssConnectString;
+    const std::string serverCS = MakeServerCS(ep.ssConnectString);
     const std::string clientCS = MakeClientCS(serverCS);
 
     sdv::TObjectPtr serverObj = mgr.Access(serverCS);
@@ -1086,12 +1144,12 @@ TEST(UnixSocketIPC, PeerCloseMidTransfer_ClientSeesDisconnected_AndSendMayFailOr
     app.SetRunningMode();
     CUnixDomainSocketsChannelMgnt mgr;
 
-    ASSERT_NO_THROW(mgr.Initialize(""));
+    ASSERT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     ASSERT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
     auto ep = mgr.CreateEndpoint("");
-    const std::string serverCS = ep.ssConnectString;
+    const std::string serverCS = MakeServerCS(ep.ssConnectString);
     const std::string clientCS = MakeClientCS(serverCS);
 
     sdv::TObjectPtr serverObj = mgr.Access(serverCS);
@@ -1119,7 +1177,7 @@ TEST(UnixSocketIPC, PeerCloseMidTransfer_ClientSeesDisconnected_AndSendMayFailOr
     ASSERT_NE(pSend, nullptr);
 
     std::atomic<bool> sendResult{true};
-    std::thread t([&]{
+    sdv::core::secure_thread t([&]{
         sendResult.store(pSend->SendData(seq));
     });
 
@@ -1148,7 +1206,7 @@ TEST(UnixSocketIPC, ClientCancelConnect_NoServer_CleansUpPromptly)
     ASSERT_TRUE(app.Startup("")); 
     app.SetRunningMode();
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize("")); 
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo())); 
     EXPECT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
@@ -1181,12 +1239,12 @@ TEST(UnixSocketIPC, ServerStartThenImmediateDisconnect_NoClient)
 ViewFilter = "Fatal")toml"));
     app.SetRunningMode();
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize("")); 
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo())); 
     EXPECT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
     auto ep = mgr.CreateEndpoint("");
-    const std::string serverCS = ep.ssConnectString;
+    const std::string serverCS = MakeServerCS(ep.ssConnectString);
 
     sdv::TObjectPtr serverObj = mgr.Access(serverCS); 
     ASSERT_TRUE(serverObj);
@@ -1212,12 +1270,12 @@ TEST(UnixSocketIPC, CallbackThrowsInSetConnectState_DoesNotCrashTransport)
     ASSERT_TRUE(app.Startup("")); 
     app.SetRunningMode();
     CUnixDomainSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize("")); 
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo())); 
     EXPECT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
     auto ep = mgr.CreateEndpoint("");
-    const std::string serverCS = ep.ssConnectString;
+    const std::string serverCS = MakeServerCS(ep.ssConnectString);
     const std::string clientCS = MakeClientCS(serverCS);
 
     sdv::TObjectPtr serverObj = mgr.Access(serverCS); 
@@ -1253,13 +1311,13 @@ TEST(UnixSocketIPC, RegisterStateEventCallback_MultipleCallbacksReceiveState)
     app.SetRunningMode();
 
     CUnixDomainSocketsChannelMgnt mgr;
-    ASSERT_NO_THROW(mgr.Initialize(""));
+    ASSERT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     ASSERT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
     // --- Setup server endpoint ---
     auto ep = mgr.CreateEndpoint("");
-    const std::string serverCS = ep.ssConnectString;
+    const std::string serverCS = MakeServerCS(ep.ssConnectString);
     const std::string clientCS = MakeClientCS(serverCS);
 
     sdv::TObjectPtr serverObj = mgr.Access(serverCS);
@@ -1312,13 +1370,13 @@ TEST(UnixSocketIPC, UnregisterStateEventCallback_RemovedListenerStopsReceiving)
     app.SetRunningMode();
 
     CUnixDomainSocketsChannelMgnt mgr;
-    ASSERT_NO_THROW(mgr.Initialize(""));
+    ASSERT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     ASSERT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
     ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
 
     // Endpoint
     auto ep = mgr.CreateEndpoint("");
-    const std::string serverCS = ep.ssConnectString;
+    const std::string serverCS = MakeServerCS(ep.ssConnectString);
     const std::string clientCS = MakeClientCS(serverCS);
 
     // Server
@@ -1372,6 +1430,62 @@ TEST(UnixSocketIPC, UnregisterStateEventCallback_RemovedListenerStopsReceiving)
     server->Disconnect();
 
     // Manager / framework cleanup
+    EXPECT_NO_THROW(mgr.Shutdown());
+    app.Shutdown();
+}
+
+// Reconnect race regression: a second AsyncConnect while connect worker is still initializing
+// must return quickly and must not deadlock by joining an in-progress worker.
+TEST(UnixSocketIPC, AsyncConnect_DoubleCallWhileInitializing_NoDeadlock)
+{
+    sdv::app::CAppControl app;
+    ASSERT_TRUE(app.Startup(""));
+    app.SetRunningMode();
+
+    CUnixDomainSocketsChannelMgnt mgr;
+    ASSERT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
+    ASSERT_NO_THROW(mgr.SetOperationMode(sdv::EOperationMode::running));
+    ASSERT_EQ(mgr.GetObjectState(), sdv::EObjectState::running);
+
+    auto ep = mgr.CreateEndpoint("");
+    ASSERT_FALSE(ep.ssConnectString.empty());
+
+    const std::string serverCS = MakeServerCS(ep.ssConnectString);
+    const std::string clientCS = MakeClientCS(serverCS);
+
+    sdv::TObjectPtr serverObj = mgr.Access(serverCS);
+    ASSERT_TRUE(serverObj);
+    auto* serverConn = serverObj.GetInterface<sdv::ipc::IConnect>();
+    ASSERT_NE(serverConn, nullptr);
+
+    sdv::TObjectPtr clientObj = mgr.Access(clientCS);
+    ASSERT_TRUE(clientObj);
+    auto* clientConn = clientObj.GetInterface<sdv::ipc::IConnect>();
+    ASSERT_NE(clientConn, nullptr);
+
+    CUDSConnectReceiver sRcvr;
+    CUDSConnectReceiver cRcvr;
+
+    ASSERT_TRUE(serverConn->AsyncConnect(&sRcvr));
+
+    auto t0 = std::chrono::steady_clock::now();
+    bool secondAsync = serverConn->AsyncConnect(&sRcvr);
+    auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - t0).count();
+
+    EXPECT_FALSE(secondAsync);
+    EXPECT_LT(elapsedMs, 200);
+
+    ASSERT_TRUE(clientConn->AsyncConnect(&cRcvr));
+    EXPECT_TRUE(serverConn->WaitForConnection(5000));
+    EXPECT_TRUE(clientConn->WaitForConnection(5000));
+
+    // Once connected, repeated AsyncConnect should be a no-op success.
+    EXPECT_TRUE(serverConn->AsyncConnect(&sRcvr));
+
+    clientConn->Disconnect(); 
+    serverConn->Disconnect();
+
     EXPECT_NO_THROW(mgr.Shutdown());
     app.Shutdown();
 }

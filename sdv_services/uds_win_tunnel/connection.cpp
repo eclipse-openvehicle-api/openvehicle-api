@@ -24,26 +24,35 @@ CWinTunnelConnection::CWinTunnelConnection(
     // No additional initialization required; acts as a thin wrapper.
 }
 
-bool CWinTunnelConnection::SendData(
-    /*inout*/ sdv::sequence<sdv::pointer<uint8_t>>& seqData)
+CWinTunnelConnection::~CWinTunnelConnection()
 {
+
+}
+
+void CWinTunnelConnection::SetWatchDogRemoveCallback(std::function<void(const void*)> callback)
+{
+    std::lock_guard<std::mutex> lock(m_WatchdogMtx);
+    m_WatchdogRemoveCallback = std::move(callback);
+}
+
+bool CWinTunnelConnection::SendData( /*inout*/ sdv::sequence<sdv::pointer<uint8_t>>& seqData)
+{
+
     if (!m_Transport)
     {
         SDV_LOG_ERROR("[WinTunnel] SendData failed: transport is null");
         return false;
     }
 
-    // Build tunnel header buffer
     sdv::pointer<uint8_t> hdrBuf;
     hdrBuf.resize(sizeof(STunnelHeader));
 
     STunnelHeader hdr{};
-    hdr.uiChannelId = m_ChannelId;  // Logical channel for this connection
-    hdr.uiFlags     = 0;            // Reserved for future use
+    hdr.uiChannelId = m_ChannelId;
+    hdr.uiFlags = 0;
 
     std::memcpy(hdrBuf.get(), &hdr, sizeof(STunnelHeader));
 
-    // Compose new sequence: [header] + original payload chunks
     sdv::sequence<sdv::pointer<uint8_t>> seqWithHdr;
     seqWithHdr.push_back(hdrBuf);
     for (auto& chunk : seqData)
@@ -51,11 +60,13 @@ bool CWinTunnelConnection::SendData(
         seqWithHdr.push_back(chunk);
     }
 
-    bool result = m_Transport->SendData(seqWithHdr);
-    if (!result) {
+    const bool result = m_Transport->SendData(seqWithHdr);
+    if (!result)
+    {
         SDV_LOG_ERROR("[WinTunnel] SendData failed in underlying transport");
     }
     return result;
+
 }
 
 bool CWinTunnelConnection::AsyncConnect(/*in*/ sdv::IInterfaceAccess* pReceiver)
@@ -70,7 +81,7 @@ bool CWinTunnelConnection::AsyncConnect(/*in*/ sdv::IInterfaceAccess* pReceiver)
     {
         std::lock_guard<std::mutex> lock(m_CallbackMtx);
         sdv::TInterfaceAccessPtr acc(pReceiver);
-        m_pUpperReceiver = acc.GetInterface<sdv::ipc::IDataReceiveCallback>();
+        m_pUpperRecv = acc.GetInterface<sdv::ipc::IDataReceiveCallback>();
         m_pUpperEvent    = acc.GetInterface<sdv::ipc::IConnectEventCallback>();
     }
 
@@ -110,14 +121,8 @@ void CWinTunnelConnection::Disconnect()
         return;
     }
 
+    // Keep upper callbacks on plain Disconnect(); they are released in DestroyObject().
     m_Transport->Disconnect();
-
-    // Clear upper-layer callbacks (thread-safe)
-    {
-        std::lock_guard<std::mutex> lock(m_CallbackMtx);
-        m_pUpperReceiver = nullptr;
-        m_pUpperEvent    = nullptr;
-    }
 }
 
 uint64_t CWinTunnelConnection::RegisterStateEventCallback(
@@ -156,55 +161,91 @@ sdv::ipc::EConnectState CWinTunnelConnection::GetConnectState() const
 
 void CWinTunnelConnection::DestroyObject()
 {
+    bool expected = false;
+    if (!m_DestroyObjectCalled.compare_exchange_strong(expected, true))
+    {
+        return;
+    }
+
+    // Stop forwarding to upper layer before transport teardown.
+    {
+        std::lock_guard<std::mutex> lock(m_CallbackMtx);
+        m_pUpperRecv = nullptr;
+        m_pUpperEvent = nullptr;
+    }
+
+    // Do not notify upper layer during destruction teardown to avoid races.
+    SetConnectState(sdv::ipc::EConnectState::terminating);
+
     Disconnect();
-    std::lock_guard<std::mutex> lock(m_CallbackMtx);
-    m_Transport.reset();
+    {
+        std::lock_guard<std::mutex> lock(m_CallbackMtx);
+        m_Transport.reset();
+    }
+
+    std::function<void(const void*)> removeCallback;
+    {
+        std::lock_guard<std::mutex> watchdogLock(m_WatchdogMtx);
+        removeCallback = std::move(m_WatchdogRemoveCallback);
+    }
+    if (removeCallback)
+    {
+        removeCallback(this);
+    }
 }
 
-void CWinTunnelConnection::ReceiveData(
-    /*inout*/ sdv::sequence<sdv::pointer<uint8_t>>& seqData)
+void CWinTunnelConnection::ReceiveData(/*inout*/ sdv::sequence<sdv::pointer<uint8_t>>& seqData)
 {
-    // Expect at least one chunk (the tunnel header)
+
     if (seqData.empty())
     {
         SDV_LOG_ERROR("[WinTunnel] ReceiveData: empty sequence");
-        return; // nothing to do
+        return;
     }
 
     const auto& hdrChunk = seqData[0];
     if (hdrChunk.size() < sizeof(STunnelHeader))
     {
         SDV_LOG_ERROR("[WinTunnel] ReceiveData: invalid tunnel header size");
-        // Invalid tunnel frame; drop it for now (could set communication_error)
         return;
     }
 
     STunnelHeader hdr{};
     std::memcpy(&hdr, hdrChunk.get(), sizeof(STunnelHeader));
 
+    // Future demux point:
+    // if (hdr.uiChannelId != m_ChannelId) { ... }
 
-    // TODO: use channelId for multiplexing later
-
-    // Build payload-only sequence: drop header chunk, keep others
     sdv::sequence<sdv::pointer<uint8_t>> payload;
     for (size_t i = 1; i < seqData.size(); ++i)
     {
         payload.push_back(seqData[i]);
     }
 
-    if (m_pUpperReceiver)
+    sdv::ipc::IDataReceiveCallback* upper = nullptr;
     {
-        try {
-            m_pUpperReceiver->ReceiveData(payload); // header stripped
-        } catch (...) {
-            SDV_LOG_ERROR("[WinTunnel] Exception in upper receiver's ReceiveData");
+        std::lock_guard<std::mutex> lock(m_CallbackMtx);
+        upper = m_pUpperRecv;
+    }
+
+    if (upper)
+    {
+        try
+        {
+            upper->ReceiveData(payload);
+        }
+        catch (...)
+        {
+            SDV_LOG_ERROR("[WinTunnel] Exception in upper receiver callback");
         }
     }
+
 }
 
 void CWinTunnelConnection::SetConnectState(sdv::ipc::EConnectState state)
 {
     sdv::ipc::IConnectEventCallback* upper = nullptr;
+
     {
         std::lock_guard<std::mutex> lock(m_CallbackMtx);
         upper = m_pUpperEvent;
@@ -218,8 +259,7 @@ void CWinTunnelConnection::SetConnectState(sdv::ipc::EConnectState state)
         }
         catch (...)
         {
-            SDV_LOG_ERROR("[WinTunnel] Exception in upper event callback's SetConnectState");
-            // Never let user callback crash the transport.
+            SDV_LOG_ERROR("[WinTunnel] Exception in upper event callback");
         }
     }
 }

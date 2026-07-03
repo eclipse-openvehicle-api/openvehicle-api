@@ -23,6 +23,7 @@
 #include "logger_control.h"
 #include "logger.h"
 #include "app_config.h"
+#include "permission_control.h"
 
 /**
 * @brief SDV core instance class containing containing the instances for the core services.
@@ -47,6 +48,7 @@ public:
         SDV_INTERFACE_CHAIN_MEMBER(GetMemoryManager())
         SDV_INTERFACE_CHAIN_MEMBER(GetRepository())
         SDV_INTERFACE_CHAIN_MEMBER(GetLoggerControl())
+        SDV_INTERFACE_CHAIN_MEMBER(GetPermissionControl())
     END_SDV_INTERFACE_MAP()
 
     /**

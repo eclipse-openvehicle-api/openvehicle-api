@@ -34,9 +34,11 @@ const CConsole::SConsolePos g_sComment3{ 24, 1 };
 const CConsole::SConsolePos g_sSeparator5{ 26, 1 };
 const CConsole::SConsolePos g_sOpenViaDevice{ 28, 1 };
 const CConsole::SConsolePos g_sOpenViaService{ 29, 1 };
-const CConsole::SConsolePos g_sSeparator6{ 31, 1 };
-const CConsole::SConsolePos g_sControlDescription{ 33, 1 };
-const CConsole::SConsolePos g_sCursor{ 34, 1 };
+const CConsole::SConsolePos g_sAutoCloseTrunk{ 30, 1 };
+const CConsole::SConsolePos g_sStatusTrunk{ 32, 1 };
+const CConsole::SConsolePos g_sSeparator6{ 34, 1 };
+const CConsole::SConsolePos g_sControlDescription{ 36, 1 };
+const CConsole::SConsolePos g_sCursor{ 37, 1 };
 
 CConsole::CConsole()
 {
@@ -92,6 +94,7 @@ void CConsole::PrintHeader(uint32_t uiInstance)
     {
         subTtitle = "Connected to core instance ";
         subTtitle.append(std::to_string(uiInstance));
+        subTtitle.append(" (not all interfaces available)");        
     }
     // Print the titles
     PrintText(g_sTitle, "Open Trunk example: Open trunk when vehicle is not moving");
@@ -108,7 +111,7 @@ void CConsole::PrintHeader(uint32_t uiInstance)
     PrintText(g_sSeparator4, "============================================================================");
     PrintText(g_sComment1, "The Open Trunk  signal has a safety request.");
     PrintText(g_sComment2, "Therefore the speed value is required and must be checked.");
-    PrintText(g_sComment3, "If the car is moving, open is blocked and trunk is closed automatically.");
+    PrintText(g_sComment3, "If the vehicle is moving, open is blocked and trunk is closed automatically.");
     PrintText(g_sSeparator5, "============================================================================");
     PrintText(g_sOpenViaDevice, "Vehicle Device Interface not available.");
     PrintText(g_sOpenViaService, "Basic Service Interface not available.");    
@@ -124,7 +127,7 @@ bool CConsole::PrepareDataConsumers()
     if (m_SignalSpeed)
         PrintValue(g_sDataLinkSpeed, "Vehicle Speed RX", m_SpeedDL, "m/s");
 
-    // Registrate for the vehicle device & basic service of the speed. 
+    // Register for the vehicle device & basic service of the speed. 
     auto vehicleDevice = sdv::core::GetObject("Vehicle.Speed_Device").GetInterface<vss::Vehicle::SpeedDevice::IVSS_ReadSpeed>();
     if (vehicleDevice)
     {
@@ -153,6 +156,10 @@ bool CConsole::PrepareDataConsumers()
     else
         PrintText(g_sOpenViaDevice, "Trunk Device NOT available");   
 
+    m_SignalStatusTrunk = dispatch.RegisterTxSignal(trunk::dsTrunk, 0);
+    if (!m_SignalStatusTrunk)
+        PrintText(g_sStatusTrunk, "Trunk Status not available.");
+
     return true;
 }
 
@@ -172,6 +179,9 @@ void CConsole::ResetSignals()
     // Unregister the data link signals
     if (m_SignalSpeed)
         m_SignalSpeed.Reset();
+
+    if (m_SignalStatusTrunk) 
+        m_SignalStatusTrunk.Reset();        
 }
 
 void CConsole::CallbackSpeed(sdv::any_t value)
@@ -246,7 +256,13 @@ void CConsole::SetSpeed(float value)
 
     if (bIsMoving && !m_bWasMovingBS)
     {
-        PrintText(g_sOpenViaService, "Safety active: speed > 0, trunk close command sent.");
+        if (m_pTrunkService)
+        {
+            if (m_pTrunkService->SetOpen(false))
+                PrintText(g_sAutoCloseTrunk, "Safety feature active: Trunk closed as the vehicle started moving.");          
+            else
+                PrintText(g_sOpenViaService, "Close trunk automatically failed.");
+        }
     }
     m_bWasMovingBS = bIsMoving;
 }
@@ -278,9 +294,24 @@ char CConsole::GetChar()
 void CConsole::RunUntilBreak()
 {
     bool bRunning = true;
+    bool bTrunkClosed = true;
 
     while (bRunning)
     {
+        if(m_SignalStatusTrunk)
+        {
+            auto value =m_SignalStatusTrunk.Read().get<bool>();
+            if (bTrunkClosed != value)
+            {   
+                bTrunkClosed = value;
+                if (bTrunkClosed)
+                    PrintText(g_sStatusTrunk, "Status: Trunk is open.");
+                else
+                    PrintText(g_sStatusTrunk, "Status: Trunk is closed.");                
+            }
+        }    
+
+
         // Check for a key
         if (!KeyHit())
         {
@@ -294,17 +325,19 @@ void CConsole::RunUntilBreak()
         {
         case 'c':
         case 'C':
-            PrintText(g_sOpenViaDevice, "                                        ");        
-            PrintText(g_sOpenViaService, "                                        ");
+            PrintText(g_sOpenViaDevice, "                                                                  ");        
+            PrintText(g_sOpenViaService, "                                                                  ");
+            PrintText(g_sAutoCloseTrunk, "                                                                  ");
             break;
         case 'd':
         case 'D':
             if (m_pTrunkDevice)
             {
+                PrintText(g_sAutoCloseTrunk, "                                                                  ");                
                 if (m_pTrunkDevice->WriteOpen(true))
                 {
                     if (m_SpeedVD || m_SpeedBS)
-                        PrintText(g_sOpenViaDevice, "Trunk opened directly although car was moving, not safe.");                          
+                        PrintText(g_sOpenViaDevice, "Trunk opened directly although vehicle was moving, not safe.");                          
                     else
                         PrintText(g_sOpenViaDevice, "Trunk opened directly, not safe.");                  
                 }
@@ -316,10 +349,11 @@ void CConsole::RunUntilBreak()
         case 'O':
             if (m_pTrunkService)
             {
+                PrintText(g_sAutoCloseTrunk, "                                                                  ");                
                 if (m_pTrunkService->SetOpen(true))
                     PrintText(g_sOpenViaService, "Trunk opened safely (auto-close if vehicle starts moving).");
                 else
-                    PrintText(g_sOpenViaService, "Open trunk failed, car is moving.");
+                    PrintText(g_sOpenViaService, "Open trunk failed, vehicle is moving.");
             }
             break;
         case 'x':

@@ -435,12 +435,14 @@ namespace sdv
              * @tparam TInfoConstruct The type of the variables that are provided to the constructor function of the parameter
              * information.
              * @param[in] rtVar Reference to the parameter variable.
+             * @param[in] bReadOnly When set, the parameter is read-only (even when writable) and will not be initialized.
              * @param[in] bLockable When set, the parameter is lockable. Only use with writable parameters.
-             * @param[in] bAutoDirty When set, the parameter dirty flag is detected automatically. Only use with writable parameters.
+             * @param[in] bAutoDirty When set, the parameter dirty flag is detected automatically. Only use with writable
+             * parameters.
              * @param[in] tConstruct The construct function arguments.
              */
             template <typename... TInfoConstruct>
-            CParamValue(TVar& rtVar, bool bLockable, bool bAutoDirty, TInfoConstruct... tConstruct);
+            CParamValue(TVar& rtVar, bool bReadOnly, bool bLockable, bool bAutoDirty, TInfoConstruct... tConstruct);
 
             /**
              * @brief Set a value. Overload of CParamGuardian::Set.
@@ -993,7 +995,7 @@ namespace sdv
             }                                                                                                                      \
             std::vector<std::shared_ptr<sdv::CSdvParamInfo>> vecParamInfo;                                                         \
             [[maybe_unused]] uint32_t uiFlags = 0;                                                                                 \
-            [[maybe_unused]] std::string ssGroup;                                                                               \
+            [[maybe_unused]] std::string ssGroup;                                                                                  \
             [[maybe_unused]] bool bLockable = false;
 
     /**
@@ -1107,8 +1109,9 @@ namespace sdv
     }                                                                                                                              \
     else                                                                                                                           \
     {                                                                                                                              \
-        std::shared_ptr<sdv::CSdvParamInfo> ptrParamInfo = pObject->RegisterParameter(pObject->var, bLockable, true, name_string,  \
-            default_val, unit_string, ssGroup, description_string, uiFlags);                                                       \
+        std::shared_ptr<sdv::CSdvParamInfo> ptrParamInfo = pObject->RegisterParameter(pObject->var,                                \
+            uiFlags & static_cast<uint32_t>(::sdv::EParamFlags::read_only), bLockable, true,  name_string,  default_val,           \
+            unit_string, ssGroup, description_string, uiFlags);                                                                    \
         if (ptrParamInfo) vecParamInfo.push_back(std::move(ptrParamInfo));                                                         \
     }
 
@@ -1126,7 +1129,7 @@ namespace sdv
      * @param description_string The description of the parameter.
      */
 #define SDV_PARAM_NUMBER_ENTRY(var, name_string, default_val, low_limit, high_limit, unit_string, description_string)              \
-    {																													           \
+    {                                                                                                                              \
         auto prLowLimit = sdv::internal::SLowerLimit() low_limit;                                                                  \
         sdv::any_t anyLower;                                                                                                       \
         if (prLowLimit.second != sdv::internal::ELimitType::no_limit) anyLower = prLowLimit.first;                                 \
@@ -1144,8 +1147,9 @@ namespace sdv
         }                                                                                                                          \
         else                                                                                                                       \
         {                                                                                                                          \
-            std::shared_ptr<sdv::CSdvParamInfo> ptrParamInfo = pObject->RegisterParameter(pObject->var, bLockable, true,           \
-                name_string, default_val, anyLower, prLowLimit.second != sdv::internal::ELimitType::up_to_limit, anyUpper,         \
+            std::shared_ptr<sdv::CSdvParamInfo> ptrParamInfo = pObject->RegisterParameter(pObject->var,                            \
+                uiFlags & static_cast<uint32_t>(::sdv::EParamFlags::read_only), bLockable, true, name_string, default_val,         \
+                anyLower, prLowLimit.second != sdv::internal::ELimitType::up_to_limit, anyUpper,                                   \
                 prHighLimit.second != sdv::internal::ELimitType::up_to_limit, unit_string, ssGroup, description_string,            \
                 uiFlags);                                                                                                          \
             if (ptrParamInfo)vecParamInfo.push_back(std::move(ptrParamInfo));                                                      \
@@ -1181,8 +1185,9 @@ namespace sdv
     }                                                                                                                              \
     else                                                                                                                           \
     {                                                                                                                              \
-        std::shared_ptr<sdv::CSdvParamInfo> ptrParamInfo = pObject->RegisterParameter(pObject->var, bLockable, true, name_string,  \
-            default_val, pattern_string, unit_string, ssGroup, description_string, uiFlags);                                       \
+        std::shared_ptr<sdv::CSdvParamInfo> ptrParamInfo = pObject->RegisterParameter(pObject->var,                                \
+            uiFlags & static_cast<uint32_t>(::sdv::EParamFlags::read_only), bLockable, true, name_string, default_val,             \
+            pattern_string, unit_string, ssGroup, description_string, uiFlags);                                                    \
         if (ptrParamInfo) vecParamInfo.push_back(std::move(ptrParamInfo));                                                         \
     }
 
@@ -1213,8 +1218,9 @@ namespace sdv
     }                                                                                                                              \
     else                                                                                                                           \
     {                                                                                                                              \
-        std::shared_ptr<sdv::CSdvParamInfo> ptrParamInfo = pObject->RegisterParameter(pObject->var, bLockable, true, name_string,  \
-            default_val, sdv::internal::GetLabelMapHelper().GetLabelMap<TEnum>(), ssGroup, description_string, uiFlags);           \
+        std::shared_ptr<sdv::CSdvParamInfo> ptrParamInfo = pObject->RegisterParameter(pObject->var,                                \
+            uiFlags & static_cast<uint32_t>(::sdv::EParamFlags::read_only), bLockable, true, name_string, default_val,             \
+            sdv::internal::GetLabelMapHelper().GetLabelMap<TEnum>(), ssGroup, description_string, uiFlags);                        \
         if (ptrParamInfo) vecParamInfo.push_back(std::move(ptrParamInfo));                                                         \
     }
 
@@ -1238,11 +1244,12 @@ namespace sdv
         std::vector<std::shared_ptr<sdv::CSdvParamInfo>> vecParamInfoMember;                                                       \
         if constexpr (bStatic)                                                                                                     \
         {                                                                                                                          \
-            vecParamInfoMember = sdv::internal::SMemberMap<decltype(member)>::BuildStatic();                                       \
+            vecParamInfoMember = sdv::internal::SMemberMap<std::decay_t<decltype(member)>>::BuildStatic();                         \
         }                                                                                                                          \
         else                                                                                                                       \
         {                                                                                                                          \
-            auto ptrMemberMap = std::make_shared<sdv::internal::SMemberMap<decltype(member)>>(pObject->member, pObject);           \
+            auto ptrMemberMap =                                                                                                    \
+                std::make_shared<sdv::internal::SMemberMap<std::decay_t<decltype(member)>>>(pObject->member, pObject);             \
             if (ptrMemberMap)                                                                                                      \
             {                                                                                                                      \
                 ptrMemberMap->BuildMap();                                                                                          \
@@ -1388,13 +1395,15 @@ namespace sdv
          * @tparam TVar Type of the variable.
          * @tparam TConstruct The arguments for the parameter info construct function.
          * @param[in] rtVar Reference to the parameter.
+         * @param[in] bReadOnly When set, the parameter is read only and will not be initialized.
          * @param[in] bLockable When set, the parameter is lockable. Only use with writable parameters.
          * @param[in] bAutoDirty When set, the parameter dirty flag is detected automatically. Only use with writable parameters.
          * @param[in] tConstruct The construct function arguments.
          * @return Smart pointer to the parameter information structure.
          */
         template <typename TVar, typename... TConstruct>
-        std::shared_ptr<CSdvParamInfo> RegisterParameter(TVar& rtVar, bool bLockable, bool bAutoDirty, TConstruct... tConstruct);
+        std::shared_ptr<CSdvParamInfo> RegisterParameter(TVar& rtVar, bool bReadOnly, bool bLockable, bool bAutoDirty,
+            TConstruct... tConstruct);
 
         /**
          * @brief Register a member parameter map into this parameter map.

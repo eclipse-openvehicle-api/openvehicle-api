@@ -28,6 +28,8 @@
 #include <sstream>
 #include <thread>
 
+#include <iostream>
+
 // Anonymous namespace: local helpers (not exported)
 namespace
 {
@@ -93,6 +95,8 @@ namespace
     {
         return static_cast<uint64_t>(::getpid());
     }
+
+
 } // namespace
 
 // Construction / Destruction
@@ -124,6 +128,12 @@ CUnixSocketConnection::~CUnixSocketConnection()
     }
 }
 
+void CUnixSocketConnection::SetWatchDogRemoveCallback(std::function<void(const void*)> callback)
+{
+    std::lock_guard<std::mutex> lock(m_WatchdogMtx);
+    m_WatchdogRemoveCallback = std::move(callback);
+}
+
 // Public API
 std::string CUnixSocketConnection::GetConnectionString()
 {
@@ -137,27 +147,81 @@ std::string CUnixSocketConnection::GetConnectionString()
 
 bool CUnixSocketConnection::SendSizedPacket(const void* pData, uint32_t uiDataLength)
 {
-    if (m_Fd < 0) return false;
+    if (m_Fd < 0)
+        return false;
+
+#ifdef MSG_NOSIGNAL
+    constexpr int kSendFlags = MSG_NOSIGNAL;
+#else
+    constexpr int kSendFlags = 0;
+#endif
+
+    auto sendAll = [&](const void* data, uint32_t length) -> int
+    {
+        const char* ptr = reinterpret_cast<const char*>(data);
+        uint32_t remaining = length;
+
+        while (remaining > 0)
+        {
+            const ssize_t sent = ::send(m_Fd, ptr, remaining, kSendFlags);
+
+            if (sent < 0)
+            {
+                if (errno == EINTR)
+                    continue;
+
+                return errno;
+            }
+
+            if (sent == 0)
+            {
+                return EPIPE;
+            }
+
+            ptr += sent;
+            remaining -= static_cast<uint32_t>(sent);
+        }
+
+        return 0;
+    };
 
     const uint32_t len = uiDataLength;
 
-    std::lock_guard<std::mutex> lock(m_SendMtx);
+    int sendErr = 0;
 
-    // Transport header: packet size
-    if (::send(m_Fd, &len, sizeof(len), 0) != static_cast<ssize_t>(sizeof(len)))
-        return false;
-
-    // SDV payload
-    const char* ptr     = reinterpret_cast<const char*>(pData);
-    uint32_t    remain  = uiDataLength;
-
-    while (remain > 0)
     {
-        const ssize_t sent = ::send(m_Fd, ptr, remain, 0);
-        if (sent <= 0) return false;
-        ptr    += sent;
-        remain -= static_cast<uint32_t>(sent);
+        std::lock_guard<std::mutex> lock(m_SendMtx);
+
+        // Transport header: packet size
+        sendErr = sendAll(&len, static_cast<uint32_t>(sizeof(len)));
+
+        // SDV payload
+        if (sendErr == 0 && uiDataLength > 0)
+        {
+            sendErr = sendAll(pData, uiDataLength);
+        }
     }
+
+    if (sendErr != 0)
+    {
+        if (sendErr == EPIPE || sendErr == ECONNRESET || sendErr == ENOTCONN)
+        {
+            SDV_LOG_WARNING("[UDS][TX] Peer closed connection during send, errno=",
+                            sendErr, " (", std::strerror(sendErr), ")");
+
+            SetConnectState(sdv::ipc::EConnectState::disconnected);
+        }
+        else
+        {
+            SDV_LOG_WARNING("[UDS][TX] send() failed, errno=",
+                            sendErr, " (", std::strerror(sendErr), ")");
+
+            SetConnectState(sdv::ipc::EConnectState::communication_error);
+        }
+
+        return false;
+    }
+
     return true;
 }
 
@@ -233,9 +297,10 @@ bool CUnixSocketConnection::SendData(sdv::sequence<sdv::pointer<uint8_t>>& seqDa
 
         // Header
         {
-            auto* hdr   = reinterpret_cast<SMsgHdr*>(frame.data());
-            hdr->uiVersion = SDVFrameworkInterfaceVersion;
-            hdr->eType     = EMsgType::data;
+            SMsgHdr hdr{};
+            hdr.uiVersion = SDVFrameworkInterfaceVersion;
+            hdr.eType = EMsgType::data;
+            std::memcpy(frame.data(), &hdr, sizeof(SMsgHdr));
             msgOff         = static_cast<uint32_t>(sizeof(SMsgHdr));
         }
 
@@ -284,11 +349,12 @@ bool CUnixSocketConnection::SendData(sdv::sequence<sdv::pointer<uint8_t>>& seqDa
 
         // Fragment header
         {
-            auto* hdr    = reinterpret_cast<SFragmentedMsgHdr*>(frame.data());
-            hdr->uiVersion    = SDVFrameworkInterfaceVersion;
-            hdr->eType        = EMsgType::data_fragment;
-            hdr->uiTotalLength= static_cast<uint32_t>(required);
-            hdr->uiOffset     = offset;
+            SFragmentedMsgHdr hdr{};
+            hdr.uiVersion = SDVFrameworkInterfaceVersion;
+            hdr.eType = EMsgType::data_fragment;
+            hdr.uiTotalLength = static_cast<uint32_t>(required);
+            hdr.uiOffset = offset;
+            std::memcpy(frame.data(), &hdr, sizeof(SFragmentedMsgHdr));
             msgOff            = static_cast<uint32_t>(sizeof(SFragmentedMsgHdr));
         }
 
@@ -330,25 +396,37 @@ bool CUnixSocketConnection::SendData(sdv::sequence<sdv::pointer<uint8_t>>& seqDa
 
 uint64_t CUnixSocketConnection::RegisterStateEventCallback(sdv::IInterfaceAccess* pEventCallback)
 {
-    if (!pEventCallback) return 0;
+    if (!pEventCallback)
+        return 0;
 
-    auto* pCb = sdv::TInterfaceAccessPtr(pEventCallback).GetInterface<sdv::ipc::IConnectEventCallback>();
-    if (!pCb) return 0;
+    // use SDV interface pointer for safe casting and lifetime management
+    sdv::TInterfaceAccessPtr ptr(pEventCallback);
 
-    // Generate a non-zero cookie
-    uint64_t cookie = 0;
-    do 
-    { 
-        cookie = static_cast<uint64_t>(::rand()); 
-    } while (cookie == 0);
-
-    // Write-lock: add entry
+    auto* pCallback = ptr.GetInterface<sdv::ipc::IConnectEventCallback>();
+    if (!pCallback)
     {
-        std::unique_lock<std::shared_mutex> lock(m_mtxEventCallbacks);
-        m_lstEventCallbacks.emplace_front(SEventCallback{ cookie, pCb });
+        SDV_LOG_WARNING("[UDS] RegisterStateEventCallback: invalid callback interface");
+        return 0;
     }
 
-    return cookie;
+    // check valid cookie generation (avoid 0)
+    uint64_t uiCookie = 0;
+    while (uiCookie == 0)
+    {
+        uiCookie = static_cast<uint64_t>(rand());
+    }
+
+    // protectiong shared list with write lock
+    {
+        std::unique_lock<std::shared_mutex> lock(m_mtxEventCallbacks);
+
+        m_lstEventCallbacks.emplace_front(SEventCallback{
+            uiCookie,
+            pCallback
+        });
+    }
+
+    return uiCookie;
 }
 
 void CUnixSocketConnection::UnregisterStateEventCallback(uint64_t uiCookie)
@@ -381,12 +459,25 @@ void CUnixSocketConnection::UnregisterStateEventCallback(uint64_t uiCookie)
 
 bool CUnixSocketConnection::AsyncConnect(sdv::IInterfaceAccess* pReceiver)
 {
+    const auto currentState = m_eConnectState.load(std::memory_order_acquire);
+    if (currentState == sdv::ipc::EConnectState::connected)
+    {
+        return true;
+    }
+
+    if (currentState == sdv::ipc::EConnectState::initializing && m_ConnectThread.joinable())
+    {
+        SDV_LOG_WARNING("[UDS] AsyncConnect ignored: connect worker already running");
+        return false;
+    }
+
     // Capture callbacks under lock
     {
         std::lock_guard<std::mutex> lk(m_StateMtx);
         m_pReceiver = sdv::TInterfaceAccessPtr(pReceiver).GetInterface<sdv::ipc::IDataReceiveCallback>();
         m_pEvent    = sdv::TInterfaceAccessPtr(pReceiver).GetInterface<sdv::ipc::IConnectEventCallback>();
         m_eConnectState   = sdv::ipc::EConnectState::initializing;
+        m_bConnectedOnce.store(false, std::memory_order_release);
 
         // Reset stop flags
         m_StopReceiveThread.store(false);
@@ -394,11 +485,12 @@ bool CUnixSocketConnection::AsyncConnect(sdv::IInterfaceAccess* pReceiver)
     }
     m_StateCv.notify_all();
 
-    // If an old worker exists, join it to avoid duplicates
+    // If an old worker exists, join it to avoid duplicates.
+    // Joining an in-progress worker here can deadlock when a previous connect attempt is still pending.
     if (m_ConnectThread.joinable()) m_ConnectThread.join();
 
     // Start the unique connect worker (server/client)
-    m_ConnectThread = std::thread(&CUnixSocketConnection::ConnectWorker, this);
+    m_ConnectThread = sdv::core::secure_thread(&CUnixSocketConnection::ConnectWorker, this);
     return true;
 }
 
@@ -448,35 +540,100 @@ int CUnixSocketConnection::AcceptConnection() // deprecated
     return clientFd;
 }
 
+void CUnixSocketConnection::CloseClientSocketOnly()
+{
+    const int fd = m_Fd;
+    m_Fd = -1;
+
+    if (fd >= 0)
+    {
+        ::shutdown(fd, SHUT_RDWR);
+        ::close(fd);
+    }
+}
+
+
+void CUnixSocketConnection::WaitForClientEnd()
+{
+    std::unique_lock<std::mutex> lock(m_MtxConnect);
+
+    m_cvConnect.wait(lock, [this]
+    {
+        const auto state = m_eConnectState.load(std::memory_order_acquire);
+
+        return m_StopConnectThread.load(std::memory_order_acquire) ||
+               state == sdv::ipc::EConnectState::disconnected ||
+               state == sdv::ipc::EConnectState::disconnected_forced ||
+               state == sdv::ipc::EConnectState::communication_error ||
+               state == sdv::ipc::EConnectState::connection_error;
+    });
+
+}
+
 bool CUnixSocketConnection::WaitForConnection(uint32_t uiWaitMs)
 {
-    if (m_eConnectState.load(std::memory_order_acquire) == sdv::ipc::EConnectState::connected) return true;
+#if ENABLE_REPORTING >= 1
+    if (m_eConnectState == sdv::ipc::EConnectState::connected)
+        TRACE("Not waiting for a connection - already connected");
+    else
+        TRACE("Waiting for a connection of ", uiWaitMs, "ms");
+#endif
 
-    std::unique_lock<std::mutex> lk(m_MtxConnect);
+    std::unique_lock<std::mutex> lock(m_MtxConnect);
 
-    if (uiWaitMs == 0xFFFFFFFFu)
+    auto isConnected = [&]()
     {
-        m_CvConnect.wait(lk, [this]{
-            return m_eConnectState.load(std::memory_order_acquire) == sdv::ipc::EConnectState::connected;
-        });
-        return true;
-    }
-    if (uiWaitMs == 0u)
-        return (m_eConnectState.load(std::memory_order_acquire) == sdv::ipc::EConnectState::connected);
+        return m_eConnectState.load(std::memory_order_acquire) ==
+               sdv::ipc::EConnectState::connected;
+    };
 
-    return m_CvConnect.wait_for(lk, std::chrono::milliseconds(uiWaitMs),
-                                [this]{ return m_eConnectState.load(std::memory_order_acquire) == sdv::ipc::EConnectState::connected; });
+
+    if (isConnected())
+        return true;
+
+    // Wait for the connection to take place.
+    // Attention: sporadic
+    if (uiWaitMs)
+        m_cvConnect.wait_for(lock, std::chrono::milliseconds(uiWaitMs), isConnected);
+
+#if ENABLE_REPORTING >= 1
+    if (m_eConnectState == sdv::ipc::EConnectState::connected)
+        TRACE("Waiting finished - connection established");
+    else
+        TRACE("Waiting finished - timeout occurred");
+#endif
+
+    return m_eConnectState == sdv::ipc::EConnectState::connected;
 }
 
 void CUnixSocketConnection::CancelWait()
 {
-    // optional: m_CvConnect.notify_all();
+#if ENABLE_REPORTING >= 1
+    TRACE("Cancel the (potential) waiting for a connection");
+#endif
+
+    m_cvConnect.notify_all();
 }
 
 void CUnixSocketConnection::Disconnect()
 {
-    StopThreadsAndCloseSockets(/*unlinkPath*/ false);
+
+    // Try to notify peer before closing the socket.
+    if (m_Fd >= 0 &&
+        m_eConnectState.load(std::memory_order_acquire) == sdv::ipc::EConnectState::connected)
+    {
+        SendControlMessage(EMsgType::connect_term);
+    }
+
+    // Notify listeners before entering teardown mode.
     SetConnectState(sdv::ipc::EConnectState::disconnected);
+    m_cvConnect.notify_all();
+
+    m_StopReceiveThread.store(true, std::memory_order_release);
+    m_StopConnectThread.store(true, std::memory_order_release);
+    m_cvConnect.notify_all(); // wake WaitForClientEnd before joins
+
+    StopThreadsAndCloseSockets(/*unlinkPath*/ false);
 }
 
 sdv::ipc::EConnectState CUnixSocketConnection::GetConnectState() const
@@ -486,28 +643,58 @@ sdv::ipc::EConnectState CUnixSocketConnection::GetConnectState() const
 
 void CUnixSocketConnection::DestroyObject()
 {
+    bool expected = false;
+    if (!m_DestroyObjectCalled.compare_exchange_strong(expected, true))
+    {
+        return;
+    }
+
     m_StopReceiveThread.store(true);
-    m_eConnectState = sdv::ipc::EConnectState::disconnected;
+    m_StopConnectThread.store(true);
+    SetConnectState(sdv::ipc::EConnectState::terminating);
+
+    // Perform full teardown (threads/sockets/state/waiters).
+    Disconnect();
+
+    std::function<void(const void*)> removeCallback;
+    {
+        std::lock_guard<std::mutex> lock(m_WatchdogMtx);
+        removeCallback = std::move(m_WatchdogRemoveCallback);
+    }
+    if (removeCallback)
+    {
+        removeCallback(this);
+    }
 }
 
 void CUnixSocketConnection::SetConnectState(sdv::ipc::EConnectState eConnectState)
 {
+    if (eConnectState == sdv::ipc::EConnectState::connected)
+        m_bConnectedOnce.store(true, std::memory_order_release);
+
     // Update internal state atomically and wake up waiters.
     {
         std::lock_guard<std::mutex> lk(m_MtxConnect);
         m_eConnectState.store(eConnectState, std::memory_order_release);
     }
-    m_CvConnect.notify_all();
+
+    // During teardown, owner objects may already be destructing. Do not callback then.
+    const bool bTeardown = m_StopReceiveThread.load(std::memory_order_acquire) ||
+                           m_StopConnectThread.load(std::memory_order_acquire);
 
     // Notify the legacy single-listener (kept for backward compatibility).
-    try
+    if (!bTeardown && m_pEvent)
     {
-        m_pEvent->SetConnectState(eConnectState);
+        try
+        {
+            m_pEvent->SetConnectState(eConnectState);
+        }
+        catch (...) { /* swallow: user callback must not crash transport */ }
     }
-    catch (...) { /* swallow: user callback must not crash transport */ }
 
     // Notify all registered listeners from the registry (read-mostly path).
     bool needCompact = false;
+    if (!bTeardown)
     {
         std::shared_lock<std::shared_mutex> rlock(m_mtxEventCallbacks);
         for (const auto& entry : m_lstEventCallbacks)
@@ -522,7 +709,7 @@ void CUnixSocketConnection::SetConnectState(sdv::ipc::EConnectState eConnectStat
     }
 
     // Compact registry if we saw null entries (write path).
-    if (needCompact)
+    if (!bTeardown && needCompact)
     {
         std::unique_lock<std::shared_mutex> wlock(m_mtxEventCallbacks);
         m_lstEventCallbacks.remove_if([](const SEventCallback& e){ return e.pCallback == nullptr; });
@@ -601,13 +788,29 @@ void CUnixSocketConnection::ConnectWorker()
             }
 
             ::unlink(m_UdsPath.c_str());
-            sockaddr_un addr{}; addr.sun_family = AF_UNIX;
-            ::snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", m_UdsPath.c_str());
 
-            if (::bind(m_ListenFd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0)
+            sockaddr_un addr{};
+            addr.sun_family = AF_UNIX;
+
+            if (m_UdsPath.size() >= sizeof(addr.sun_path))
+            {
+                SDV_LOG_ERROR("[UDS] Path too long: ", m_UdsPath, " (max ", sizeof(addr.sun_path) - 1, ")");
+                ::close(m_ListenFd);
+                m_ListenFd = -1;
+                SetConnectState(sdv::ipc::EConnectState::connection_error);
+                return;
+            }
+
+            strncpy(addr.sun_path, m_UdsPath.c_str(), sizeof(addr.sun_path) - 1);
+            addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
+
+            socklen_t len = offsetof(sockaddr_un, sun_path) + strlen(addr.sun_path) + 1;
+
+            if (::bind(m_ListenFd, reinterpret_cast<sockaddr*>(&addr), len) < 0)
             {
                 SDV_LOG_ERROR("[UDS][Server] bind('", m_UdsPath, "') failed: ", std::strerror(errno));
-                ::close(m_ListenFd); m_ListenFd = -1;
+                ::close(m_ListenFd);
+                m_ListenFd = -1;
                 SetConnectState(sdv::ipc::EConnectState::connection_error);
                 return;
             }
@@ -617,71 +820,109 @@ void CUnixSocketConnection::ConnectWorker()
             if (::listen(m_ListenFd, 1) < 0)
             {
                 SDV_LOG_ERROR("[UDS][Server] listen() failed: ", std::strerror(errno));
-                ::close(m_ListenFd); m_ListenFd = -1;
+                ::close(m_ListenFd);
+                m_ListenFd = -1;
                 SetConnectState(sdv::ipc::EConnectState::connection_error);
                 return;
             }
 
-#if ENABLE_REPORTING >= 1
+        #if ENABLE_REPORTING >= 1
             TRACE("[UDS][Server] Listening on path ", m_UdsPath);
-#endif
+        #endif
 
-            // Cancellable accept loop (poll)
-            int clientFd = -1;
+            SetConnectState(sdv::ipc::EConnectState::initializing);
+
+            // Keep listener alive and accept clients repeatedly.
             while (!m_StopConnectThread.load())
             {
-                struct pollfd pfd{ m_ListenFd, POLLIN, 0 };
-                const int pr = ::poll(&pfd, 1, /*timeout_ms*/ 100);
-                if (pr < 0) { if (errno == EINTR) continue; SDV_LOG_WARNING("[UDS][Server] poll() error: ", std::strerror(errno)); break; }
-                if (pr == 0) continue;
+                int clientFd = -1;
+                bool acceptFatal = false;
 
-                if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL))
+                // Cancellable accept loop
+                while (!m_StopConnectThread.load())
                 {
-#if ENABLE_REPORTING >= 1
-                    TRACE("[UDS][Server] Listening socket closed/invalidated");
-#endif
-                    break;
-                }
+                    struct pollfd pfd{ m_ListenFd, POLLIN, 0 };
+                    const int pr = ::poll(&pfd, 1, /*timeout_ms*/ 10);
 
-                if (pfd.revents & POLLIN)
-                {
-                    clientFd = ::accept(m_ListenFd, nullptr, nullptr);
-                    if (clientFd < 0)
+                    if (pr < 0)
                     {
                         if (errno == EINTR) continue;
                         if (m_StopConnectThread.load()) break;
-                        SDV_LOG_ERROR("[UDS][Server] accept() failed: ", std::strerror(errno));
+                        SDV_LOG_WARNING("[UDS][Server] poll() error: ", std::strerror(errno));
+                        acceptFatal = true;
                         break;
                     }
-                    break; // accepted
+
+                    if (pr == 0) continue;
+
+                    if (pfd.revents & (POLLERR | POLLHUP | POLLNVAL))
+                    {
+        #if ENABLE_REPORTING >= 1
+                        TRACE("[UDS][Server] Listening socket closed/invalidated");
+        #endif
+                        if (!m_StopConnectThread.load())
+                            acceptFatal = true;
+                        break;
+                    }
+
+                    if (pfd.revents & POLLIN)
+                    {
+                        clientFd = ::accept(m_ListenFd, nullptr, nullptr);
+
+                        if (clientFd < 0)
+                        {
+                            if (errno == EINTR) continue;
+                            if (m_StopConnectThread.load()) break;
+                            SDV_LOG_ERROR("[UDS][Server] accept() failed: ", std::strerror(errno));
+                            acceptFatal = true;
+                            break;
+                        }
+                        break; // one client accepted
+                    }
+                }
+
+                if (m_StopConnectThread.load())
+                    break;
+
+                if (acceptFatal || clientFd < 0)
+                {
+                    SetConnectState(sdv::ipc::EConnectState::connection_error);
+                    break;
+                }
+
+                // Serve one client session
+                m_Fd = clientFd;
+                SetConnectState(sdv::ipc::EConnectState::initialized);
+                StartReceiveThread_Unsafe();
+
+                // Wait until that client disconnects or teardown is requested
+                WaitForClientEnd();
+                CloseClientSocketOnly();
+
+                if (!m_StopConnectThread.load())
+                {
+                    // Re-arm state for next accept
+                    SetConnectState(sdv::ipc::EConnectState::initializing);
                 }
             }
 
-            // Close listen fd (safe if already closed elsewhere)
-            const int lfd = m_ListenFd; m_ListenFd = -1;
+            // Close listen FD on final shutdown/error
+            const int lfd = m_ListenFd;
+            m_ListenFd = -1;
             if (lfd >= 0) ::close(lfd);
 
             if (m_StopConnectThread.load())
             {
-#if ENABLE_REPORTING >= 1
+        #if ENABLE_REPORTING >= 1
                 TRACE("[UDS][Server] ConnectWorker stopped intentionally");
-#endif
-                return; // intentional stop
-            }
-            if (clientFd < 0)
-            {
-                SetConnectState(sdv::ipc::EConnectState::connection_error);
-                return;
+        #endif
             }
 
-            m_Fd = clientFd;
-            SetConnectState(sdv::ipc::EConnectState::connected);
-            StartReceiveThread_Unsafe();
             return;
         }
         else
         {
-            // --- CLIENT ---
+        // --- CLIENT ---
             m_Fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
             if (m_Fd < 0)
             {
@@ -690,8 +931,22 @@ void CUnixSocketConnection::ConnectWorker()
                 return;
             }
 
-            sockaddr_un addr{}; addr.sun_family = AF_UNIX;
-            ::snprintf(addr.sun_path, sizeof(addr.sun_path), "%s", m_UdsPath.c_str());
+            sockaddr_un addr{};
+            addr.sun_family = AF_UNIX;  
+            
+            if (m_UdsPath.size() >= sizeof(addr.sun_path)) 
+            {
+                SDV_LOG_ERROR("[UDS] Path too long: ", m_UdsPath, " (max ", sizeof(addr.sun_path) - 1, ")");
+                ::close(m_Fd);
+                m_Fd = -1;
+                SetConnectState(sdv::ipc::EConnectState::connection_error);
+                return;
+            }
+            
+            strncpy(addr.sun_path, m_UdsPath.c_str(), sizeof(addr.sun_path) - 1);
+            addr.sun_path[sizeof(addr.sun_path) - 1] = '\0';
+
+            socklen_t len = offsetof(sockaddr_un, sun_path) + strlen(addr.sun_path) + 1;
 
 #if ENABLE_REPORTING >= 1
             TRACE("[UDS][Client] Connecting to ", m_UdsPath);
@@ -700,60 +955,53 @@ void CUnixSocketConnection::ConnectWorker()
             int attempts = 10;
             while (attempts-- > 0 && !m_StopConnectThread.load())
             {
-                if (::connect(m_Fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) == 0)
+                if (::connect(m_Fd, reinterpret_cast<struct sockaddr*>(&addr), len) == 0)
                 {
-                    SetConnectState(sdv::ipc::EConnectState::connected);
-#if ENABLE_REPORTING >= 1
-                    TRACE("[UDS][Client] Connected");
-#endif
+                    SetConnectState(sdv::ipc::EConnectState::initialized);
                     StartReceiveThread_Unsafe();
                     return;
                 }
+                else
+                {
+                    SDV_LOG_WARNING("Connect failed: ", strerror(errno));
+                }
+
                 std::this_thread::sleep_for(std::chrono::milliseconds(200));
             }
 
-            if (!m_StopConnectThread.load())
+            // Disconnect() requested while retries were running: do not overwrite state with connection_error.
+            if (m_StopConnectThread.load())
             {
-                SDV_LOG_WARNING("[UDS][Client] connect() timeout to '", m_UdsPath,
-                                "', last errno=", errno, " (", std::strerror(errno), ")");
+                ::close(m_Fd);
+                m_Fd = -1;
+                return;
             }
 
-            ::close(m_Fd); m_Fd = -1;
+            SDV_LOG_WARNING("[UDS][Client] connect() timeout to '", m_UdsPath,
+                            "', last errno=", errno, " (", std::strerror(errno), ")");
+
+            ::close(m_Fd);
+            m_Fd = -1;
             SetConnectState(sdv::ipc::EConnectState::connection_error);
             return;
         }
     }
     catch (const std::exception& ex)
     {
-        SDV_LOG_ERROR("[UDS][ConnectWorker] exception: ", ex.what());
-        SetConnectState(sdv::ipc::EConnectState::connection_error);
+        if (!m_StopConnectThread.load(std::memory_order_acquire))
+        {
+            SDV_LOG_ERROR("[UDS][ConnectWorker] exception: ", ex.what());
+            SetConnectState(sdv::ipc::EConnectState::connection_error);
+        }
     }
     catch (...)
     {
-        SDV_LOG_ERROR("[UDS][ConnectWorker] unknown exception");
-        SetConnectState(sdv::ipc::EConnectState::connection_error);
+        if (!m_StopConnectThread.load(std::memory_order_acquire))
+        {
+            SDV_LOG_ERROR("[UDS][ConnectWorker] unknown exception");
+            SetConnectState(sdv::ipc::EConnectState::connection_error);
+        }
     }
-}
-
-// Receive thread and SDV state machine
-void CUnixSocketConnection::ReceiveSyncAnswer(const CMessage& message)
-{
-    const auto hdr = message.GetMsgHdr();
-    if (hdr.uiVersion != SDVFrameworkInterfaceVersion)
-    {
-        SetConnectState(sdv::ipc::EConnectState::communication_error);
-        SDV_LOG_WARNING("[UDS][RX] sync_answer with invalid version");
-        return;
-    }
-
-    // Client -> send connect_request
-    SConnectMsg msg{};
-    msg.uiVersion  = SDVFrameworkInterfaceVersion;
-    msg.eType      = EMsgType::connect_request;
-    msg.tProcessID = GetCurrentProcessID_Local();
-
-    if (!SendSizedPacket(&msg, sizeof(msg)))
-        SDV_LOG_ERROR("[UDS][RX] Failed to send connect_request in response to sync_answer");
 }
 
 void CUnixSocketConnection::ReceiveMessages()
@@ -789,34 +1037,69 @@ void CUnixSocketConnection::ReceiveMessages()
 
             if (pr == 0)
             {
-                if (!m_AcceptConnectionRequired && (m_eConnectState == sdv::ipc::EConnectState::initialized))
+                if (!m_AcceptConnectionRequired && 
+                    (m_eConnectState == sdv::ipc::EConnectState::initialized ||
+                     m_eConnectState == sdv::ipc::EConnectState::disconnected))
                 {
                     auto now = std::chrono::high_resolution_clock::now();
                     if (std::chrono::duration<double>(now - tpStart).count() > 0.5)
                     {
                         tpStart = now;
-                        SMsgHdr sync{ SDVFrameworkInterfaceVersion, EMsgType::sync_request };
-                        if (!SendSizedPacket(&sync, static_cast<uint32_t>(sizeof(sync))))
-                            SDV_LOG_WARNING("[UDS][RX] Failed to send periodic sync_request (client pacing)");
+
+                        if (!SendControlMessage(EMsgType::sync_request))
+                        {
+                            SDV_LOG_WARNING("[UDS][RX] Failed to send periodic sync_request");
+                        }
                     }
                 }
                 continue;
             }
-
-            if (pr < 0 || (pfd.revents & (POLLERR | POLLHUP | POLLNVAL)) != 0)
+            if (pr < 0)
             {
                 SetConnectState(sdv::ipc::EConnectState::disconnected);
-                SDV_LOG_WARNING("[UDS][RX] poll() hangup/error -> disconnected");
+                SDV_LOG_WARNING("[UDS][RX] poll() failed -> disconnected, errno=", errno,
+                    " (", std::strerror(errno), ")");
                 break;
             }
-            if ((pfd.revents & POLLIN) == 0) continue;
+
+            const short revents = pfd.revents;
+            const bool bHasPollIn = (revents & POLLIN) != 0;
+            const bool bHasPollErr = (revents & (POLLERR | POLLNVAL)) != 0;
+            const bool bHasPollHup = (revents & POLLHUP) != 0;
+            const bool bHasPollNval = (revents & POLLNVAL) != 0;
+
+            // POLLNVAL commonly happens when another thread closed/replaced the FD during local shutdown.
+            // In this case treat it as an expected teardown signal.
+            if (bHasPollNval && (m_StopReceiveThread.load() || m_Fd < 0))
+            {
+                SetConnectState(sdv::ipc::EConnectState::disconnected);
+                break;
+            }
+
+            // If POLLIN is present together with HUP/ERR, consume pending data first.
+            // This avoids dropping the last frame when peer closes after sending.
+            if (bHasPollErr && !bHasPollIn)
+            {
+                SetConnectState(sdv::ipc::EConnectState::disconnected);
+                break;
+            }
+
+            if (bHasPollHup && !bHasPollIn)
+            {
+                SetConnectState(sdv::ipc::EConnectState::disconnected);
+                break;
+            }
+
+            if (!bHasPollIn) continue;
+
 
             // Transport header
             uint32_t packetSize = 0;
             if (!ReadTransportHeader(packetSize))
             {
                 SetConnectState(sdv::ipc::EConnectState::disconnected);
-                SDV_LOG_WARNING("[UDS][RX] Invalid/missing transport header -> disconnected");
+                if (!bHasPollHup)
+                    SDV_LOG_WARNING("[UDS][RX] Invalid/missing transport header -> disconnected");
                 break;
             }
 
@@ -825,7 +1108,8 @@ void CUnixSocketConnection::ReceiveMessages()
             if (!ReadNumberOfBytes(reinterpret_cast<char*>(payload.data()), packetSize))
             {
                 SetConnectState(sdv::ipc::EConnectState::disconnected);
-                SDV_LOG_WARNING("[UDS][RX] Incomplete payload read -> disconnected");
+                if (!bHasPollHup)
+                    SDV_LOG_WARNING("[UDS][RX] Incomplete payload read -> disconnected");
                 break;
             }
 
@@ -886,61 +1170,168 @@ void CUnixSocketConnection::ReceiveMessages()
 void CUnixSocketConnection::ReceiveSyncRequest(const CMessage& message)
 {
     const auto hdr = message.GetMsgHdr();
+
     if (hdr.uiVersion != SDVFrameworkInterfaceVersion)
     {
         SetConnectState(sdv::ipc::EConnectState::communication_error);
-        SDV_LOG_WARNING("[UDS][RX] sync_request with invalid version");
         return;
     }
 
-    // Reply with sync_answer
-    SMsgHdr reply{};
-    reply.uiVersion = SDVFrameworkInterfaceVersion;
-    reply.eType     = EMsgType::sync_answer;
+    if (!IsServer())
+        return;
 
-    if (!SendSizedPacket(&reply, sizeof(reply)))
-        SDV_LOG_ERROR("[UDS][RX] Failed to send sync_answer to sync_request");
+    SetConnectState(sdv::ipc::EConnectState::connecting);
+
+    if (!SendControlMessage(EMsgType::sync_answer))
+    {
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
+        return;
+    }
+
+}
+
+// Receive thread and SDV state machine
+void CUnixSocketConnection::ReceiveSyncAnswer(const CMessage& message)
+{
+    const auto hdr = message.GetMsgHdr();
+    if (hdr.uiVersion != SDVFrameworkInterfaceVersion)
+    {
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
+        SDV_LOG_WARNING("[UDS][RX] sync_answer with invalid version");
+        return;
+    }
+ 
+    if (IsServer())
+        return;
+
+    SetConnectState(sdv::ipc::EConnectState::negotiating);
+
+    if (!SendConnectMessage(EMsgType::connect_request))
+    {
+        SetConnectState(sdv::ipc::EConnectState::communication_error);
+        return;
+    }
+
 }
 
 void CUnixSocketConnection::ReceiveConnectRequest(const CMessage& message)
 {
-    const auto hdr = message.GetConnectHdr();
-    if (hdr.uiVersion != SDVFrameworkInterfaceVersion)
-    {
-        SetConnectState(sdv::ipc::EConnectState::communication_error);
-        SDV_LOG_WARNING("[UDS][RX] connect_request with invalid version");
-        return;
-    }
+    //if (m_eConnectState == sdv::ipc::EConnectState::connecting)
+    //{
+    	const auto hdr = message.GetConnectHdr();
+	if (hdr.uiVersion != SDVFrameworkInterfaceVersion)
+	{
+	    SetConnectState(sdv::ipc::EConnectState::communication_error);
+	    SDV_LOG_WARNING("[UDS][RX] connect_request with invalid version");
+	    return;
+	}
 
-    // Reply with connect_answer
-    SConnectMsg reply{};
-    reply.uiVersion  = SDVFrameworkInterfaceVersion;
-    reply.eType      = EMsgType::connect_answer;
-    reply.tProcessID = GetCurrentProcessID_Local();
+	// connect_request must be handled only by server
+	if (!IsServer())
+	{
+	    SDV_LOG_WARNING("[UDS][RX] Client received connect_request - ignored");
+	    return;
+	}
+	
+	if (!SendConnectMessage(EMsgType::connect_answer))
+	{
+	    SDV_LOG_ERROR("[UDS][RX] Failed to send connect_answer");
+	    SetConnectState(sdv::ipc::EConnectState::communication_error);
+	    return;
+	}
 
-    if (!SendSizedPacket(&reply, sizeof(reply)))
-        SDV_LOG_ERROR("[UDS][RX] Failed to send connect_answer");
+	SetConnectState(sdv::ipc::EConnectState::connected);
+    m_cvConnect.notify_all();
+
+#if ENABLE_REPORTING >= 1
+        TRACE("Trigger connected");
+#endif
+
+	//}
 }
 
 void CUnixSocketConnection::ReceiveConnectAnswer(const CMessage& message)
 {
-    const auto hdr = message.GetConnectHdr();
-    if (hdr.uiVersion != SDVFrameworkInterfaceVersion)
+    //if (m_eConnectState == sdv::ipc::EConnectState::negotiating)
+    //{	
+	    const auto hdr = message.GetConnectHdr();
+	    if (hdr.uiVersion != SDVFrameworkInterfaceVersion)
+	    {
+	        SetConnectState(sdv::ipc::EConnectState::communication_error);
+	        SDV_LOG_WARNING("[UDS][RX] connect_answer with invalid version");
+	        return;
+	    }
+	    // connect_answer must be handled only by client
+	    if (IsServer())
+	    {
+	    	SDV_LOG_WARNING("[UDS][RX] Server received connect_answer - ignored");
+		    return;
+	    }
+
+    	    SetConnectState(sdv::ipc::EConnectState::connected);
+            m_cvConnect.notify_all();   
+#if ENABLE_REPORTING >= 1
+		TRACE("[UDS][RX] Client connected after connect_answer");
+#endif
+
+	//}
+	
+}
+
+bool CUnixSocketConnection::SendControlMessage(EMsgType type)
+{
+    // Only simple header-based control messages are allowed here.
+    if (type != EMsgType::sync_request &&
+        type != EMsgType::sync_answer &&
+        type != EMsgType::connect_term)
     {
-        SetConnectState(sdv::ipc::EConnectState::communication_error);
-        SDV_LOG_WARNING("[UDS][RX] connect_answer with invalid version");
-        return;
+        SDV_LOG_ERROR("[UDS][TX] Invalid control message type");
+        return false;
     }
 
-    // Fully established
-    SetConnectState(sdv::ipc::EConnectState::connected);
+    SMsgHdr msg{};
+    msg.uiVersion = SDVFrameworkInterfaceVersion;
+    msg.eType     = type;
+
+#if ENABLE_REPORTING >= 1
+    TRACE("[UDS][TX] Send control message type=", static_cast<uint32_t>(type));
+#endif
+
+    return SendSizedPacket(&msg, sizeof(msg));
+}
+
+bool CUnixSocketConnection::SendConnectMessage(EMsgType type)
+{
+    if (type != EMsgType::connect_request &&
+        type != EMsgType::connect_answer)
+    {
+        SDV_LOG_ERROR("[UDS][TX] Invalid connect message type");
+        return false;
+    }
+
+    SConnectMsg msg{};
+    msg.uiVersion  = SDVFrameworkInterfaceVersion;
+    msg.eType      = type;
+    msg.tProcessID = GetCurrentProcessID_Local();
+
+#if ENABLE_REPORTING >= 1
+    TRACE("[UDS][TX] Send ",
+          type == EMsgType::connect_request ? "connect_request" : "connect_answer",
+          " pid=", msg.tProcessID);
+#endif
+
+    return SendSizedPacket(&msg, sizeof(msg));
 }
 
 void CUnixSocketConnection::ReceiveConnectTerm(const CMessage& /*message*/)
 {
     // Peer requested termination
     SetConnectState(sdv::ipc::EConnectState::disconnected);
-    m_StopReceiveThread.store(true);
+    // m_rWatchDog.RemoveMonitor(this);
+
+    m_StopReceiveThread.store(true, std::memory_order_release);
+    m_cvConnect.notify_all();
+
 }
 
 void CUnixSocketConnection::StartReceiveThread_Unsafe()
@@ -954,14 +1345,28 @@ void CUnixSocketConnection::StartReceiveThread_Unsafe()
     }
 
     m_StopReceiveThread.store(false);
-    m_ReceiveThread = std::thread(&CUnixSocketConnection::ReceiveMessages, this);
+    m_ReceiveThread = sdv::core::secure_thread(&CUnixSocketConnection::ReceiveMessages, this);
 }
 
 void CUnixSocketConnection::StopThreadsAndCloseSockets(bool unlinkPath)
 {
+
+    {
+        // Prevent callbacks into potentially destroyed owners during teardown.
+        std::lock_guard<std::mutex> lk(m_StateMtx);
+        m_pReceiver = nullptr;
+        m_pEvent = nullptr;
+    }
+    {
+        std::unique_lock<std::shared_mutex> wlock(m_mtxEventCallbacks);
+        m_lstEventCallbacks.clear();
+    }
+
     // Signal stop
     m_StopReceiveThread.store(true);
     m_StopConnectThread.store(true);
+
+    m_cvConnect.notify_all(); // defensive wake-up for any waiter
 
     // Close listen FD to break accept()
     const int lfd = m_ListenFd; m_ListenFd = -1;
@@ -1077,7 +1482,8 @@ uint32_t CUnixSocketConnection::ReadDataTable(const CMessage& rMessage, SDataCon
 
     // Buffer count
     if (rMessage.GetSize() < (uiOffset + static_cast<uint32_t>(sizeof(uint32_t)))) return 0;
-    const uint32_t uiAmount = *reinterpret_cast<const uint32_t*>(rMessage.GetData() + uiOffset);
+    uint32_t uiAmount = 0;
+    std::memcpy(&uiAmount, rMessage.GetData() + uiOffset, sizeof(uiAmount));
     uiOffset += sizeof(uint32_t);
     rsDataCtxt.uiCurrentOffset += sizeof(uint32_t);
 
@@ -1089,7 +1495,8 @@ uint32_t CUnixSocketConnection::ReadDataTable(const CMessage& rMessage, SDataCon
 
     for (uint32_t i = 0; i < uiAmount; ++i)
     {
-        const uint32_t sz = *reinterpret_cast<const uint32_t*>(rMessage.GetData() + uiOffset);
+        uint32_t sz = 0;
+        std::memcpy(&sz, rMessage.GetData() + uiOffset, sizeof(sz));
         sizes.push_back(static_cast<size_t>(sz));
         uiOffset += sizeof(uint32_t);
         rsDataCtxt.uiCurrentOffset += sizeof(uint32_t);

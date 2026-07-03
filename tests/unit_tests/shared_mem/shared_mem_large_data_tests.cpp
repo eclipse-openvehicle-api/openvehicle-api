@@ -90,7 +90,7 @@ public:
 
         // Start the processing thread if needed
         if (!m_threadDecoupledSend.joinable())
-            m_threadDecoupledSend = std::thread(&CLargeDataReceiver::DecoupledSendThread, this);
+            m_threadDecoupledSend = sdv::core::secure_thread(&CLargeDataReceiver::DecoupledSendThread, this);
 
         // Store data into the queue for sending.
         m_queueDecoupledSend.push(std::move(seqData));
@@ -262,7 +262,7 @@ private:
     bool                                    m_bForcedDisconnect = false;    ///< Force disconnect.
     std::atomic_size_t                      m_nCount = 0;                   ///< Receive counter.
     std::condition_variable                 m_cvReceived;                   ///< Receive event.
-    std::thread                             m_threadDecoupledSend;          ///< Decoupled send thread.
+    sdv::core::secure_thread                m_threadDecoupledSend;          ///< Decoupled send thread.
     std::queue<sdv::sequence<sdv::pointer<uint8_t>>> m_queueDecoupledSend;  ///< Data queue for sending.
     std::condition_variable                 m_cvDecoupledSend;              ///< Trigger decoupled sending.
     std::atomic_bool                        m_bShutdown = false;            ///< Shutdown send thread.
@@ -271,27 +271,29 @@ private:
 TEST(SharedMemChannelService, CommunicateOneLargeBlock)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code(
+    ASSERT_TRUE(appcontrol.Startup(R"toml(
 [Console]
 Report = "Silent"
-        )code"));
+        )toml"));
     appcontrol.SetConfigMode();
 
     CSharedMemChannelMgnt mgntServer, mgntClient;
 
     // Create an endpoint.
-    EXPECT_NO_THROW(mgntServer.Initialize(""));
+    EXPECT_NO_THROW(mgntServer.Initialize(sdv::SObjectInfo()));
     EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     mgntServer.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::running);
-    EXPECT_NO_THROW(mgntClient.Initialize("service = \"client\""));
+    sdv::SObjectInfo sClientInfo{};
+    sClientInfo.ssConfig = "service = \"client\"";
+    EXPECT_NO_THROW(mgntClient.Initialize(sClientInfo));
     EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::initialized);
     mgntClient.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::running);
-    sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint(R"code(
+    sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint(R"toml(
 [IpcChannel]
 Size = 1024000
-)code");
+)toml");
     EXPECT_NE(sChannelEndpoint.pConnection, nullptr);
     EXPECT_FALSE(sChannelEndpoint.ssConnectString.empty());
 
@@ -376,18 +378,20 @@ TEST(SharedMemChannelService, CommunicateMultiLargeBlock)
     CSharedMemChannelMgnt mgntServer, mgntClient;
 
     // Create an endpoint.
-    EXPECT_NO_THROW(mgntServer.Initialize(""));
+    EXPECT_NO_THROW(mgntServer.Initialize(sdv::SObjectInfo()));
     EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     mgntServer.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::running);
-    EXPECT_NO_THROW(mgntClient.Initialize("service = \"client\""));
+    sdv::SObjectInfo sClientInfo{};
+    sClientInfo.ssConfig = "service = \"client\"";
+    EXPECT_NO_THROW(mgntClient.Initialize(sClientInfo));
     EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::initialized);
     mgntClient.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::running);
-    sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint(R"code(
+    sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint(R"toml(
 [IpcChannel]
 Size = 1024000
-)code");
+)toml");
     EXPECT_NE(sChannelEndpoint.pConnection, nullptr);
     EXPECT_FALSE(sChannelEndpoint.ssConnectString.empty());
 
@@ -504,18 +508,20 @@ TEST(SharedMemChannelService, CommunicateFragmentedLargeBlock)
     CSharedMemChannelMgnt mgntServer, mgntClient;
 
     // Create an endpoint.
-    EXPECT_NO_THROW(mgntServer.Initialize(""));
+    EXPECT_NO_THROW(mgntServer.Initialize(sdv::SObjectInfo()));
     EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     mgntServer.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::running);
-    EXPECT_NO_THROW(mgntClient.Initialize("service = \"client\""));
+    sdv::SObjectInfo sClientInfo{};
+    sClientInfo.ssConfig = "service = \"client\"";
+    EXPECT_NO_THROW(mgntClient.Initialize(sClientInfo));
     EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::initialized);
     mgntClient.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(mgntClient.GetObjectState(), sdv::EObjectState::running);
-    sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint(R"code(
+    sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint(R"toml(
 [IpcChannel]
 Size = 1024000
-)code");
+)toml");
     EXPECT_NE(sChannelEndpoint.pConnection, nullptr);
     EXPECT_FALSE(sChannelEndpoint.ssConnectString.empty());
 
@@ -614,23 +620,23 @@ Size = 1024000
 TEST(SharedMemChannelService, AppCommunicateOneLargeBlock)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code(
+    ASSERT_TRUE(appcontrol.Startup(R"toml(
 [Application]
-Mode="Essential")code"));
+Mode="Essential")toml"));
     LoadSupportServices();
     appcontrol.SetConfigMode();
 
     CSharedMemChannelMgnt mgntServer;
 
     // Create an endpoint.
-    EXPECT_NO_THROW(mgntServer.Initialize(""));
+    EXPECT_NO_THROW(mgntServer.Initialize(sdv::SObjectInfo()));
     EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     mgntServer.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::running);
-    sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint(R"code(
+    sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint(R"toml(
 [IpcChannel]
 Size = 1024000
-)code");
+)toml");
     EXPECT_NE(sChannelEndpoint.pConnection, nullptr);
     EXPECT_FALSE(sChannelEndpoint.ssConnectString.empty());
 
@@ -698,23 +704,23 @@ Size = 1024000
 TEST(SharedMemChannelService, AppCommunicateMultiLargeBlock)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code(
+    ASSERT_TRUE(appcontrol.Startup(R"toml(
 [Application]
-Mode="Essential")code"));
+Mode="Essential")toml"));
     LoadSupportServices();
     appcontrol.SetConfigMode();
 
     CSharedMemChannelMgnt mgntServer;
 
     // Create an endpoint.
-    EXPECT_NO_THROW(mgntServer.Initialize(""));
+    EXPECT_NO_THROW(mgntServer.Initialize(sdv::SObjectInfo()));
     EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::initialized);
     mgntServer.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(mgntServer.GetObjectState(), sdv::EObjectState::running);
-    sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint(R"code(
+    sdv::ipc::SChannelEndpoint sChannelEndpoint = mgntServer.CreateEndpoint(R"toml(
 [IpcChannel]
 Size = 1024000
-)code");
+)toml");
     EXPECT_NE(sChannelEndpoint.pConnection, nullptr);
     EXPECT_FALSE(sChannelEndpoint.ssConnectString.empty());
 

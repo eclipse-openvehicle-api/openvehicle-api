@@ -157,6 +157,7 @@ private:
     mutable std::mutex  m_mtxPrintToConsole;                ///< Mutex to print complete message
     bool                m_bRunning = false;                 ///< When set, the application is running.
 
+    sdv::core::CSignal  m_SignalStatusTrunk;                ///< Status of the trunk, only available in the standalone example
     sdv::core::CSignal  m_SignalSpeed;                      ///< Speed
     float               m_SpeedDL = 0.0;                    ///< Speed Data Link
     float               m_SpeedVD = 0.0;                    ///< Speed Vehicle Device

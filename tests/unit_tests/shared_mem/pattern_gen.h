@@ -16,6 +16,7 @@
 
 #include <thread>
 #include <atomic>
+#include <support/local_service_access.h>
 #include "../../../sdv_services/ipc_shared_mem/mem_buffer_accessor.h"
 
 /**
@@ -55,14 +56,14 @@ public:
      */
 
 private:
-	CMemBufferAccessorTx& m_raccessorOut;		 //!< Reference to the output accessor
-	std::thread			  m_thread;				 //!< Processing thread
-    std::atomic_bool      m_bStarted	= false; //!< Set by the thread when started.
-    std::atomic_bool      m_bShutdown	= false; //!< When set, shutdown the thread.
-	uint32_t			  m_uiDelayMs	= 0u;	 //!< Delay (in ms) to insert while processing.
-	uint32_t			  m_uiCycleCnt	= 0u;	 //!< Amount of packets
-	uint32_t			  m_uiPacketCnt = 0u;	 //!< Amount of packets
-	uint64_t			  m_uiByteCnt	= 0ull;	 //!< Amount of bytes
+    CMemBufferAccessorTx&       m_raccessorOut;             //!< Reference to the output accessor
+    sdv::core::secure_thread    m_thread;                   //!< Processing thread
+    std::atomic_bool            m_bStarted = false;         //!< Set by the thread when started.
+    std::atomic_bool            m_bShutdown = false;        //!< When set, shutdown the thread.
+    uint32_t                    m_uiDelayMs         = 0u;   //!< Delay (in ms) to insert while processing.
+    uint32_t                    m_uiCycleCnt        = 0u;   //!< Amount of packets
+    uint32_t                    m_uiPacketCnt       = 0u;   //!< Amount of packets
+    uint64_t                    m_uiByteCnt         = 0ull; //!< Amount of bytes
 };
 
 class CPatternReceiver
@@ -98,15 +99,15 @@ public:
      */
 
 private:
-	CMemBufferAccessorRx& m_raccessorIn;		 //!< Reference to the input accessor
-	std::thread			  m_thread;				 //!< Processing thread
+    CMemBufferAccessorRx& m_raccessorIn;		 //!< Reference to the input accessor
+    sdv::core::secure_thread			  m_thread;				 //!< Processing thread
     bool				  m_bStarted	= false; //!< Set by the thread when started.
     bool				  m_bShutdown	= false; //!< When set, shutdown the thread.
-	uint32_t			  m_uiDelayMs	= 0u;	 //!< Delay (in ms) to insert while processing.
-	uint32_t			  m_uiCycleCnt	= 0u;	 //!< Amount of packets
-	uint32_t			  m_uiErrorCnt	= 0u;	 //!< Amount of counter errors
-	uint32_t			  m_uiPacketCnt = 0u;	 //!< Amount of packets
-	uint64_t			  m_uiByteCnt	= 0ull;	 //!< Amount of bytes
+    uint32_t			  m_uiDelayMs	= 0u;	 //!< Delay (in ms) to insert while processing.
+    uint32_t			  m_uiCycleCnt	= 0u;	 //!< Amount of packets
+    uint32_t			  m_uiErrorCnt	= 0u;	 //!< Amount of counter errors
+    uint32_t			  m_uiPacketCnt = 0u;	 //!< Amount of packets
+    uint64_t			  m_uiByteCnt	= 0ull;	 //!< Amount of bytes
 };
 
 class CPatternRepeater
@@ -143,16 +144,16 @@ public:
      */
 
 private:
-	CMemBufferAccessorRx& m_raccessorIn;		 //!< Reference to the input accessor
-	CMemBufferAccessorTx& m_raccessorOut;		 //!< Reference to the output accessor
-	std::thread			  m_thread;				 //!< Processing thread
-    bool				  m_bStarted	= false; //!< Set by the thread when started.
-    bool				  m_bShutdown	= false; //!< When set, shutdown the thread.
-	uint32_t			  m_uiDelayMs	= 0u;	 //!< Delay (in ms) to insert while processing.
-	uint32_t			  m_uiCycleCnt	= 0u;	 //!< Amount of packets
-	uint32_t			  m_uiErrorCnt	= 0u;	 //!< Amount of counter errors
-	uint32_t			  m_uiPacketCnt = 0u;	 //!< Amount of packets
-	uint64_t			  m_uiByteCnt	= 0ull;	 //!< Amount of bytes
+    CMemBufferAccessorRx&       m_raccessorIn;              //!< Reference to the input accessor
+    CMemBufferAccessorTx&       m_raccessorOut;             //!< Reference to the output accessor
+    sdv::core::secure_thread    m_thread;                   //!< Processing thread
+    bool                        m_bStarted = false;         //!< Set by the thread when started.
+    bool                        m_bShutdown = false;        //!< When set, shutdown the thread.
+    uint32_t                    m_uiDelayMs = 0u;           //!< Delay (in ms) to insert while processing.
+    uint32_t                    m_uiCycleCnt = 0u;          //!< Amount of packets
+    uint32_t                    m_uiErrorCnt = 0u;          //!< Amount of counter errors
+    uint32_t                    m_uiPacketCnt = 0u;         //!< Amount of packets
+    uint64_t                    m_uiByteCnt = 0ull;         //!< Amount of bytes
 };
 
 #endif // !defined(PATTERN_GEN_H)

@@ -119,6 +119,9 @@ else()
     if (WIN32)
         message("Use g++ compiler under Windows (mingw)...")
         add_compile_definitions(UNICODE _UNICODE main=wmain)
+        # MinGW COFF object files can hit section limits for large translation units.
+        # Enable big object format to avoid assembler 'too many sections' failures.
+        add_compile_options(-Wa,-mbig-obj)
         add_link_options(-municode)
     else()
         message("Use g++ compiler...")

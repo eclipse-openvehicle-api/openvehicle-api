@@ -62,6 +62,10 @@
  * #Console output
  * [Console]
  * Report = "Silent"       # Either "Silent", "Normal" or "Verbose" for no, normal or extensive messages.
+ * RedirectMon = true      # When set, redirects messages to the console instead of the monitor application in main mode.
+ *
+ * [Connections]
+ * Retries = 5              # The amount of retries when trying to connect (value between 3 and 30, default is 5).
  *
  * # Search directories
  * @endcode
@@ -103,11 +107,40 @@
  * # Example
  * #   AppConfig = "app_config.toml"
  * AppConfig = ""
+ * 
+ * # A list of zero or more listener definitions that should be instantiated during startup of the
+ * # main application. If no listener definition is available, the default shared-memory listener 
+ * # is being instantiated.
+ * #
+ * # [[Settings.Listener]]
+ * # Name = ""
+ * # [Settings.Listerner.Provider]
+ * # Name = ""
+ * # [Settings.Listener.IpcChannel]
+ * 
+ * # A list of zero or more client connections that should be instantiated during startup.
+ * #
+ * # [[Settings.Connection]]
+ * # Name = ""
+ * # [Settings.Connection.Provider]
+ * # Name = ""
+ * # [Settings.Listener.IpcChannel]
  * @endcode
  */
-class CAppSettings : public sdv::IInterfaceAccess, public sdv::app::IAppContext, public sdv::IAttributes
+class CAppSettings : public sdv::CSdvParamMap, public sdv::IInterfaceAccess, public sdv::app::IAppContext,
+    public sdv::app::IAppSettingsPersist, public sdv::app::IAppConnections
 {
 public:
+    /**
+     * @brief Console reporting.
+     */
+    enum class EAppConsoleReporting
+    {
+        silent,  ///< No reporting by application control (default)
+        normal,  ///< Normal reporting by application control
+        verbose, ///< Extensive reporting by application control
+    };
+
     /**
      * @brief Constructor
      */
@@ -118,10 +151,70 @@ public:
      */
     ~CAppSettings();
 
+#ifndef DOXYGEN_IGNORE
     // Interface map
     BEGIN_SDV_INTERFACE_MAP()
         SDV_INTERFACE_ENTRY(sdv::app::IAppContext)
     END_SDV_INTERFACE_MAP()
+
+    // Application mode labels
+    BEGIN_SDV_LABEL_MAP(sdv::app::EAppContext)
+        SDV_LABEL_ENTRY(sdv::app::EAppContext::no_context, "Undefined")
+        SDV_LABEL_ENTRY(sdv::app::EAppContext::standalone, "Standalone")
+        SDV_LABEL_ENTRY(sdv::app::EAppContext::external, "External")
+        SDV_LABEL_ENTRY(sdv::app::EAppContext::isolated, "Isolated")
+        SDV_LABEL_ENTRY(sdv::app::EAppContext::main, "Main")
+        SDV_LABEL_ENTRY(sdv::app::EAppContext::essential, "Essential")
+        SDV_LABEL_ENTRY(sdv::app::EAppContext::maintenance, "Maintenance")
+    END_SDV_LABEL_MAP()
+
+    // Log severity labels
+    BEGIN_SDV_LABEL_MAP(sdv::core::ELogSeverity)
+        SDV_LABEL_ENTRY(sdv::core::ELogSeverity::trace, "Trace")
+        SDV_LABEL_ENTRY(sdv::core::ELogSeverity::debug, "Debug")
+        SDV_LABEL_ENTRY(sdv::core::ELogSeverity::info, "Info")
+        SDV_LABEL_ENTRY(sdv::core::ELogSeverity::warning, "Warning")
+        SDV_LABEL_ENTRY(sdv::core::ELogSeverity::error, "Error")
+        SDV_LABEL_ENTRY(sdv::core::ELogSeverity::fatal, "Fatal")
+    END_SDV_LABEL_MAP()
+
+    // Console reporting labels
+    BEGIN_SDV_LABEL_MAP(EAppConsoleReporting)
+        SDV_LABEL_ENTRY(EAppConsoleReporting::normal, "Normal")
+        SDV_LABEL_ENTRY(EAppConsoleReporting::silent, "Silent")
+        SDV_LABEL_ENTRY(EAppConsoleReporting::verbose, "Verbose")
+    END_SDV_LABEL_MAP()
+
+    // Parameter map
+    BEGIN_SDV_PARAM_MAP()
+        SDV_PARAM_SET_READONLY()
+        SDV_PARAM_GROUP("LogHandler")
+        SDV_PARAM_ENTRY(m_ssLoggerClass, "Class", "", "", "Component class name of a custom logger")
+        SDV_PARAM_ENTRY(m_pathLoggerModule, "Path", "", "", "Component module path of a custom logger")
+        SDV_PARAM_ENTRY(m_ssProgramTag, "Tag", "", "", "Program tag to use instead of the name SDV_LOG_<pid>")
+        SDV_PARAM_ENUM_ENTRY(m_eSeverityFilter, "Filter", sdv::core::ELogSeverity::info,
+            "Lowest severity filter to use when logging (Trace, Debug, Info, Warning, Error, Fatal)")
+        SDV_PARAM_ENUM_ENTRY(m_eSeverityViewFilter, "ViewFilter", sdv::core::ELogSeverity::error,
+            "Lowest severity filter to use when logging (Trace, Debug, Info, Warning, Error, Fatal)")
+
+        SDV_PARAM_GROUP("Application")
+        SDV_PARAM_ENUM_ENTRY(m_eAppContextType, "Mode", sdv::app::EAppContext::no_context, "Application mode")
+        SDV_PARAM_ENTRY(m_uiInstanceID, "Instance", 0u, "", "System instance ID")
+        SDV_PARAM_ENTRY(m_pathRootDir, "RootDir", "", "", "Location of user component root directory")
+        SDV_PARAM_ENTRY(m_pathInstallDir, "InstallDir", "", "", "Location of user component installations")
+        SDV_PARAM_ENTRY(m_pathPlatformConfig, "PlatformConfig", "", "", "The platform abstraction configuration file")
+        SDV_PARAM_ENTRY(m_pathVehIfcConfig, "VehIfcConfig", "", "", "The vehicle interface configuration file")
+        SDV_PARAM_ENTRY(m_pathVehAbstrConfig, "VehAbstrConfig", "", "", "The vehicle abstraction configuration file")
+        SDV_PARAM_ENTRY(m_pathUserConfig, "AppConfig", "", "", "The application configuration file")
+
+        SDV_PARAM_GROUP("Console")
+        SDV_PARAM_ENUM_ENTRY(m_eConsoleReporting, "Reporting", EAppConsoleReporting::normal, "Console reporting (Normal, Silent, Verbose)")
+        SDV_PARAM_ENTRY(m_bRedirectMon, "RedirectMon", false, "", "Redirect messages from the monitor onto the console.")
+
+        SDV_PARAM_GROUP("Communication")
+        SDV_PARAM_ENTRY(m_ssDefaultComProvider, "DefaultProvider", "", "", "Name of the default communication provider")
+    END_SDV_PARAM_MAP()
+#endif // !defined DOXYGEN_IGNORE
 
     /**
      * @brief Process the application starrtup configuration.
@@ -131,19 +224,20 @@ public:
     bool ProcessAppStartupConfig(const sdv::u8string& rssConfig);
 
     /**
-     * @brief Load the application settings file.
+     * @brief Load the application settings file. Overload of sdv::app::IAppSettingsPersist::LoadSettings.
      * @attention Only works if the application is running in main, isolation or maintenance mode.
      * @remarks When there is no settings file, this is not an error. Default settings will be assumed.
      * @return Returns whether the loading was successful.
      */
-    bool LoadSettingsFile();
+    bool LoadSettings() override;
 
     /**
      * @brief Save the application settings file (or create when not existing yet).
-     * @attention Only works if the application is running in main, isolation or maintenance mode.
+     * Overload of sdv::app::IAppSettingsPersist::SaveSettings.
+     * @attention Only works if the application is running in maintenance mode.
      * @return Returns whether the saving was successful.
      */
-    bool SaveSettingsFile();
+    bool SaveSettings() override;
 
     /**
      * @brief Return whether the current application is the main application.
@@ -182,25 +276,31 @@ public:
     bool IsExternalApplication() const;
 
     /**
+     * @brief Set the application context type.
+     * @param[in] eContextType The application context type to set.
+     */
+    void SetContextType(sdv::app::EAppContext eContextType);
+
+    /**
      * @brief Return the application context mode. Overload of sdv::app::IAppContext::GetContextType.
      * @return The context mode.
      */
     sdv::app::EAppContext GetContextType() const override;
 
     /**
+     * @brief Set the instance ID.
+     * @param uiID The instance ID to set.
+     */
+    void SetInstanceID(uint32_t uiID);
+
+    /**
      * @brief Return the core instance ID. Overload of sdv::app::IAppContext::GetContextType.
      * @details Get the instance. If not otherwise specified, the current instance depends on whether the application is running
-     * as main or isolated application, in which case the instance is 1000. In all other cases the instance is 0. An instance
-     * ID can be supplied through the app startup configuration.
+     * as main, isolated or maintenance application, in which case the instance is 1000. In all other cases the instance is 0. An
+     * instance ID can be supplied through the app startup configuration.
      * @return The core instance ID.
      */
     uint32_t GetInstanceID() const override;
-
-    /**
-     * @brief Return the number of retries to establish a connection. Overload of sdv::app::IAppContext::GetRetries.
-     * @return Number of retries.
-     */
-    uint32_t GetRetries() const override;
 
     /**
      * @brief Get the class name of a logger service, if specified in the application startup configuration.
@@ -245,6 +345,30 @@ public:
     bool IsConsoleVerbose() const;
 
     /**
+     * @brief Set the application console reporting status.
+     * @param eReporting The console reporting status to set.
+     */
+    void SetConsoleReporting(EAppConsoleReporting eReporting);
+
+    /**
+     * @brief Get the current application console reporting status.
+     * @return The console reporting status of the application.
+     */
+    EAppConsoleReporting GetConsoleReporting() const;
+
+    /**
+     * @brief Redirect the messages monitored for main application onto the console.
+     * @return Returns whether redirection is switched on.
+     */
+    bool RedirectMonitorToConsole() const;
+
+    /**
+     * @brief Get the framework directory for the application.
+     * @return The location of framework directory.
+     */
+    std::filesystem::path GetFrameworkDir() const;
+
+    /**
      * @brief Get the root directory for the application.
      * @remarks Is only valid when used in main, isolated and maintenance applications.
      * @return The location of root directory.
@@ -279,6 +403,7 @@ public:
     /**
      * @brief Get the stored or default configuration path name.
      * @attention Setting a path is only valid when running as main application.
+     * @param[in] eType The configuration type to get the path for.
      * @return The path name dependent on the configuration type. If no path name was configured, the default path name is returned.
      */
     std::filesystem::path GetConfigPath(EConfigType eType) const;
@@ -326,33 +451,80 @@ public:
     bool RemoveUserConfigPath();
 
     /**
-     * @brief Get a sequence with the available attribute names. Overload of sdv::IAttributes::GetNames.
-     * @return The sequence of attribute names.
+     * @brief Get the default communication provider (extracted from listener and connection settings).
+     * @return Name of the default communication provider.
      */
-    virtual sdv::sequence<sdv::u8string> GetNames() const override;
+    const std::string& GetDefaultComProvider() const;
 
     /**
-     * @brief  Get the attribute value. Overload of sdv::IAttributes::Get.
-     * @param[in] ssAttribute Name of the attribute.
-     * @return The attribute value or an empty any-value if the attribute wasn't found or didn't have a value.
+     * @brief Get a sequence with listener names. Overload of sdv::app::IAppConnections::GetListeners.
+     * @return Sequence with listener name strings.
      */
-    virtual sdv::any_t Get(/*in*/ const sdv::u8string& ssAttribute) const override;
+    sdv::sequence<sdv::u8string> GetListeners() const override;
 
     /**
-     * @brief Set the attribute value. Overload of sdv::IAttributes::Set.
-     * @param[in] ssAttribute Name of the attribute.
-     * @param[in] anyAttribute Attribute value to set.
-     * @return Returns 'true' when setting the attribute was successful or 'false' when the attribute was not found or the
-     * attribute is read-only or another error occurred.
+     * @brief Get the listener configuration. Overload of sdv::app::IAppConnections::GetListenerConfig.
+     * @param[in] ssName Name of the listener.
+     * @return String containing the listener configuration.
      */
-    virtual bool Set(/*in*/ const sdv::u8string& ssAttribute, /*in*/ sdv::any_t anyAttribute) override;
+    sdv::u8string GetListenerConfig(/*in*/ const sdv::u8string& ssName) const override;
 
     /**
-     * @brief Get the attribute flags belonging to a certain attribute. Overload of sdv::IAttributes::GetFlags.
-     * @param[in] ssAttribute Name of the attribute.
-     * @return Returns the attribute flags (zero or more EAttributeFlags flags) or 0 when the attribute could not be found.
+     * @brief Add or update a listener configuration. Overload of sdv::app::IAppConnections::AddListenerConfig.
+     * @remarks Only accessible when the application runs in maintenance mode.
+     * @param[in] ssName Name of the listener configuration.
+     * @param[in] ssConfig The configuration string for the listener.
+     * @return Returns whether the listener could be added (fails when the listener already exists).
      */
-    virtual uint32_t GetFlags(/*in*/ const sdv::u8string& ssAttribute) const override;
+    bool AddListenerConfig(/*in*/ const sdv::u8string& ssName, /*in*/ const sdv::u8string& ssConfig) override;
+
+    /**
+     * @brief Remove a listener configuration with the provided name. Overload of sdv::app::IAppConnections::RemoveListenerConfig.
+     * @remarks Only accessible when the application runs in maintenance mode.
+     * @param[in] ssName Name of the listener configuration.
+     * @return Returns whether the removal was successful.
+     */
+    bool RemoveListenerConfig(/*in*/ const sdv::u8string& ssName) override;
+
+    /**
+     * @brief Get a sequence with connection names. Overload of sdv::app::IAppConnections::GetConnections.
+     * @return Sequence with connection name strings.
+     */
+    sdv::sequence<sdv::u8string> GetConnections() const override;
+
+    /**
+     * @brief Get the connection configuration. Overload of sdv::app::IAppConnections::GetConnectionConfig.
+     * @param[in] ssName Name of the connection.
+     * @return String containing the connection configuration.
+     */
+    sdv::u8string GetConnectionConfig(/*in*/ const sdv::u8string& ssName) const override;
+
+    /**
+     * @brief Add or update a connection configuration. Overload of sdv::app::IAppConnections::AddConnectionConfig.
+     * @remarks Only accessible when the application runs in maintenance mode.
+     * @param[in] ssName Name of the connection configuration.
+     * @param[in] ssConfig The configuration string for the connection.
+     * @param[in] ssInsertBefore Reference to the string to connection to insert the the new connection before, or empty when the
+     * the new connection should be placed at the end.
+     * @return Returns whether the connection could be added (fails when the connection already exists).
+     */
+    bool AddConnectionConfig(/*in*/ const sdv::u8string& ssName, /*in*/ const sdv::u8string& ssConfig,
+        /*in*/ const sdv::u8string& ssInsertBefore = std::string()) override;
+
+    /**
+     * @brief Remove a connection configuration with the provided name. Overload of
+     * sdv::app::IAppConnections::RemoveConnectionConfig.
+     * @remarks Only accessible when the application runs in maintenance mode.
+     * @param[in] ssName Name of the connection configuration.
+     * @return Returns whether the removal was successful.
+     */
+    bool RemoveConnectionConfig(/*in*/ const sdv::u8string& ssName) override;
+
+    /**
+     * @brief Return the number of retries to establish a connection. Overload of sdv::app::IAppConnections::GetRetries.
+     * @return Number of retries.
+     */
+    uint32_t GetConnectRetries() const override;
 
     /**
      * @brief Reset the settings after a shutdown.
@@ -360,26 +532,42 @@ public:
     void Reset();
 
 private:
-    sdv::app::EAppContext       m_eContextMode = sdv::app::EAppContext::no_context; ///< The application is running as...
-    uint32_t                    m_uiInstanceID = 0u;            ///< Instance number.
-    uint32_t                    m_uiRetries = 0u;               ///< Number of retries to establish a connection.
+    /**
+     * @brief Get the default listener config.
+     * @return String containing the TOML with the listener config.
+     */
+    std::string DefaultListenerConfig() const;
+
+    /**
+     * @brief Get the default connection config.
+     * @return String containing the TOML with the connection config.
+     */
+    std::string DefaultConnectionConfig() const;
+
+    sdv::app::EAppContext       m_eAppContextType = sdv::app::EAppContext::no_context; ///< The application is running as...
+    uint32_t                    m_uiInstanceID = 0u;            ///< Instance number (default 1000, but only after startup).
+    uint32_t                    m_uiConnectRetries = 5u;        ///< Number of retries to establish a connection.
     std::string                 m_ssLoggerClass;                ///< Class name of a logger service.
     std::filesystem::path       m_pathLoggerModule;             ///< Module name of a custom logger.
     std::string                 m_ssProgramTag;                 ///< Program tag to use when logging.
     sdv::core::ELogSeverity     m_eSeverityFilter = sdv::core::ELogSeverity::info;      ///< Severity level filter while logging.
     sdv::core::ELogSeverity     m_eSeverityViewFilter = sdv::core::ELogSeverity::error; ///< Severity level filter while logging.
-    bool                        m_bSilent = false;              ///< When set, no console reporting takes place.
-    bool                        m_bVerbose = false;             ///< When set, extensive console reporting takes place.
+    EAppConsoleReporting        m_eConsoleReporting = EAppConsoleReporting::normal; ///< Console reporting
+    bool                        m_bRedirectMon = false;         ///< When set, redirect the message from the monitor onto console.
+    std::filesystem::path       m_pathFrameworkDir;             ///< Location of framework component directory.
     std::filesystem::path       m_pathRootDir;                  ///< Location of user component root directory.
     std::filesystem::path       m_pathInstallDir;               ///< Location of user component installations (root with instance).
     std::filesystem::path       m_pathPlatformConfig;           ///< The platform configuration from the settings file.
     std::filesystem::path       m_pathVehIfcConfig;             ///< The vehicle interface configuration from the settings file.
     std::filesystem::path       m_pathVehAbstrConfig;           ///< The vehicle abstraction configuration from the settings file.
     std::filesystem::path       m_pathUserConfig;               ///< The user configuration from the settings file.
-    bool                        m_bPlatformConfig = false;      ///< Platform config was explicitly enabled/disabled.
-    bool                        m_bVehIfcConfig = false;        ///< Vehicle interface config was explicitly enabled/disabled.
-    bool                        m_bVehAbstrConfig = false;      ///< Vehicle abstraction config was explicitly enabled/disabled.
-    bool                        m_bUserConfig = false;          ///< User config was explicitly enabled/disabled.
+    bool                        m_bUpdatePlatformConfig = false; ///< Platform config was explicitly marked for update.
+    bool                        m_bUpdateVehIfcConfig = false;  ///< Vehicle interface config was explicitly marked for update.
+    bool                        m_bUpdateVehAbstrConfig = false; ///< Vehicle abstraction config was explicitly marked for update.
+    bool                        m_bUpdateUserConfig = false;    ///< User config was explicitly marked for update.
+    std::map<std::string, std::string> m_mapListeners;          ///< Map with listener configurations.
+    std::vector<std::pair<std::string, std::string>> m_vecConnections; ///< Vector with connection configurations.
+    std::string                 m_ssDefaultComProvider;         ///< Name of the default communication provider.
 };
 
 /**
@@ -398,13 +586,22 @@ public:
 
     // Interface map
     BEGIN_SDV_INTERFACE_MAP()
-        SDV_INTERFACE_ENTRY_MEMBER(sdv::IAttributes, GetAppSettings())
+        SDV_INTERFACE_SET_SECTION_CONDITION(GetAppSettings().IsMaintenanceApplication(), 1)
+        SDV_INTERFACE_SECTION(1)
+        SDV_INTERFACE_ENTRY_MEMBER(sdv::app::IAppSettingsPersist, GetAppSettings())
+        SDV_INTERFACE_ENTRY_MEMBER(sdv::app::IAppConnections, GetAppSettings())
+        SDV_INTERFACE_DEFAULT_SECTION()
     END_SDV_INTERFACE_MAP()
 
     // Object declarations
     DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
     DECLARE_OBJECT_CLASS_NAME("AppSettingsService")
     DECLARE_OBJECT_SINGLETON()
+
+    // Parameter map
+    BEGIN_SDV_PARAM_MAP()
+        SDV_PARAM_CHAIN_MEMBER(GetAppSettings())
+    END_SDV_PARAM_MAP()
 
     /**
      * @brief Get access to the application settings.

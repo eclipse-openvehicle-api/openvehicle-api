@@ -13,6 +13,7 @@
 
 #include "core.idl"
 #include "process.idl"
+#include "permission.idl"
 
 /**
  * @brief Software Defined Vehicle framework.
@@ -149,6 +150,7 @@ module sdv
             TMarshallID             tProxyID;       ///< Proxy id to identify the proxy this packet is sending from or destined to.
             TMarshallID             tStubID;        ///< Stub id to identify the stub this packet is destined to or receiving from.
             uint64                  uiCallIndex;    ///< Call index to uniquely identify the call.
+            core::TPermissionID     tPermissionID;  ///< Permission ID used to elevate permission, or 0 for standard permission.
         };
 
         /**

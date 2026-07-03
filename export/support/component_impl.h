@@ -20,6 +20,8 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <atomic>
+#include <memory>
 
 #include "../interfaces/core_types.h"
 #include "../interfaces/core.h"
@@ -683,9 +685,9 @@ namespace sdv
 
         /**
          * @brief Initialize the object. Overload of IObjectControl::Initialize.
-         * @param[in] ssObjectConfig Optional configuration string.
+         * @param[in] sObjectInfo The registration information of this object.
          */
-        virtual void Initialize(/*in*/ const u8string& ssObjectConfig) override
+        virtual void Initialize(/*in*/ const SObjectInfo& sObjectInfo) override
         {
             // Not started before or ended completely?
             if (GetObjectState() != EObjectState::initialization_pending && GetObjectState() != EObjectState::destruction_pending)
@@ -700,19 +702,19 @@ namespace sdv
             // Initialize the parameter map.
             InitParamMap();
 
-            // Copy the configuration
-            m_ssObjectConfig = ssObjectConfig;
+            // Copy the object information
+            m_sSelf = sObjectInfo;
 
             // Prepare initialization
             OnPreInitialize();
 
             // Parse the object configuration if there is any.
-            if (!ssObjectConfig.empty())
+            if (!m_sSelf.ssConfig.empty())
             {
                 try
                 {
                     // Parse the config TOML.
-                    toml::CTOMLParser parser(ssObjectConfig);
+                    toml::CTOMLParser parser(m_sSelf.ssConfig);
                     if (!parser.IsValid())
                     {
                         m_eObjectState = EObjectState::config_error;
@@ -782,6 +784,15 @@ namespace sdv
         }
 
         /**
+         * @brief Get information about ourself.
+         * @return The object information about ourself.
+         */
+        const SObjectInfo& Self() const
+        {
+            return m_sSelf;
+        }
+
+        /**
          * @brief Set the component operation mode. Overload of IObjectControl::SetOperationMode.
          * @param[in] eMode The operation mode, the component should run in.
          */
@@ -831,15 +842,11 @@ namespace sdv
         }
 
         /**
-         * @brief Get the object configuration for persistence.
+         * @brief Build the object configuration from the parameter map and the stored initial configuration.
          * @return The object configuration as TOML string.
          */
-        virtual u8string GetObjectConfig() const override
+        virtual u8string BuildObjectConfig() const
         {
-            // During the initialization, return the stored object configuration.
-            if (m_eObjectState == EObjectState::initializing || m_eObjectState == EObjectState::initialization_pending)
-                return m_ssObjectConfig;
-
             // Split path function (splits the group from the parameter names)
             auto fnSplitPath = [](const u8string& rssPath) -> std::pair<u8string, u8string>
             {
@@ -849,13 +856,10 @@ namespace sdv
                 return std::make_pair(rssPath.substr(0, nPos), rssPath.substr(nPos + 1));
             };
 
-            // Create a new configuration string from the parameters.
-            auto seqParameters = GetParamPaths();
-            if (seqParameters.empty()) return {};
-
             // Iterate through the list of parameter names and create the TOML entries for it.
+            auto seqParameters = GetParamPaths();
             u8string ssGroup;
-            toml::CTOMLParser parser("");
+            toml::CTOMLParser parser(m_sSelf.ssConfig);
             toml::CNodeCollection table(parser);
             for (auto ssParamPath : seqParameters)
             {
@@ -863,7 +867,7 @@ namespace sdv
                 auto ptrParam = FindParamObject(ssParamPath);
                 
                 // Read only and temporary parameters are not stored
-                if ((!ptrParam->Locked() && ptrParam->ReadOnly()) || !ptrParam->Temporary())
+                if ((!ptrParam->Locked() && ptrParam->ReadOnly()) || ptrParam->Temporary())
                     continue;
 
                 // Get the value
@@ -877,7 +881,9 @@ namespace sdv
                 // Need to add a group?
                 if (prParam.first != ssGroup)
                 {
-                    table = parser.AddTable(prParam.first);
+                    table = parser.GetDirect(prParam.first);
+                    if (!table)
+                        table = parser.AddTable(prParam.first);
                     ssGroup = prParam.first;
                 }
 
@@ -886,6 +892,20 @@ namespace sdv
             }
 
             return parser.GetTOML();
+        }
+
+        /**
+         * @brief Get the object configuration for persistence. Overload of IObjectControl::GetObjectConfig.
+         * @return The object configuration as TOML string.
+         */
+        virtual u8string GetObjectConfig() const override
+        {
+            // During the initialization, return the stored object configuration.
+            if (m_eObjectState == EObjectState::initializing || m_eObjectState == EObjectState::initialization_pending)
+                return m_sSelf.ssConfig;
+
+            
+            return BuildObjectConfig();
         }
 
         /**
@@ -930,7 +950,7 @@ namespace sdv
          * @post Reset by switching to configuration mode.
          */
         void SetObjectIntoRuntimeErrorState()
-        {
+        {   
             if (m_eObjectState == EObjectState::running)
                 m_eObjectState = EObjectState::runtime_error;
         }
@@ -993,6 +1013,12 @@ namespace sdv
         virtual void OnShutdown() {}
 
         /**
+         * @brief Last function called before destruction. The object integrity is still in tact. It can be assumed that all
+         * dependencies to the object have been released.
+         */
+        virtual void OnDestroy() {}
+
+        /**
          * @brief Interface map
          */
         BEGIN_SDV_INTERFACE_MAP()
@@ -1002,7 +1028,8 @@ namespace sdv
 
     private:
         std::atomic<EObjectState>   m_eObjectState = EObjectState::initialization_pending;  ///< Object state
-        std::string                 m_ssObjectConfig;                                       ///< Copy of the configuration TOML.
+        CLifetimeCookie             m_lifetime = CreateLifetimeCookie();                    ///< Manage module lifetime.
+        SObjectInfo                 m_sSelf;                                                ///< Information about ourself.
     };
 
     /**
@@ -1020,6 +1047,206 @@ namespace sdv
             SDV_INTERFACE_CHAIN_BASE(CSdvObject)
             SDV_INTERFACE_CHAIN_BASE(TSdvObject)
         END_SDV_INTERFACE_MAP()
+    };
+
+    /**
+     * @brief Lifetime control implementation class.
+     */
+    class CLifetimeControlImpl : public virtual IInterfaceAccess, public IObjectLifetime, protected IObjectDestroy
+    {
+    public:
+        /**
+         * @brief Default constructor
+         */
+        CLifetimeControlImpl()
+        {}
+
+        /**
+         * @brief Deleted copy constructor.
+         * @param[in] rClass Reference to the class to copy from.
+         */
+        CLifetimeControlImpl(const CLifetimeControlImpl& rClass) = delete;
+
+        /**
+         * @brief Deleted move constructor.
+         * @param[in] rClass Reference to the class to copy from.
+         */
+        CLifetimeControlImpl(CLifetimeControlImpl&& rClass) = delete;
+
+        /**
+         * @brief Destructor.
+         */
+        virtual ~CLifetimeControlImpl()
+        {}
+
+        // Interface map (IObjectDestroy is not exposed)
+        BEGIN_SDV_INTERFACE_MAP()
+            SDV_INTERFACE_ENTRY(IObjectLifetime)
+        END_SDV_INTERFACE_MAP()
+
+        /**
+         * @brief Deleted copy assignment constructor.
+         * @param[in] rClass Reference to the class to copy from.
+         * @return Reference to this class.
+         */
+        CLifetimeControlImpl& operator=(const CLifetimeControlImpl& rClass) = delete;
+
+        /**
+         * @brief Deleted move assignment constructor.
+         * @param[in] rClass Reference to the class to copy from.
+         * @return Reference to this class.
+         */
+        CLifetimeControlImpl& operator=(CLifetimeControlImpl&& rClass) = delete;
+
+        /**
+         * @brief Increment the lifetime. Needs to be balanced by a call to Decrement. Overload of IObjectLifetime::Increment.
+         */
+        virtual void Increment() override
+        {
+            m_uiLifetimeCnt++;
+        }
+
+        /**
+         * @brief Decrement the lifetime. If the lifetime reaches zero, the object will be destroyed (through the exposed
+         * IObjectDestroy interface). Overload of IObjectLifetime::Decrement.
+         * @return Returns 'true' if the object was destroyed, false if not.
+         */
+        virtual bool Decrement() override
+        {
+            if (m_uiLifetimeCnt && !(--m_uiLifetimeCnt))
+            {
+                DestroyObject();
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * @brief Get the current lifetime count. Overload of IObjectLifetime::GetCount.
+         * @remarks The GetCount function returns a momentary value, which can be changed at any moment.
+         * @return Returns the current counter value.
+         */
+        virtual uint32_t GetCount() const override
+        {
+            return m_uiLifetimeCnt;
+        }
+
+    protected:
+        /**
+         * @brief Destroy the object. Default implementation deletes 'this'. Overload of IObjectDestroy::DestroyObject.
+         * @attention After a call of this function, all exposed interfaces render invalid and should not be used any more.
+         */
+        virtual void DestroyObject() override
+        {
+            delete this;
+        }
+
+    private:
+        CLifetimeCookie         m_lifetime = CreateLifetimeCookie();    ///< Module lifetime
+        std::atomic_uint32_t    m_uiLifetimeCnt = 1;                    ///< Lifetime reference counter
+    };
+
+    /**
+     * @brief Lifetime control implementation class based on shared pointer.
+     * @tparam TClass The type of class deriving CSharedLifetimeControlImpl class.
+     */
+    template <class TClass>
+    class CSharedLifetimeControlImpl : public std::enable_shared_from_this<TClass>, public CLifetimeControlImpl
+    {
+    public:
+        /**
+         * @brief Default constructor
+         */
+        CSharedLifetimeControlImpl()
+        {}
+
+        /**
+         * @brief Deleted copy constructor.
+         * @param[in] rClass Reference to the class to copy from.
+         */
+        CSharedLifetimeControlImpl(const CSharedLifetimeControlImpl& rClass) = delete;
+
+        /**
+         * @brief Deleted move constructor.
+         * @param[in] rClass Reference to the class to copy from.
+         */
+        CSharedLifetimeControlImpl(CSharedLifetimeControlImpl&& rClass) = delete;
+
+        /**
+         * @brief Destructor.
+         */
+        virtual ~CSharedLifetimeControlImpl()
+        {
+        }
+
+        // Interface map (IObjectDestroy is not exposed)
+        BEGIN_SDV_INTERFACE_MAP()
+            SDV_INTERFACE_ENTRY(IObjectLifetime)
+        END_SDV_INTERFACE_MAP()
+
+        /**
+         * @brief Deleted copy assignment constructor.
+         * @param[in] rClass Reference to the class to copy from.
+         * @return Reference to this class.
+         */
+        CSharedLifetimeControlImpl& operator=(const CSharedLifetimeControlImpl& rClass) = delete;
+
+        /**
+         * @brief Deleted move assignment constructor.
+         * @param[in] rClass Reference to the class to copy from.
+         * @return Reference to this class.
+         */
+        CSharedLifetimeControlImpl& operator=(CSharedLifetimeControlImpl&& rClass) = delete;
+
+        /**
+         * @brief Increment the lifetime. Needs to be balanced by a call to Decrement. Overload of IObjectLifetime::Increment.
+         */
+        virtual void Increment() override
+        {
+            if (!m_uiLifetimeCnt++)
+                m_ptrLocking = std::enable_shared_from_this<TClass>::shared_from_this();
+        }
+
+        /**
+         * @brief Decrement the lifetime. If the lifetime reaches zero, the object will be destroyed (through the exposed
+         * IObjectDestroy interface). Overload of IObjectLifetime::Decrement.
+         * @return Returns 'true' if the object was destroyed, false if not.
+         */
+        virtual bool Decrement() override
+        {
+            if (m_uiLifetimeCnt && !(--m_uiLifetimeCnt))
+            {
+                DestroyObject();
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * @brief Get the current lifetime count. Overload of IObjectLifetime::GetCount.
+         * @remarks The GetCount function returns a momentary value, which can be changed at any moment.
+         * @return Returns the current counter value.
+         */
+        virtual uint32_t GetCount() const override
+        {
+            return m_uiLifetimeCnt;
+        }
+
+    protected:
+        /**
+         * @brief Destroy the object. Default implementation deletes 'this'. Overload of IObjectDestroy::DestroyObject.
+         * @attention After a call of this function, all exposed interfaces render invalid and should not be used any more.
+         */
+        virtual void DestroyObject() override
+        {
+            // Reset the locking; this might delete the class if no other references are present.
+            m_ptrLocking.reset();
+        }
+
+    private:
+        std::shared_ptr<TClass>     m_ptrLocking;                         ///< Holder of the instance of the class during lifetime.
+        CLifetimeCookie             m_lifetime = CreateLifetimeCookie();  ///< Module lifetime
+        std::atomic_uint32_t        m_uiLifetimeCnt = 0;                  ///< Lifetime reference counter
     };
 
     /////////////////////////////////////////
@@ -1114,6 +1341,7 @@ namespace sdv
                 auto objectPtr = std::move(*iter);
                 m_vecActiveObjects.erase(iter);
                 lockObjects.unlock();
+                objectPtr->OnDestroy();
                 objectPtr = nullptr;
                 if (m_uiActiveObjectCount) --m_uiActiveObjectCount;
                 return;

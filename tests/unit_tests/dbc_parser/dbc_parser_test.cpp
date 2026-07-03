@@ -156,7 +156,7 @@ TEST_F(CDbcParserTest, SourceContent)
 
 TEST_F(CDbcParserTest, SourceLineColumn)
 {
-    std::string ssSource = R"code(VERSION ""
+    std::string ssSource = R"dbc(VERSION ""
 
 
 NS_ :
@@ -169,7 +169,7 @@ NS_ :
     CAT_
     FILTER
     BA_DEF_DEF_
-    EV_DATA_)code";
+    EV_DATA_)dbc";
 
     dbc::CDbcSource src(ssSource);
     EXPECT_EQ(src.CalcLine(), 1);
@@ -370,10 +370,10 @@ TEST_F(CDbcParserTest, NewSymbols)
     EXPECT_NO_THROW(parser.Parse(srcOneNS));
 
     // All symbols
-    std::string ssAllNS = R"code(NS_ : NS_DESC_ CM_ BA_DEF_ BA_ VAL_ CAT_DEF_ CAT_ FILTER BA_DEF_DEF_ EV_DATA_
+    std::string ssAllNS = R"dbc(NS_ : NS_DESC_ CM_ BA_DEF_ BA_ VAL_ CAT_DEF_ CAT_ FILTER BA_DEF_DEF_ EV_DATA_
         ENVVAR_DATA_ SGTYPE_ SGTYPE_VAL_ BA_DEF_SGTYPE_ BA_SGTYPE_ SIG_TYPE_REF_ VAL_TABLE_ SIG_GROUP_
         SIG_VALTYPE_ SIGTYPE_VALTYPE_ BO_TX_BU_ BA_DEF_REL_ BA_REL_ BA_DEF_DEF_REL_ BU_SG_REL_
-        BU_EV_REL_ BU_BO_REL_ SG_MUL_VAL_)code";
+        BU_EV_REL_ BU_BO_REL_ SG_MUL_VAL_)dbc";
     dbc::CDbcSource srcAllNS(ssAllNS);
     EXPECT_NO_THROW(parser.Parse(srcAllNS));
 
@@ -628,7 +628,7 @@ TEST_F(CDbcParserTest, SignalDef)
     EXPECT_TRUE(parser.HasNodeDef("nodeRx2"));
 
     // Message definition
-    std::string ssValidMsgDef1 = R"code(
+    std::string ssValidMsgDef1 = R"dbc(
         BO_ 1 msg_big_endian: 8 nodeTx
             SG_ sig1 : 7|4@0+ (1,0) [0|8191] "Nm" nodeRx1
             SG_ sig2 : 3|8@0+ (1,0) [0|8191] "Nm" nodeRx1, nodeRx2
@@ -651,7 +651,7 @@ TEST_F(CDbcParserTest, SignalDef)
             SG_ sig5a m 1: 24|8@1+ (1,0) [0|8191] "Nm" Vector__XXX
             SG_ sig2b m 0: 4|32@1+ (1,0) [0|8191] "Nm" nodeRx1, nodeRx2
             SG_ sig6 : 32|32@1+ (1,0) [0|8191] "Nm" Vector__XXX
-)code";
+)dbc";
     dbc::CDbcSource srcValidMsgDef1(ssValidMsgDef1);
     EXPECT_NO_THROW(parser.Parse(srcValidMsgDef1));
     EXPECT_TRUE(parser.HasSignalDef("msg_big_endian", "sig1"));
@@ -725,32 +725,32 @@ TEST_F(CDbcParserTest, SignalDef)
     EXPECT_TRUE(parser.GetSignalDefExtId(3, "sig6").second);
 
     // Duplicate signals
-    std::string ssDuplicateSigDef1 = R"code(
+    std::string ssDuplicateSigDef1 = R"dbc(
         BO_ 4 msg4: 8 nodeTx
             SG_ sig1 : 52|13@0+ (1,0) [0|8191] "Nm" nodeRx1
             SG_ sig2 : 36|13@0+ (1,0) [0|8191] "Nm" nodeRx1, nodeRx2
             SG_ sig1 : 18|13@0+ (1,0) [0|8191] "Nm" Vector__XXX
-        )code";
+        )dbc";
     dbc::CDbcSource srcDuplicateSigDef1(ssDuplicateSigDef1);
     EXPECT_THROW(parser.Parse(srcDuplicateSigDef1), dbc::SDbcParserException);
 
     // Invalid signals
-    std::string ssInvalidStartBit = R"code(
+    std::string ssInvalidStartBit = R"dbc(
         BO_ 5 msg5: 8 nodeTx
             SG_ sig1 : 64|13@0+ (1,0) [0|8191] "Nm" nodeRx1
-        )code";
+        )dbc";
     dbc::CDbcSource srcInvalidStartBit(ssInvalidStartBit);
     EXPECT_THROW(parser.Parse(srcInvalidStartBit), dbc::SDbcParserException);
-    std::string ssInvalidLengthLittleEndian = R"code(
+    std::string ssInvalidLengthLittleEndian = R"dbc(
         BO_ 6 msg6: 8 nodeTx
             SG_ sig1 : 33|32@1+ (1,0) [0|8191] "Nm" nodeRx1
-        )code";
+        )dbc";
     dbc::CDbcSource srcInvalidLengthLittleEndian(ssInvalidLengthLittleEndian);
     EXPECT_THROW(parser.Parse(srcInvalidLengthLittleEndian), dbc::SDbcParserException);
-    std::string ssInvalidLengthBigEndian = R"code(
+    std::string ssInvalidLengthBigEndian = R"dbc(
         BO_ 7 msg7: 8 nodeTx
             SG_ sig1 : 38|32@0+ (1,0) [0|8191] "Nm" nodeRx1
-        )code";
+        )dbc";
     dbc::CDbcSource srcInvalidLengthBigEndian(ssInvalidLengthBigEndian);
     EXPECT_THROW(parser.Parse(srcInvalidLengthBigEndian), dbc::SDbcParserException);
 }
@@ -767,13 +767,13 @@ TEST_F(CDbcParserTest, SignalTypeDef)
     EXPECT_TRUE(parser.HasNodeDef("nodeRx"));
 
     // Message definition
-    std::string ssMsgDef = R"code(
+    std::string ssMsgDef = R"dbc(
         BO_ 1 msg_float: 8 nodeTx
             SG_ sig_float : 0|32@1- (1,0) [0|8191] "Nm" nodeRx
             SG_ sig_int : 32|32@1+ (1,0) [0|8191] "Nm" nodeRx
         BO_ 2 msg_double: 8 nodeTx
             SG_ sig_double : 0|64@1- (1,0) [0|8191] "Nm" nodeRx
-    )code";
+    )dbc";
     dbc::CDbcSource srcMsgDef(ssMsgDef);
     EXPECT_NO_THROW(parser.Parse(srcMsgDef));
     EXPECT_TRUE(parser.HasMsgDef("msg_float"));
@@ -789,11 +789,11 @@ TEST_F(CDbcParserTest, SignalTypeDef)
     EXPECT_EQ(prSigDouble.first.eValType, dbc::SSignalDef::EValueType::signed_integer);
 
     // Set the signal value types.
-    std::string ssSigValType = R"code(
+    std::string ssSigValType = R"dbc(
         SIG_VALTYPE_ 1 sig_float 1;
         SIG_VALTYPE_ 1 sig_int 0;
         SIG_VALTYPE_ 2 sig_double 2;
-        )code";
+        )dbc";
     dbc::CDbcSource srcSigValType(ssSigValType);
     EXPECT_NO_THROW(parser.Parse(srcSigValType));
 
@@ -877,11 +877,11 @@ TEST_F(CDbcParserTest, SignalValueDescriptions)
     EXPECT_TRUE(parser.HasNodeDef("nodeRx"));
 
     // Message definition
-    std::string ssMsgDef = R"code(
+    std::string ssMsgDef = R"dbc(
         BO_ 1 msg_enum: 8 nodeTx
             SG_ sig_enum : 0|32@1+ (1,0) [0|0] "" nodeRx
             SG_ sig_enum_empty : 0|32@1+ (1,0) [0|0] "" nodeRx
-    )code";
+    )dbc";
     dbc::CDbcSource srcMsgDef(ssMsgDef);
     EXPECT_NO_THROW(parser.Parse(srcMsgDef));
     EXPECT_TRUE(parser.HasMsgDef("msg_enum"));
@@ -933,11 +933,11 @@ TEST_F(CDbcParserTest, EnvironmentVariableDef)
     EXPECT_TRUE(parser.HasNodeDef("nodeRx"));
 
     // Environment variable definition
-    std::string ssEnvVarDef = R"code(
+    std::string ssEnvVarDef = R"dbc(
     EV_ var1 : 0 [10|20] "steps" 15 100 DUMMY_NODE_VECTOR3 nodeTx, nodeRx;
     EV_ var2 : 1 [0.1|0.2] "tenth steps" 0.5 101 DUMMY_NODE_VECTOR2 nodeTx;
     EV_ var3 : 2 [0.0|0.0] "string val" 0.0 102 DUMMY_NODE_VECTOR8001 nodeRx;
-)code";
+)dbc";
     dbc::CDbcSource srcEnvVarDef(ssEnvVarDef);
     EXPECT_NO_THROW(parser.Parse(srcEnvVarDef));
     auto vecEnvVars = parser.GetEnvVarNames();
@@ -996,18 +996,18 @@ TEST_F(CDbcParserTest, EnvVarData)
     EXPECT_TRUE(parser.HasNodeDef("nodeRx"));
 
     // Environment variable definition
-    std::string ssEnvVarDef = R"code(
+    std::string ssEnvVarDef = R"dbc(
     EV_ var1 : 0 [10|20] "steps" 15 100 DUMMY_NODE_VECTOR3 nodeTx, nodeRx;
     EV_ var2 : 1 [0.1|0.2] "tenth steps" 0.5 101 DUMMY_NODE_VECTOR2 nodeTx;
     EV_ var3 : 2 [0.0|0.0] "string val" 0.0 102 DUMMY_NODE_VECTOR8001 nodeRx;
-)code";
+)dbc";
     dbc::CDbcSource srcEnvVarDef(ssEnvVarDef);
     EXPECT_NO_THROW(parser.Parse(srcEnvVarDef));
 
     // Environment variable data definition
-    std::string ssEnvVarDataDef = R"code(
+    std::string ssEnvVarDataDef = R"dbc(
     ENVVAR_DATA_ var1 : 10;
-)code";
+)dbc";
     dbc::CDbcSource srcEnvVarDataDef(ssEnvVarDataDef);
     EXPECT_NO_THROW(parser.Parse(srcEnvVarDataDef));
     auto prEnvVar = parser.GetEnvVarDef("var1");
@@ -1038,11 +1038,11 @@ TEST_F(CDbcParserTest, EnvVarValueDescriptions)
     EXPECT_TRUE(parser.HasNodeDef("nodeRx"));
 
     // Environment variable definition
-    std::string ssEnvVarDef = R"code(
+    std::string ssEnvVarDef = R"dbc(
     EV_ var1 : 0 [10|20] "steps" 15 100 DUMMY_NODE_VECTOR3 nodeTx, nodeRx;
     EV_ var2 : 1 [0.1|0.2] "tenth steps" 0.5 101 DUMMY_NODE_VECTOR2 nodeTx;
     EV_ var3 : 2 [0.0|0.0] "string val" 0.0 102 DUMMY_NODE_VECTOR8001 nodeRx;
-)code";
+)dbc";
     dbc::CDbcSource srcEnvVarDef(ssEnvVarDef);
     EXPECT_NO_THROW(parser.Parse(srcEnvVarDef));
 
@@ -1079,17 +1079,17 @@ TEST_F(CDbcParserTest, ExtSignalTypeDef)
     dbc::CDbcParser parser;
 
     // Value table
-    std::string ssValueTable = R"code(
+    std::string ssValueTable = R"dbc(
         VAL_TABLE_ table1 10 "ten" 20 "twenty";
-)code";
+)dbc";
     dbc::CDbcSource srcValueTable(ssValueTable);
     EXPECT_NO_THROW(parser.Parse(srcValueTable));
 
     // Value table type definition
-    std::string ssValueTableType = R"code(
+    std::string ssValueTableType = R"dbc(
         SGTYPE_ sgtype1 : 32 @ 1+ (1.0, 0) [0|100] "signal unit" 50, table1;
         SGTYPE_ sgtype2 : 16 @ 0- (-10.5, 10) [-100|200] "signal unit2" 13, Vector__XXX;
-)code";
+)dbc";
     dbc::CDbcSource srcValueTableType(ssValueTableType);
     EXPECT_NO_THROW(parser.Parse(srcValueTableType));
     auto vecSignalTypes = parser.GetSignalTypeDefNames();
@@ -1129,17 +1129,17 @@ TEST_F(CDbcParserTest, SignalTypeRef)
     dbc::CDbcParser parser;
 
     // Value table
-    std::string ssValueTable = R"code(
+    std::string ssValueTable = R"dbc(
         VAL_TABLE_ table1 10 "ten" 20 "twenty";
         VAL_TABLE_ table2 20 "twenty" 30 "thirty";
-)code";
+)dbc";
     dbc::CDbcSource srcValueTable(ssValueTable);
     EXPECT_NO_THROW(parser.Parse(srcValueTable));
 
     // Signal type definition
-    std::string ssSignalType = R"code(
+    std::string ssSignalType = R"dbc(
         SGTYPE_ sgtype1 : 32 @ 1+ (1.0, 0) [0|100] "signal unit" 50, table1;
-)code";
+)dbc";
     dbc::CDbcSource srcSignalType(ssSignalType);
     EXPECT_NO_THROW(parser.Parse(srcSignalType));
 
@@ -1151,11 +1151,11 @@ TEST_F(CDbcParserTest, SignalTypeRef)
     EXPECT_TRUE(parser.HasNodeDef("nodeRx"));
 
     // Message definition
-    std::string ssMsgDef = R"code(
+    std::string ssMsgDef = R"dbc(
         BO_ 1 msg: 8 nodeTx
             SG_ sig1 : 0|32@1+ (1,0) [0|0] "" nodeRx
             SG_ sig2 : 0|32@1+ (1,0) [0|0] "" nodeRx
-    )code";
+    )dbc";
     dbc::CDbcSource srcMsgDef(ssMsgDef);
     EXPECT_NO_THROW(parser.Parse(srcMsgDef));
 
@@ -1180,20 +1180,20 @@ TEST_F(CDbcParserTest, SignalGroupDef)
     EXPECT_TRUE(parser.HasNodeDef("nodeRx"));
 
     // Message definition
-    std::string ssMsgDef = R"code(
+    std::string ssMsgDef = R"dbc(
         BO_ 1 msg: 8 nodeTx
             SG_ sig1 : 0|32@1+ (1,0) [0|0] "" nodeRx
             SG_ sig2 : 0|32@1+ (1,0) [0|0] "" nodeRx
             SG_ sig3 : 0|32@1+ (1,0) [0|0] "" nodeRx
-    )code";
+    )dbc";
     dbc::CDbcSource srcMsgDef(ssMsgDef);
     EXPECT_NO_THROW(parser.Parse(srcMsgDef));
 
     // Signal group definition
-    std::string ssSignalGroup = R"code(
+    std::string ssSignalGroup = R"dbc(
         SIG_GROUP_ 1 group1 10 : sig1 sig2;
         SIG_GROUP_ 1 group2 20 : sig3;
-    )code";
+    )dbc";
     dbc::CDbcSource srcSignalGroup(ssSignalGroup);
     EXPECT_NO_THROW(parser.Parse(srcSignalGroup));
     auto vecGroupNames = parser.GetSignalGroupDefNames(1);
@@ -1220,12 +1220,12 @@ TEST_F(CDbcParserTest, GlobalComments)
     dbc::CDbcParser parser;
 
     // Global comments
-    std::string ssComments = R"code(
+    std::string ssComments = R"dbc(
         CM_ "first comment";
         CM_ "second comment";
         CM_ "third comment";
         CM_ "fourth comment";
-    )code";
+    )dbc";
     dbc::CDbcSource srcComments(ssComments);
     EXPECT_NO_THROW(parser.Parse(srcComments));
     auto vecComments = parser.GetComments();
@@ -1248,12 +1248,12 @@ TEST_F(CDbcParserTest, NodeComments)
     EXPECT_TRUE(parser.HasNodeDef("nodeRx"));
 
     // Node comments
-    std::string ssComments = R"code(
+    std::string ssComments = R"dbc(
         CM_ BU_ nodeTx "first comment";
         CM_ BU_ nodeTx "second comment \"with quotes\"";
         CM_ BU_ nodeRx "third comment 'with single quotes'";
         CM_ BU_ nodeRx "fourth comment";
-    )code";
+    )dbc";
     dbc::CDbcSource srcComments(ssComments);
     EXPECT_NO_THROW(parser.Parse(srcComments));
     auto prNode = parser.GetNodeDef("nodeTx");
@@ -1280,22 +1280,22 @@ TEST_F(CDbcParserTest, MessageComments)
     EXPECT_TRUE(parser.HasNodeDef("nodeRx"));
 
     // Message definition
-    std::string ssMsgDef = R"code(
+    std::string ssMsgDef = R"dbc(
         BO_ 1 msg: 8 nodeTx
             SG_ sig1 : 0|32@1+ (1,0) [0|0] "" nodeRx
             SG_ sig2 : 0|32@1+ (1,0) [0|0] "" nodeRx
             SG_ sig3 : 0|32@1+ (1,0) [0|0] "" nodeRx
-    )code";
+    )dbc";
     dbc::CDbcSource srcMsgDef(ssMsgDef);
     EXPECT_NO_THROW(parser.Parse(srcMsgDef));
 
     // Message comments
-    std::string ssComments = R"code(
+    std::string ssComments = R"dbc(
         CM_ BO_ 1 "first comment";
         CM_ BO_ 1 "second comment";
         CM_ BO_ 1 "third comment";
         CM_ BO_ 1 "fourth comment";
-    )code";
+    )dbc";
     dbc::CDbcSource srcComments(ssComments);
     EXPECT_NO_THROW(parser.Parse(srcComments));
     auto prMsgDef = parser.GetMsgDef(1);
@@ -1319,22 +1319,22 @@ TEST_F(CDbcParserTest, SignalComments)
     EXPECT_TRUE(parser.HasNodeDef("nodeRx"));
 
     // Signal definition
-    std::string ssMsgDef = R"code(
+    std::string ssMsgDef = R"dbc(
         BO_ 1 msg: 8 nodeTx
             SG_ sig1 : 0|32@1+ (1,0) [0|0] "" nodeRx
             SG_ sig2 : 0|32@1+ (1,0) [0|0] "" nodeRx
             SG_ sig3 : 0|32@1+ (1,0) [0|0] "" nodeRx
-    )code";
+    )dbc";
     dbc::CDbcSource srcMsgDef(ssMsgDef);
     EXPECT_NO_THROW(parser.Parse(srcMsgDef));
 
     // Node comments
-    std::string ssComments = R"code(
+    std::string ssComments = R"dbc(
         CM_ SG_ 1 sig1 "first comment";
         CM_ SG_ 1 sig1 "second comment";
         CM_ SG_ 1 sig2 "third comment";
         CM_ SG_ 1 sig3 "fourth comment";
-    )code";
+    )dbc";
     dbc::CDbcSource srcComments(ssComments);
     EXPECT_NO_THROW(parser.Parse(srcComments));
     auto prSignal = parser.GetSignalDef(1, "sig1");
@@ -1364,21 +1364,21 @@ TEST_F(CDbcParserTest, EnvVarComments)
     EXPECT_TRUE(parser.HasNodeDef("nodeRx"));
 
     // Environment variable definition
-    std::string ssEnvVarDef = R"code(
+    std::string ssEnvVarDef = R"dbc(
     EV_ var1 : 0 [10|20] "steps" 15 100 DUMMY_NODE_VECTOR3 nodeTx, nodeRx;
     EV_ var2 : 1 [0.1|0.2] "tenth steps" 0.5 101 DUMMY_NODE_VECTOR2 nodeTx;
     EV_ var3 : 2 [0.0|0.0] "string val" 0.0 102 DUMMY_NODE_VECTOR8001 nodeRx;
-)code";
+)dbc";
     dbc::CDbcSource srcEnvVarDef(ssEnvVarDef);
     EXPECT_NO_THROW(parser.Parse(srcEnvVarDef));
 
     // Env var comments
-    std::string ssComments = R"code(
+    std::string ssComments = R"dbc(
         CM_ EV_ var1 "first comment";
         CM_ EV_ var1 "second comment";
         CM_ EV_ var2 "third comment";
         CM_ EV_ var3 "fourth comment";
-    )code";
+    )dbc";
     dbc::CDbcSource srcComments(ssComments);
     EXPECT_NO_THROW(parser.Parse(srcComments));
     auto prEnvVar = parser.GetEnvVarDef("var1");
@@ -1402,14 +1402,14 @@ TEST_F(CDbcParserTest, AttributeDef)
 
     // Global attribute definition
     // The use of "n/a" and "not-used" is not part of the official standard.
-    std::string ssAttribute = R"code(
+    std::string ssAttribute = R"dbc(
         BA_DEF_ "attr1" INT 10 20;
         BA_DEF_ "attr2" HEX 10 20;
         BA_DEF_ "attr3" FLOAT 1.0 10.9;
         BA_DEF_ "attr4" STRING;
         BA_DEF_ "attr5" ENUM "abc", "def", "ghi";
         BA_DEF_ "attr6" ENUM "abc", "n/a", "not-used", "jkl", "n/a", "not-used", "stu";
-    )code";
+    )dbc";
     dbc::CDbcSource srcAttribute(ssAttribute);
     EXPECT_NO_THROW(parser.Parse(srcAttribute));
     auto vecAttr = parser.GetAttributeDefNames();
@@ -1470,27 +1470,27 @@ TEST_F(CDbcParserTest, AttributeDefaultValDef)
 
     // Global attribute definition
     // The use of "n/a" and "not-used" is not part of the official standard.
-    std::string ssAttribute = R"code(
+    std::string ssAttribute = R"dbc(
         BA_DEF_ "attr1" INT 10 20;
         BA_DEF_ "attr2" HEX 10 20;
         BA_DEF_ "attr3" FLOAT 1.0 10.9;
         BA_DEF_ "attr4" STRING;
         BA_DEF_ "attr5" ENUM "abc", "def", "ghi";
         BA_DEF_ "attr6" ENUM "abc", "n/a", "not-used", "jkl", "n/a", "not-used", "stu";
-    )code";
+    )dbc";
     dbc::CDbcSource srcAttribute(ssAttribute);
     EXPECT_NO_THROW(parser.Parse(srcAttribute));
 
     // Attribute def default value
     // The use of an index instead of a value for the enum value is not part of the official standard.
-    std::string ssAttrDefDefaultVal = R"code(
+    std::string ssAttrDefDefaultVal = R"dbc(
         BA_DEF_DEF_ "attr1" 15;
         BA_DEF_DEF_ "attr2" 15;
         BA_DEF_DEF_ "attr3" 5.5;
         BA_DEF_DEF_ "attr4" "hello";
         BA_DEF_DEF_ "attr5" "def";
         BA_DEF_DEF_ "attr6" 6;
-    )code";
+    )dbc";
     dbc::CDbcSource srcAttrDefDefaultVal(ssAttrDefDefaultVal);
     EXPECT_NO_THROW(parser.Parse(srcAttrDefDefaultVal));
 
@@ -1514,20 +1514,20 @@ TEST_F(CDbcParserTest, GlobalAttributeVal)
 
     // Global attribute definition
     // The use of "n/a" and "not-used" is not part of the official standard.
-    std::string ssAttribute = R"code(
+    std::string ssAttribute = R"dbc(
         BA_DEF_ "attr1" INT 10 20;
         BA_DEF_ "attr2" HEX 10 20;
         BA_DEF_ "attr3" FLOAT 1.0 10.9;
         BA_DEF_ "attr4" STRING;
         BA_DEF_ "attr5" ENUM "abc", "def", "ghi";
         BA_DEF_ "attr6" ENUM "abc", "n/a", "not-used", "jkl", "n/a", "not-used", "stu";
-    )code";
+    )dbc";
     dbc::CDbcSource srcAttribute(ssAttribute);
     EXPECT_NO_THROW(parser.Parse(srcAttribute));
 
     // Attribute value
     // The use of an index instead of a value for the enum value is not part of the official standard.
-    std::string ssAttrVal = R"code(
+    std::string ssAttrVal = R"dbc(
         BA_ "attr1" 11;
         BA_ "attr2" 12;
         BA_ "attr2" 13;
@@ -1535,7 +1535,7 @@ TEST_F(CDbcParserTest, GlobalAttributeVal)
         BA_ "attr4" "hi";
         BA_ "attr5" "ghi";
         BA_ "attr6" 6;
-    )code";
+    )dbc";
     dbc::CDbcSource srcAttrVal(ssAttrVal);
     EXPECT_NO_THROW(parser.Parse(srcAttrVal));
     auto vecAttr = parser.GetAttributes();
@@ -1562,20 +1562,20 @@ TEST_F(CDbcParserTest, NodeAttributeVal)
 
     // Node attribute definition
     // The use of "n/a" and "not-used" is not part of the official standard.
-    std::string ssAttribute = R"code(
+    std::string ssAttribute = R"dbc(
         BA_DEF_ BU_ "attr1" INT 10 20;
         BA_DEF_ BU_ "attr2" HEX 10 20;
         BA_DEF_ BU_ "attr3" FLOAT 1.0 10.9;
         BA_DEF_ BU_ "attr4" STRING;
         BA_DEF_ BU_ "attr5" ENUM "abc", "def", "ghi";
         BA_DEF_ BU_ "attr6" ENUM "abc", "n/a", "not-used", "jkl", "n/a", "not-used", "stu";
-    )code";
+    )dbc";
     dbc::CDbcSource srcAttribute(ssAttribute);
     EXPECT_NO_THROW(parser.Parse(srcAttribute));
 
     // Attribute value
     // The use of an index instead of a value for the enum value is not part of the official standard.
-    std::string ssAttrVal = R"code(
+    std::string ssAttrVal = R"dbc(
         BA_ "attr1" BU_ nodeTx 11;
         BA_ "attr2" BU_ nodeTx 12;
         BA_ "attr2" BU_ nodeTx 13;
@@ -1583,7 +1583,7 @@ TEST_F(CDbcParserTest, NodeAttributeVal)
         BA_ "attr4" BU_ nodeRx "hi";
         BA_ "attr5" BU_ nodeRx "ghi";
         BA_ "attr6" BU_ nodeRx 6;
-    )code";
+    )dbc";
     dbc::CDbcSource srcAttrVal(ssAttrVal);
     EXPECT_NO_THROW(parser.Parse(srcAttrVal));
     auto prNodeDef = parser.GetNodeDef("nodeTx");
@@ -1612,31 +1612,31 @@ TEST_F(CDbcParserTest, MessageAttributeVal)
 
     // Message attribute definition
     // The use of "n/a" and "not-used" is not part of the official standard.
-    std::string ssAttribute = R"code(
+    std::string ssAttribute = R"dbc(
         BA_DEF_ BO_ "attr1" INT 10 20;
         BA_DEF_ BO_ "attr2" HEX 10 20;
         BA_DEF_ BO_ "attr3" FLOAT 1.0 10.9;
         BA_DEF_ BO_ "attr4" STRING;
         BA_DEF_ BO_ "attr5" ENUM "abc", "def", "ghi";
         BA_DEF_ BO_ "attr6" ENUM "abc", "n/a", "not-used", "jkl", "n/a", "not-used", "stu";
-    )code";
+    )dbc";
     dbc::CDbcSource srcAttribute(ssAttribute);
     EXPECT_NO_THROW(parser.Parse(srcAttribute));
 
     // Message definition
-    std::string ssMsgDef = R"code(
+    std::string ssMsgDef = R"dbc(
         BO_ 1 msg: 8 nodeTx
             SG_ sig1 : 0|32@1+ (1,0) [0|0] "" nodeRx
             SG_ sig2 : 0|32@1+ (1,0) [0|0] "" nodeRx
             SG_ sig3 : 0|32@1+ (1,0) [0|0] "" nodeRx
         BO_ 2 msg2: 8 nodeRx
-    )code";
+    )dbc";
     dbc::CDbcSource srcMsgDef(ssMsgDef);
     EXPECT_NO_THROW(parser.Parse(srcMsgDef));
 
     // Attribute value
     // The use of an index instead of a value for the enum value is not part of the official standard.
-    std::string ssAttrVal = R"code(
+    std::string ssAttrVal = R"dbc(
         BA_ "attr1" BO_ 1 11;
         BA_ "attr2" BO_ 1 12;
         BA_ "attr2" BO_ 1 13;
@@ -1644,7 +1644,7 @@ TEST_F(CDbcParserTest, MessageAttributeVal)
         BA_ "attr4" BO_ 2 "hi";
         BA_ "attr5" BO_ 2 "ghi";
         BA_ "attr6" BO_ 2 6;
-    )code";
+    )dbc";
     dbc::CDbcSource srcAttrVal(ssAttrVal);
     EXPECT_NO_THROW(parser.Parse(srcAttrVal));
     auto prMsgDef = parser.GetMsgDef(1);
@@ -1673,31 +1673,31 @@ TEST_F(CDbcParserTest, SignalAttributeVal)
 
     // Signal attribute definition
     // The use of "n/a" and "not-used" is not part of the official standard.
-    std::string ssAttribute = R"code(
+    std::string ssAttribute = R"dbc(
         BA_DEF_ SG_ "attr1" INT 10 20;
         BA_DEF_ SG_ "attr2" HEX 10 20;
         BA_DEF_ SG_ "attr3" FLOAT 1.0 10.9;
         BA_DEF_ SG_ "attr4" STRING;
         BA_DEF_ SG_ "attr5" ENUM "abc", "def", "ghi";
         BA_DEF_ SG_ "attr6" ENUM "abc", "n/a", "not-used", "jkl", "n/a", "not-used", "stu";
-    )code";
+    )dbc";
     dbc::CDbcSource srcAttribute(ssAttribute);
     EXPECT_NO_THROW(parser.Parse(srcAttribute));
 
     // Message definition
-    std::string ssMsgDef = R"code(
+    std::string ssMsgDef = R"dbc(
         BO_ 1 msg: 8 nodeTx
             SG_ sig1 : 0|32@1+ (1,0) [0|0] "" nodeRx
             SG_ sig2 : 0|32@1+ (1,0) [0|0] "" nodeRx
             SG_ sig3 : 0|32@1+ (1,0) [0|0] "" nodeRx
         BO_ 2 msg2: 8 nodeRx
-    )code";
+    )dbc";
     dbc::CDbcSource srcMsgDef(ssMsgDef);
     EXPECT_NO_THROW(parser.Parse(srcMsgDef));
 
     // Attribute value
     // The use of an index instead of a value for the enum value is not part of the official standard.
-    std::string ssAttrVal = R"code(
+    std::string ssAttrVal = R"dbc(
         BA_ "attr1" SG_ 1 sig1 11;
         BA_ "attr2" SG_ 1 sig1 12;
         BA_ "attr2" SG_ 1 sig2 13;
@@ -1705,7 +1705,7 @@ TEST_F(CDbcParserTest, SignalAttributeVal)
         BA_ "attr4" SG_ 1 sig3 "hi";
         BA_ "attr5" SG_ 1 sig3 "ghi";
         BA_ "attr6" SG_ 1 sig3 6;
-    )code";
+    )dbc";
     dbc::CDbcSource srcAttrVal(ssAttrVal);
     EXPECT_NO_THROW(parser.Parse(srcAttrVal));
     auto prSigDef = parser.GetSignalDef(1, "sig1");
@@ -1736,29 +1736,29 @@ TEST_F(CDbcParserTest, EnvVarAttributeVal)
 
     // Environment variable attribute definition
     // The use of "n/a" and "not-used" is not part of the official standard.
-    std::string ssAttribute = R"code(
+    std::string ssAttribute = R"dbc(
         BA_DEF_ EV_ "attr1" INT 10 20;
         BA_DEF_ EV_ "attr2" HEX 10 20;
         BA_DEF_ EV_ "attr3" FLOAT 1.0 10.9;
         BA_DEF_ EV_ "attr4" STRING;
         BA_DEF_ EV_ "attr5" ENUM "abc", "def", "ghi";
         BA_DEF_ EV_ "attr6" ENUM "abc", "n/a", "not-used", "jkl", "n/a", "not-used", "stu";
-    )code";
+    )dbc";
     dbc::CDbcSource srcAttribute(ssAttribute);
     EXPECT_NO_THROW(parser.Parse(srcAttribute));
 
     // Environment variable definition
-    std::string ssEnvVarDef = R"code(
+    std::string ssEnvVarDef = R"dbc(
     EV_ var1 : 0 [10|20] "steps" 15 100 DUMMY_NODE_VECTOR3 nodeTx, nodeRx;
     EV_ var2 : 1 [0.1|0.2] "tenth steps" 0.5 101 DUMMY_NODE_VECTOR2 nodeTx;
     EV_ var3 : 2 [0.0|0.0] "string val" 0.0 102 DUMMY_NODE_VECTOR8001 nodeRx;
-)code";
+)dbc";
     dbc::CDbcSource srcEnvVarDef(ssEnvVarDef);
     EXPECT_NO_THROW(parser.Parse(srcEnvVarDef));
 
     // Attribute value
     // The use of an index instead of a value for the enum value is not part of the official standard.
-    std::string ssAttrVal = R"code(
+    std::string ssAttrVal = R"dbc(
         BA_ "attr1" EV_ var1 11;
         BA_ "attr2" EV_ var1 12;
         BA_ "attr2" EV_ var2 13;
@@ -1766,7 +1766,7 @@ TEST_F(CDbcParserTest, EnvVarAttributeVal)
         BA_ "attr4" EV_ var3 "hi";
         BA_ "attr5" EV_ var3 "ghi";
         BA_ "attr6" EV_ var3 6;
-    )code";
+    )dbc";
     dbc::CDbcSource srcAttrVal(ssAttrVal);
     EXPECT_NO_THROW(parser.Parse(srcAttrVal));
     auto prEnvVarDef = parser.GetEnvVarDef("var1");
@@ -1789,7 +1789,7 @@ TEST_F(CDbcParserTest, SignalExtendedMultiplexing)
     dbc::CDbcParser parser;
 
     // Message definition
-    std::string ssMsgDef = R"code(
+    std::string ssMsgDef = R"dbc(
         BO_ 100 MuxMsg: 1 Vector__XXX
             SG_ Mux_4 m2 : 6|2@1+ (1,0) [0|0] "" Vector__XXX
             SG_ Mux_3 m3M : 4|2@1+ (1,0) [0|0] "" Vector__XXX
@@ -1799,7 +1799,7 @@ TEST_F(CDbcParserTest, SignalExtendedMultiplexing)
         SG_MUL_VAL_ 100 Mux_2 Mux_1 3-3, 5-10;
         SG_MUL_VAL_ 100 Mux_3 Mux_2 3-3;
         SG_MUL_VAL_ 100 Mux_4 Mux_3 2-2;
-    )code";
+    )dbc";
     dbc::CDbcSource srcMsgDef(ssMsgDef);
     EXPECT_NO_THROW(parser.Parse(srcMsgDef));
 
@@ -1842,7 +1842,7 @@ TEST_F(CDbcParserTest, ExampleDBC1)
     dbc::CDbcParser parser;
 
     // Message definition
-    std::string ssMsgDef = R"code(
+    std::string ssMsgDef = R"dbc(
 VERSION ""
 
 NS_ :
@@ -1891,7 +1891,7 @@ CM_ "CAN communication matrix for power train electronics
 implemented: turn lights, warning lights, windows";
 
 VAL_ 100 IdleRunning 0 "Running" 1 "Idle" ;
-    )code";
+    )dbc";
     dbc::CDbcSource srcMsgDef(ssMsgDef);
     EXPECT_NO_THROW(parser.Parse(srcMsgDef));
 }
@@ -1900,7 +1900,7 @@ TEST_F(CDbcParserTest, ExampleDBC2)
     dbc::CDbcParser parser;
 
     // Message definition
-    std::string ssMsgDef = R"code(
+    std::string ssMsgDef = R"dbc(
 VERSION ""
 
 
@@ -2023,7 +2023,7 @@ VAL_ 1 HMI_Lateral_Long_Ctrl_Req 3 "LONGITUDINAL_CTRL_REQ" 2 "LONGITUDINAL_AND_L
 VAL_ 1 HMI_Algo_Variant_Request 4 "NONE" 3 "VARIANT_4" 2 "VARIANT_3" 1 "VARIANT_2" 0 "VARIANT_1" ;
 VAL_ 0 MAB_AI4Motion_Algo_Var_Selected 4 "NONE" 3 "VARIANT_4" 2 "VARIANT_3" 1 "VARIANT_2" 0 "VARIANT_1" ;
 VAL_ 0 MAB_Activation_AI4Motion 3 "LONGITUDINAL_CTRL_REQ" 2 "LONGITUDINAL_AND_LATERAL" 1 "LATERAL_CTRL_REQ" 0 "NONE" ;
-SIG_VALTYPE_ 3221225472 New_Signal_25 : 2;    )code";
+SIG_VALTYPE_ 3221225472 New_Signal_25 : 2;    )dbc";
     dbc::CDbcSource srcMsgDef(ssMsgDef);
     EXPECT_NO_THROW(parser.Parse(srcMsgDef));
 }
@@ -2032,7 +2032,7 @@ TEST_F(CDbcParserTest, ExampleDBC3)
     dbc::CDbcParser parser;
 
     // Message definition
-    std::string ssMsgDef = R"code(
+    std::string ssMsgDef = R"dbc(
 VERSION ""
 
 
@@ -2135,7 +2135,7 @@ VERSION ""
                         VAL_ 100 DRIVER_HEARTBEAT_cmd 2 "DRIVER_HEARTBEAT_cmd_REBOOT" 1 "DRIVER_HEARTBEAT_cmd_SYNC" 0
                         "DRIVER_HEARTBEAT_cmd_NOOP" ;
                         VAL_ 500 IO_DEBUG_test_enum 2 "IO_DEBUG_test2_enum_two" 1 "IO_DEBUG_test2_enum_one" ;
-    )code";
+    )dbc";
     dbc::CDbcSource srcMsgDef(ssMsgDef);
     EXPECT_NO_THROW(parser.Parse(srcMsgDef));
 }

@@ -18,6 +18,40 @@
 #include <support/app_control.h>
 #include "../error_msg.h"
 
+#ifdef _WIN32
+/**
+ * @brief Console application control handler (CTRL+C, close, shutdown, etc.).
+ * @param[in] dwCtrlType The control type triggered by the system.
+ * @return Returns TRUE when the signal was handled.
+ */
+static BOOL WINAPI ControlHandler(DWORD dwCtrlType)
+{
+    switch (dwCtrlType)
+    {
+    case CTRL_C_EVENT:
+    case CTRL_BREAK_EVENT:
+    case CTRL_CLOSE_EVENT:
+    case CTRL_LOGOFF_EVENT:
+    case CTRL_SHUTDOWN_EVENT:
+        return TRUE;
+        break;
+    default:
+        return FALSE;
+    }
+}
+#elif defined __unix__
+#include <signal.h>
+
+ /**
+ * @brief Signal handler to catch signal events.
+ * @param[in] iSigNum The signal type that was triggered.
+ */
+static void SignalHandler(int /*iSigNum*/)
+{
+    // Do nothing...
+}
+#endif
+
 /**
 * @brief Main function of the executable.
 * @param[in] iArgc Amount of arguments provided.
@@ -45,12 +79,6 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     while (!bThreadStarted) {std::this_thread::sleep_for(std::chrono::milliseconds(100));}
     if (thread.joinable())
         thread.join();
-
-    // If not set, set the runtime location to the EXE directory.
-    if (sdv::app::CAppControl::GetFrameworkRuntimeDirectory().empty())
-        sdv::app::CAppControl::SetFrameworkRuntimeDirectory(GetExecDirectory());
-    if (sdv::app::CAppControl::GetComponentInstallDirectory().empty())
-        sdv::app::CAppControl::SetComponentInstallDirectory(GetExecDirectory());
 
     CCommandLine cmdln(static_cast<uint32_t>(CCommandLine::EParseFlags::no_assignment_character));
     bool bHelp = false;
@@ -91,7 +119,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     if (!bSilent && !bNoBanner)
     {
         std::cout << "SDV core application" << std::endl;
-        std::cout << "Copyright (C): 2022-2025 ZF Friedrichshafen AG" << std::endl;
+        std::cout << "Copyright (C): 2022-2026 ZF Friedrichshafen AG" << std::endl;
         std::cout << "Author: Erik Verhoeven" << std::endl << std::endl;
     }
 
@@ -185,13 +213,39 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
         return APP_CONTROL_STARTUP_ERROR;
     }
 
+#ifdef _WIN32
+    // Register the console control handler
+    if (!SetConsoleCtrlHandler(&ControlHandler, TRUE))
+    {
+        if (!bSilent)
+            std::cerr << "ERROR: " << APP_CONTROL_START_LOOP_FAILED_MSG << " - failed registering control handler." << std::endl;
+        return APP_CONTROL_START_LOOP_FAILED;
+    }
+#elif defined __unix__
+    // Install our signal handler
+    struct sigaction sSigAction
+    {};
+    sSigAction.sa_handler = SignalHandler;
+    sSigAction.sa_flags   = SA_RESTART;
+    if (sigaction(SIGINT, &sSigAction, NULL) == -1)
+    {
+        if (!bSilent)
+            std::cerr << "ERROR: " << APP_CONTROL_START_LOOP_FAILED_MSG << " - failed registering control handler." << std::endl;
+        return APP_CONTROL_START_LOOP_FAILED;
+    }
+#endif
+
     // Start the running loop
     if (!appcontrol.RunLoop())
     {
         if (!bSilent)
-            std::cerr << "ERROR: " << APP_CONTROL_DUPLICATE_INSTANCE_MSG << std::endl;
-        return APP_CONTROL_DUPLICATE_INSTANCE;
+            std::cerr << "ERROR: " << APP_CONTROL_START_LOOP_FAILED_MSG << std::endl;
+        return APP_CONTROL_START_LOOP_FAILED;
     }
+
+#ifdef _WIN32
+    SetConsoleCtrlHandler(&ControlHandler, FALSE);
+#endif
 
     if (bVerbose)
     {

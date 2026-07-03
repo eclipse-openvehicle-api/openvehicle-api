@@ -26,6 +26,7 @@
 #include <support/interface_ptr.h>
 #include "miscellaneous.h"
 #include "code_snippet.h"
+#include "parser_node_indexer.h"
 
 /// The TOML parser namespace
 namespace toml_parser
@@ -72,11 +73,12 @@ namespace toml_parser
         void InitTopMostNode(const std::shared_ptr<const CNode>& rptrNode);
 
         /**
-         * @brief Check whether the provided node is a parent of the top most node.
-         * @param[in] rptrNode Reference to the node to use for the checking.
-         * @return Returns true if the node is a parent of the top most node, false otherwise.
+         * @brief A node is part of the view if either it is an inline node, or it is a standard node and the current parent is the
+         * root view.
+         * @param[in] rptrNode Reference to the smart pointer to the node to check for.
+         * @return Returns whether the node is part of the view.
          */
-        bool PartOfExcludedParents(const std::shared_ptr<const CNode>& rptrNode) const;
+        bool IsPartOfView(const std::shared_ptr<const CNode>& rptrNode) const;
 
         /**
          * @brief Create a copy of the context class with a new key context.
@@ -289,10 +291,42 @@ namespace toml_parser
         END_SDV_INTERFACE_MAP()
 
         /**
+         * @{ 
          * @brief Get a reference to the TOML parser that generated this node.
          * @return Reference to the TOML parse.
          */
         CParser& Parser();
+        const CParser& Parser() const;
+        /**
+         * @}
+         */
+
+        /**
+         * @{
+         * @brief Return the index object of the node.
+         * @return Reference to the node index object.
+         */
+        const CNodeIndex& NodeIndex() const;
+        CNodeIndex& NodeIndex();
+        /**
+         * @}
+         */
+
+        /**
+         * @brief Compare the index position of this node with the position of another node and return whether this node occurs
+         * before the other node.
+         * @param[in] rNode Reference to the node to compare the position with.
+         * @return Returns whether this node occurs before the other node.
+         */
+        bool operator<(const CNode& rNode) const;
+
+        /**
+         * @brief Compare the index position of this node with the position of another node and return whether this node occurs
+         * before the other node.
+         * @param[in] rptrNode Reference to the node to compare the position with.
+         * @return Returns whether this node occurs before the other node.
+         */
+        bool operator<(const std::shared_ptr<CNode>& rptrNode) const;
 
         /**
          * @brief Get the node name (no conversion to a literal or quoted key is made). Overload of sdv::toml::INodeInfo::GetName.
@@ -328,9 +362,8 @@ namespace toml_parser
         virtual sdv::any_t GetValue() const override;
 
         /**
-         * @brief Get the index of this node within the view collection (either the assigned view or the parent). Overload of
-         * sdv::toml::INodeInfo::GetIndex.
-         * @return The index of the node within the view collection node or npos when no parent is available.
+         * @brief Get the index of this node within the parent collection. Overload of sdv::toml::INodeInfo::GetIndex.
+         * @return The index of the node within the parent collection node or npos when no parent is available.
          */
         virtual uint32_t GetIndex() const override;
 
@@ -370,10 +403,10 @@ namespace toml_parser
         virtual sdv::u8string GetComment(sdv::toml::INodeInfo::ECommentType eType) override;
 
         /**
-         * @brief Format the node automatically. This will remove the whitespace between the elements within the node. Comments
-         * will not be changed. Overload of sdv::toml::INodeInfo::AutomaticFormat.
+         * @brief Format the node automatically, remove redundant whitespace. Overload of sdv::toml::INodeInfo::AutomaticFormat.
+         * @param[in] bRemoveComments When set, the comments are removed from the node.
          */
-        virtual void AutomaticFormat() override;
+        virtual void AutomaticFormat(/*in*/ bool bRemoveComments) override;
 
         /**
          * @brief Is the node inline? Overload of sdv::toml::INodeInfo::IsInline.
@@ -457,10 +490,11 @@ namespace toml_parser
         std::shared_ptr<const TNodeType> Cast() const;
 
         /**
-         * @brief Set the parent node.
+         * @brief Reassign the parent node and if necessary the parser reference.
+         * @details This function allows shifting nodes from one parser to another.
          * @param[in] rptrParent Reference to the node to assign to this node as a parent.
          */
-        void SetParentPtr(const std::shared_ptr<CNodeCollection>& rptrParent);
+        virtual void SetParentPtr(const std::shared_ptr<CNodeCollection>& rptrParent);
 
         /**
          * @brief Gets the parent node pointer.
@@ -476,29 +510,6 @@ namespace toml_parser
         std::string GetParentPath() const;
 
         /**
-         * @brief Set the view definition node. The view definition node is a parent or grand parent that presents the node when
-         * generating TOML code. When not set, the parent node is taking over this role.
-         * @param[in] rptrView Reference to the node to assign to this node as a parent or grand parent.
-         */
-        void SetViewPtr(const std::shared_ptr<CNodeCollection>& rptrView);
-
-        /**
-         * @brief Gets the view definition node pointer.
-         * @return Returns the store view definition node pointer or an empty pointer when no view was assigned.
-         */
-        std::shared_ptr<CNodeCollection> GetViewPtr() const;
-
-        /**
-         * @brief Checks whether the node is part of the view.
-         * @details The node is part of the view if the supplied pointer is identical to the view definition pointer, when the view
-         * definition pointer is not part of a parent of the topmost node. In all other cases, the node is part of the view.
-         * @param[in] rContext Reference to the context class to use during TOML code generation.
-         * @param[in] rptrNode Reference to the node to check whether it registered for a view.
-         * @return Returns whether this node is part of the view with the supplied pointer.
-         */
-        bool IsPartOfView(const CGenContext& rContext, const std::shared_ptr<const CNodeCollection>& rptrNode) const;
-
-        /**
          * @brief Accesses a node by its key in the parse tree.
          * @details Elements of tables can be accessed and traversed by using '.' to separated the parent name from child name.
          * E.g. 'parent.child' would access the 'child' element of the 'parent' table. Elements of arrays can be accessed and
@@ -507,7 +518,7 @@ namespace toml_parser
          * @attention Array indexing starts with 0!
          * @attention For an array, when no indexing is supplied, the latest entry will be returned.
          * @param[in] rssPath The path of the node to searched for.
-         * @return Returns a shared pointer to the wanted Node if it was found or a node with invalid content if it was not found.
+         * @return Returns a shared pointer to the wanted node if it was found or a node with invalid content if it was not found.
          */
         virtual std::shared_ptr<CNode> Direct(const std::string& rssPath) const = 0;
 
@@ -577,13 +588,20 @@ namespace toml_parser
          */
         std::string GetCustomPath(const std::string& rssPrefixKey, const std::string& rssContext) const;
 
+        /**
+         * @brief When the parent changes (e.g. when moving items from one parser to the other), the items and all its sub-items
+         * need to reasign the parser.
+         * @param[in] rParser Reference to the parser to assign.
+         */
+        virtual void ReassignParser(CParser& rParser);
+
     private:
-        std::weak_ptr<CNodeCollection>      m_ptrParent;            ///< Weak pointer to the parent node (if existing).
-        std::weak_ptr<CNodeCollection>      m_ptrView;              ///< Weak pointer to the view node (if existing and explicitly set).
-        std::string                         m_ssName;               ///< Name of the node.
-        std::string                         m_ssRawName;            ///< Raw name of the node.
-        bool                                m_bDeleted = false;     ///< Enabled when the node was marked for deletion.
-        CParser&                            m_rParser;              ///< Reference to the TOML parser.
+        CNodeIndex                          m_index;            ///< Node index object holding the overall node position.
+        std::weak_ptr<CNodeCollection>      m_ptrParent;        ///< Weak pointer to the parent node (if existing).
+        std::string                         m_ssName;           ///< Name of the node.
+        std::string                         m_ssRawName;        ///< Raw name of the node.
+        bool                                m_bDeleted = false; ///< Enabled when the node was marked for deletion.
+        std::reference_wrapper<CParser>     m_refParser;        ///< Reference to the TOML parser.
         std::vector<std::map<std::string, CCodeSnippet>> m_vecCodeSnippets; ///< Vector with comments/code snippets.
 
     public:
@@ -596,11 +614,16 @@ namespace toml_parser
         /**
          * @brief With some node collections it is possible to switch between inline and normal.
          * @remarks Additional node composition information will be removed and the order within the parent node might be changed.
+         * @remarks When made inline, all child nodes must be made inline as well. When made standard, only this node is made
+         * standard.
+         * @remarks Making this node a standard node, this is only possible when the parent is not an inline mode.
          * @param[in] bInline When set, try to switch to inline. Otherwise try to switch to normal.
+         * @param[in] bIncludeChildren When set and bInline is not set, applicable child nodes are converted as well (only tables
+         * and table-arrays can be defined as standard). Making a node inline is always including the children.
          * @return Returns whether the switch was successful. A switch to the same type (normal to normal or inline to inline is
          * always successful). When returning false, the switching might not be supported for this type.
          */
-        virtual bool Inline(bool bInline) = 0;
+        virtual bool Inline(bool bInline, bool bIncludeChildren = true) = 0;
 
         /**
          * @brief Checks whether the table was explicitly defined.
@@ -654,10 +677,12 @@ namespace toml_parser
          * @brief With some node collections it is possible to switch between inline and normal. Overload of CNode::Inline.
          * @remarks Additional node composition information will be removed and the order within the parent node might be changed.
          * @param[in] bInline When set, try to switch to inline. Otherwise try to switch to normal.
+         * @param[in] bIncludeChildren When set and bInline is not set, applicable child nodes are converted as well (only tables
+         * and table-arrays can be defined as standard). Making a node inline is always including the children.
          * @return Returns whether the switch was successful. A switch to the same type (normal to normal or inline to inline is
          * always successful). When returning false, the switching might not be supported for this type.
          */
-        virtual bool Inline(bool bInline) override;
+        virtual bool Inline(bool bInline, bool bIncludeChildren = true) override;
 
         /**
          * @brief Accesses a node by its key in the parse tree. Overload of CNode::Direct.
@@ -668,7 +693,7 @@ namespace toml_parser
          * @attention Array indexing starts with 0!
          * @attention For an array, when no indexing is supplied, the latest entry will be returned.
          * @param[in] rssPath The path of the node to searched for.
-         * @return Returns a shared pointer to the wanted Node if it was found or a node with invalid content if it was not found.
+         * @return Returns a shared pointer to the wanted node if it was found or a node with invalid content if it was not found.
          */
         virtual std::shared_ptr<CNode> Direct(const std::string& rssPath) const override;
 
@@ -943,10 +968,10 @@ namespace toml_parser
         END_SDV_INTERFACE_MAP()
 
         /**
-         * @brief Format the node automatically. This will remove the whitespace between the elements within the node. Comments
-         * will not be changed. Overload of sdv::toml::INodeInfo::AutomaticFormat.
+         * @brief Format the node automatically, remove redundant whitespace. Overload of sdv::toml::INodeInfo::AutomaticFormat.
+         * @param[in] bRemoveComments When set, the comments are removed from the node.
          */
-        virtual void AutomaticFormat() override;
+        virtual void AutomaticFormat(/*in*/ bool bRemoveComments) override;
 
         /**
          * @brief Returns the amount of nodes. Overload of sdv::toml::INodeCollection::GetCount.
@@ -966,7 +991,28 @@ namespace toml_parser
          * @param[in] uiIndex Index of the node to get.
          * @return Smart pointer to the node object.
          */
-        std::shared_ptr<CNode> Get(uint32_t uiIndex) const;
+        virtual std::shared_ptr<CNode> Get(uint32_t uiIndex) const;
+
+        /**
+         * @brief After every insert, deletion and shift, the node order of this and all sub- tables need to be rebuild.
+         * @param[in] bForce Force rebuild, even if locked.
+         */
+        virtual void RebuildNodeOrder(bool bForce);
+
+        /**
+         * @brief After every insert, deletion and shift, the node order needs to be rebuild.
+         * @details Adding is done iteratively through the node list. In case the top level flag is set, all nodes are added that
+         * are marked explicit or if a node is implicit, the explicit sub-nodes are added. In case this is root view, all sub-nodes
+         * which are standard tables or standard table arrays are added. This flattens the hierarchy. When the root view is not set,
+         * only the tables and table arrays are added that are a direct child of the node collection. At the end of building the
+         * root view, the nodes are sorted using their index. Furthermore, inline nodes are moved to the beginning of the vector and
+         * standard nodes to the end.
+         * @param[in, out] rvecNodes Reference to the vector being filled with the nodes for the view.
+         * @param[in] bRootView Set when the count is top level.
+         * @param[in] bTopLevel Set when this is the top level node for adding sub nodes.
+         */
+        virtual void FillNodeOrderVector(std::vector<std::shared_ptr<CNode>>& rvecNodes, bool bRootView = true,
+            bool bTopLevel = true);
 
         /**
          * @brief Accesses a node by its key in the parse tree. Overload of CNode::Direct.
@@ -977,7 +1023,7 @@ namespace toml_parser
          * @attention Array indexing starts with 0!
          * @attention For an array, when no indexing is supplied, the latest entry will be returned.
          * @param[in] rssPath The path of the node to searched for.
-         * @return Returns a shared pointer to the wanted Node if it was found or a node with invalid content if it was not found.
+         * @return Returns a shared pointer to the wanted node if it was found or a node with invalid content if it was not found.
          */
         virtual std::shared_ptr<CNode> Direct(const std::string& rssPath) const override;
 
@@ -994,84 +1040,123 @@ namespace toml_parser
         virtual sdv::IInterfaceAccess* GetNodeDirect(/*in*/ const sdv::u8string& ssPath) const override;
 
         /**
+         * @brief Get or create the parent nodes automotatically from the path.
+         * @details Elements of tables can be accessed and traversed by using '.' to separated the parent name from child name.
+         * E.g. 'parent.child' would access the 'child' element of the 'parent' table. Elements of arrays can be accessed and
+         * traversed by using the index number in brackets. E.g. 'array[3]' would access the fourth element of the array 'array'.
+         * These access conventions can also be chained like 'table.array[2][1].subtable.integerElement'.
+         * @attention Array indexing starts with 0!
+         * @attention For an array, when no indexing or a too large index number is supplied, a new entry will be created and
+         * returned.
+         * @param[in] rssPath The path of the node to searched for.
+         * @param[in] bInsertTableArray Since a table array consists of an array and a table, this is different than the other
+         * insertions that only insert one element. Some special treatment is needed at certain points.
+         * @return Returns a pair with the shared pointer to the parent node and the leftover name. If the creation could not be
+         * done, a NULL pointer is returned.
+         */
+        virtual std::pair<std::shared_ptr<CNodeCollection>, std::string> SmartParentCreate(const std::string& rssPath,
+            bool bInsertTableArray = false);
+
+        /**
          * @brief Insert a value into the collection at the location before the supplied index. Overload of
          * sdv::toml::INodeCollectionInsert::InsertValue.
-         * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
-         * collection count to insert the node at the end of the collection. Value nodes cannot be inserted behind external
-         * tables and table arrays. If the index is referencing a position behind an external table or a table array, the index
-         * is automatically corrected.
-         * @param[in] ssName Name of the node to insert. Will be ignored for an array collection. The name must adhere to the
-         * key names defined by the TOML specification. Defining the key multiple times is not allowed. Quotation of key names
-         * is done automatically; the parser decides itself whether the key is bare-key, a literal key or a quoted key.
-         * @param[in] anyValue The value of the node, being either an integer, floating point number, virtual bool value or a string.
+         * @remarks In TOML, inline nodes are located before standard nodes. Since values are presented as inline node, they
+         * will be inserted before any standard node (table or table array if defined as standard node).
+         * @param[in] ssInsertBefore Name of the node to insert the value before. In case of an array, can be an index between
+         * square brackets. Can be empty, causing the node to be inserted at the end.
+         * @param[in] ssName Name of the node to insert. This name can contain parent nodes, which are automatically created if
+         * not existing. With arrays, since the value in TOML doesn't have a name, the name of the value must be an empty
+         * string and any names provided are considered parent nodes. The name must adhere to the key names defined by the TOML
+         * specification. Defining the key multiple times is not allowed. Quotation of key names is done automatically; the
+         * parser decides itself whether the key is bare-key, a literal key or a quoted key.
+         * @param[in] anyValue The value of the node, being either an integer, floating point number, virtual bool value or a
+         * string.
          * Conversion is automatically done to int64, double float, bool or u8string.
          * @return On success the interface to the newly inserted node is returned or NULL otherwise.
          */
-        virtual sdv::IInterfaceAccess* InsertValue(uint32_t uiIndex, const sdv::u8string& ssName, sdv::any_t anyValue) override;
+        virtual sdv::IInterfaceAccess* InsertValue(/*in*/ const sdv::u8string& ssInsertBefore, /*in*/ const sdv::u8string& ssName,
+            /*in*/ sdv::any_t anyValue) override;
 
         /**
          * @brief Insert an array into the collection at the location before the supplied index. Overload of
          * sdv::toml::INodeCollectionInsert::InsertArray.
-         * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
-         * collection count to insert the node at the end of the collection. Array nodes cannot be inserted behind external
-         * tables and table arrays. If the index is referencing a position behind an external table or a table array, the index
-         * is automatically corrected.
-         * @param[in] ssName Name of the array node to insert. Will be ignored if the current node is also an array collection.
-         * The name must adhere to the key names defined by the TOML specification. Defining the key multiple times is not
-         * allowed. Quotation of key names is done automatically; the parser decides itself whether the key is bare-key, a
-         * literal key or a quoted key.
+         * @remarks In TOML, inline nodes are located before standard nodes. Since arrays are presented as inline node, they
+         * will be inserted before any standard node (table or table array if defined as standard node).
+         * @param[in] ssInsertBefore Name of the node to insert the value before. In case of an array, can be an index between
+         * square brackets. Can be empty, causing the node to be inserted at the end.
+         * @param[in] ssName Name of the node to insert. This name can contain parent nodes, which are automatically created if
+         * not existing. With arrays, since the value in TOML doesn't have a name, the name of the value must be an empty
+         * string and any names provided are considered parent nodes. The name must adhere to the key names defined by the TOML
+         * specification. Defining the key multiple times is not allowed. Quotation of key names is done automatically; the
+         * parser decides itself whether the key is bare-key, a literal key or a quoted key.
          * @return On success the interface to the newly inserted node is returned or NULL otherwise.
          */
-        virtual sdv::IInterfaceAccess* InsertArray(uint32_t uiIndex, const sdv::u8string& ssName) override;
+        virtual sdv::IInterfaceAccess* InsertArray(/*in*/ const sdv::u8string& ssInsertBefore,
+            /*in*/ const sdv::u8string& ssName) override;
 
         /**
          * @brief Insert a table into the collection at the location before the supplied index. Overload of
          * sdv::toml::INodeCollectionInsert::InsertTable.
-         * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
-         * collection count to insert the node at the end of the collection. Table nodes cannot be inserted before value nodes
-         * or arrays. If the index is referencing a position before a value node or an array, the index is automatically
-         * corrected.
-         * @param[in] ssName Name of the table node to insert. Will be ignored if the current node is an array collection.
-         * The name must adhere to the key names defined by the TOML specification. Defining the key multiple times is not
-         * allowed. Quotation of key names is done automatically; the parser decides itself whether the key is bare-key, a
-         * literal key or a quoted key.
+         * @remarks In TOML, inline nodes are located before standard nodes. Tables can be inserted as inline node, in which
+         * case they will be inserted before any standard node (table or table array if defined as standard node).
+         * @param[in] ssInsertBefore Name of the node to insert the value before. In case of an array, can be an index between
+         * square brackets. Can be empty, causing the node to be inserted at the end.
+         * @param[in] ssName Name of the node to insert. This name can contain parent nodes, which are automatically created if
+         * not existing. With arrays, since the value in TOML doesn't have a name, the name of the value must be an empty
+         * string and any names provided are considered parent nodes. The name must adhere to the key names defined by the TOML
+         * specification. Defining the key multiple times is not allowed. Quotation of key names is done automatically; the
+         * parser decides itself whether the key is bare-key, a literal key or a quoted key.
          * @param[in] ePreference The preferred form of the node to be inserted.
          * @return On success the interface to the newly inserted node is returned or NULL otherwise.
          */
-        virtual sdv::IInterfaceAccess* InsertTable(uint32_t uiIndex, const sdv::u8string& ssName,
-            sdv::toml::INodeCollectionInsert::EInsertPreference ePreference) override;
+        virtual sdv::IInterfaceAccess* InsertTable(/*in*/ const sdv::u8string& ssInsertBefore, /*in*/ const sdv::u8string& ssName,
+            /*in*/ sdv::toml::EInsertPreference ePreference) override;
 
         /**
          * @brief Insert a table array into the collection at the location before the supplied index. Overload of
          * sdv::toml::INodeCollectionInsert::InsertTableArray.
-         * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
-         * collection count to insert the node at the end of the collection. Table array nodes cannot be inserted before value
-         * nodes or arrays. If the index is referencing a position before a value node or an array, the index is automatically
-         * corrected.
-         * @param[in] ssName Name of the array node to insert. Will be ignored if the current node is also an array collection.
-         * The name must adhere to the key names defined by the TOML specification. Defining the key multiple times is not
-         * allowed. Quotation of key names is done automatically; the parser decides itself whether the key is bare-key, a
-         * literal key or a quoted key.
+         * @remarks In TOML, inline nodes are located before standard nodes. Table arrays can be inserted as inline node, in
+         * which case they will be inserted before any standard node (table or table array if defined as standard node).
+         * @param[in] ssInsertBefore Name of the node to insert the value before. In case of an array, can be an index between
+         * square brackets. Can be empty, causing the node to be inserted at the end.
+         * @param[in] ssName Name of the node to insert. This name can contain parent nodes, which are automatically created if
+         * not existing. With arrays, since the value in TOML doesn't have a name, the name of the value must be an empty
+         * string and any names provided are considered parent nodes. The name must adhere to the key names defined by the TOML
+         * specification. Defining the key multiple times is not allowed. Quotation of key names is done automatically; the
+         * parser decides itself whether the key is bare-key, a literal key or a quoted key.
          * @param[in] ePreference The preferred form of the node to be inserted.
          * @return On success the interface to the newly inserted node is returned or NULL otherwise.
          */
-        virtual sdv::IInterfaceAccess* InsertTableArray(uint32_t uiIndex, const sdv::u8string& ssName,
-            sdv::toml::INodeCollectionInsert::EInsertPreference ePreference) override;
+        virtual sdv::IInterfaceAccess* InsertTableArray(/*in*/ const sdv::u8string& ssInsertBefore, /*in*/ const sdv::u8string& ssName,
+            /*in*/ sdv::toml::EInsertPreference ePreference) override;
 
         /**
          * @brief Insert a TOML string as a child of the current collection node. If the collection is a table, the TOML string
          * should contain values and inline/external/array-table nodes with names. If the collection is an array, the TOML
          * string should contain and inline table nodes without names. Overload of sdv::toml::INodeCollectionInsert::InsertTOML.
-         * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
-         * collection count to insert the node at the end of the collection. Table array nodes cannot be inserted before value
-         * nodes or arrays. If the index is referencing a position before a value node or an array, the index is automatically
-         * corrected.
+         * @remarks In TOML, inline nodes are located before standard nodes. Dependable on the nodes defined in the TOML they
+         * might be transferred to inline or they might be inserted at a different location.
+         * @param[in] ssInsertBefore Name of the node to insert the value before. In case of an array, can be an index between
+         * square brackets. Can be empty, causing the node to be inserted at the end.
          * @param[in] ssTOML The TOML string to insert.
          * @param[in] bRollbackOnPartly If only part of the nodes could be inserted, no node will be inserted.
          * @return The result of the insertion.
          */
-        virtual sdv::toml::INodeCollectionInsert::EInsertResult InsertTOML(uint32_t uiIndex, const sdv::u8string& ssTOML,
-            bool bRollbackOnPartly) override;
+        virtual sdv::toml::INodeCollectionInsert::EInsertResult InsertTOML(/*in*/ const sdv::u8string& ssInsertBefore,
+            /*in*/ const sdv::u8string& ssTOML, /*in*/ bool bRollbackOnPartly) override;
+
+        /**
+         * @brief Insert a TOML string as a child of the current collection node. If the collection is a table, the TOML string
+         * should contain values and inline/external/array-table nodes with names. If the collection is an array, the TOML
+         * string should contain and inline table nodes without names.
+         * @param[in] rptrInsertBefore The node to insert the TOML nodes before (if possible). Can be NULL, causing the TOML nodes
+         * to be inserted at the end.
+         * @param[in] ssTOML The TOML string to insert.
+         * @param[in] bRollbackOnPartly If only part of the nodes could be inserted, no node will be inserted.
+         * @return A pair structure with the result of the insertion and a vector of all the inserted nodes.
+         */
+        std::pair<sdv::toml::INodeCollectionInsert::EInsertResult, std::vector<std::shared_ptr<CNode>>> InsertTOML(
+            const std::shared_ptr<CNode>& rptrInsertBefore, const sdv::u8string& ssTOML, bool bRollbackOnPartly);
 
         /**
          * @brief Delete the current node. Overload of sdv::toml::INodeUpdate::DeleteNode.
@@ -1079,6 +1164,23 @@ namespace toml_parser
          * @return Returns whether the deletion was successful.
          */
         virtual bool DeleteNode() override;
+
+        /**
+         * @brief The derived class from the node collection can be inline or not. Overload of CNode::Inline.
+         * @return Returns whether the node is an inline node.
+         */
+        virtual bool Inline() const override;
+
+        /**
+         * @brief With some node collections it is possible to switch between inline and normal. Overload of CNode::Inline.
+         * @remarks Additional node composition information will be removed and the order within the parent node might be changed.
+         * @param[in] bInline When set, try to switch to inline. Otherwise try to switch to normal.
+         * @param[in] bIncludeChildren When set and bInline is not set, applicable child nodes are converted as well (only tables
+         * and table-arrays can be defined as standard). Making a node inline is always including the children.
+         * @return Returns whether the switch was successful. A switch to the same type (normal to normal or inline to inline is
+         * always successful). When returning false, the switching might not be supported for this type.
+         */
+        virtual bool Inline(bool bInline, bool bIncludeChildren = true) override;
 
         /**
          * @brief Can the node convert to an inline definition? Overload of sdv::toml::INodeCollectionConvert::CanMakeInline.
@@ -1101,10 +1203,12 @@ namespace toml_parser
 
         /**
          * @brief Convert the node to a standard node. Overload of sdv::toml::INodeCollectionConvert::MakeStandard.
+         * @param[in] bIncludeChildren When set, applicable child nodes are made are converted to standard nodes as well (only
+         * tables and table-arrays can be defined as standard).
          * @return Returns whether the conversion was successful. Returns 'true' when the node was already defined as standard
          * node.
          */
-        virtual bool MakeStandard() override;
+        virtual bool MakeStandard(/*in*/ bool bIncludeChildren) override;
 
         /**
          * @brief Delete a node from the collection.
@@ -1113,28 +1217,6 @@ namespace toml_parser
          * @return Returns whether the removal was successful.
          */
         bool DeleteNode(const std::shared_ptr<CNode>& rptrNode);
-
-        /**
-         * @brief Insert the node into the view.
-         * @remarks The node must be a descendant (direct child or an indirect child) of the node.
-         * @details Insert the node into the vector (and remove it from any previous vector if still assigned). Inline nodes can be
-         * assigned to stadard and inline nodes. Standard nodes can only be assigned to standard nodes. In the vector, first the
-         * inline nodes and then the standard nodes are located. This means that an inline node will be placed before standard nodes
-         * and standard nodes behind inline nodes, regardless of the index provided.
-         * @param[in] uiIndex Location within the vector to insert the node. Could be sdv::toml::npos to insert as last node.
-         * @param[in] rptrNode Reference to the smart pointer to the node to set the view for. If the node is not a direct child
-         * node, the view pointer of the node will be set.
-         * @return Returns true when the insertion was successful, false when node (likely because the node to insert is a standard
-         * node, whereas this node is an inline node.
-         */
-        bool InsertIntoView(uint32_t uiIndex, const std::shared_ptr<CNode>& rptrNode);
-
-        /**
-         * @brief Remove a node from a view.
-         * @param[in] rptrNode Reference to the smart pointer pointing to the node to remove.
-         * @return Returns whether the removal was successful.
-         */
-        bool RemoveFromView(const std::shared_ptr<CNode>& rptrNode);
 
         /**
          * @brief Find the index belonging to the provided node.
@@ -1151,7 +1233,7 @@ namespace toml_parser
         bool IsDescendant(const std::shared_ptr<CNode>& rptrNode) const;
 
         /**
-         * @brief Generic inserting function for nodes.
+         * @brief Generic add function for nodes.
          * @details Elements of tables can be accessed and traversed by using '.' to separated the parent name from child name.
          * E.g. 'parent.child' would access the 'child' element of the 'parent' table. Elements of arrays can be accessed and
          * traversed by using the index number in brackets. E.g. 'array[3]' would access the fourth element of the array 'array'.
@@ -1160,10 +1242,6 @@ namespace toml_parser
          * @attention For an array, when no indexing is supplied, the latest entry will be returned.
          * @remarks If the node to insert exists already, but is marked implicit, the node will be returned and made explicit. In
          * all other cases the an error will occur that the node already exists.
-         * @param[in] uiIndex The insertion location to insert the node before. Can be npos or any value larger than the
-         * collection count to insert the node at the end of the collection. Table array nodes cannot be inserted before value
-         * nodes or arrays. If the index is referencing a position before a value node or an array, the index is automatically
-         * corrected.
          * @param[in] rrangeKeyPath Reference to the token range containing the path to the node to insert.
          * @param[in] rtArgs Zero or more references to arguments passed to the constructor of the node classes being created by
          * this function.
@@ -1171,7 +1249,7 @@ namespace toml_parser
          * there the returned node is a table within the table array.
          */
         template <typename TNodeType, typename... TArgs>
-        std::shared_ptr<CNode> Insert(uint32_t uiIndex, const CTokenRange& rrangeKeyPath, const TArgs&... rtArgs);
+        std::shared_ptr<CNode> AddNodeFromRange(const CTokenRange& rrangeKeyPath, const TArgs&... rtArgs);
 
         /**
          * @brief Combine the collection with the provided content (mathematical union).
@@ -1190,6 +1268,13 @@ namespace toml_parser
          * @return Returns whether the reduction was successful.
          */
         virtual bool Reduce(const std::shared_ptr<CNodeCollection>& rptrCollection) = 0;
+
+        /**
+         * @brief When the parent changes (e.g. when moving items from one parser to the other), the items and all its sub-items
+         * need to reasign the parser. Overload of CNode::ReassignParser.
+         * @param[in] rParser Reference to the parser to assign.
+         */
+        virtual void ReassignParser(CParser& rParser) override;
 
     private:
         /**
@@ -1228,8 +1313,6 @@ namespace toml_parser
         // The child node uses the parent node pointer to indicate which node holds node.
         // The child node uses the view node pointer to indicate which node displays the node content.
                 
-        std::vector<std::shared_ptr<CNode>> m_vecNodeOrder;     ///< Vector holding the child nodes (could contain grand children as
-                                                                ///< well).
         std::list<std::shared_ptr<CNode>>   m_lstNodes;         ///< List holding the direct child nodes.
         std::list<std::shared_ptr<CNode>>   m_lstRecycleBin;    ///< List holding the child elements that were deleted. This will
                                                                 ///< prevent destruction of the node class, which would otherwise
@@ -1284,6 +1367,26 @@ namespace toml_parser
         virtual sdv::toml::ENodeType GetType() const override;
 
         /**
+         * @brief Returns the amount of nodes. Overload of sdv::toml::INodeCollection::GetCount.
+         * @return The amount of nodes.
+         */
+        virtual uint32_t GetCount() const override;
+
+        /**
+         * @brief Get the node. Overload of CNodeCollection::Get.
+         * @param[in] uiIndex Index of the node to get.
+         * @return Smart pointer to the node object.
+         */
+        virtual std::shared_ptr<CNode> Get(uint32_t uiIndex) const override;
+
+        /**
+         * @brief Delete the current node. Overload of sdv::toml::INodeUpdate::DeleteNode.
+         * @attention A successful deletion will cause all interfaces to the current node to become inoperable.
+         * @return Returns whether the deletion was successful.
+         */
+        virtual bool DeleteNode() override;
+
+        /**
          * @brief Create the TOML text based on the content using an optional prefix node. Overload of CNode::GenerateTOML.
          * @param[in] rContext Reference to the context class to use during TOML code generation.
          * @return The TOML text string.
@@ -1308,10 +1411,12 @@ namespace toml_parser
          * table doesn't have a name.
          * @remarks Additional node composition information will be removed and the order within the parent node might be changed.
          * @param[in] bInline When set, try to switch to inline. Otherwise try to switch to normal.
+         * @param[in] bIncludeChildren When set and bInline is not set, applicable child nodes are converted as well (only tables
+         * and table-arrays can be defined as standard). Making a node inline is always including the children.
          * @return Returns whether the switch was successful. A switch to the same type (normal to normal or inline to inline is
          * always successful). When returning false, the switching might not be supported for this type.
          */
-        virtual bool Inline(bool bInline) override;
+        virtual bool Inline(bool bInline, bool bIncludeChildren = true) override;
 
         /**
          * @brief Checks whether the table was explicitly defined. Overload of CNodeCollection::ExplicitlyDefined.
@@ -1342,9 +1447,17 @@ namespace toml_parser
          */
         virtual bool Reduce(const std::shared_ptr<CNodeCollection>& rptrCollection) override;
 
+        /**
+         * @brief After every insert, deletion and shift, the node order of this and all sub- tables need to be rebuild.
+         * @param[in] bForce Force rebuild, even if locked.
+         */
+        virtual void RebuildNodeOrder(bool bForce) override;
+
     private:
-        bool m_bDefinedExplicitly = true;   ///< When set, the table is defined explicitly.
-        bool m_bInline = false;             ///< Flag determining whether the table is inline or not.
+        bool    m_bDefinedExplicitly = true;                ///< When set, the table is defined explicitly.
+        bool    m_bInline = false;                          ///< Flag determining whether the table is inline or not.
+        std::vector<std::shared_ptr<CNode>> m_vecNodeOrder; ///< Vector holding the child nodes (could contain grand children as
+                                                            ///< well).
     };
 
     /**
@@ -1426,9 +1539,27 @@ namespace toml_parser
          * @attention Array element access indices starts with 0!
          * @attention For an array element inserting, when no indexing is supplied, the latest entry will be returned.
          * @param[in] rssPath Reference to the path of the node to searched for.
-         * @return Returns a shared pointer to the wanted Node if it was found or a node with invalid content if it was not found.
+         * @return Returns a shared pointer to the wanted node if it was found or a node with invalid content if it was not found.
          */
         virtual std::shared_ptr<CNode> Direct(const std::string& rssPath) const override;
+
+        /**
+         * @brief Get or create the parent nodes automotatically from the path. Overload of CNodeCollection::SmartParentCreate.
+         * @details Elements of tables can be accessed and traversed by using '.' to separated the parent name from child name.
+         * E.g. 'parent.child' would access the 'child' element of the 'parent' table. Elements of arrays can be accessed and
+         * traversed by using the index number in brackets. E.g. 'array[3]' would access the fourth element of the array 'array'.
+         * These access conventions can also be chained like 'table.array[2][1].subtable.integerElement'.
+         * @attention Array indexing starts with 0!
+         * @attention For an array, when no indexing or a too large index number is supplied, a new entry will be created and
+         * returned.
+         * @param[in] rssPath The path of the node to searched for.
+         * @param[in] bInsertTableArray Since a table array consists of an array and a table, this is different than the other
+         * insertions that only insert one element. Some special treatment is needed at certain points.
+         * @return Returns a pair with the shared pointer to the parent node and the leftover name. If the creation could not be
+         * done, a NULL pointer is returned.
+         */
+        virtual std::pair<std::shared_ptr<CNodeCollection>, std::string> SmartParentCreate(const std::string& rssPath,
+            bool bInsertTableArray = false) override;
 
         /**
          * @brief Create the TOML text based on the content using an optional prefix node. Overload of CNode::GenerateTOML.
@@ -1451,13 +1582,6 @@ namespace toml_parser
         bool TableArray() const;
 
         /**
-         * @brief Can the node convert to a standard definition? Overload of sdv::toml::INodeCollectionConvert::CanMakeStandard.
-         * @return Returns whether the conversion to standard is possible. Returns 'true' when the node is already defined as
-         * standard node.
-         */
-        virtual bool CanMakeStandard() const override;
-
-        /**
          * @brief The derived class from the node collection can be inline or not. Overload of CNode::Inline.
          * @return Returns whether the node is an inline node.
          */
@@ -1472,10 +1596,19 @@ namespace toml_parser
          * doesn't have a name that can be used to define the explicit table array.
          * @remarks Additional node composition information will be removed and the order within the parent node might be changed.
          * @param[in] bInline When set, try to switch to inline. Otherwise try to switch to normal.
+         * @param[in] bIncludeChildren When set and bInline is not set, applicable child nodes are converted as well (only tables
+         * and table-arrays can be defined as standard). Making a node inline is always including the children.
          * @return Returns whether the switch was successful. A switch to the same type (normal to normal or inline to inline is
          * always successful). When returning false, the switching might not be supported for this type.
          */
-        virtual bool Inline(bool bInline) override;
+        virtual bool Inline(bool bInline, bool bIncludeChildren = true) override;
+
+        /**
+         * @brief Can the node convert to a standard definition? Overload of sdv::toml::INodeCollectionConvert::CanMakeStandard.
+         * @return Returns whether the conversion to standard is possible. Returns 'true' when the node is already defined as
+         * standard node.
+         */
+        virtual bool CanMakeStandard() const override;
 
         /**
          * @brief Does the last child node need a comma following the node?
@@ -1534,7 +1667,7 @@ namespace toml_parser
          * @brief Constructor
          * @param[in] rparser Reference to the TOML parser.
          */
-        CRootTable(CParser& rparser) : CTable(rparser, "root", "", false)
+        CRootTable(CParser& rparser) : CTable(rparser, "root", "", false, true)
         {}
 
         /**
@@ -1550,20 +1683,25 @@ namespace toml_parser
          */
         virtual bool Inline() const override
         {
+            // The root node can never be inline.
             return false;
         }
 
         /**
-         * @brief With some node collections it is possible to switch between inline and normal. Overload of
-         * CNodeCollection::Inline.
+         * @brief Switch between inline and explicit table definition. Overload of CNodeCollection::Inline.
+         * @attention It is not possible to switch to an explicit table definition if the table is part of an array, since the
+         * table doesn't have a name.
          * @remarks Additional node composition information will be removed and the order within the parent node might be changed.
          * @param[in] bInline When set, try to switch to inline. Otherwise try to switch to normal.
+         * @param[in] bIncludeChildren When set and bInline is not set, applicable child nodes are converted as well (only tables
+         * and table-arrays can be defined as standard). Making a node inline is always including the children.
          * @return Returns whether the switch was successful. A switch to the same type (normal to normal or inline to inline is
          * always successful). When returning false, the switching might not be supported for this type.
          */
-        virtual bool Inline(bool bInline) override
+        virtual bool Inline(bool bInline, bool bIncludeChildren = true) override
         {
-            return bInline == false;
+            // Pass call to table implementation.
+            return CTable::Inline(bInline, bIncludeChildren);
         }
     };
 
@@ -1580,7 +1718,7 @@ namespace toml_parser
     }
 
     template <typename TNodeType, typename... TArgs>
-    inline std::shared_ptr<CNode> CNodeCollection::Insert(uint32_t uiIndex, const CTokenRange& rrangeKeyPath, const TArgs&... rtArgs)
+    inline std::shared_ptr<CNode> CNodeCollection::AddNodeFromRange(const CTokenRange& rrangeKeyPath, const TArgs&... rtArgs)
     {
         // Get the first part of the node
         auto prKey = SplitNodeKey(rrangeKeyPath);
@@ -1613,9 +1751,8 @@ namespace toml_parser
                         "' exists already, but is not a table array.");
 
                 // Create the table.
-                ptrNode = ptrTableArray->Insert<CTable>(sdv::toml::npos, CTokenRange(prKey.first, prKey.first.get().Next()),
+                ptrNode = ptrTableArray->AddNodeFromRange<CTable>(CTokenRange(prKey.first, prKey.first.get().Next()),
                     false, true);
-                ptrNode->SetViewPtr(Cast<CNodeCollection>());
             } else if (!Cast<CArray>() && itNode != m_lstNodes.end())
             {
                 // If existing... this might be a duplicate if not explicitly defined before.
@@ -1644,7 +1781,7 @@ namespace toml_parser
                 // If the current node is implicit, take over the inline flag (this determines whether a sub-table definition is
                 // allowed or not).
                 if (!ExplicitlyDefined())
-                    Inline(ptrNode->Inline());
+                    Inline(ptrNode->Inline(), false);
             }
         }
         else // Intermediate node
@@ -1663,6 +1800,9 @@ namespace toml_parser
                     auto prNextKey = SplitNodeKey(prKey.second);
                     if (prNextKey.first.get().Category() != ETokenCategory::token_integer)
                     {
+                        // The table array should have an ordered vector. This is not the case yet. Rebuild the table array.
+                        ptrNode->Cast<CTableArray>()->RebuildNodeOrder(true);
+
                         // Get the last table
                         if (!ptrNode->Cast<CTableArray>()->GetCount())
                             throw XTOMLParseException("The parent table array node '" + prKey.first.get().StringValue() +
@@ -1700,23 +1840,14 @@ namespace toml_parser
             std::shared_ptr<CNodeCollection> ptrNodeCollection = ptrNode->Cast<CNodeCollection>();
             if (!ptrNodeCollection)
                 throw XTOMLParseException("Parent node is not an array or table '" + ptrNode->GetPath(true) + "'.");
-            ptrNode = ptrNodeCollection->Insert<TNodeType>(sdv::toml::npos, prKey.second, rtArgs...);
+            ptrNode = ptrNodeCollection->AddNodeFromRange<TNodeType>(prKey.second, rtArgs...);
             if (!ptrNode)
                 throw XTOMLParseException("Could not create the node '" + prKey.first.get().StringValue() + "'.");
         }
 
-        // Insert the node at the requested location if this node is inline or this is the view of the node.
-        auto itPos = (static_cast<size_t>(uiIndex) >= m_vecNodeOrder.size()) ? m_vecNodeOrder.end() :
-            m_vecNodeOrder.begin() + static_cast<size_t>(uiIndex);
-        m_vecNodeOrder.insert(itPos, ptrNode);
-        if (ptrNode->GetParentPtr() != Cast<CNodeCollection>())
-            ptrNode->SetViewPtr(Cast<CNodeCollection>());
-
         // Return the result
         return ptrNode;
     }
-
-
 } // namespace toml_parser
 
 #endif // !defined PARSER_NODE_TOML_H

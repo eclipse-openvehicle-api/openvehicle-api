@@ -14,8 +14,10 @@
 #include "list_elements.h"
 #include "print_table.h"
 #include <interfaces/config.h>
+#include <interfaces/app.h>
 #include <support/sdv_core.h>
 #include <support/local_service_access.h>
+#include <support/toml.h>
 #include "../../global/cmdlnparser/cmdlnparser.h"
 #include "../../global/exec_dir_helper.h"
 #include "../../global/flags.h"
@@ -38,13 +40,14 @@ void ListHelp(const SContext& rsContext)
     }
 
     // Which list command help is requested
-    enum class EListCommand { unknown, modules, classes, components, installations, connections } eListCommand = EListCommand::unknown;
+    enum class EListCommand { unknown, modules, classes, components, installations, listeners, connections } eListCommand = EListCommand::unknown;
     if (rsContext.seqCmdLine.size() >= 2)
     {
         if (iequals(rsContext.seqCmdLine[1], "MODULES")) eListCommand = EListCommand::modules;
         else if (iequals(rsContext.seqCmdLine[1], "CLASSES")) eListCommand = EListCommand::classes;
         else if (iequals(rsContext.seqCmdLine[1], "COMPONENTS")) eListCommand = EListCommand::components;
         else if (iequals(rsContext.seqCmdLine[1], "INSTALLATIONS")) eListCommand = EListCommand::installations;
+        else if (iequals(rsContext.seqCmdLine[1], "LISTENERS")) eListCommand = EListCommand::listeners;
         else if (iequals(rsContext.seqCmdLine[1], "CONNECTIONS")) eListCommand = EListCommand::connections;
     }
 
@@ -65,20 +68,24 @@ void ListHelp(const SContext& rsContext)
         case EListCommand::installations:
             CCommandLine::PrintHelpText(std::cout, "Usage: sdv_control LIST INSTALLATIONS [options...]\n\nShow a list of all installations.\n");
             break;
+        case EListCommand::listeners:
+            CCommandLine::PrintHelpText(std::cout, "Usage: sdv_control LIST LISTENERS [options...]\n\nShow a list of all configured listeners.\n");
+            break;
         case EListCommand::connections:
-            CCommandLine::PrintHelpText(std::cout, "Usage: sdv_control LIST CONNECTIONS [options...]\n\nShow a list of all connected applications.\n");
+            CCommandLine::PrintHelpText(std::cout, "Usage: sdv_control LIST CONNECTIONS [options...]\n\nShow a list of all configured connections.\n");
             break;
         default:
-            CCommandLine::PrintHelpText(std::cout, R"code(Usage: sdv_control LIST <list_command> [options...]
+            CCommandLine::PrintHelpText(std::cout, R"text(Usage: sdv_control LIST <list_command> [options...]
 
 Supported listing commands:
     LIST MODULES        Show a list of loaded server modules.
     LIST CLASSES        Show a list of available component classes.
     LIST COMPONENTS     Show a list of instantiated server components
     LIST INSTALLATIONS  Show a list of installations.
+    LIST LISTENERS      Show a list of current listeners.
     LIST CONNECTIONS    Show a list of current connections.
 
-)code");
+)text");
             break;
         }
         std::cout << "Options:\n";
@@ -103,33 +110,39 @@ int ListElements(const SContext& rsContext, std::ostream& rstream /*= std::cout*
         return CMDLN_ARG_ERR;
     }
 
-    // Which list command help is requested
-    enum class EListCommand { unknown, modules, classes, components, installations, connections } eListCommand = EListCommand::unknown;
+    // Which list command is requested
+    enum class EListCommand { unknown, modules, classes, components, installations, listeners, connections } eListCommand = EListCommand::unknown;
     if (rsContext.seqCmdLine.size() >= 2)
     {
         if (iequals(rsContext.seqCmdLine[1], "MODULES")) eListCommand = EListCommand::modules;
         else if (iequals(rsContext.seqCmdLine[1], "CLASSES")) eListCommand = EListCommand::classes;
         else if (iequals(rsContext.seqCmdLine[1], "COMPONENTS")) eListCommand = EListCommand::components;
         else if (iequals(rsContext.seqCmdLine[1], "INSTALLATIONS")) eListCommand = EListCommand::installations;
+        else if (iequals(rsContext.seqCmdLine[1], "LISTENERS")) eListCommand = EListCommand::listeners;
         else if (iequals(rsContext.seqCmdLine[1], "CONNECTIONS")) eListCommand = EListCommand::connections;
     }
     else
     {
         if (!rsContext.bSilent)
         {
-            std::cerr << "ERROR: " << CMDLN_ARG_ERR_MSG << " Missing listing command.." << std::endl << std::endl;
+            std::cerr << "ERROR: " << CMDLN_ARG_ERR_MSG << " Missing listing command." << std::endl;
             ListHelp(rsContext);
         }
         return CMDLN_ARG_ERR;
     }
 
-    // Try to connect
-    sdv::TObjectPtr ptrRepository = sdv::com::ConnectToLocalServerRepository(rsContext.uiInstanceID);
-    if (!ptrRepository)
+    // Try to connect (except when listing the listeners and connections... they can be read from the settings).
+    sdv::TObjectPtr ptrRepository;
+    if (eListCommand != EListCommand::listeners && eListCommand != EListCommand::connections)
     {
-        if (!rsContext.bSilent)
-            std::cerr << "ERROR: " << CONNECT_SDV_SERVER_ERROR_MSG << " Instance #" << rsContext.uiInstanceID << "." << std::endl;
-        return CONNECT_SDV_SERVER_ERROR;
+        ptrRepository = sdv::com::ConnectToLocalServerRepository();
+        if (!ptrRepository)
+        {
+            if (!rsContext.bSilent)
+                std::cerr << "ERROR: " << CONNECT_SDV_SERVER_ERROR_MSG << " Instance #" << rsContext.uiInstanceID << "."
+                          << std::endl;
+            return CONNECT_SDV_SERVER_ERROR;
+        }
     }
 
     int iRet = -100;
@@ -147,12 +160,16 @@ int ListElements(const SContext& rsContext, std::ostream& rstream /*= std::cout*
     case EListCommand::installations:
         iRet = ListInstallations(rsContext, ptrRepository, rstream);
         break;
+    case EListCommand::listeners:
+        iRet = ListListeners(rsContext, rstream);
+        break;
     case EListCommand::connections:
-        iRet = ListConnections(rsContext, ptrRepository, rstream);
+        iRet = ListConnections(rsContext, rstream);
         break;
     default:
         break;
     }
+    rstream << std::endl;
     return iRet;
 }
 
@@ -388,8 +405,107 @@ int ListInstallations(const SContext& rsContext, const sdv::TObjectPtr& rptrRepo
     return NO_ERROR;
 }
 
-int ListConnections(const SContext& /*rsContext*/, const sdv::TObjectPtr& /*rptrRepository*/, std::ostream& /*rstream = std::cout */ )
+std::string BuildParameters(const sdv::toml::CNodeCollection& rtable, const std::string& ssPrefix = std::string())
 {
-    std::cout << "ERROR: " << NOT_IMPLEMENTED_MSG << " :-(" << std::endl;
-    return NOT_IMPLEMENTED;
+    std::string ssParams;
+    for (uint32_t uiIndex = 0; uiIndex < rtable.GetCount(); uiIndex++)
+    {
+        sdv::toml::CNode node = rtable.Get(uiIndex);
+        if (!node) continue;
+        std::string ssNodeText;
+        if (node.GetType() == sdv::toml::ENodeType::node_table)
+        {
+            sdv::toml::CNodeCollection tableChild(node);
+            if (!tableChild) continue;
+            ssNodeText = BuildParameters(tableChild, static_cast<std::string>(tableChild.GetName()) + ".");
+        }
+        else if (node.GetType() == sdv::toml::ENodeType::node_array)
+        {
+            // TODO...
+        }
+        else
+            ssNodeText = ssPrefix + node.GetName() + "=" + node.GetValueAsString();
+
+        // Add the text
+        if (!ssParams.empty())
+            ssParams += ", ";
+        ssParams += ssNodeText;
+    }
+    return ssParams;
+}
+
+int ListListeners(const SContext& rsContext, std::ostream& rstream /*= std::cout */ )
+{
+    std::vector<std::array<std::string, 3>> vecListenerList;
+    vecListenerList.push_back({"Listener", "Provider", "Parameters"});
+
+    // Request the settings.
+    auto ptrAppService = sdv::core::GetObject("AppSettingsService");
+    sdv::app::IAppSettingsPersist* pAppSettingsPersist = ptrAppService.GetInterface<sdv::app::IAppSettingsPersist>();
+    sdv::app::IAppConnections* pAppConnections = ptrAppService.GetInterface<sdv::app::IAppConnections>();
+    if (!pAppSettingsPersist || !pAppConnections)
+    {
+        if (!rsContext.bSilent)
+            std::cerr << "ERROR: " << CANNOT_LOAD_SETTINGS_MSG << std::endl;
+        return CANNOT_LOAD_SETTINGS;
+    }
+    auto seqListeners = pAppConnections->GetListeners();
+    for (const sdv::u8string& rssListener : seqListeners)
+    {
+        std::string ssListener = rssListener;
+        auto ssConfig = pAppConnections->GetListenerConfig(rssListener);
+        sdv::toml::CTOMLParser parser(ssConfig);
+        if (!parser)
+        {
+            if (!rsContext.bSilent)
+                std::cerr << "ERROR: " << PROCESS_LISTENER_CONFIG_ERROR_MSG << std::endl;
+            return PROCESS_LISTENER_CONFIG_ERROR;
+        }
+        std::string ssProvider = parser.GetDirect("Provider.Name").GetValueAsString();
+        std::string ssParams = BuildParameters(parser.GetDirect("IpcChannel"));
+        vecListenerList.push_back({ssListener, ssProvider, ssParams});
+    }
+    
+    PrintTable(vecListenerList, rstream, rsContext.bListNoHdr);
+    if (vecListenerList.size() < 2)
+        rstream << "  No listeners configured!" << std::endl;
+    return NO_ERROR;
+}
+
+int ListConnections(const SContext& rsContext, std::ostream& rstream /*= std::cout */ )
+{
+    std::vector<std::array<std::string, 3>> vecConnectionList;
+    vecConnectionList.push_back({"Connection", "Provider", "Parameters"});
+
+    // Request the settings.
+    auto ptrAppService  = sdv::core::GetObject("AppSettingsService");
+    sdv::app::IAppSettingsPersist* pAppSettingsPersist = ptrAppService.GetInterface<sdv::app::IAppSettingsPersist>();
+    sdv::app::IAppConnections* pAppConnections = ptrAppService.GetInterface<sdv::app::IAppConnections>();
+    if (!pAppSettingsPersist || !pAppConnections || !pAppSettingsPersist->LoadSettings())
+    {
+        if (!rsContext.bSilent)
+            std::cerr << "ERROR: " << CANNOT_LOAD_SETTINGS_MSG << std::endl;
+        return CANNOT_LOAD_SETTINGS;
+    }
+    auto seqConnections = pAppConnections->GetConnections();
+    for (const sdv::u8string& rssConnection : seqConnections)
+    {
+        std::string ssConnection = rssConnection;
+        auto ssConfig = pAppConnections->GetConnectionConfig(rssConnection);
+        sdv::toml::CTOMLParser parser(ssConfig);
+        if (!parser)
+        {
+            if (!rsContext.bSilent)
+                std::cerr << "ERROR: " << PROCESS_CONNECTION_CONFIG_ERROR_MSG << std::endl;
+            return PROCESS_CONNECTION_CONFIG_ERROR;
+        }
+        std::string ssProvider = parser.GetDirect("Provider.Name").GetValueAsString();
+        std::string ssParams = BuildParameters(parser.GetDirect("IpcChannel"));
+        vecConnectionList.push_back({ssConnection, ssProvider, ssParams});
+    }
+
+    PrintTable(vecConnectionList, rstream, rsContext.bListNoHdr);
+    if (vecConnectionList.size() < 2)
+        rstream << "  No connections configured!" << std::endl;
+    return NO_ERROR;
 }

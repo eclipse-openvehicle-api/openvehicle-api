@@ -174,6 +174,9 @@ std::string CProxyGenerator::GetFuncImpl(const SFuncInfo& rsFunc, CKeywordMap& r
     else
         sstreamExceptions << R"code(sdv::XUnknownException exception;
         exception.unknown_id = except_id;
+        // Cpp-Check 2.7 warns about the uninitialized variable _id. This variable is allocated as inline static const and is
+        // assigned a value. Suppress the warning.
+        // cppcheck-suppress uninitvar
         throw exception;)code";
     for (const std::string& rssException : rvecExceptions)
     {
@@ -181,6 +184,9 @@ std::string CProxyGenerator::GetFuncImpl(const SFuncInfo& rsFunc, CKeywordMap& r
         {
             )code" << rssException << R"code( exception;
             desOutput >> exception;
+            // Cpp-Check 2.7 warns about the uninitialized variable _id. This variable is allocated as inline static const and is
+            // assigned a value. Suppress the warning.
+            // cppcheck-suppress uninitvar
             throw exception;
         }
         )code";
@@ -190,6 +196,9 @@ std::string CProxyGenerator::GetFuncImpl(const SFuncInfo& rsFunc, CKeywordMap& r
         {
             sdv::XUnknownException exception;
             exception.unknown_id = except_id;
+            // Cpp-Check 2.7 warns about the uninitialized variable _id. This variable is allocated as inline static const and is
+            // assigned a value. Suppress the warning.
+            // cppcheck-suppress uninitvar
             throw exception;
         }
         })code";

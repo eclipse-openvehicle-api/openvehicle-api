@@ -19,7 +19,7 @@
 #include <interfaces/com.h>
 
 // Forward declaration.
-class CClient;
+class CClientConnect;
 
 /**
  * @brief Class managing the connection and providing access to the server repository through a proxy.
@@ -33,7 +33,7 @@ public:
      * @param[in] tConnection The connection ID to the server.
      * @param[in] pRepositoryProxy Proxy to the server repository.
      */
-    CRepositoryProxy(CClient& rClient, sdv::com::TConnectionID tConnection, sdv::IInterfaceAccess* pRepositoryProxy);
+    CRepositoryProxy(CClientConnect& rClient, sdv::com::TConnectionID tConnection, sdv::IInterfaceAccess* pRepositoryProxy);
 
     /**
      * @brief Do not allow a copy constructor.
@@ -59,8 +59,14 @@ public:
      */
     virtual void DestroyObject() override;
 
+    /**
+     * @brief Get the connection ID for this connection.
+     * @return The connection ID.
+     */
+    sdv::com::TConnectionID GetConnectionID() const;
+
 private:
-    CClient&                        m_rClient;                  ///< Reference to the client object.
+    CClientConnect&                 m_rClient;                  ///< Reference to the client object.
     sdv::com::TConnectionID         m_tConnection = {};         ///< Connection ID.
     sdv::TInterfaceAccessPtr        m_ptrRepositoryProxy;       ///< Smart pointer to the remote repository.
 };
@@ -68,7 +74,7 @@ private:
 /**
  * @brief Client object
  */
-class CClient : public sdv::CSdvObject, public sdv::com::IClientConnect
+class CClientConnect : public sdv::CSdvObject, public sdv::com::IClientConnect
 {
 public:
     // Interface map
@@ -78,8 +84,15 @@ public:
 
     // Object declaration
     DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
-    DECLARE_OBJECT_CLASS_NAME("ConnectionService")
-    DECLARE_OBJECT_SINGLETON()
+    DECLARE_OBJECT_CLASS_NAME("ClientConnectService")
+    DECLARE_OBJECT_DEPENDENCIES("CommunicationControl")
+
+    // Parameter map
+    BEGIN_SDV_PARAM_MAP()
+        SDV_PARAM_ENABLE_LOCKING()
+        SDV_PARAM_GROUP("Provider")
+        SDV_PARAM_ENTRY(m_ssProvider, "Name", "", "", "Provider name to create a connection for.")
+    END_SDV_PARAM_MAP()
 
     /**
      * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
@@ -93,40 +106,40 @@ public:
     virtual void OnShutdown() override;
 
     /**
-     * @brief Connect to a remote system using the connection string to contact the system. Overload of
-     * sdv::com::IClientConnect::Connect.
-     * @remarks After a successful connection, the ConnectClient utility is not needed any more.
-     * @param[in] ssConnectString Optional connection string to use for connection. If not provided, the connection will
-     * automatically get the connection ID from the app-control service (default). The connection string for a local
-     * connection can be of the form:
-     * @code
-     * [Client]
-     * Type = "Local"
-     * Instance = 1234  # Optional: only use when connecting to a system with a different instance ID.
-     * @endcode
-     * And the following can be used for a remote connection:
-     * @code
-     * [Client]
-     * Type = "Remote"
-     * Interface = "127.0.0.1"
-     * Port = 2000
-     * @endcode
-     * @return Returns an interface to the repository of the remote system or a NULL pointer if not found.
+     * @brief Connect to a remote system. Overload of IClientConnect::Connect.
+     * @return Returns whether connect was successful.
      */
-    virtual sdv::IInterfaceAccess* Connect(const sdv::u8string& ssConnectString) override;
+    virtual bool Connect() override;
 
     /**
-     * @brief Disconnect and remove the remote repository object.
-     * @param[in] tConnectionID The ID of the connection.
+     * @brief Disconnect from a connected system. Overload of IClientConnect::Disconnect.
+     * @return Returns whether disconnect was successful.
      */
-    void Disconnect(sdv::com::TConnectionID tConnectionID);
+    bool Disconnect() override;
+
+    /**
+     * @brief State of the current connection. Overload of IClientConnect::IsConnected.
+     * @return Returns whether an active connection exists.
+     * @return The connect state.
+     */
+    bool IsConnected() const override;
+
+    /**
+     * @brief Get the remote repository that is available after connection. Overload of IClientConnect::GetRemoteRepository.
+     * @remarks For main, isolated and external applications, the remote repository will be automatically linked to the
+     * local repository. Hence a requests for the repository is not needed. For all other applications, access must be
+     * explicitly acquired through this interface.
+     * @return Interface to the remote repository if a successful connection is established. The interface is valid until
+     * disconnect is called or the client connection service is terminated.
+     */
+    sdv::IInterfaceAccess* GetRemoteRepository() override;
 
 private:
-    std::mutex              m_mtxRepositoryProxies;                             ///< Protect access to the remnote repository map.
-    std::map<sdv::com::TConnectionID, CRepositoryProxy> m_mapRepositoryProxies; ///< map of remote repositories.
+    mutable std::mutex                  m_mtx;                      ///< Protect against multiple parallel connection activities.
+    sdv::u8string                       m_ssProvider;               ///< Name of the provider to use for the listening.
+    std::shared_ptr<CRepositoryProxy>   m_ptrRemoteRepo;            ///< Interface to the remote repository.
 };
 
-DEFINE_SDV_OBJECT(CClient)
-
+DEFINE_SDV_OBJECT(CClientConnect)
 
 #endif // !defined CLIENT_H

@@ -24,7 +24,7 @@ CPatternSender::CPatternSender(CMemBufferAccessorTx& raccessorOut, uint32_t uiDe
     m_raccessorOut(raccessorOut), m_uiDelayMs(uiDelayMs)
 {
     // Start the thread
-    m_thread = std::thread(&CPatternSender::Process, this);
+    m_thread = sdv::core::secure_thread(&CPatternSender::Process, this);
 
     // Wait for the thread to run
     while (!m_bStarted) std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -67,7 +67,7 @@ CPatternReceiver::CPatternReceiver(CMemBufferAccessorRx& raccessorIn, uint32_t u
     m_raccessorIn(raccessorIn),m_uiDelayMs(uiDelayMs)
 {
     // Start the thread
-    m_thread = std::thread(& CPatternReceiver::Process, this);
+    m_thread = sdv::core::secure_thread(& CPatternReceiver::Process, this);
 
     // Wait for the thread to run
     while (!m_bStarted) std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -123,7 +123,7 @@ CPatternRepeater::CPatternRepeater(CMemBufferAccessorRx& raccessorIn, CMemBuffer
     m_raccessorIn(raccessorIn), m_raccessorOut(raccessorOut), m_uiDelayMs(uiDelayMs)
 {
     // Start the thread
-    m_thread = std::thread(&CPatternRepeater::Process, this);
+    m_thread = sdv::core::secure_thread(&CPatternRepeater::Process, this);
 
     // Wait for the thread to run
     while (!m_bStarted) std::this_thread::sleep_for(std::chrono::milliseconds(1));

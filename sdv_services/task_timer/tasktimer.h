@@ -102,6 +102,8 @@ private:
     std::atomic_bool            m_bRunning = false;                     ///< When set, the timer is running.
     std::mutex                  m_mtxExecution;                         ///< Prevent killing the timer when in execution.
 #endif
+    sdv::core::TPermissionTransferID m_tPermissionTransferID = 0u;      ///< The transfer ID to transfer permissions between the
+                                                                        ///< timer creator and the execution thread.
 };
 
 /**

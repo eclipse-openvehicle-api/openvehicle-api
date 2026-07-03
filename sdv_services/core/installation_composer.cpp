@@ -38,6 +38,12 @@
 #error OS is not supported!
 #endif
 
+namespace
+{
+    constexpr float kMaxBLOBSize  = (24*1024*1024) + 25000000;
+}
+
+
 CInstallComposer::~CInstallComposer()
 {}
 
@@ -1019,10 +1025,16 @@ uint32_t CInstallComposer::SerializeModuleBLOB(uint32_t uiChecksumInit, sdv::poi
     // Calculate the size of the BLOB (including padding and checksum)
     sdv::installation::SPackageBLOBChecksum sBLOBChecksum{};
     size_t nSize = 0;
-    sdv::ser_size(sBLOB, nSize);
+    sdv::ser_size(sBLOB, nSize);	
     sdv::ser_size(sBLOBChecksum, nSize);
     if (nSize % 8) nSize += 8 - nSize % 8;
     sBLOB.uiBLOBSize = static_cast<uint32_t>(nSize);
+    if(sBLOB.uiBLOBSize > kMaxBLOBSize)
+    {
+        sdv::installation::XPackageSizeExceeded exception;
+        exception.ssFileName = sBLOB.sFileDesc.ssFileName;
+        throw exception;
+    }
 
     // Serialize the BLOB
     sdv::serializer<sdv::GetPlatformEndianess(), sdv::crcCRC32C> serializer;
@@ -1246,7 +1258,7 @@ sdv::installation::SPackageBLOB CInstallComposer::DeserializeBLOB(std::ifstream&
 
     // Extend the buffer and read the BLOB data (after the resize, the psPartialBLOB pointer could be invalidated).
     uint32_t uiBLOBSize = psPartialBLOB->uiBLOBSize;
-    if (uiBLOBSize > 26*1024*1024)  // 26 instead of 24 becasue of door example
+    if (uiBLOBSize > kMaxBLOBSize)
         throw sdv::installation::XIncompatiblePackage();    // Safety
     ptrBLOB.resize(uiBLOBSize);
     if (!ptrBLOB)

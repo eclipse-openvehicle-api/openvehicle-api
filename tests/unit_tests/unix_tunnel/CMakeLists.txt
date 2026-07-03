@@ -35,7 +35,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         ${CMAKE_DL_LIBS} 
         rt
         uds_unix_tunnel
-        uds_unix_sockets
+        uds_unix_sockets_static
     )
 else()
     target_link_libraries(UnitTest_UnixTunnelConnectTests
@@ -43,7 +43,7 @@ else()
         Ws2_32 Winmm 
         Rpcrt4.lib
         uds_unix_tunnel
-        uds_unix_sockets
+        uds_unix_sockets_static
     )
 endif()
 
@@ -52,14 +52,12 @@ add_test(NAME UnitTest_UnixTunnelConnectTests
 
 add_dependencies(UnitTest_UnixTunnelConnectTests dependency_sdv_components)
 
-if ((NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (NOT WIN32))
 add_custom_command(TARGET UnitTest_UnixTunnelConnectTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env TEST_EXECUTION_MODE=CMake
             "$<TARGET_FILE:UnitTest_UnixTunnelConnectTests>"
             --gtest_output=xml:${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/UnitTest_UnixTunnelConnectTests.xml
     VERBATIM
 )
-endif()
 
 add_executable(UnitTest_UnixTunnelChannelMgntTests
     unix_tunnel_channel_mgnt_tests.cpp           
@@ -77,7 +75,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         ${CMAKE_DL_LIBS} 
         rt
         uds_unix_tunnel
-        uds_unix_sockets
+        uds_unix_sockets_static
     )
 else()
     target_link_libraries(UnitTest_UnixTunnelChannelMgntTests
@@ -86,7 +84,7 @@ else()
         Winmm 
         Rpcrt4.lib
         uds_unix_tunnel
-        uds_unix_sockets
+        uds_unix_sockets_static
     )
 endif()
 
@@ -95,13 +93,11 @@ add_test(NAME UnitTest_UnixTunnelChannelMgntTests
 
 add_dependencies(UnitTest_UnixTunnelChannelMgntTests dependency_sdv_components)
 
-if ((NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (NOT WIN32))
 add_custom_command(TARGET UnitTest_UnixTunnelChannelMgntTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env TEST_EXECUTION_MODE=CMake
             "$<TARGET_FILE:UnitTest_UnixTunnelChannelMgntTests>"
             --gtest_output=xml:${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/UnitTest_UnixTunnelChannelMgntTests.xml
     VERBATIM
 )
-endif()
 
 endif()

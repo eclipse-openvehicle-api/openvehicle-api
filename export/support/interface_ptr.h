@@ -389,7 +389,13 @@ namespace sdv
         template <typename TIfc>
         TIfc* GetInterface() const
         {
-            return m_pInterface ? m_pInterface.load()->GetInterface(GetInterfaceId<TIfc>()).template get<TIfc>() : nullptr;
+            try
+            {
+                return m_pInterface ? m_pInterface.load()->GetInterface(GetInterfaceId<TIfc>()).template get<TIfc>() : nullptr;
+            } catch (const XSysExcept&)
+            {
+                return nullptr;
+            }
         }
 
     private:

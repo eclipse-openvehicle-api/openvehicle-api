@@ -196,7 +196,7 @@ public:
 private:
     std::mutex                                      m_mtxChannels;                  ///< Protect the channel map.
     std::vector<std::shared_ptr<CChannelConnector>> m_vecChannels;                  ///< Channel vector.
-    std::vector<std::thread>                        m_vecInitialConnectMon;         ///< Initial connection monitor.
+    std::vector<sdv::core::secure_thread>           m_vecInitialConnectMon;         ///< Initial connection monitor.
     std::recursive_mutex                            m_mtxObjects;                   ///< Protect object vectors.
     std::vector<std::weak_ptr<CMarshallObject>>     m_vecMarshallObjects;           ///< Vector with marshall objects; lifetime is handled by channel.
     std::map<sdv::interface_t, std::shared_ptr<CMarshallObject>> m_mapStubObjects;  ///< Map of interfaces to stub objects

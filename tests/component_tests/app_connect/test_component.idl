@@ -1,0 +1,46 @@
+ /********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the 
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
+#include <interfaces/core.idl>
+#include <interfaces/process.idl>
+
+ /**
+  * @brief Stages the call might go through.
+  */
+ struct SStages
+{
+    boolean bDevice;
+    boolean bBasicService;
+    boolean bComplexService;
+    boolean bSystemService;
+    boolean bUtility;
+};
+
+/**
+ * @brief Hello interface
+ */
+interface IHello
+{
+    /**
+     * @brief Say hello
+     * @param[in, out] sStages The struct stages will be filled by the components. The complex service calls the basic service. The
+     * basic service calls the device. The device calls the system service and the utility.
+     * @return The greetings string.
+     */
+    u8string SayHello(inout SStages sStages) const;
+
+    /**
+     * @brief Get the PID of the process the component is running in...
+     */
+    sdv::process::TProcessID GetPID() const;
+};

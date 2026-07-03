@@ -834,22 +834,23 @@ public:
         InitParamMap();
     }
 
+
     BEGIN_SDV_PARAM_MAP()
         SDV_PARAM_SET_READONLY()
-        SDV_PARAM_ENTRY(m_i, "my_integer", 10, "int_unit", "My integer")
+        SDV_PARAM_ENTRY(m_i, "my_integer", 20, "int_unit", "My integer")
         SDV_PARAM_RESET_READONLY()
         SDV_PARAM_ENTRY(m_d, "my_double", 1234.5, "double_unit", "My double")
         SDV_PARAM_SET_READONLY()
-        SDV_PARAM_ENTRY(m_ss, "my_string", "string_value", "string_unit", "My string")
+        SDV_PARAM_ENTRY(m_ss, "my_string", "value_string", "string_unit", "My string")
         SDV_PARAM_RESET_ATTRIBUTES()
         SDV_PARAM_ENTRY(m_b, "my_boolean", true, "no_unit", "My boolean")
     END_SDV_PARAM_MAP()
 
 private:
-    int m_i;
-    double m_d;
-    std::string m_ss;
-    bool m_b;
+    int m_i = 10;                           // Read only; will not be overwritten
+    double m_d = 5432.1;                    // Writable, will be overwritten
+    std::string m_ss = "string_value";      // Read only; will not be overwritten
+    bool m_b = false;                       // Writable, will be overwritten
 };
 
 TEST(ParameterTest, ReadOnlyParamMapStaticInfo)
@@ -869,7 +870,7 @@ TEST(ParameterTest, ReadOnlyParamMapStaticInfo)
     EXPECT_EQ(ptrParamInfo->Name(), "my_integer");
     EXPECT_EQ(ptrParamInfo->Unit(), "int_unit");
     EXPECT_EQ(ptrParamInfo->Description(), "My integer");
-    EXPECT_EQ(ptrParamInfo->DefaultVal(), 10);
+    EXPECT_EQ(ptrParamInfo->DefaultVal(), 20);
     EXPECT_TRUE(ptrParamInfo->ReadOnly());
 
     // Get parameter #1 global information
@@ -889,7 +890,7 @@ TEST(ParameterTest, ReadOnlyParamMapStaticInfo)
     EXPECT_EQ(ptrParamInfo->Name(), "my_string");
     EXPECT_EQ(ptrParamInfo->Unit(), "string_unit");
     EXPECT_EQ(ptrParamInfo->Description(), "My string");
-    EXPECT_EQ(ptrParamInfo->DefaultVal(), "string_value");
+    EXPECT_EQ(ptrParamInfo->DefaultVal(), "value_string");
     EXPECT_TRUE(ptrParamInfo->ReadOnly());
 
     // Get parameter #3 global information
@@ -922,7 +923,7 @@ TEST(ParameterTest, ReadOnlyParamMapObjectInfo)
     EXPECT_TRUE(ptrParamInfo->Numeric());
     EXPECT_EQ(ptrParamInfo->Unit(), "int_unit");
     EXPECT_EQ(ptrParamInfo->Description(), "My integer");
-    EXPECT_EQ(ptrParamInfo->DefaultVal(), 10);
+    EXPECT_EQ(ptrParamInfo->DefaultVal(), 20);
     EXPECT_TRUE(ptrParamInfo->ReadOnly());
 
     // Get parameter #1 global information
@@ -940,7 +941,7 @@ TEST(ParameterTest, ReadOnlyParamMapObjectInfo)
     EXPECT_TRUE(ptrParamInfo->String());
     EXPECT_EQ(ptrParamInfo->Unit(), "string_unit");
     EXPECT_EQ(ptrParamInfo->Description(), "My string");
-    EXPECT_EQ(ptrParamInfo->DefaultVal(), "string_value");
+    EXPECT_EQ(ptrParamInfo->DefaultVal(), "value_string");
     EXPECT_TRUE(ptrParamInfo->ReadOnly());
 
     // Get parameter #3 global information
@@ -971,7 +972,7 @@ TEST(ParameterTest, ReadOnlyParamMapObjectInfoIndirect)
     EXPECT_TRUE(info.Numeric());
     EXPECT_EQ(info.Unit(), "int_unit");
     EXPECT_EQ(info.Description(), "My integer");
-    EXPECT_EQ(info.DefaultVal(), 10);
+    EXPECT_EQ(info.DefaultVal(), 20);
     EXPECT_TRUE(info.ReadOnly());
 
     // Get parameter #1 global information
@@ -987,7 +988,7 @@ TEST(ParameterTest, ReadOnlyParamMapObjectInfoIndirect)
     EXPECT_TRUE(info.String());
     EXPECT_EQ(info.Unit(), "string_unit");
     EXPECT_EQ(info.Description(), "My string");
-    EXPECT_EQ(info.DefaultVal(), "string_value");
+    EXPECT_EQ(info.DefaultVal(), "value_string");
     EXPECT_TRUE(info.ReadOnly());
 
     // Get parameter #2 global information

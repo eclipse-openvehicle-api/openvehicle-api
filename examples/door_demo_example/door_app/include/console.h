@@ -19,15 +19,16 @@
 #include <support/app_control.h>
 #include <support/component_impl.h>
 #include <support/timer.h>
-#include "../../generated/vss_files/signal_identifier.h"
+#include "../../generated/front/vss_files/signal_identifier.h"
+#include "../../generated/rear/vss_files/signal_identifier.h"
 #include <fcntl.h>
 #include <atomic>
 
-#include "../../generated/vss_files/vss_vehiclebodydooraxle_01left_vd_rx.h"
-#include "../../generated/vss_files/vss_vehiclebodydooraxle_01left_bs_rx.h"
-#include "../../generated/vss_files/vss_vehiclebodydooraxle_01right_bs_rx.h"
-#include "../../generated/vss_files/vss_vehiclebodydooraxle_02left_bs_rx.h"
-#include "../../generated/vss_files/vss_vehiclebodydooraxle_02right_bs_rx.h"
+#include "../../generated/front/vss_files/vss_vehiclebodydooraxle_01left_vd_rx.h"
+#include "../../generated/front/vss_files/vss_vehiclebodydooraxle_01left_bs_rx.h"
+#include "../../generated/front/vss_files/vss_vehiclebodydooraxle_01right_bs_rx.h"
+#include "../../generated/rear/vss_files/vss_vehiclebodydooraxle_02left_bs_rx.h"
+#include "../../generated/rear/vss_files/vss_vehiclebodydooraxle_02right_bs_rx.h"
 
 #ifdef __unix__
 #include <termios.h>        // Needed for tcgetattr and fcntl
@@ -215,41 +216,41 @@ private:
     */
     std::string AlignString(const std::string& message, uint32_t desiredLength = 0);
 
-    mutable std::mutex  m_mtxPrintToConsole;                ///< Mutex to print complete message
-    bool                m_bThreadStarted = false;           ///< Set when initialized.
-    std::atomic_bool    m_bRunning = false;                 ///< When set, the application is running.
-    bool                m_isExternalApp = false;            ///< True when we have an external application
+    mutable std::mutex          m_mtxPrintToConsole;                ///< Mutex to print complete message
+    bool                        m_bThreadStarted = false;           ///< Set when initialized.
+    std::atomic_bool            m_bRunning = false;                 ///< When set, the application is running.
+    bool                        m_isExternalApp = false;            ///< True when we have an external application
     
-    std::thread         m_threadReadTxSignals;              ///< Simulation datalink thread.
+    sdv::core::secure_thread    m_threadReadTxSignals;              ///< Simulation datalink thread.
 
-    sdv::core::CSignal  m_SignalFrontLeftDoorIsOpen;        ///< Front Left Door signal (RX input) - open / closed
-    sdv::core::CSignal  m_SignalFrontRightDoorIsOpen;       ///< Front Right Door signal (RX input) - open / closed
-    sdv::core::CSignal  m_SignalRearLeftDoorIsOpen;         ///< Rear Left Door signal (RX input) - open / closed
-    sdv::core::CSignal  m_SignalRearRightDoorIsOpen;        ///< Rear Right Door signal (RX input) - open / closed
+    sdv::core::CSignal          m_SignalFrontLeftDoorIsOpen;        ///< Front Left Door signal (RX input) - open / closed
+    sdv::core::CSignal          m_SignalFrontRightDoorIsOpen;       ///< Front Right Door signal (RX input) - open / closed
+    sdv::core::CSignal          m_SignalRearLeftDoorIsOpen;         ///< Rear Left Door signal (RX input) - open / closed
+    sdv::core::CSignal          m_SignalRearRightDoorIsOpen;        ///< Rear Right Door signal (RX input) - open / closed
 
-    bool                m_FrontLeftDoorIsOpen = false;	    ///< Front Left Door value (RX input signal) - open / closed
-    bool                m_FrontRightDoorIsOpen = false;	    ///< Front Right Door value (RX input signal)  - open / closed
-    bool                m_RearLeftDoorIsOpen = false;	    ///< Rear Left Door value (RX input signal)  - open / closed
-    bool                m_RearRightDoorIsOpen = false;      ///< Rear Right Door value (RX input signal)  - open / closed
+    bool                        m_FrontLeftDoorIsOpen = false;	    ///< Front Left Door value (RX input signal) - open / closed
+    bool                        m_FrontRightDoorIsOpen = false;	    ///< Front Right Door value (RX input signal)  - open / closed
+    bool                        m_RearLeftDoorIsOpen = false;	    ///< Rear Left Door value (RX input signal)  - open / closed
+    bool                        m_RearRightDoorIsOpen = false;      ///< Rear Right Door value (RX input signal)  - open / closed
 
-    sdv::core::CSignal  m_SignalFrontLeftDoorIsLocked;      ///< Front Left Door signal (TX output) - locked / unlocked
-    sdv::core::CSignal  m_SignalFrontRightDoorIsLocked;     ///< Front Right Door signal (TX output) - locked / unlocked
-    sdv::core::CSignal  m_SignalRearLeftDoorIsLocked;       ///< Rear Left Door signal (TX output) - locked / unlocked
-    sdv::core::CSignal  m_SignalRearRightDoorIsLocked;      ///< Rear Right Door signal (TX output) - locked / unlocked
+    sdv::core::CSignal          m_SignalFrontLeftDoorIsLocked;      ///< Front Left Door signal (TX output) - locked / unlocked
+    sdv::core::CSignal          m_SignalFrontRightDoorIsLocked;     ///< Front Right Door signal (TX output) - locked / unlocked
+    sdv::core::CSignal          m_SignalRearLeftDoorIsLocked;       ///< Rear Left Door signal (TX output) - locked / unlocked
+    sdv::core::CSignal          m_SignalRearRightDoorIsLocked;      ///< Rear Right Door signal (TX output) - locked / unlocked
 
-    bool                m_FrontLeftDoorIsLocked = false;	///< Front Left Door value (TX output) - locked / unlocked
-    bool                m_FrontRightDoorIsLocked = false;	///< Front Right Door value (TX output) - locked / unlocked
-    bool                m_RearLeftDoorIsLocked = false;	    ///< Rear Left Door value (TX output) - locked / unlocked
-    bool                m_RearRightDoorIsLocked = false;    ///< Rear Right Door value (TX output) - locked / unlocked
+    bool                        m_FrontLeftDoorIsLocked = false;	///< Front Left Door value (TX output) - locked / unlocked
+    bool                        m_FrontRightDoorIsLocked = false;	///< Front Right Door value (TX output) - locked / unlocked
+    bool                        m_RearLeftDoorIsLocked = false;	    ///< Rear Left Door value (TX output) - locked / unlocked
+    bool                        m_RearRightDoorIsLocked = false;    ///< Rear Right Door value (TX output) - locked / unlocked
 	
-	IDoorService* 		m_pDoorService = nullptr;			///< Door service interface pointer.
+	IDoorService*               m_pDoorService = nullptr;			///< Door service interface pointer.
 
 #ifdef _WIN32
-    DWORD               m_dwConsoleOutMode = 0u;            ///< The console mode before switching on ANSI support.
-    DWORD               m_dwConsoleInMode = 0u;             ///< The console mode before switching on ANSI support.
+    DWORD                       m_dwConsoleOutMode = 0u;            ///< The console mode before switching on ANSI support.
+    DWORD                       m_dwConsoleInMode = 0u;             ///< The console mode before switching on ANSI support.
 #elif defined __unix__
-    struct termios      m_sTermAttr{};                      ///< The terminal attributes before disabling echo.
-    int                 m_iFileStatus = 0;                  ///< The file status flags for STDIN.
+    struct termios              m_sTermAttr{};                      ///< The terminal attributes before disabling echo.
+    int                         m_iFileStatus = 0;                  ///< The file status flags for STDIN.
 #else
 #error The OS is not supported!
 #endif

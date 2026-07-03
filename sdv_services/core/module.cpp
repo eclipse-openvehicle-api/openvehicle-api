@@ -297,6 +297,10 @@ bool CModuleInst::Load(const std::filesystem::path& rpathModule) noexcept
             }
 
             m_mapClassInfo[sClass.ssName] = sClass;
+
+            // Add aliases?
+            for (const auto& rssAlias : sClass.seqClassAliases)
+                m_mapClassInfo[rssAlias] = sClass;
         }
     }
     catch (const sdv::toml::XTOMLParseException&)

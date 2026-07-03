@@ -61,6 +61,8 @@ inline bool RequestShutdown(uint32_t uiInstanceID = 1000u)
         CloseHandle(hEvent);
         return true;
     }
+    else
+        std::cerr << "ERROR: Shutdown event handle is not available: " << m_ssSignalName << std::endl;
 #elif defined __unix__
     sem_t* pSemaphore = sem_open(m_ssSignalName.c_str(), 0);
     if (pSemaphore && pSemaphore != SEM_FAILED)

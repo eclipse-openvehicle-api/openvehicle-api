@@ -15,6 +15,7 @@
 #define MOCK_H
 
 #include <interfaces/app.h>
+#include <interfaces/permission.h>
 #include <support/component_impl.h>
 #include "../../../global/exec_dir_helper.h"
 #include "../../../sdv_services/core/installation_manifest.h"
@@ -24,6 +25,7 @@
 #define APP_CONTROL_H
 #define LOGGER_H
 #define LOGGER_CONTROL_H
+//#define PERMISSION_CONTROL_H
 
 /**
  * @brief CAppSettings redefined
@@ -45,6 +47,7 @@ public:
     bool IsConsoleSilent() { return true; }
     bool IsConsoleVerbose() { return false; }
     uint32_t GetInstanceID() { return 1000u; }
+    std::filesystem::path GetFrameworkDir() const { return GetExecDirectory(); }
     std::filesystem::path GetRootDir() const { return GetExecDirectory(); }
     std::filesystem::path GetInstallDir() const { return GetExecDirectory(); }
     std::vector<std::filesystem::path> GetSystemConfigPaths() const { return {}; }
@@ -105,14 +108,35 @@ inline CLoggerControl& GetLoggerControl()
     return logger_control;
 }
 
+///**
+// * @brief CPermissionControl redefined
+// */
+//class CPermissionControl : public sdv::IInterfaceAccess
+//{
+//public:
+//    BEGIN_SDV_INTERFACE_MAP()
+//    END_SDV_INTERFACE_MAP()
+//
+//    // CPermissionControl mocked functions
+//    virtual sdv::core::EAccessPermission GetCurrentPermission() const { return sdv::core::EAccessPermission::full_access; }
+//};
+//
+///**
+// * @brief Return the permission control.
+// * @return Reference to the permission control.
+// */
+//inline CPermissionControl& GetPermissionControl()
+//{
+//    static CPermissionControl control;
+//    return control;
+//}
+//
 #include "../../../sdv_services/core/toml_parser/parser_toml.h"
 #include "../../../sdv_services/core/toml_parser/parser_node_toml.h"
 #include "../../../sdv_services/core/module_control.h"
 #include "../../../sdv_services/core/repository.h"
+#include "../../../sdv_services/core/permission_control.h"
 #include "../../../sdv_services/core/app_config.h"
-
-//inline std::filesystem::path GetCoreDirectoryMock() { return "../../bin"; }
-//#define GetCoreDirectory GetCoreDirectoryMock
 
 class CHelper
 {

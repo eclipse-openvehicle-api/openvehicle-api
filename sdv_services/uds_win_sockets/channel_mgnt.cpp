@@ -11,15 +11,20 @@
 *   Denisa Ros - initial API and implementation
 ********************************************************************************/
 #ifdef _WIN32
-
 #include "channel_mgnt.h"
 #include "connection.h"
 
-#include "../../global/base64.h"
-#include <support/toml.h>
-#include <interfaces/process.h>
-
+#include <chrono>
 #include <future>
+#include <mutex>
+#include <thread>
+#include <cstring>
+
+#include "../../global/base64.h"
+#include <interfaces/app.h>
+#include <interfaces/process.h>
+#include <support/local_service_access.h>
+#include <support/toml.h>
 
 #pragma push_macro("interface")
 #undef interface
@@ -44,53 +49,23 @@
 namespace
 {
 
-/**
- * @brief Parse a UDS connect/config string and extract the path
- *
- * Expected format (substring-based, not strict):
- *   "proto=uds;path=<something>;"
- *
- * Behavior:
- *  - If "proto=uds" is missing   -> returns false (not a UDS config)
- *  - If "path=" is missing       -> returns true and outPath is cleared
- *  - If "path=" is present       -> extracts the substring until ';' or end
- *
- * @param cs       Input configuration / connect string
- * @param outPath  Output: extracted path (possibly empty)
- * @return true if this looks like a UDS string, false otherwise
- */
-static bool ParseUdsPath(const std::string& cs, std::string& outPath)
+static bool EnsureWSAInitialized()
 {
-    constexpr const char* protoKey = "proto=uds";
-    constexpr const char* pathKey  = "path=";
+    static std::once_flag s_once;
+    static bool s_ok = false;
 
-    // Must contain "proto=uds" to be considered UDS
-    if (cs.find(protoKey) == std::string::npos)
+    std::call_once(s_once, []()
     {
-        return false;
-    }
+        WSADATA wsa{};
+        const int rc = WSAStartup(MAKEWORD(2, 2), &wsa);
+        s_ok = (rc == 0);
+        if (!s_ok)
+        {
+            SDV_LOG_ERROR("[AF_UNIX] WSAStartup failed, rc=", rc);
+        }
+    });
 
-    const auto p = cs.find(pathKey);
-    if (p == std::string::npos)
-    {
-        // No path given, but proto=uds is present -> use default later
-        outPath.clear();
-        return true;
-    }
-
-    const auto start = p + std::strlen(pathKey);
-    const auto end   = cs.find(';', start);
-
-    if (end == std::string::npos)
-    {
-        outPath = cs.substr(start);
-    }
-    else
-    {
-        outPath = cs.substr(start, end - start);
-    }
-
-    return true;
+    return s_ok;
 }
 
 /**
@@ -105,6 +80,7 @@ static bool ParseUdsPath(const std::string& cs, std::string& outPath)
  *
  * @return Expanded string, or the original input on failure
  */
+
 static std::string ExpandEnvVars(const std::string& in)
 {
     if (in.find('%') == std::string::npos)
@@ -112,9 +88,8 @@ static std::string ExpandEnvVars(const std::string& in)
         return in;
     }
 
-    char  buf[4096] = {};
-    DWORD n         = ExpandEnvironmentStringsA(in.c_str(), buf, static_cast<DWORD>(sizeof(buf)));
-
+    char buf[4096] = {};
+    DWORD n = ExpandEnvironmentStringsA(in.c_str(), buf, static_cast<DWORD>(sizeof(buf)));
     if (n > 0 && n < sizeof(buf))
     {
         return std::string(buf);
@@ -135,18 +110,180 @@ static std::string ExpandEnvVars(const std::string& in)
  *
  * @return A safe pathname guaranteed to fit into sun_path
  */
+
 static std::string ClampUdsPath(const std::string& p)
 {
-    SOCKADDR_UN    tmp{};
+    SOCKADDR_UN tmp{};
     constexpr auto kMax = sizeof(tmp.sun_path) - 1;
-
     if (p.size() <= kMax)
     {
         return p;
     }
-
     return p.substr(0, kMax);
 }
+
+/*static std::string BuildFinalUdsPath(const std::string& rawPath)
+{
+    std::string full = ExpandEnvVars(rawPath);
+
+    auto pos = full.find_last_of("\\/");
+    if (pos != std::string::npos)
+    {
+        const std::string dir = full.substr(0, pos);
+        CreateDirectoryA(dir.c_str(), nullptr);
+    }
+
+    return ClampUdsPath(full);
+}*/
+
+
+
+/**
+ * @brief Parse a UDS connect/config string and extract the path
+ *
+ * Expected format (substring-based, not strict):
+ *   "proto=uds;path=<something>;"
+ *
+ * Behavior:
+ *  - If "proto=uds" is missing   -> returns false (not a UDS config)
+ *  - If "path=" is missing       -> returns true and outPath is cleared
+ *  - If "path=" is present       -> extracts the substring until ';' or end
+ *
+ * @param cs       Input configuration / connect string
+ * @param outPath  Output: extracted path (possibly empty)
+ * @return true if this looks like a UDS string, false otherwise
+ */
+static bool ParseUdsPath(const std::string& cs, std::string& outPath)
+{
+    constexpr const char* protoKey = "proto=uds";
+    constexpr const char* pathKey  = "path=";
+
+    // Strict raw connect string only
+    if (cs.rfind(protoKey, 0) != 0)
+    {
+        return false;
+    }
+
+    const auto p = cs.find(pathKey);
+    if (p == std::string::npos)
+    {
+        outPath.clear();
+        return true;
+    }
+
+    const auto start = p + std::strlen(pathKey);
+    const auto end   = cs.find(';', start);
+    if (end == std::string::npos)
+    {
+        outPath = cs.substr(start);
+    }
+    else
+    {
+        outPath = cs.substr(start, end - start);
+    }
+
+    return true;
+}
+
+static std::string SanitizeUdsName(std::string name)
+{
+    for (char& ch : name)
+    {
+        const bool isAlphaNum = (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9');
+        if (!isAlphaNum && ch != '_' && ch != '-')
+        {
+            ch = '_';
+        }
+    }
+
+    if (name.empty())
+    {
+        name = "sdv";
+    }
+
+    return name;
+}
+
+/**
+ * @brief Build a named UDS raw path using the channel name
+ *
+ * @param[in] channelName  The name of the channel
+ *
+ * @return A raw UDS path suitable for further processing
+ */
+static std::string BuildNamedUdsRawPath(const std::string& channelName)
+{
+    return "%LOCALAPPDATA%/sdv/" + SanitizeUdsName(channelName) + ".sock";
+}
+
+/**
+ * @brief Extract a UDS connect string from either raw UDS format or Provider TOML.
+ *
+ * Supported inputs:
+ *  - "proto=uds;path=<...>;"
+ *  - [Provider]\nName="unix_domain_sockets"\nConnectString="proto=uds;path=<...>;"
+ */
+static bool ExtractUdsConnectString(const std::string& in,
+                                    std::string& outUdsConnectString)
+{
+    std::string path;
+
+    // Case 1: strict raw UDS connect string
+    if (ParseUdsPath(in, path))
+    {
+        outUdsConnectString = in;
+        return true;
+    }
+
+    // Do not run the TOML parser on obviously non-TOML garbage
+    //if (!LooksLikeToml(in))
+    //{
+    //    return false;
+    //}
+
+    // Case 2: structured TOML
+    sdv::toml::CTOMLParser parser(in);
+    if (!parser.IsValid())
+    {
+        return false;
+    }
+
+    const std::string providerName = parser.GetDirect("Provider.Name").GetValue();
+    if (!providerName.empty() &&
+        providerName != "unix_domain_sockets" &&
+        providerName != "WinSocketsChannelControl")
+    {
+        return false;
+    }
+
+    const std::string nested = parser.GetDirect("Provider.ConnectString").GetValue();
+    if (!nested.empty())
+    {
+        if (ParseUdsPath(nested, path))
+        {
+            outUdsConnectString = nested;
+            return true;
+        }
+        return false;
+    }
+
+    const std::string cfgPath = parser.GetDirect("IpcChannel.Path").GetValue();
+    if (!cfgPath.empty())
+    {
+        outUdsConnectString = "proto=uds;path=" + cfgPath + ";";
+        return true;
+    }
+
+    const std::string cfgName = parser.GetDirect("IpcChannel.Name").GetValue();
+    if (!cfgName.empty())
+    {
+        outUdsConnectString = "proto=uds;path=" + BuildNamedUdsRawPath(cfgName) + ";";
+        return true;
+    }
+
+    return false;
+}
+
 
 /**
  * @brief Normalize a UDS path for display/logging purposes
@@ -166,19 +303,17 @@ static std::string ClampUdsPath(const std::string& p)
 static std::string NormalizeUdsPathForWindows(const std::string& raw)
 {
     std::string p = ExpandEnvVars(raw);
-
-    const size_t pos  = p.find_last_of("/\\");
-    std::string  base = (pos == std::string::npos) ? p : p.substr(pos + 1);
-
+    const size_t pos = p.find_last_of("/\\");
+    std::string base = (pos == std::string::npos) ? p : p.substr(pos + 1);
     if (base.empty())
     {
         base = "sdv.sock";
     }
 
     SDV_LOG_INFO("[AF_UNIX] Normalize raw='", raw, "' -> base='", base, "'");
-
     return ClampUdsPath(base);
 }
+
 
 /**
  * @brief Build a short absolute Win32 path suitable for AF_UNIX `sun_path`
@@ -225,6 +360,41 @@ static std::string MakeShortWinUdsPath(const std::string& raw)
 }
 
 /**
+ * @brief Build the default UDS path using the current SDV instance ID.
+ *
+ * Using a single global socket filename makes independently running test
+ * processes trample each other when the build executes multiple post-build
+ * tests in parallel. Namespace the implicit endpoint per instance instead.
+ */
+static std::string GetDefaultUdsRawPath()
+{
+    uint32_t instanceId = 1000u;
+    const sdv::app::IAppContext* pAppContext = sdv::core::GetCore<sdv::app::IAppContext>();
+    if (pAppContext && pAppContext->GetInstanceID() != 0u)
+    {
+        instanceId = pAppContext->GetInstanceID();
+    }
+
+    return "%LOCALAPPDATA%/sdv/vapi_" + std::to_string(instanceId) + ".sock";
+}
+
+static std::string GetUniqueEndpointUdsRawPath()
+{
+    static std::atomic<uint32_t> nextEndpointId { 0u };
+
+    uint32_t instanceId = 1000u;
+    const sdv::app::IAppContext* pAppContext = sdv::core::GetCore<sdv::app::IAppContext>();
+    if (pAppContext && pAppContext->GetInstanceID() != 0u)
+    {
+        instanceId = pAppContext->GetInstanceID();
+    }
+
+    const uint32_t endpointId = nextEndpointId.fetch_add(1u, std::memory_order_relaxed);
+    return "%LOCALAPPDATA%/sdv/vapi_" + std::to_string(instanceId) + "_" +
+        std::to_string(static_cast<uint32_t>(GetCurrentProcessId())) + "_" + std::to_string(endpointId) + ".sock";
+}
+
+/**
  * @brief Create a listening AF_UNIX socket on Windows
  *
  * This creates a WinSock AF_UNIX stream socket, constructs a pathname
@@ -239,6 +409,9 @@ static std::string MakeShortWinUdsPath(const std::string& raw)
  */
 static SOCKET CreateUnixListenSocket(const std::string& rawPath)
 {
+    if (!EnsureWSAInitialized())
+        return INVALID_SOCKET;
+
     SOCKET s = socket(AF_UNIX, SOCK_STREAM, 0);
     if (s == INVALID_SOCKET)
     {
@@ -285,118 +458,99 @@ static SOCKET CreateUnixListenSocket(const std::string& rawPath)
     return s;
 }
 
-/**
- * @brief Connect to a Windows AF_UNIX server socket with retry logic
- *
- * Repeatedly attempts to connect to the server's UDS path until either:
- *   - connection succeeds, or
- *   - total timeout is exceeded
- *
- * On each attempt:
- *   - a new socket() is created
- *   - connect() is attempted
- *   - on failure the socket is closed and retried
- *
- * This mirrors Linux AF_UNIX behavior where the client waits for the
- * server's socket file to appear/become ready
- *
- * @param[in] rawPath         Raw UDS path from configuration
- * @param[in] totalTimeoutMs  Maximum total wait time in milliseconds
- * @param[in] retryDelayMs    Delay between retries in milliseconds
- *
- * @return Connected SOCKET on success, INVALID_SOCKET on timeout or error
- */
-static SOCKET ConnectUnixSocket(
-    const std::string& rawPath,
-    uint32_t totalTimeoutMs,
-    uint32_t retryDelayMs)
+/*static SOCKET ConnectUnixSocket(const std::string& rawPath,
+                                uint32_t totalTimeoutMs,
+                                uint32_t retryDelayMs)
 {
-    const std::string udsPath = MakeShortWinUdsPath(rawPath);
+    if (!EnsureWSAInitialized())
+    {
+        return INVALID_SOCKET;
+    }
+
+    const std::string udsPath = BuildFinalUdsPath(rawPath);
 
     SOCKADDR_UN addr{};
     addr.sun_family = AF_UNIX;
     strcpy_s(addr.sun_path, sizeof(addr.sun_path), udsPath.c_str());
 
     const int addrlen = static_cast<int>(
-        offsetof(SOCKADDR_UN, sun_path) + std::strlen(addr.sun_path) + 1
-    );
+        offsetof(SOCKADDR_UN, sun_path) + std::strlen(addr.sun_path) + 1);
 
-    const auto deadline = std::chrono::steady_clock::now() +
-                          std::chrono::milliseconds(totalTimeoutMs);
+    auto deadline =
+        std::chrono::steady_clock::now() + std::chrono::milliseconds(totalTimeoutMs);
 
     while (true)
     {
         SOCKET s = socket(AF_UNIX, SOCK_STREAM, 0);
         if (s == INVALID_SOCKET)
         {
-            SDV_LOG_ERROR("[AF_UNIX] socket() FAIL (client), WSA=", WSAGetLastError());
+            SDV_LOG_ERROR("[AF_UNIX] socket FAIL (client), WSA=", WSAGetLastError());
             return INVALID_SOCKET;
         }
 
         if (connect(s, reinterpret_cast<const sockaddr*>(&addr), addrlen) == 0)
         {
-            SDV_LOG_INFO("[AF_UNIX] connect OK (pathname), path='", udsPath, "'");
+            SDV_LOG_INFO("[AF_UNIX] connect OK: ", udsPath);
             return s;
         }
 
-        int lastError = WSAGetLastError();
+        const int err = WSAGetLastError();
         closesocket(s);
 
         if (std::chrono::steady_clock::now() >= deadline)
         {
-            SDV_LOG_ERROR(
-                "[AF_UNIX] connect TIMEOUT (pathname), last WSA=",
-                lastError, ", path='", udsPath, "'"
-            );
+            SDV_LOG_ERROR("[AF_UNIX] connect TIMEOUT, WSA=", err, ", path=", udsPath);
             return INVALID_SOCKET;
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(retryDelayMs));
     }
-}
+}*/
 
 } // anonymous namespace
 
 bool CSocketsChannelMgnt::OnInitialize()
 {
-    return true;
-}
-
-void CSocketsChannelMgnt::OnServerClosed(const std::string& udsPath, CWinsockConnection* ptr)
-{
-    std::lock_guard<std::mutex> lock(m_udsMtx);
-
-    auto it = m_udsServers.find(udsPath);
-    if (it != m_udsServers.end() && it->second.get() == ptr)
-    {
-        // Remove the server entry only if it matches the pointer we know
-        m_udsServers.erase(it);
-    }
-
-    // Mark this UDS path as no longer claimed
-    m_udsServerClaimed.erase(udsPath);
+    return EnsureWSAInitialized();
 }
 
 void CSocketsChannelMgnt::OnShutdown()
-{}
+{
+}
+
+void CSocketsChannelMgnt::OnDestroy()
+{
+    m_watchdog.Clear();
+}
 
 sdv::ipc::SChannelEndpoint CSocketsChannelMgnt::CreateEndpoint(const sdv::u8string& cfgStr)
 {
-    // Ensure WinSock is initialized on Windows
-    if (StartUpWinSock() != 0)
-    {
-        // If WinSock cannot be initialized, we cannot create an endpoint
-        return {};
-    }
-
     // Parse UDS path from config. If proto!=uds, we still default to UDS
     std::string udsRaw;
     bool        udsRequested = ParseUdsPath(cfgStr, udsRaw);
 
     if (!udsRequested || udsRaw.empty())
     {
-        // Default path if not provided or not UDS-specific
-        udsRaw = "%LOCALAPPDATA%/sdv/vapi.sock";
+        sdv::toml::CTOMLParser parser(cfgStr);
+        const std::string cfgPath = parser.GetDirect("IpcChannel.Path").GetValue();
+        const std::string cfgName = parser.GetDirect("IpcChannel.Name").GetValue();
+
+        if (!cfgPath.empty())
+        {
+            udsRaw = cfgPath;
+        }
+        else if (!cfgName.empty())
+        {
+            udsRaw = BuildNamedUdsRawPath(cfgName);
+        }
+        else if (cfgStr.empty())
+        {
+            udsRaw = GetUniqueEndpointUdsRawPath();
+        }
+        else
+        {
+            udsRaw = GetDefaultUdsRawPath();
+        }
     }
 
     std::string udsPath = NormalizeUdsPathForWindows(udsRaw);
@@ -411,75 +565,81 @@ sdv::ipc::SChannelEndpoint CSocketsChannelMgnt::CreateEndpoint(const sdv::u8stri
 
     // Server-side CWinsockConnection, it will accept() a client on first use
     auto server = std::make_shared<CWinsockConnection>(listenSocket, /*acceptRequired*/ true);
-
+    // Ignore cppcheck warning; if construction failed, an exception is expected first.
+    // cppcheck-suppress knownConditionTrueFalse
+    if (!server)
     {
-        std::lock_guard<std::mutex> lock(m_udsMtx);
-        m_udsServers[udsPath] = server;
-        m_udsServerClaimed.erase(udsPath);
+        return {};
     }
+    server->SetWatchDogRemoveCallback([this](const void* connection)
+    {
+        m_watchdog.RemoveConnection(connection);
+    });
+    m_watchdog.AddConnection(server);
 
     sdv::ipc::SChannelEndpoint ep{};
-    ep.pConnection   = static_cast<IInterfaceAccess*>(server.get());
-    ep.ssConnectString = "proto=uds;path=" + udsPath + ";";
+    ep.pConnection = static_cast<IInterfaceAccess*>(server.get());
+
+    // Keep compatibility with CCommunicationControl::CreateClientConnection,
+    // which expects a Provider TOML section with Provider.Name.
+    const std::string udsConnectString = "proto=uds;path=" + udsPath + ";";
+    ep.ssConnectString = udsConnectString;
 
     return ep;
 }
 
 sdv::IInterfaceAccess* CSocketsChannelMgnt::Access(const sdv::u8string& cs)
 {
-    // Ensure WinSock is initialized
-    if (StartUpWinSock() != 0)
+    std::string udsConnectString;
+    if (!ExtractUdsConnectString(cs, udsConnectString))
     {
+        // Not a UDS connect string / provider description
         return nullptr;
     }
 
     std::string udsRaw;
-    if (!ParseUdsPath(cs, udsRaw))
-    {
-        // Not a UDS connect string
-        return nullptr;
-    }
+    ParseUdsPath(udsConnectString, udsRaw);
 
     if (udsRaw.empty())
     {
-        udsRaw = "%LOCALAPPDATA%/sdv/vapi.sock";
+        udsRaw = GetDefaultUdsRawPath();
     }
 
     std::string udsPath = NormalizeUdsPathForWindows(udsRaw);
     SDV_LOG_INFO("[AF_UNIX] Access udsPath=", udsPath);
 
+    const bool isServer = (udsConnectString.find("role=server") != std::string::npos);
+    std::shared_ptr<CWinsockConnection> connection;
+    if (isServer)
     {
-        std::lock_guard<std::mutex> lock(m_udsMtx);
-
-        auto it = m_udsServers.find(udsPath);
-        if (it != m_udsServers.end() && it->second != nullptr)
+        SOCKET listenSocket = CreateUnixListenSocket(udsPath);
+        if (listenSocket == INVALID_SOCKET)
         {
-            // Return the server-side object only once for this UDS path
-            if (!m_udsServerClaimed.count(udsPath))
-            {
-                m_udsServerClaimed.insert(udsPath);
-                SDV_LOG_INFO("[AF_UNIX] Access -> RETURN SERVER for ", udsPath);
-                return it->second.get(); // server object (acceptRequired=true)
-            }
-            // Otherwise, later calls will create a client socket below
+            return nullptr;
         }
+        connection = std::make_shared<CWinsockConnection>(listenSocket, /*acceptRequired*/ true);
+    }
+    else
+    {
+        // Client-side endpoint object. The actual socket connect is deferred to AsyncConnect,
+        // matching the semantic contract used by ipc_com and shared memory.
+        connection = std::make_shared<CWinsockConnection>(udsPath);
     }
 
-    // CLIENT: create a socket connected to the same udsPath
-    SOCKET s = ConnectUnixSocket(udsPath,
-                                 /*totalTimeoutMs*/ 5000,
-                                 /*retryDelayMs*/   50);
-
-    if (s == INVALID_SOCKET)
+    // Ignore cppcheck warning; if construction failed, an exception is expected first.
+    // cppcheck-suppress knownConditionTrueFalse
+    if (!connection)
     {
         return nullptr;
     }
 
-    SDV_LOG_INFO("[AF_UNIX] Access -> CREATE CLIENT for ", udsPath);
+    connection->SetWatchDogRemoveCallback([this](const void* instance)
+    {
+        m_watchdog.RemoveConnection(instance);
+    });
 
-    // Client-side connection object (acceptRequired=false)
-    // Ownership is transferred to the caller (VAPI runtime)
-    return new CWinsockConnection(s, /*acceptRequired*/ false);
+    m_watchdog.AddConnection(connection);
+    return static_cast<IInterfaceAccess*>(connection.get());
 }
 
 #endif

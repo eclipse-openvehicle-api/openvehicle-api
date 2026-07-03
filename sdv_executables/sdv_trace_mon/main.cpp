@@ -65,7 +65,7 @@ static BOOL WINAPI ControlHandler(DWORD dwCtrlType)
 }
 #elif defined __unix__
 /**
- * @brief Signal handler to catch signal eevents.
+ * @brief Signal handler to catch signal events.
  * @param[in] iSigNum The signal type that was triggered.
  */
 static void SignalHandler(int iSigNum)
@@ -97,12 +97,6 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     if (thread.joinable())
         thread.join();
 
-    // If not set, set the runtime location to the EXE directory.
-    if (sdv::app::CAppControl::GetFrameworkRuntimeDirectory().empty())
-        sdv::app::CAppControl::SetFrameworkRuntimeDirectory(GetExecDirectory());
-    if (sdv::app::CAppControl::GetComponentInstallDirectory().empty())
-        sdv::app::CAppControl::SetComponentInstallDirectory(GetExecDirectory());
-
     CCommandLine cmdln(static_cast<uint32_t>(CCommandLine::EParseFlags::no_assignment_character));
     bool bHelp = false;
     bool bVersion = false;
@@ -123,7 +117,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     }
 
     std::cout << "SDV Server Log Monitor Utility" << std::endl;
-    std::cout << "Copyright (C): 2022-2025 ZF Friedrichshafen AG" << std::endl;
+    std::cout << "Copyright (C): 2022-2026 ZF Friedrichshafen AG" << std::endl;
     std::cout << "Author: Erik Verhoeven" << std::endl << std::endl;
 
     if (bVersion)

@@ -54,6 +54,9 @@ namespace toml_parser
 
         try
         {
+            // Lock the rebuild of the node order
+            auto lock = CreateRebuildLockObject();
+
             // Run through all tokens of the lexer and process the tokens.
             bool bEOF = false; // Explicit test, since the peek could return EOF, but the cursor might not be at the end yet.
             while (!bEOF && !m_lexer.IsEnd())
@@ -95,7 +98,7 @@ namespace toml_parser
         }
         catch (const sdv::toml::XTOMLParseException& e)
         {
-            std::cout << e.what() << '\n';
+            std::cerr << e.what() << std::endl;
             throw;
         }
 
@@ -113,6 +116,11 @@ namespace toml_parser
     CLexer& CParser::Lexer()
     {
         return m_lexer;
+    }
+
+    CNodeIndexer& CParser::Indexer()
+    {
+        return m_indexer;
     }
 
     const CNodeCollection& CParser::Root() const
@@ -139,6 +147,49 @@ namespace toml_parser
         return m_ptrRoot->GenerateTOML(rssPrefixKey);
     }
 
+    CParser::CLockRebuild::CLockRebuild(CParser& rParser) : m_rParser(rParser)
+    {
+        rParser.IncrRebuildLockCnt();
+    }
+
+    CParser::CLockRebuild::CLockRebuild(const CLockRebuild& rLockRebuild) : m_rParser(rLockRebuild.m_rParser)
+    {
+        m_rParser.IncrRebuildLockCnt();
+    }
+
+    CParser::CLockRebuild::CLockRebuild(CLockRebuild&& rLockRebuild) : m_rParser(rLockRebuild.m_rParser)
+    {
+        m_rParser.IncrRebuildLockCnt();
+    }
+
+    CParser::CLockRebuild::~CLockRebuild()
+    {
+        m_rParser.DecrRebuildLockCnt();
+    }
+
+    CParser::CLockRebuild CParser::CreateRebuildLockObject()
+    {
+        return CLockRebuild(*this);
+    }
+    
+    bool CParser::RebuildLocked() const
+    {
+        return m_nRebuildLockCnt ? true : false;
+    }
+
+    void CParser::IncrRebuildLockCnt()
+    {
+        ++m_nRebuildLockCnt;
+    }
+
+    void CParser::DecrRebuildLockCnt()
+    {
+        if (!m_nRebuildLockCnt)
+            return; // Should not occur
+        --m_nRebuildLockCnt;
+        if (!m_nRebuildLockCnt) Root().RebuildNodeOrder(false);
+    }
+
     void CParser::ProcessTable(CNodeTokenRange& rNodeRange)
     {
         // Get the table path (table name preceded by parent tables separated with dots).
@@ -154,7 +205,7 @@ namespace toml_parser
         m_lexer.SmartExtendNodeRange(rNodeRange);
 
         // Add the table to the root
-        auto ptrTable = m_ptrRoot->Insert<CTable>(sdv::toml::npos, rangeKeyPath, false);
+        auto ptrTable = m_ptrRoot->AddNodeFromRange<CTable>(rangeKeyPath, false);
         if (ptrTable)
         {
             m_ptrCurrentCollection = ptrTable->Cast<CTable>();
@@ -176,7 +227,7 @@ namespace toml_parser
         m_lexer.SmartExtendNodeRange(rNodeRange);
 
         // Add the table array to the root
-        auto ptrTableArray = m_ptrRoot->Insert<CTableArray>(sdv::toml::npos, rangeKeyPath);
+        auto ptrTableArray = m_ptrRoot->AddNodeFromRange<CTableArray>(rangeKeyPath);
         if (ptrTableArray)
         {
             m_ptrCurrentCollection = ptrTableArray->Cast<CNodeCollection>();
@@ -226,46 +277,43 @@ namespace toml_parser
         switch (rAssignmentValue.Category())
         {
         case ETokenCategory::token_boolean:
-            ptrNode = m_ptrCurrentCollection->Insert<CBooleanNode>(sdv::toml::npos, rrangeKeyPath, rAssignmentValue.BooleanValue(),
+            ptrNode = m_ptrCurrentCollection->AddNodeFromRange<CBooleanNode>(rrangeKeyPath, rAssignmentValue.BooleanValue(),
                 rAssignmentValue.RawString());
             break;
         case ETokenCategory::token_integer:
-            ptrNode = m_ptrCurrentCollection->Insert<CIntegerNode>(sdv::toml::npos, rrangeKeyPath, rAssignmentValue.IntegerValue(),
+            ptrNode = m_ptrCurrentCollection->AddNodeFromRange<CIntegerNode>(rrangeKeyPath, rAssignmentValue.IntegerValue(),
                 rAssignmentValue.RawString());
             break;
         case ETokenCategory::token_float:
-            ptrNode = m_ptrCurrentCollection->Insert<CFloatingPointNode>(sdv::toml::npos, rrangeKeyPath, rAssignmentValue.FloatValue(),
+            ptrNode = m_ptrCurrentCollection->AddNodeFromRange<CFloatingPointNode>(rrangeKeyPath, rAssignmentValue.FloatValue(),
                  rAssignmentValue.RawString());
             break;
         case ETokenCategory::token_string:
             switch (rAssignmentValue.StringType())
             {
             case ETokenStringType::literal_string:
-                ptrNode = m_ptrCurrentCollection->Insert<CStringNode>(sdv::toml::npos, rrangeKeyPath, rAssignmentValue.StringValue(),
+                ptrNode = m_ptrCurrentCollection->AddNodeFromRange<CStringNode>(rrangeKeyPath, rAssignmentValue.StringValue(),
                     CStringNode::EQuotationType::literal_string, rAssignmentValue.RawString());
                 break;
             case ETokenStringType::multi_line_literal:
-                ptrNode = m_ptrCurrentCollection->Insert<CStringNode>(
-                    sdv::toml::npos, rrangeKeyPath, rAssignmentValue.StringValue(), CStringNode::EQuotationType::multi_line_literal,
-                    rAssignmentValue.RawString());
+                ptrNode = m_ptrCurrentCollection->AddNodeFromRange<CStringNode>(rrangeKeyPath, rAssignmentValue.StringValue(),
+                    CStringNode::EQuotationType::multi_line_literal, rAssignmentValue.RawString());
                 break;
             case ETokenStringType::multi_line_quoted:
-                ptrNode = m_ptrCurrentCollection->Insert<CStringNode>(
-                    sdv::toml::npos, rrangeKeyPath, rAssignmentValue.StringValue(), CStringNode::EQuotationType::multi_line_quoted,
-                    rAssignmentValue.RawString());
+                ptrNode = m_ptrCurrentCollection->AddNodeFromRange<CStringNode>(rrangeKeyPath, rAssignmentValue.StringValue(),
+                    CStringNode::EQuotationType::multi_line_quoted, rAssignmentValue.RawString());
                 break;
             case ETokenStringType::quoted_string:
             default:
-                ptrNode = m_ptrCurrentCollection->Insert<CStringNode>(
-                    sdv::toml::npos, rrangeKeyPath, rAssignmentValue.StringValue(), CStringNode::EQuotationType::quoted_string,
-                    rAssignmentValue.RawString());
+                ptrNode = m_ptrCurrentCollection->AddNodeFromRange<CStringNode>(rrangeKeyPath, rAssignmentValue.StringValue(),
+                    CStringNode::EQuotationType::quoted_string, rAssignmentValue.RawString());
                 break;
             }
             break;
         case ETokenCategory::token_syntax_array_open:
             {
                 auto ptrCurrentCollectionStored = m_ptrCurrentCollection;
-                ptrNode = m_ptrCurrentCollection->Insert<CArray>(sdv::toml::npos, rrangeKeyPath);
+                ptrNode = m_ptrCurrentCollection->AddNodeFromRange<CArray>(rrangeKeyPath);
                 m_ptrCurrentCollection = ptrNode->Cast<CNodeCollection>();
                 m_stackEnvironment.push(EEnvironment::array);
                 ProcessArray(rNodeRange);
@@ -276,7 +324,7 @@ namespace toml_parser
         case ETokenCategory::token_syntax_inline_table_open:
             {
                 auto ptrCurrentCollectionStored = m_ptrCurrentCollection;
-                ptrNode = m_ptrCurrentCollection->Insert<CTable>(sdv::toml::npos, rrangeKeyPath, true);
+                ptrNode = m_ptrCurrentCollection->AddNodeFromRange<CTable>(rrangeKeyPath, true);
                 m_ptrCurrentCollection = ptrNode->Cast<CNodeCollection>();
                 m_stackEnvironment.push(EEnvironment::inline_table);
                 ProcessInlineTable(rNodeRange);

@@ -51,7 +51,7 @@ TEST(CoreLibrary_AppControl_NoEventHandler, Startup_Default_NoConfig)
     sdv::app::IAppControl* pControl = sdv::core::GetCore<sdv::app::IAppControl>();
     ASSERT_NE(pControl, nullptr);
     sdv::app::IAppContext* pContext = sdv::core::GetCore<sdv::app::IAppContext>();
-    ASSERT_NE(pContext, nullptr);
+    ASSERT_NE(pContext, nullptr); 
     sdv::app::IAppOperation* pOperation = sdv::core::GetCore<sdv::app::IAppOperation>();
     ASSERT_NE(pOperation, nullptr);
 
@@ -96,7 +96,9 @@ TEST(CoreLibrary_AppControl_NoEventHandler, Startup_Standalone_NoConfig)
     EXPECT_EQ(pContext->GetInstanceID(), 0u);
 }
 
-TEST(CoreLibrary_AppControl_NoEventHandler, Startup_External_NoConfig)
+// Currently disabled due to absence of server accepting connections.
+// https://dev.azure.com/SW4ZF/AZP-431_DivDI_Vehicle_API/_workitems/edit/800643
+TEST(CoreLibrary_AppControl_NoEventHandler, DISABLED_Startup_External_NoConfig)
 {
     sdv::app::IAppControl* pControl = sdv::core::GetCore<sdv::app::IAppControl>();
     ASSERT_NE(pControl, nullptr);
@@ -134,13 +136,13 @@ TEST(CoreLibrary_AppControl_NoEventHandler, Startup_Isolated_NoConfig)
     EXPECT_EQ(pContext->GetContextType(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(pContext->GetInstanceID(), 0u);
 
-    bool bResult = pControl->Startup(R"code(
+    bool bResult = pControl->Startup(R"toml(
 [Application]
 Mode = "Isolated"
 
 [Console]
 Report = "Silent"
-)code", nullptr);
+)toml", nullptr);
     EXPECT_TRUE(bResult);
     EXPECT_EQ(pOperation->GetOperationState(), sdv::app::EAppOperationState::running);
     EXPECT_EQ(pContext->GetContextType(), sdv::app::EAppContext::isolated);
@@ -240,11 +242,11 @@ TEST(CoreLibrary_AppControl_NoEventHandler, Startup_Default_DefineInstance)
     EXPECT_EQ(pContext->GetContextType(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(pContext->GetInstanceID(), 0u);
 
-    bool bResult = pControl->Startup("[Application]\nInstance=2005", nullptr);
+    bool bResult = pControl->Startup("[Application]\nInstance=2009", nullptr);
     EXPECT_TRUE(bResult);
     EXPECT_EQ(pOperation->GetOperationState(), sdv::app::EAppOperationState::running);
     EXPECT_EQ(pContext->GetContextType(), sdv::app::EAppContext::standalone);
-    EXPECT_EQ(pContext->GetInstanceID(), 2005u);
+    EXPECT_EQ(pContext->GetInstanceID(), 2009u);
 
     pControl->Shutdown(true);
     EXPECT_EQ(pOperation->GetOperationState(), sdv::app::EAppOperationState::not_started);
@@ -265,11 +267,11 @@ TEST(CoreLibrary_AppControl_NoEventHandler, Startup_Standalone_DefineInstance)
     EXPECT_EQ(pContext->GetContextType(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(pContext->GetInstanceID(), 0u);
 
-    bool bResult = pControl->Startup("[Application]\nMode=\"Standalone\"\nInstance=2005", nullptr);
+    bool bResult = pControl->Startup("[Application]\nMode=\"Standalone\"\nInstance=2009", nullptr);
     EXPECT_TRUE(bResult);
     EXPECT_EQ(pOperation->GetOperationState(), sdv::app::EAppOperationState::running);
     EXPECT_EQ(pContext->GetContextType(), sdv::app::EAppContext::standalone);
-    EXPECT_EQ(pContext->GetInstanceID(), 2005u);
+    EXPECT_EQ(pContext->GetInstanceID(), 2009u);
 
     pControl->Shutdown(true);
     EXPECT_EQ(pOperation->GetOperationState(), sdv::app::EAppOperationState::not_started);
@@ -277,7 +279,9 @@ TEST(CoreLibrary_AppControl_NoEventHandler, Startup_Standalone_DefineInstance)
     EXPECT_EQ(pContext->GetInstanceID(), 0u);
 }
 
-TEST(CoreLibrary_AppControl_NoEventHandler, Startup_External_DefineInstance)
+// Currently disabled due to absence of server accepting connections.
+// https://dev.azure.com/SW4ZF/AZP-431_DivDI_Vehicle_API/_workitems/edit/800643
+TEST(CoreLibrary_AppControl_NoEventHandler, DISABLED_Startup_External_DefineInstance)
 {
     sdv::app::IAppControl* pControl = sdv::core::GetCore<sdv::app::IAppControl>();
     ASSERT_NE(pControl, nullptr);
@@ -290,11 +294,11 @@ TEST(CoreLibrary_AppControl_NoEventHandler, Startup_External_DefineInstance)
     EXPECT_EQ(pContext->GetContextType(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(pContext->GetInstanceID(), 0u);
 
-    bool bResult = pControl->Startup("[Application]\nMode=\"External\"\nInstance=2005", nullptr);
+    bool bResult = pControl->Startup("[Application]\nMode=\"External\"\nInstance=2009", nullptr);
     EXPECT_TRUE(bResult);
     EXPECT_EQ(pOperation->GetOperationState(), sdv::app::EAppOperationState::running);
     EXPECT_EQ(pContext->GetContextType(), sdv::app::EAppContext::external);
-    EXPECT_EQ(pContext->GetInstanceID(), 2005u);
+    EXPECT_EQ(pContext->GetInstanceID(), 2009u);
 
     pControl->Shutdown(true);
     EXPECT_EQ(pOperation->GetOperationState(), sdv::app::EAppOperationState::not_started);
@@ -315,16 +319,16 @@ TEST(CoreLibrary_AppControl_NoEventHandler, Startup_Isolated_DefineInstance)
     EXPECT_EQ(pContext->GetContextType(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(pContext->GetInstanceID(), 0u);
 
-    std::string ssConfig = R"code([Application]
+    std::string ssConfig = R"toml([Application]
 Mode = "Isolated"
-Instance = 2005
-Connection = ")code";
+Instance = 2009
+Connection = ")toml";
     ssConfig += Base64EncodePlainText("test") + "\"";
     bool bResult = pControl->Startup(ssConfig, nullptr);
     EXPECT_TRUE(bResult);
     EXPECT_EQ(pOperation->GetOperationState(), sdv::app::EAppOperationState::running);
     EXPECT_EQ(pContext->GetContextType(), sdv::app::EAppContext::isolated);
-    EXPECT_EQ(pContext->GetInstanceID(), 2005u);
+    EXPECT_EQ(pContext->GetInstanceID(), 2009u);
 
     pControl->Shutdown(true);
     EXPECT_EQ(pOperation->GetOperationState(), sdv::app::EAppOperationState::not_started);
@@ -345,11 +349,11 @@ TEST(CoreLibrary_AppControl_NoEventHandler, Startup_Main_DefineInstance)
     EXPECT_EQ(pContext->GetContextType(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(pContext->GetInstanceID(), 0u);
 
-    bool bResult = pControl->Startup("[Application]\nMode=\"Main\"\nInstance=2005", nullptr);
+    bool bResult = pControl->Startup("[Application]\nMode=\"Main\"\nInstance=2009", nullptr);
     EXPECT_TRUE(bResult);
     EXPECT_EQ(pOperation->GetOperationState(), sdv::app::EAppOperationState::running);
     EXPECT_EQ(pContext->GetContextType(), sdv::app::EAppContext::main);
-    EXPECT_EQ(pContext->GetInstanceID(), 2005u);
+    EXPECT_EQ(pContext->GetInstanceID(), 2009u);
 
     pControl->Shutdown(true);
     EXPECT_EQ(pOperation->GetOperationState(), sdv::app::EAppOperationState::not_started);
@@ -370,11 +374,11 @@ TEST(CoreLibrary_AppControl_NoEventHandler, Startup_Essential_DefineInstance)
     EXPECT_EQ(pContext->GetContextType(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(pContext->GetInstanceID(), 0u);
 
-    bool bResult = pControl->Startup("[Application]\nMode=\"Essential\"\nInstance=2005", nullptr);
+    bool bResult = pControl->Startup("[Application]\nMode=\"Essential\"\nInstance=2009", nullptr);
     EXPECT_TRUE(bResult);
     EXPECT_EQ(pOperation->GetOperationState(), sdv::app::EAppOperationState::running);
     EXPECT_EQ(pContext->GetContextType(), sdv::app::EAppContext::essential);
-    EXPECT_EQ(pContext->GetInstanceID(), 2005u);
+    EXPECT_EQ(pContext->GetInstanceID(), 2009u);
 
     pControl->Shutdown(true);
     EXPECT_EQ(pOperation->GetOperationState(), sdv::app::EAppOperationState::not_started);
@@ -395,11 +399,11 @@ TEST(CoreLibrary_AppControl_NoEventHandler, Startup_Maintenance_DefineInstance)
     EXPECT_EQ(pContext->GetContextType(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(pContext->GetInstanceID(), 0u);
 
-    bool bResult = pControl->Startup("[Application]\nMode=\"Maintenance\"\nInstance=2005", nullptr);
+    bool bResult = pControl->Startup("[Application]\nMode=\"Maintenance\"\nInstance=2009", nullptr);
     EXPECT_TRUE(bResult);
     EXPECT_EQ(pOperation->GetOperationState(), sdv::app::EAppOperationState::running);
     EXPECT_EQ(pContext->GetContextType(), sdv::app::EAppContext::maintenance);
-    EXPECT_EQ(pContext->GetInstanceID(), 2005u);
+    EXPECT_EQ(pContext->GetInstanceID(), 2009u);
 
     pControl->Shutdown(true);
     EXPECT_EQ(pOperation->GetOperationState(), sdv::app::EAppOperationState::not_started);
@@ -427,8 +431,10 @@ TEST(CoreLibrary_AppControl_NoEventHandler, RunLoop_Default)
     EXPECT_EQ(pContext->GetInstanceID(), 2007u);
 
     auto tpStart = std::chrono::high_resolution_clock::now();
-    std::thread threadShutdownRequest([]()
+    sdv::core::secure_thread threadShutdownRequest([&]()
         {
+            while (pOperation->GetOperationState() != sdv::app::EAppOperationState::running)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             std::this_thread::sleep_for(std::chrono::milliseconds(250));
             RequestShutdown(2007u);
         });
@@ -462,8 +468,10 @@ TEST(CoreLibrary_AppControl_NoEventHandler, RunLoop_Standalone)
     EXPECT_EQ(pContext->GetInstanceID(), 2007u);
 
     auto tpStart = std::chrono::high_resolution_clock::now();
-    std::thread threadShutdownRequest([]()
+    sdv::core::secure_thread threadShutdownRequest([&]()
         {
+            while (pOperation->GetOperationState() != sdv::app::EAppOperationState::running)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             std::this_thread::sleep_for(std::chrono::milliseconds(250));
             RequestShutdown(2007u);
         });
@@ -477,7 +485,9 @@ TEST(CoreLibrary_AppControl_NoEventHandler, RunLoop_Standalone)
     EXPECT_EQ(pContext->GetInstanceID(), 0u);
 }
 
-TEST(CoreLibrary_AppControl_NoEventHandler, RunLoop_External)
+// Currently disabled due to absence of server accepting connections.
+// https://dev.azure.com/SW4ZF/AZP-431_DivDI_Vehicle_API/_workitems/edit/800643
+TEST(CoreLibrary_AppControl_NoEventHandler, DISABLED_RunLoop_External)
 {
     sdv::app::IAppControl* pControl = sdv::core::GetCore<sdv::app::IAppControl>();
     ASSERT_NE(pControl, nullptr);
@@ -497,8 +507,10 @@ TEST(CoreLibrary_AppControl_NoEventHandler, RunLoop_External)
     EXPECT_EQ(pContext->GetInstanceID(), 2007u);
 
     auto tpStart = std::chrono::high_resolution_clock::now();
-    std::thread threadShutdownRequest([]()
+    sdv::core::secure_thread threadShutdownRequest([&]()
         {
+            while (pOperation->GetOperationState() != sdv::app::EAppOperationState::running)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             std::this_thread::sleep_for(std::chrono::milliseconds(250));
             RequestShutdown(2007u);
         });
@@ -525,10 +537,10 @@ TEST(CoreLibrary_AppControl_NoEventHandler, RunLoop_Isolated)
     EXPECT_EQ(pContext->GetContextType(), sdv::app::EAppContext::no_context);
     EXPECT_EQ(pContext->GetInstanceID(), 0u);
 
-    std::string ssConfig = R"code([Application]
+    std::string ssConfig = R"toml([Application]
 Mode = "Isolated"
 Instance = 2007
-Connection = ")code";
+Connection = ")toml";
     ssConfig += Base64EncodePlainText("test") + "\"";
     bool bResult = pControl->Startup(ssConfig, nullptr);
     EXPECT_TRUE(bResult);
@@ -537,8 +549,10 @@ Connection = ")code";
     EXPECT_EQ(pContext->GetInstanceID(), 2007u);
 
     auto tpStart = std::chrono::high_resolution_clock::now();
-    std::thread threadShutdownRequest([]()
+    sdv::core::secure_thread threadShutdownRequest([&]()
         {
+            while (pOperation->GetOperationState() != sdv::app::EAppOperationState::running)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             std::this_thread::sleep_for(std::chrono::milliseconds(250));
             sdv::app::IAppShutdownRequest* pShutdownRequest = sdv::core::GetObject<sdv::app::IAppShutdownRequest>("AppControlService");
             ASSERT_NE(pShutdownRequest, nullptr);
@@ -574,8 +588,10 @@ TEST(CoreLibrary_AppControl_NoEventHandler, RunLoop_Main)
     EXPECT_EQ(pContext->GetInstanceID(), 2007u);
 
     auto tpStart = std::chrono::high_resolution_clock::now();
-    std::thread threadShutdownRequest([]()
+    sdv::core::secure_thread threadShutdownRequest([&]()
         {
+            while (pOperation->GetOperationState() != sdv::app::EAppOperationState::running)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             std::this_thread::sleep_for(std::chrono::milliseconds(250));
             sdv::app::IAppShutdownRequest* pShutdownRequest = sdv::core::GetObject<sdv::app::IAppShutdownRequest>("AppControlService");
             ASSERT_NE(pShutdownRequest, nullptr);
@@ -611,8 +627,10 @@ TEST(CoreLibrary_AppControl_NoEventHandler, RunLoop_Essential)
     EXPECT_EQ(pContext->GetInstanceID(), 2007u);
 
     auto tpStart = std::chrono::high_resolution_clock::now();
-    std::thread threadShutdownRequest([]()
+    sdv::core::secure_thread threadShutdownRequest([&]()
         {
+            while (pOperation->GetOperationState() != sdv::app::EAppOperationState::running)
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             std::this_thread::sleep_for(std::chrono::milliseconds(250));
             RequestShutdown(2007u);
         });

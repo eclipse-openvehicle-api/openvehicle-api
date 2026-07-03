@@ -17,11 +17,92 @@
 #include <WS2tcpip.h>
 #include <cstring>
 #include <chrono>
+#include <afunix.h>
+
+namespace
+{
+static std::string ExpandEnvVarsLocal(const std::string& in)
+{
+    if (in.find('%') == std::string::npos)
+    {
+        return in;
+    }
+
+    char buf[4096] = {};
+    DWORD n = ExpandEnvironmentStringsA(in.c_str(), buf, static_cast<DWORD>(sizeof(buf)));
+    if (n > 0 && n < sizeof(buf))
+    {
+        return std::string(buf);
+    }
+
+    return in;
+}
+
+static std::string ClampUdsPathLocal(const std::string& path)
+{
+    sockaddr_un tmp{};
+    constexpr auto kMax = sizeof(tmp.sun_path) - 1;
+    return path.size() <= kMax ? path : path.substr(0, kMax);
+}
+
+static std::string MakeShortWinUdsPathLocal(const std::string& raw)
+{
+    std::string path = ExpandEnvVarsLocal(raw);
+    const size_t pos = path.find_last_of("/\\");
+    std::string base = (pos == std::string::npos) ? path : path.substr(pos + 1);
+
+    if (base.empty())
+    {
+        base = "sdv.sock";
+    }
+
+    std::string dir = ExpandEnvVarsLocal("%TEMP%\\sdv\\");
+    CreateDirectoryA(dir.c_str(), nullptr);
+    return ClampUdsPathLocal(dir + base);
+}
+
+static SOCKET ConnectUnixSocketLocal(const std::string& rawPath, uint32_t totalTimeoutMs, uint32_t retryDelayMs)
+{
+    const std::string udsPath = MakeShortWinUdsPathLocal(rawPath);
+
+    sockaddr_un addr{};
+    addr.sun_family = AF_UNIX;
+    strcpy_s(addr.sun_path, sizeof(addr.sun_path), udsPath.c_str());
+
+    const int addrlen = static_cast<int>(offsetof(sockaddr_un, sun_path) + std::strlen(addr.sun_path) + 1);
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(totalTimeoutMs);
+
+    while (true)
+    {
+        SOCKET s = socket(AF_UNIX, SOCK_STREAM, 0);
+        if (s == INVALID_SOCKET)
+        {
+            return INVALID_SOCKET;
+        }
+
+        if (connect(s, reinterpret_cast<const sockaddr*>(&addr), addrlen) == 0)
+        {
+            return s;
+        }
+
+        const int lastError = WSAGetLastError();
+        closesocket(s);
+
+        if (std::chrono::steady_clock::now() >= deadline)
+        {
+            SDV_LOG_ERROR("[AF_UNIX] lazy connect TIMEOUT, last WSA=", lastError, ", path='", udsPath, "'");
+            return INVALID_SOCKET;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(retryDelayMs));
+    }
+}
+}
 
 CWinsockConnection::CWinsockConnection(unsigned long long preconfiguredSocket, bool acceptConnectionRequired)
     : m_ConnectionState(sdv::ipc::EConnectState::uninitialized)
     , m_AcceptConnectionRequired(acceptConnectionRequired)
-    , m_CancelWait(false)
+    , m_UdsPath()
 {
     // Initialize legacy buffers with zero (kept for potential compatibility)
     std::fill(std::begin(m_SendBuffer), std::end(m_SendBuffer), '\0');
@@ -39,6 +120,17 @@ CWinsockConnection::CWinsockConnection(unsigned long long preconfiguredSocket, b
         m_ListenSocket     = INVALID_SOCKET;
         m_ConnectionSocket = static_cast<SOCKET>(preconfiguredSocket);
     }
+}
+
+CWinsockConnection::CWinsockConnection(const std::string& udsPath)
+    : m_ConnectionState(sdv::ipc::EConnectState::uninitialized)
+    , m_AcceptConnectionRequired(false)
+    , m_UdsPath(udsPath)
+{
+    std::fill(std::begin(m_SendBuffer), std::end(m_SendBuffer), '\0');
+    std::fill(std::begin(m_ReceiveBuffer), std::end(m_ReceiveBuffer), '\0');
+    m_ListenSocket = INVALID_SOCKET;
+    m_ConnectionSocket = INVALID_SOCKET;
 }
 
 /*CWinsockConnection::CWinsockConnection()
@@ -65,28 +157,47 @@ CWinsockConnection::~CWinsockConnection()
     }
 }
 
+void CWinsockConnection::SetWatchDogRemoveCallback(std::function<void(const void*)> callback)
+{
+    std::lock_guard<std::mutex> lock(m_WatchdogMtx);
+    m_WatchdogRemoveCallback = std::move(callback);
+}
+
 void CWinsockConnection::SetConnectState(sdv::ipc::EConnectState state)
 {
+    sdv::ipc::IConnectEventCallback* pEventLocal = nullptr;
+
     {
         std::lock_guard<std::mutex> lk(m_MtxConnect);
         m_ConnectionState.store(state, std::memory_order_release);
+
+        // Main receiver has priority over registered state listener
+        if (m_pMainEvent)
+        {
+            pEventLocal = m_pMainEvent;
+        }
+        else
+        {
+            pEventLocal = m_pRegisteredEvent;
+        }
     }
 
     // Wake up any waiter
     m_CvConnect.notify_all();
 
     // Notify event callback if registered
-    if (m_pEvent)
+    if (pEventLocal)
     {
         try
         {
-            m_pEvent->SetConnectState(state);
+            pEventLocal->SetConnectState(state);
         }
         catch (...)
         {
             // Ignore callbacks throwing exceptions
         }
     }
+
 }
 
 int32_t CWinsockConnection::Send(const char* data, int32_t dataLength)
@@ -177,7 +288,7 @@ bool CWinsockConnection::SendData(/*inout*/ sdv::sequence<sdv::pointer<uint8_t>>
         (kMaxUdsPacketSize - static_cast<uint32_t>(sizeof(SFragmentedMsgHdr))) :
         0;
 
-    if (maxPayloadFrag == 0)
+    if constexpr (maxPayloadFrag == 0)
     {
         return false;
     }
@@ -318,9 +429,18 @@ SOCKET CWinsockConnection::AcceptConnection()
         tv.tv_usec = 50 * 1000; // 50 ms
 
         const int sr = ::select(0, &rfds, nullptr, nullptr, &tv);
+
         if (sr == SOCKET_ERROR)
         {
-            SDV_LOG_ERROR("[AF_UNIX] select(listen) FAIL, WSA=", WSAGetLastError());
+            const int err = WSAGetLastError();
+
+            if (m_StopConnectThread.load() || m_ListenSocket == INVALID_SOCKET)
+            {
+                SDV_LOG_INFO("[AF_UNIX] select(listen) canceled during shutdown, WSA=", err);
+                return INVALID_SOCKET;
+            }
+
+            SDV_LOG_ERROR("[AF_UNIX] select(listen) FAIL, WSA=", err);
             SetConnectState(sdv::ipc::EConnectState::connection_error);
             return INVALID_SOCKET;
         }
@@ -331,9 +451,17 @@ SOCKET CWinsockConnection::AcceptConnection()
         }
 
         SOCKET c = ::accept(m_ListenSocket, nullptr, nullptr);
+
         if (c == INVALID_SOCKET)
         {
             const int err = WSAGetLastError();
+
+            if (m_StopConnectThread.load() || m_ListenSocket == INVALID_SOCKET || err == WSAENOTSOCK)
+            {
+                SDV_LOG_INFO("[AF_UNIX] accept canceled during shutdown, WSA=", err);
+                return INVALID_SOCKET;
+            }
+
             if (err == WSAEINTR || err == WSAEWOULDBLOCK)
             {
                 continue;
@@ -355,23 +483,53 @@ SOCKET CWinsockConnection::AcceptConnection()
 
 bool CWinsockConnection::AsyncConnect(sdv::IInterfaceAccess* pReceiver)
 {
+    auto expectedState = m_ConnectionState.load(std::memory_order_acquire);
+    while (true)
+    {
+        if (expectedState == sdv::ipc::EConnectState::connected)
+        {
+            return true;
+        }
+
+        if (expectedState == sdv::ipc::EConnectState::initializing)
+        {
+            SDV_LOG_WARNING("[AF_UNIX] AsyncConnect ignored: connect worker already running");
+            return false;
+        }
+
+        if (m_ConnectionState.compare_exchange_weak(
+                expectedState,
+                sdv::ipc::EConnectState::initializing,
+                std::memory_order_acq_rel,
+                std::memory_order_acquire))
+        {
+            break;
+        }
+    }
+
     // Store callbacks
-    m_pReceiver = sdv::TInterfaceAccessPtr(pReceiver).GetInterface<sdv::ipc::IDataReceiveCallback>();
-    m_pEvent    = sdv::TInterfaceAccessPtr(pReceiver).GetInterface<sdv::ipc::IConnectEventCallback>();
+    auto* pReceiverIfc = sdv::TInterfaceAccessPtr(pReceiver).GetInterface<sdv::ipc::IDataReceiveCallback>();
+    auto* pEventIfc    = sdv::TInterfaceAccessPtr(pReceiver).GetInterface<sdv::ipc::IConnectEventCallback>();
+    {
+        std::lock_guard<std::mutex> lk(m_MtxConnect);
+        m_pReceiver = pReceiverIfc;
+        m_pMainEvent    = pEventIfc;
+    }
 
     // Reset stop flags
     m_StopReceiveThread.store(false);
     m_StopConnectThread.store(false);
     m_CancelWait.store(false);
 
-    // Join old threads if any
+    // Join old workers only after they completed.
+    // Joining an active worker here can block forever when a previous connect is still pending.
     if (m_ReceiveThread.joinable())
         m_ReceiveThread.join();
     if (m_ConnectThread.joinable())
         m_ConnectThread.join();
 
     // Start the connect worker
-    m_ConnectThread = std::thread(&CWinsockConnection::ConnectWorker, this);
+    m_ConnectThread = sdv::core::secure_thread(&CWinsockConnection::ConnectWorker, this);
     return true;
 }
 
@@ -428,11 +586,16 @@ void CWinsockConnection::Disconnect()
 
 uint64_t CWinsockConnection::RegisterStateEventCallback(/*in*/ sdv::IInterfaceAccess* pEventCallback)
 {
+    auto* pEventIfc = sdv::TInterfaceAccessPtr(pEventCallback).GetInterface<sdv::ipc::IConnectEventCallback>();
+
     // Extract IConnectEventCallback interface
-    m_pEvent = sdv::TInterfaceAccessPtr(pEventCallback).GetInterface<sdv::ipc::IConnectEventCallback>();
+    {
+        std::lock_guard<std::mutex> lk(m_MtxConnect);
+        m_pRegisteredEvent = pEventIfc;
+    }
 
     // Only one callback is supported; cookie 1 = valid
-    return (m_pEvent != nullptr) ? 1ULL : 0ULL;
+    return (pEventIfc != nullptr) ? 1ULL : 0ULL;
 }
 
 void CWinsockConnection::UnregisterStateEventCallback(/*in*/ uint64_t uiCookie)
@@ -440,7 +603,9 @@ void CWinsockConnection::UnregisterStateEventCallback(/*in*/ uint64_t uiCookie)
     // Only one callback supported -> cookie value is 1
     if (uiCookie == 1ULL)
     {
-        m_pEvent = nullptr;
+        std::lock_guard<std::mutex> lk(m_MtxConnect);
+        m_pMainEvent = nullptr;
+        m_pRegisteredEvent = nullptr;
     }
 }
 
@@ -451,11 +616,38 @@ sdv::ipc::EConnectState CWinsockConnection::GetConnectState() const
 
 void CWinsockConnection::DestroyObject()
 {
-    m_StopReceiveThread  = true;
-    m_StopConnectThread  = true;
 
-    StopThreadsAndCloseSockets();
-    m_ConnectionState = sdv::ipc::EConnectState::disconnected;
+    bool expected = false;
+    if (!m_DestroyObjectCalled.compare_exchange_strong(expected, true))
+    {
+        return;
+    }
+
+    m_StopReceiveThread.store(true);
+    m_StopConnectThread.store(true);
+
+    // Optional: notify terminating before releasing callbacks
+    SetConnectState(sdv::ipc::EConnectState::terminating);
+
+    Disconnect();
+
+    // Release callbacks only during final teardown
+    {
+        std::lock_guard<std::mutex> lk(m_MtxConnect);
+        m_pReceiver = nullptr;
+        m_pMainEvent = nullptr;
+        m_pRegisteredEvent = nullptr;
+    }
+
+    std::function<void(const void*)> removeCallback;
+    {
+        std::lock_guard<std::mutex> lock(m_WatchdogMtx);
+        removeCallback = std::move(m_WatchdogRemoveCallback);
+    }
+    if (removeCallback)
+    {
+        removeCallback(this);
+    }
 }
 
 void CWinsockConnection::ConnectWorker()
@@ -482,16 +674,6 @@ void CWinsockConnection::ConnectWorker()
 
             if (c == INVALID_SOCKET)
             {
-                if (m_pEvent)
-                {
-                    try
-                    {
-                        m_pEvent->SetConnectState(m_ConnectionState);
-                    }
-                    catch (...)
-                    {
-                    }
-                }
                 return;
             }
 
@@ -505,8 +687,22 @@ void CWinsockConnection::ConnectWorker()
             // CLIENT SIDE
             if (m_ConnectionSocket == INVALID_SOCKET)
             {
-                SetConnectState(sdv::ipc::EConnectState::connection_error);
-                return;
+                SetConnectState(sdv::ipc::EConnectState::initializing);
+
+                if (m_UdsPath.empty())
+                {
+                    SetConnectState(sdv::ipc::EConnectState::connection_error);
+                    return;
+                }
+
+                SOCKET s = ConnectUnixSocketLocal(m_UdsPath, 5000, 50);
+                if (s == INVALID_SOCKET)
+                {
+                    SetConnectState(sdv::ipc::EConnectState::connection_error);
+                    return;
+                }
+
+                m_ConnectionSocket = s;
             }
         }
 
@@ -528,7 +724,7 @@ void CWinsockConnection::StartReceiveThread_Unsafe()
     }
 
     m_StopReceiveThread.store(false);
-    m_ReceiveThread = std::thread(&CWinsockConnection::ReceiveMessages, this);
+    m_ReceiveThread = sdv::core::secure_thread(&CWinsockConnection::ReceiveMessages, this);
 }
 
 void CWinsockConnection::StopThreadsAndCloseSockets()
@@ -583,6 +779,7 @@ void CWinsockConnection::StopThreadsAndCloseSockets()
     SDV_LOG_INFO("[AF_UNIX] StopThreadsAndCloseSockets: closing listen=%llu conn=%llu",
                  static_cast<uint64_t>(l),
                  static_cast<uint64_t>(s));
+
 }
 
 bool CWinsockConnection::ReadNumberOfBytes(char* buffer, uint32_t length)
@@ -608,7 +805,7 @@ bool CWinsockConnection::ReadNumberOfBytes(char* buffer, uint32_t length)
                 continue;
             }
 
-            SDV_LOG_WARNING("[UDS][RX] recv() error: ", std::strerror(err));
+            SDV_LOG_WARNING("[UDS][RX] recv() FAIL, WSA=", err);
             return false;
         }
 
@@ -742,8 +939,13 @@ bool CWinsockConnection::ReadDataChunk(const CMessage& message, uint32_t offset,
 #if ENABLE_DECOUPLING > 0
                 // optional queueing path...
 #else
-                if (m_pReceiver)
-                    m_pReceiver->ReceiveData(dataCtx.seqDataChunks);
+                sdv::ipc::IDataReceiveCallback* pReceiverLocal = nullptr;
+                {
+                    std::lock_guard<std::mutex> lk(m_MtxConnect);
+                    pReceiverLocal = m_pReceiver;
+                }
+                if (pReceiverLocal)
+                    pReceiverLocal->ReceiveData(dataCtx.seqDataChunks);
                 dataCtx = SDataContext(); // reset context
 #endif
                 break;

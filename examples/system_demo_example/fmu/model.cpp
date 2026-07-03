@@ -103,7 +103,10 @@ bool CreateCoreServiceTomlFile(const std::string& resources)
     std::ofstream tomlFile("sdv_core_reloc.toml");
     if (tomlFile.is_open())
     {
-        tomlFile << "# Location of the SDV binaries and configuration files\ndirectory = \"";
+        tomlFile << R"toml(# Location of the SDV binaries and configuration files
+[CoreLocation]
+Version = 100
+Framework = ")toml";
         tomlFile << resources;
         tomlFile << "\"\n";
         tomlFile.close();

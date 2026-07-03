@@ -390,6 +390,17 @@ module sdv
         };
 
         /**
+         * @brief The package exceeds the maximum size.
+         */
+        exception XPackageSizeExceeded : XSysExcept
+        {
+            /** Description */
+            const char _description[] = "Maximum package size exceeded.";
+
+            u8string    ssFileName;     ///< Name of the file which causes the exception.
+        };        
+
+        /**
          * @brief The installation doesn't contain a module.
          */
         exception XModuleNotFound : XSysExcept

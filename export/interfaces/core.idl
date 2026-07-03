@@ -57,9 +57,26 @@ module sdv
         template <typename TInterface>
         TInterface* GetInterface()
         {
-            return GetInterface(sdv::GetInterfaceId<TInterface>()).template get<TInterface>();
+            try
+            {
+                return GetInterface(sdv::GetInterfaceId<TInterface>()).template get<TInterface>();
+            } catch (const XSysExcept&)
+            {
+                return nullptr;
+            }
         }
 #verbatim_end
+    };
+
+    /**
+     * @brief Core features.
+     */
+    module core
+    {
+        /**
+         * @brief Object ID.
+         */
+        typedef uint64 TObjectID;
     };
 
     /**
@@ -163,11 +180,22 @@ module sdv
 
     /**
      * @brief Component operation mode.
-    */
+     */
     enum EOperationMode : uint32
     {
         configuring = 20,               ///< The component should switch to configuration mode.
         running = 30,                   ///< The component should switch to running mode.
+    };
+
+    /**
+     * @brief Object information supplied to the object initialization function.
+     */
+    struct SObjectInfo
+    {
+        core::TObjectID     tObjectID;          ///< Object ID (local for the running process)
+        SClassInfo          sClassInfo;         ///< Object class information
+        u8string            ssName;             ///< Object name
+        u8string            ssConfig;           ///< Object configuration TOML
     };
 
     /**
@@ -179,9 +207,9 @@ module sdv
     {
         /**
          * @brief Initialize the object.
-         * @param[in] ssObjectConfig Optional configuration string.
+         * @param[in] sObjectInfo The registration information of this object.
          */
-        void Initialize(in u8string ssObjectConfig);
+        void Initialize(in SObjectInfo sObjectInfo);
 
         /**
          * @brief Get the current state of the object.
@@ -247,50 +275,6 @@ module sdv
          */
         uint32 GetCount() const;
     };
-
-    /**
-     * @brief Attribute flags.
-     */
-    enum EAttributeFlags : uint32
-    {
-        read_only = 0x100,      ///< When set, the attribute is readonly.
-    };
-
-    /**
-     * @brief Attribute interface
-     */
-    interface IAttributes
-    {
-        /**
-         * @brief Get a sequence with the available attribute names.
-         * @return The sequence of attribute names.
-         */
-        sequence<u8string> GetNames() const;
-
-        /**
-         * @brief  Get the attribute value.
-         * @param[in] ssAttribute Name of the attribute.
-         * @return The attribute value or an empty any-value if the attribute wasn't found or didn't have a value.
-         */
-        any Get(in u8string ssAttribute) const;
-
-        /**
-         * @brief Set the attribute value.
-         * @param[in] ssAttribute Name of the attribute.
-         * @param[in] anyAttribute Attribute value to set.
-         * @return Returns 'true' when setting the attribute was successful or 'false' when the attribute was not found or the
-         * attribute is read-only or another error occurred.
-        */
-        boolean Set(in u8string ssAttribute, in any anyAttribute);
-
-        /**
-         * @brief Get the attribute flags belonging to a certain attribute.
-         * @param[in] ssAttribute Name of the attribute.
-         * @return Returns the attribute flags (zero or more EAttributeFlags flags) or 0 when the attribute could not be found.
-         */
-        uint32 GetFlags(in u8string ssAttribute) const;
-    };
-
 }; // module sdv
 
 #verbatim_begin

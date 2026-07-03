@@ -43,9 +43,7 @@ public:
 
     // Object declarations
     DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
-    DECLARE_OBJECT_CLASS_NAME("DefaultSharedMemoryChannelControl")
-    DECLARE_OBJECT_CLASS_ALIAS("LocalChannelControl")
-    DECLARE_DEFAULT_OBJECT_NAME("LocalChannelControl")
+    DECLARE_OBJECT_CLASS_NAME("DefaultSharedMemory")
     DECLARE_OBJECT_SINGLETON()
 
     /**

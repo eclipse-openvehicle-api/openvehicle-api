@@ -37,7 +37,8 @@ namespace toml_parser
         TTokenListIterator it = m_lstTokens.begin();
         bool bCommaAvailable  = false;
         bool bPrintableCharsAvailable = false;
-        bool bLastTokenIsComment = false;
+        bool bLastTokenIsCommentOrForceNewline = false;
+        bool bNewlineAllowed = rContext.NewlineAllowed() || (eMode == EComposeMode::compose_behind && rContext.FinalNewline());
         while (it != m_lstTokens.end() && it->Category() != ETokenCategory::token_comment)
         {
             // Add comma only when needed.
@@ -53,12 +54,12 @@ namespace toml_parser
                 bCommaAvailable = true;
                 break;
             case ETokenCategory::token_comment:
-                bSkip = !rContext.CommentAndNewlineAllowed();
-                if (!bSkip) bLastTokenIsComment = true;
+                bSkip = !bNewlineAllowed;
+                if (!bSkip) bLastTokenIsCommentOrForceNewline = true;
                 break;
             case ETokenCategory::token_syntax_new_line:
-                bSkip = !rContext.NewlineAllowed();
-                if (!bSkip) bLastTokenIsComment = false;
+                bSkip = !bNewlineAllowed;
+                if (!bSkip) bLastTokenIsCommentOrForceNewline = false;
                 break;
             default:
                 break;
@@ -107,11 +108,11 @@ namespace toml_parser
                     break;
                 case ETokenCategory::token_comment:
                     bSkip = !rContext.CommentAndNewlineAllowed();
-                if (!bSkip) bLastTokenIsComment = true;
+                if (!bSkip) bLastTokenIsCommentOrForceNewline = true;
                     break;
                 case ETokenCategory::token_syntax_new_line:
-                    bSkip = !rContext.NewlineAllowed();
-                if (!bSkip) bLastTokenIsComment = false;
+                    bSkip = !bNewlineAllowed;
+                if (!bSkip) bLastTokenIsCommentOrForceNewline = false;
                     break;
                 default:
                     break;
@@ -210,11 +211,11 @@ namespace toml_parser
                 break;
             case ETokenCategory::token_comment:
                 bSkip = !rContext.CommentAndNewlineAllowed();
-                if (!bSkip) bLastTokenIsComment = true;
+                if (!bSkip) bLastTokenIsCommentOrForceNewline = true;
                 break;
             case ETokenCategory::token_syntax_new_line:
-                bSkip = !rContext.NewlineAllowed();
-                if (!bSkip) bLastTokenIsComment = false;
+                bSkip = !bNewlineAllowed;
+                if (!bSkip) bLastTokenIsCommentOrForceNewline = false;
                 break;
             default:
                 break;
@@ -239,7 +240,7 @@ namespace toml_parser
             }
 
             // Default newline needed
-            if (rContext.FinalNewline() && ((m_lstTokens.empty() && m_ssComment.empty()) || bLastTokenIsComment))
+            if (rContext.FinalNewline() && ((m_lstTokens.empty() && m_ssComment.empty()) || bLastTokenIsCommentOrForceNewline))
                 sstream << std::endl;
             break;
         case EComposeMode::compose_before:

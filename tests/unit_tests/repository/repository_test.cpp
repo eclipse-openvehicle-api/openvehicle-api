@@ -29,7 +29,7 @@ public:
         SDV_INTERFACE_ENTRY(sdv::IObjectControl)
     END_SDV_INTERFACE_MAP()
 
-    virtual void Initialize([[maybe_unused]] const sdv::u8string& ssObjectConfig) override
+    virtual void Initialize([[maybe_unused]] const sdv::SObjectInfo& sObjectInfo) override
     {
         FAIL() << "Error: Initialize should not be called by Repo Service!";
         //m_eObjectState = sdv::EObjectState::initialization_failure;
@@ -91,8 +91,8 @@ TEST(RepositoryTest, CreateNonexistentClass)
     CModuleControl modulectrl;
     CHelper helper(modulectrl, repository);
     ASSERT_TRUE(modulectrl.Load((GetExecDirectory() / "UnitTest_Repository_test_module.sdv").generic_u8string()));
-    EXPECT_FALSE(repository.CreateObject2("TestFooBar", nullptr, nullptr));
-    repository.DestroyObject2("TestFooBar");
+    EXPECT_FALSE(repository.CreateObject("TestFooBar", nullptr, nullptr));
+    EXPECT_FALSE(repository.DestroyObject("TestFooBar"));
 }
 
 TEST(RepositoryTest, GetNonexistentObject)
@@ -100,11 +100,11 @@ TEST(RepositoryTest, GetNonexistentObject)
     CRepository repository;     // Must be created first
     CModuleControl modulectrl;
     CHelper helper(modulectrl, repository);
+    auto permission = GetPermissionControl().CreatePermissionObject(sdv::core::EAccessPermission::full_access);
     ASSERT_TRUE(modulectrl.Load((GetExecDirectory() / "UnitTest_Repository_test_module.sdv").generic_u8string()));
-    bool bRes = repository.CreateObject2("Example_Object", nullptr, nullptr);
-    EXPECT_TRUE(bRes);
+    EXPECT_TRUE(repository.CreateObject("Example_Object", nullptr, nullptr));
     EXPECT_EQ(nullptr, repository.GetObject("TestFooBar"));
-    repository.DestroyObject2("Example_Object");
+    EXPECT_TRUE(repository.DestroyObject("Example_Object"));
 }
 
 TEST(RepositoryTest, InstantiateAndGet)
@@ -112,11 +112,12 @@ TEST(RepositoryTest, InstantiateAndGet)
     CRepository repository;     // Must be created first
     CModuleControl modulectrl;
     CHelper helper(modulectrl, repository);
+    auto permission = GetPermissionControl().CreatePermissionObject(sdv::core::EAccessPermission::full_access);
     ASSERT_TRUE(modulectrl.Load((GetExecDirectory() / "UnitTest_Repository_test_module.sdv").generic_u8string()));
-    bool bRes = repository.CreateObject2("Example_Object", nullptr, nullptr);
+    bool bRes = repository.CreateObject("Example_Object", nullptr, nullptr);
     EXPECT_TRUE(bRes);
     EXPECT_NE(nullptr, repository.GetObject("Example_Object"));
-    repository.DestroyObject2("Example_Object");
+    EXPECT_TRUE(repository.DestroyObject("Example_Object"));
     EXPECT_EQ(nullptr, repository.GetObject("Example_Object"));
 }
 
@@ -126,8 +127,7 @@ TEST(RepositoryTest, InstantiateInitFail)
     CModuleControl modulectrl;
     CHelper helper(modulectrl, repository);
     ASSERT_TRUE(modulectrl.Load((GetExecDirectory() / "UnitTest_Repository_test_module.sdv").generic_u8string()));
-    bool bRes = repository.CreateObject2("TestObject_IObjectControlFail", nullptr, nullptr);
-    EXPECT_FALSE(bRes);
+    EXPECT_FALSE(repository.CreateObject("TestObject_IObjectControlFail", nullptr, nullptr));
     EXPECT_EQ(nullptr, repository.GetObject("TestObject_IObjectControlFail"));
-    repository.DestroyObject2("TestObject_IObjectControlFail");
+    EXPECT_FALSE(repository.DestroyObject("TestObject_IObjectControlFail"));
 }

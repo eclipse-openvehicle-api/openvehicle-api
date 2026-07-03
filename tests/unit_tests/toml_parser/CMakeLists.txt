@@ -12,6 +12,9 @@
 #   Erik Verhoeven - writing TOML and whitespace preservation
 #*******************************************************************************
 
+# Define project
+project (UnitTest_TOMLParser VERSION 1.0 LANGUAGES CXX)
+
 # Character Reader executable
 add_executable(UnitTest_TOMLParser
     "character_reader_tests.cpp"
@@ -19,13 +22,17 @@ add_executable(UnitTest_TOMLParser
     "parser_tests.cpp"
     "main.cpp"
     "generate_toml_tests.cpp"
-    "generate_toml_delete_node.cpp"
+    "delete_node.cpp"
     "statement_boundary_detection.cpp"
-    "miscellaneous_tests.cpp"
+    "miscellaneous.cpp"
     "generate_toml_with_transfer.cpp"
-    "generate_toml_switch_inline.cpp"
-    "generate_toml_getset_comment.cpp"
-    "generate_toml_insert_node.cpp" "generate_toml_miscellaneous.cpp" "generate_toml_combine_reduce.cpp")
+    "getset_comment.cpp"
+    "insert_node.cpp"
+    "combine_reduce.cpp"
+    "comparison_tests.cpp"
+    "make_inline_standard.cpp"
+    "indexer_tests.cpp" "cascade_insert_node.cpp")
+
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_link_libraries(UnitTest_TOMLParser GTest::GTest ${CMAKE_THREAD_LIBS_INIT})
     if (WIN32)

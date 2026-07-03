@@ -44,8 +44,8 @@ extern "C" int main(int argc, char* argv[])
     EOperatingmode eMode = static_cast<EOperatingmode>(std::atoi(sdv::MakeAnsiString(argv[1]).c_str()));
 
     sdv::app::CAppControl appcontrol;
-    if (!appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"))
+    if (!appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"))
     {
         std::cout << GetTimestamp() << "Failed to start app control..." << std::endl;
         return -1;
@@ -89,7 +89,7 @@ Mode="Maintenance")code"))
             std::cout << GetTimestamp() << "Waiting for process with PID#" << std::dec << tProcessID << std::endl;
             CProcessMonitorHelper monitor;
             CProcessControl control;
-            control.Initialize(""); // Needed since local instantiation
+            control.Initialize(sdv::SObjectInfo()); // Needed since local instantiation
             uint32_t uiMon = control.RegisterMonitor(tProcessID, &monitor);
             if (!uiMon)
             {
@@ -134,7 +134,7 @@ Mode="Maintenance")code"))
             std::cout << GetTimestamp() << "Terminate process with PID#" << std::dec << tProcessID << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(100));    // Make certain, that the first process is actually running...
             CProcessControl control;
-            control.Initialize(""); // Needed since local instantiation
+            control.Initialize(sdv::SObjectInfo()); // Needed since local instantiation
             nResult = control.Terminate(tProcessID) ? 0 : -20;
             control.Shutdown(); // Needed to prevent clash with core
         }

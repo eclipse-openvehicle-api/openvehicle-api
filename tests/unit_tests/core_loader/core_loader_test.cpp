@@ -283,7 +283,7 @@ TEST(CoreLoaderTest, EnvVarLoading)
     EXPECT_EQ(executor.Execute(), 1);
 }
 
-TEST(CoreLoaderTest, CfgFileLoadingRel)
+TEST(CoreLoaderTest, CoreRelocFileLoadingRel)
 {
     CTestExecute executor;
 
@@ -291,14 +291,17 @@ TEST(CoreLoaderTest, CfgFileLoadingRel)
     fstream << R"cfg(# Some bogus information
 unknown_var = 2
 
+[CoreLocation]
+Version = 100
+
 # Core library path
-directory = "../../../bin")cfg";
+Runtime = "../../../bin")cfg";
     fstream.close();
 
     EXPECT_EQ(executor.Execute(), 1);
 }
 
-TEST(CoreLoaderTest, CfgFileLoadingAbs)
+TEST(CoreLoaderTest, CoreRelocFileLoadingAbs)
 {
     CTestExecute executor;
 
@@ -306,15 +309,18 @@ TEST(CoreLoaderTest, CfgFileLoadingAbs)
     fstream << R"cfg(# Some bogus information
 unknown_var = 2
 
+[CoreLocation]
+Version = 100
+
 # Core library path
-directory = ")cfg" << (executor.GetExeDir() / "../../../bin").lexically_normal().generic_string() << "\"";
+Runtime = ")cfg" << (executor.GetExeDir() / "../../../bin").lexically_normal().generic_string() << "\"";
     fstream.close();
 
     EXPECT_EQ(executor.Execute(), 1);
 }
 
 #ifdef _WIN32
-TEST(CoreLoaderTest, CfgFileLoadingRelWin)
+TEST(CoreLoaderTest, CoreRelocFileLoadingRelWin)
 {
     CTestExecute executor;
 
@@ -322,14 +328,17 @@ TEST(CoreLoaderTest, CfgFileLoadingRelWin)
     fstream << R"cfg(# Some bogus information
 unknown_var = 2
 
+[CoreLocation]
+Version = 100
+
 # Core library path
-directory = "..\\..\\..\\bin")cfg";
+Runtime = "..\\..\\..\\bin")cfg";
     fstream.close();
 
     EXPECT_EQ(executor.Execute(), 1);
 }
 
-TEST(CoreLoaderTest, CfgFileLoadingAbsWin)
+TEST(CoreLoaderTest, CoreRelocFileLoadingAbsWin)
 {
     CTestExecute executor;
 
@@ -352,8 +361,11 @@ TEST(CoreLoaderTest, CfgFileLoadingAbsWin)
     fstream << R"cfg(# Some bogus information
 unknown_var = 2
 
+[CoreLocation]
+Version = 100
+
 # Core library path
-directory = ")cfg" << ssDir << "\"";
+Runtime = ")cfg" << ssDir << "\"";
     fstream.close();
 
     EXPECT_EQ(executor.Execute(), 1);

@@ -45,8 +45,10 @@ set_target_properties(UnitTest_IPC_Communication_ps PROPERTIES SUFFIX ".sdv")
 # Compile the source code
 add_executable(UnitTest_IPC_Communication
     "main.cpp"
-
-    "ipc_com.cpp"
+    "ipc_com_sharedmem.cpp"
+    "ipc_com_uds.cpp"
+    "include.h"
+    "ipc_com_uds_tunnel.cpp"
     )
 target_link_libraries(UnitTest_IPC_Communication ${CMAKE_DL_LIBS} GTest::GTest)
 

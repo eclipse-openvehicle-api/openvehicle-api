@@ -1,3 +1,20 @@
+The 'Eclipse Open Vehicle API' project is supported by Chips JU.
+
+<img src="funding_logos\CHIPS_logo_RGB_full_colour.png" alt="arch-module-if" height="80"/>
+
+<img src="funding_logos\EN_Co-fundedbytheEU_RGB_POS.png" alt="arch-module-if" height="80"/>
+
+The HAL4SDV project (Grant Agreement No. 101139789) is supported by the Chips Joint Undertaking and its members, including top-up funding by the national authorities.
+
+<img src="funding_logos\HAL4SDV_logo_on_white.jpg" alt="arch-module-if" height="80"/>
+
+The Shift2SDV project (Grant Agreement No. 101194245) is supported by the Chips Joint Undertaking and its members, including top-up funding by the national authorities.
+
+<img src="funding_logos\Shift2sdv_logo_tagline_blue.svg" alt="arch-module-if" height="80"/>
+
+---
+
+
 # This is the latest news about 'Eclipse Open Vehicle API'
 #
 # for more information see documentation: https://eclipse.dev/openvehicle-api/

@@ -176,9 +176,9 @@ namespace debug
          */
         struct SLogMsg
         {
-            std::thread::id id; ///< Thread ID
-            size_t nDepth;      ///< Depth within the calls
-            std::string ssMsg;  ///< Message to log
+            std::thread::id     id;         ///< Thread ID
+            size_t              nDepth;     ///< Depth within the calls
+            std::string         ssMsg;      ///< Message to log
         };
 
         /**
@@ -271,7 +271,7 @@ namespace debug
 
         std::filesystem::path       m_pathLogFile;          ///< Path to the log file.
 #if DECOUPLED_DEBUG_LOG != 0
-        std::mutex m_mtxLogger;                             ///< Protect against multiple log entries at the same time.
+        std::mutex                  m_mtxLogger;            ///< Protect against multiple log entries at the same time.
         std::thread                 m_threadLogger;         ///< Logger thread
         std::atomic_bool            m_bShutdown = false;    ///< When set, terminate the logging thread
         std::queue<SLogMsg>         m_queueLogger;          ///< Queue with messages to log.

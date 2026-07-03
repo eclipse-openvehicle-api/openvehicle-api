@@ -49,13 +49,14 @@ add_library(core_services SHARED
     "toml_parser_util.h"
     "installation_manifest.h"
     "installation_manifest.cpp"
+    "../../global/tracefifo/trace_fifo.cpp"
     "local_shutdown_request.h"
     "iso_monitor.h"
     "iso_monitor.cpp"
     "installation_composer.h"
     "installation_composer.cpp"
 
-     "toml_parser/lexer_toml_token.h" "toml_parser/lexer_toml_token.cpp" "toml_parser/miscellaneous.h" "toml_parser/miscellaneous.cpp" "toml_parser/code_snippet.h" "toml_parser/code_snippet.cpp" "app_settings.h" "app_settings.cpp" "app_config_file.h" "app_config_file.cpp")
+     "toml_parser/lexer_toml_token.h" "toml_parser/lexer_toml_token.cpp" "toml_parser/miscellaneous.h" "toml_parser/miscellaneous.cpp" "toml_parser/code_snippet.h" "toml_parser/code_snippet.cpp" "app_settings.h" "app_settings.cpp" "app_config_file.h" "app_config_file.cpp" "toml_parser/parser_node_indexer.h" "toml_parser/parser_node_indexer.cpp"  "permission_control.h" "permission_control.cpp")
 
 # Compiler settiings
 add_compile_definitions(SDV_NO_EXPORT_DEFINITION)

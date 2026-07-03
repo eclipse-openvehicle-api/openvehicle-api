@@ -29,6 +29,20 @@ static std::string UniqueUds(const char* prefix) {
     return std::string("%LOCALAPPDATA%/sdv/") + buf;
 }
 
+/*inline std::string RandomHex()
+{
+    std::mt19937_64 rng{std::random_device{}()};
+    std::uniform_int_distribution<uint64_t> dist;
+    std::ostringstream oss;
+    oss << std::hex << dist(rng);
+    return oss.str();
+}
+
+inline std::string UniqueTunnel()
+{
+    return "t_" + RandomHex();
+}*/
+
 // Negative: invalid connect string
 TEST(WinTunnelNegative, InvalidConnectString)
 {
@@ -36,7 +50,7 @@ TEST(WinTunnelNegative, InvalidConnectString)
     ASSERT_TRUE(app.Startup(R"toml([LogHandler]
 ViewFilter = "Fatal")toml"));
     CSocketsTunnelChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
     // Missing proto, missing path
     auto obj = mgr.Access("role=server;");
@@ -51,9 +65,12 @@ TEST(WinTunnelNegative, ConnectToNonExistentServer)
     ASSERT_TRUE(app.Startup(R"toml([LogHandler]
 ViewFilter = "Fatal")toml"));
     CSocketsTunnelChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
-    std::string cs = "proto=tunnel;path=" + UniqueUds("no_server") + ";";
+
+    std::string tunnel = "neg_" + std::to_string(rand());
+    std::string cs = "proto=tunnel;path=" + UniqueUds("no_server") + ";tunnel=" + tunnel + ";";
+    
     auto obj = mgr.Access(cs);
     if (!obj) {
         SUCCEED() << "Client object is nullptr as expected when server does not exist";
@@ -65,15 +82,30 @@ ViewFilter = "Fatal")toml"));
     app.Shutdown();
 }
 
+TEST(WinTunnelNegative, MissingTunnel)
+{
+    CSocketsTunnelChannelMgnt mgr;
+    mgr.Initialize(sdv::SObjectInfo());
+    mgr.SetOperationMode(sdv::EOperationMode::running);
+
+    // missing tunnel = invalid now
+    auto obj = mgr.Access("proto=tunnel;path=/tmp/x.sock;");
+    EXPECT_EQ(obj, nullptr);
+}
+
+
 // Edge: double disconnect
 TEST(WinTunnelEdge, DoubleDisconnect)
 {
     sdv::app::CAppControl app;
     ASSERT_TRUE(app.Startup(""));
     CSocketsTunnelChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
-    std::string cs = "proto=tunnel;path=" + UniqueUds("double_disc") + ";";
+
+    std::string tunnel = "neg_" + std::to_string(rand());
+    std::string cs = "proto=tunnel;path=" + UniqueUds("double_disc") + ";tunnel=" + tunnel + ";";
+   
     auto ep = mgr.CreateEndpoint(cs);
     auto obj = mgr.Access(ep.ssConnectString);
     auto* conn = obj->GetInterface<sdv::ipc::IConnect>();
@@ -91,9 +123,12 @@ TEST(WinTunnelEdge, RepeatedConnectDisconnect)
     ASSERT_TRUE(app.Startup(R"toml([LogHandler]
 ViewFilter = "Fatal")toml"));
     CSocketsTunnelChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
-    std::string cs = "proto=tunnel;path=" + UniqueUds("repeat") + ";";
+
+    std::string tunnel = "neg_" + std::to_string(rand());
+    std::string cs = "proto=tunnel;path=" + UniqueUds("repeat") + ";tunnel=" + tunnel + ";";
+
     for (int i = 0; i < 3; ++i) {
         auto ep = mgr.CreateEndpoint(cs); // recreate endpoint every time
         sdv::TObjectPtr obj = mgr.Access(ep.ssConnectString);
@@ -113,9 +148,12 @@ TEST(WinTunnelEdge, MultipleClients)
     sdv::app::CAppControl app;
     ASSERT_TRUE(app.Startup(""));
     CSocketsTunnelChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
-    std::string cs = "proto=tunnel;path=" + UniqueUds("multi_client") + ";";
+    
+    std::string tunnel = "neg_" + std::to_string(rand());
+    std::string cs = "proto=tunnel;path=" + UniqueUds("multi_client") + ";tunnel=" + tunnel + ";";
+
     auto ep = mgr.CreateEndpoint(cs);
     auto obj1 = mgr.Access(ep.ssConnectString);
     auto obj2 = mgr.Access(ep.ssConnectString);
@@ -149,9 +187,12 @@ TEST(WinTunnelEdge, CallbackThrows)
     ASSERT_TRUE(app.Startup(R"toml([LogHandler]
 ViewFilter = "Fatal")toml"));
     CSocketsTunnelChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
-    std::string cs = "proto=tunnel;path=" + UniqueUds("cb_throw") + ";";
+
+    std::string tunnel = "neg_" + std::to_string(rand());
+    std::string cs = "proto=tunnel;path=" + UniqueUds("cb_throw") + ";tunnel=" + tunnel + ";";
+
     auto ep = mgr.CreateEndpoint(cs);
     auto obj = mgr.Access(ep.ssConnectString);
     auto* conn = obj->GetInterface<sdv::ipc::IConnect>();

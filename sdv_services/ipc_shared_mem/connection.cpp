@@ -117,7 +117,7 @@ std::string CConnection::GetConnectionString()
 {
     // The connection string is of the form:
     // [Provider]
-    // Name = "DefaultSharedMemoryChannelControl"
+    // Name = "DefaultSharedMemory"
     //
     // [[ConnectParam]]
     // Type = "shared_mem"
@@ -132,9 +132,9 @@ std::string CConnection::GetConnectionString()
     // SyncTx = "SDV_TX_SYNC_REQUEST_1234"
     // SyncRx = "SDV_RX_SYNC_REQUEST_1234"
     // Direction = "request"
-    std::string ssConnectionString = R"code([Provider]
-Name = "LocalChannelControl"
-)code" + std::string("\n") + m_sender.GetConnectionString() + "\n" + m_receiver.GetConnectionString();
+    std::string ssConnectionString = R"toml([Provider]
+Name = "DefaultSharedMemory"
+)toml" + std::string("\n") + m_sender.GetConnectionString() + "\n" + m_receiver.GetConnectionString();
     return ssConnectionString;
 }
 
@@ -352,7 +352,7 @@ bool CConnection::AsyncConnect(sdv::IInterfaceAccess* pReceiver)
     std::unique_lock<std::mutex> lock(m_mtxConnect);
 
     // Allowed to connect?
-    if (m_eConnectState != sdv::ipc::EConnectState::uninitialized)
+    if (m_eConnectState != sdv::ipc::EConnectState::uninitialized && m_eConnectState != sdv::ipc::EConnectState::disconnected)
     {
         for (auto& rprEventCallback : m_lstEventCallbacks)
             if (rprEventCallback.pCallback && rprEventCallback.uiCookie)
@@ -377,9 +377,9 @@ bool CConnection::AsyncConnect(sdv::IInterfaceAccess* pReceiver)
     SetConnectState(sdv::ipc::EConnectState::initialized);
 
     // Start the receiving thread (wait until started).
-    m_threadReceive = std::thread(&CConnection::ReceiveMessages, this);
+    m_threadReceive = sdv::core::secure_thread(&CConnection::ReceiveMessages, this);
 #if ENABLE_DECOUPLING > 0
-    m_threadDecoupleReceive = std::thread(&CConnection::DecoupleReceive, this);
+    m_threadDecoupleReceive = sdv::core::secure_thread(&CConnection::DecoupleReceive, this);
 #endif
     if (!m_bStarted)
         m_cvStartConnect.wait_for(lock, std::chrono::milliseconds(1000));
@@ -602,9 +602,10 @@ void CConnection::ReceiveMessages()
         auto optPacket = m_receiver.TryRead();
         if (!optPacket)
         {
+            // TODO EVE: Also allow synchronization take place when disconnected.
             // Start communication, but only if connection is client based. Server based should not start the communication. If
             // there is no client, the server would otherwise fill its send-buffer. Repeat sending every 500ms.
-            if (!m_bServer && (/*m_eConnectState == sdv::ipc::EConnectState::disconnected ||*/ m_eConnectState == sdv::ipc::EConnectState::initialized))
+            if (!m_bServer && (m_eConnectState == sdv::ipc::EConnectState::disconnected || m_eConnectState == sdv::ipc::EConnectState::initialized))
             {
                 // Send request
                 auto tpNow = std::chrono::high_resolution_clock::now();
@@ -1001,9 +1002,10 @@ void CConnection::ReceiveConnectTerm(CMessage& /*rMessage*/)
     m_sender.CancelSend();
     m_sender.ResetRx();
 
-    // Send sync request (do not wait until next round in case a very short connection <100ms took place).
-    if (m_bServer)
-        Send(SMsgHdr{ SDVFrameworkInterfaceVersion, EMsgType::sync_request });
+    // TODO EVE: Disabled, since state of client straight goes into "connecting" after being disconnected.
+    //// Send sync request (do not wait until next round in case a very short connection <100ms took place).
+    //if (m_bServer)
+    //    Send(SMsgHdr{ SDVFrameworkInterfaceVersion, EMsgType::sync_request });
 }
 
 void CConnection::ReceiveDataMessage(CMessage& rMessage, SDataContext& rsDataCtxt)

@@ -200,33 +200,33 @@ private:
     */
     std::string AlignString(const std::string& message, uint32_t desiredLength = 0);
 
-    mutable std::mutex  m_mtxPrintToConsole;                ///< Mutex to print complete message
-    std::thread         m_threadReadTxSignals;              ///< Simulation datalink thread.
-    bool                m_bThreadStarted = false;           ///< Set when initialized.
-    std::atomic_bool    m_bRunning = false;                 ///< When set, the application is running.
+    mutable std::mutex          m_mtxPrintToConsole;                ///< Mutex to print complete message
+    sdv::core::secure_thread    m_threadReadTxSignals;              ///< Simulation datalink thread.
+    bool                        m_bThreadStarted = false;           ///< Set when initialized.
+    std::atomic_bool            m_bRunning = false;                 ///< When set, the application is running.
 
-    sdv::core::CSignal  m_signalCurrentLatitude;            ///< Signal Current latitude  
-    sdv::core::CSignal  m_signalCurrentLongitude;		    ///< Signal Current longitude         
-    sdv::core::CSignal  m_signalHeadlight;                  ///< Signal Headlight status
+    sdv::core::CSignal          m_signalCurrentLatitude;            ///< Signal Current latitude  
+    sdv::core::CSignal          m_signalCurrentLongitude;		    ///< Signal Current longitude         
+    sdv::core::CSignal          m_signalHeadlight;                  ///< Signal Headlight status
 
-    float               m_fCurrentLongitude = 0.0f;         //< Current latitude
-    float               m_fCurrentLatitude = 0.0f;          //< Current longitude   
-    bool                m_bHeadLight = true;	            ///< Head light
+    float                       m_fCurrentLongitude = 0.0f;         //< Current latitude
+    float                       m_fCurrentLatitude = 0.0f;          //< Current longitude   
+    bool                        m_bHeadLight = true;	            ///< Head light
 
-    float               m_fVehicleDeviceCurrentLatitude = 0.0f;       ///< Current latitude (Vehicle Device)
-    float               m_fVehicleDeviceCurrentLongitude = 0.0;       ///< Current longitude  (Vehicle Device)   
+    float                       m_fVehicleDeviceCurrentLatitude = 0.0f;       ///< Current latitude (Vehicle Device)
+    float                       m_fVehicleDeviceCurrentLongitude = 0.0;       ///< Current longitude  (Vehicle Device)   
     
-    float               m_fBasicServiceCurrentLatitude = 0.0f;	      ///< Current latitude (basic Service)
-    float               m_fBasicServiceCurrentLongitude = 0.0;        ///< Current longitude (basic Service)  
+    float                       m_fBasicServiceCurrentLatitude = 0.0f;	      ///< Current latitude (basic Service)
+    float                       m_fBasicServiceCurrentLongitude = 0.0;        ///< Current longitude (basic Service)  
 
-    IAutoheadlightService* m_pIAutoheadlightComplexService = nullptr; ///< Autoheadlight Service interface pointer.
+    IAutoheadlightService*      m_pIAutoheadlightComplexService = nullptr; ///< Autoheadlight Service interface pointer.
 
 
 #ifdef _WIN32
-    DWORD               m_dwConsoleOutMode = 0u;            ///< The console mode before switching on ANSI support.
-    DWORD               m_dwConsoleInMode = 0u;             ///< The console mode before switching on ANSI support.
+    DWORD                       m_dwConsoleOutMode = 0u;            ///< The console mode before switching on ANSI support.
+    DWORD                       m_dwConsoleInMode = 0u;             ///< The console mode before switching on ANSI support.
 #elif defined __unix__
-    struct termios      m_sTermAttr {};                     ///< The terminal attributes before disabling echo.
+    struct termios              m_sTermAttr {};                     ///< The terminal attributes before disabling echo.
     int                 m_iFileStatus = 0;                  ///< The file status flags for STDIN.
 #else
 #error The OS is not supported!

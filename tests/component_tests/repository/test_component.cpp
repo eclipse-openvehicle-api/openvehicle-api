@@ -306,7 +306,7 @@ public:
             }
         };
 
-        std::thread testThread(fun);
+        sdv::core::secure_thread testThread(fun);
 
         testThread.join();
 

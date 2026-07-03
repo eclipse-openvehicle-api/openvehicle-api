@@ -9,7 +9,8 @@
  ********************************************************************************/
 
 #include "../door_app/include/door_application.h"
-#include "../generated/vss_files/signal_identifier.h"
+#include "../generated/front/vss_files/signal_identifier.h"
+#include "../generated/rear/vss_files/signal_identifier.h"
 
 #ifdef _WIN32
 #include <conio.h>      // Needed for _kbhit
@@ -61,23 +62,23 @@ bool CDoorControl::RegisterSignals()
 {
     sdv::core::CDispatchService dispatch;
 
-    m_SignalFrontLeftDoorIsOpen = dispatch.RegisterRxSignal(doors::dsLeftDoorIsOpen01);
-    m_SignalFrontLeftDoorIsLocked = dispatch.RegisterTxSignal(doors::dsLeftLatch01, 0);
+    m_SignalFrontLeftDoorIsOpen = dispatch.RegisterRxSignal(frontdoors::dsLeftDoorIsOpen01);
+    m_SignalFrontLeftDoorIsLocked = dispatch.RegisterTxSignal(frontdoors::dsLeftLatch01, 0);
 
     if (m_iNumberOfDoors > 1)
     {
-        m_SignalFrontRightDoorIsOpen = dispatch.RegisterRxSignal(doors::dsRightDoorIsOpen01);
-        m_SignalFrontRightDoorIsLocked = dispatch.RegisterTxSignal(doors::dsRightLatch01, 0);
+        m_SignalFrontRightDoorIsOpen = dispatch.RegisterRxSignal(frontdoors::dsRightDoorIsOpen01);
+        m_SignalFrontRightDoorIsLocked = dispatch.RegisterTxSignal(frontdoors::dsRightLatch01, 0);
 
         if (m_iNumberOfDoors > 2)
         {
-            m_SignalRearLeftDoorIsOpen = dispatch.RegisterRxSignal(doors::dsLeftDoorIsOpen02);
-            m_SignalRearLeftDoorIsLocked = dispatch.RegisterTxSignal(doors::dsLeftLatch02, 0);
+            m_SignalRearLeftDoorIsOpen = dispatch.RegisterRxSignal(reardoors::dsLeftDoorIsOpen02);
+            m_SignalRearLeftDoorIsLocked = dispatch.RegisterTxSignal(reardoors::dsLeftLatch02, 0);
 
             if (m_iNumberOfDoors > 3)
             {
-                m_SignalRearRightDoorIsOpen = dispatch.RegisterRxSignal(doors::dsRightDoorIsOpen02);
-                m_SignalRearRightDoorIsLocked = dispatch.RegisterTxSignal(doors::dsRightLatch02, 0);
+                m_SignalRearRightDoorIsOpen = dispatch.RegisterRxSignal(reardoors::dsRightDoorIsOpen02);
+                m_SignalRearRightDoorIsLocked = dispatch.RegisterTxSignal(reardoors::dsRightLatch02, 0);
             }
         }
     }

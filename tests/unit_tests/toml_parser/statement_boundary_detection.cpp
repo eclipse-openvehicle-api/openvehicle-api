@@ -14,6 +14,7 @@
 #include <gtest/gtest.h>
 #include <limits>
 #include <functional>
+#include "../../../global/localmemmgr.h"
 #include "../../../sdv_services/core/toml_parser/lexer_toml.h"
 #include "../../../sdv_services/core/toml_parser/exception.h"
 #include "../../../sdv_services/core/toml_parser/miscellaneous.h"
@@ -445,7 +446,7 @@ bool FindAndExtendToken(toml_parser::CLexer& rlexer, const std::string& rssKey,
     return false; // When coming here, the key was not found
 }
 
-TEST(TOMLLexerStatementBoundaryTests, CheckEmptyRange)
+TEST(StatementBoundary, CheckEmptyRange)
 {
     std::string ssEmpty;
 
@@ -459,11 +460,11 @@ TEST(TOMLLexerStatementBoundaryTests, CheckEmptyRange)
     EXPECT_THROW(lexerEmpty.SmartExtendNodeRange(rangeEmpty), sdv::toml::XTOMLParseException);
 }
 
-TEST(TOMLLexerStatementBoundaryTests, CheckInvalidRange)
+TEST(StatementBoundary, CheckInvalidRange)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
 token_a = 10
-)code";
+)toml";
     std::string ssOther = ssCode;
 
     // Process the code
@@ -477,11 +478,11 @@ token_a = 10
     EXPECT_THROW(lexerCode.SmartExtendNodeRange(rangeOther), sdv::toml::XTOMLParseException);
 }
 
-TEST(TOMLLexerStatementBoundaryTests, StandardIntegerAssignment)
+TEST(StatementBoundary, StandardIntegerAssignment)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
 token_a = 10
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -497,11 +498,11 @@ token_a = 10
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, StandardStringAssignment)
+TEST(StatementBoundary, StandardStringAssignment)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
 token_b = "abc"
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -516,16 +517,16 @@ token_b = "abc"
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, AssignmentWithIndependentComment)
+TEST(StatementBoundary, AssignmentWithIndependentComment)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
 token_c = 30.1
 
 # middle followed by double lines
 
 
 token_d = "def"
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -541,9 +542,9 @@ token_d = "def"
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, AssignmentCommentsNotPartOfIt)
+TEST(StatementBoundary, AssignmentCommentsNotPartOfIt)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
 token_c = 30.1
 
 # middle followed by double lines
@@ -554,7 +555,7 @@ token_d = "def"
 # before
 # more before
 token_e = [10, 20, 30]
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -570,9 +571,9 @@ token_e = [10, 20, 30]
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, ArrayAssignmentWithPreceedingComment)
+TEST(StatementBoundary, ArrayAssignmentWithPreceedingComment)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
 token_d = "def"
 
 # before
@@ -581,7 +582,7 @@ token_e = [10, 20, 30]
 
 token_f = "ghi" # after
                 # more after
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -609,14 +610,14 @@ token_f = "ghi" # after
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, AssignmentWithFollowingComment)
+TEST(StatementBoundary, AssignmentWithFollowingComment)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
 token_f = "ghi" # after
                 # more after
 # belonging to next
 [token_g]
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -636,9 +637,9 @@ token_f = "ghi" # after
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, AssignmentWithFollowingComment2)
+TEST(StatementBoundary, AssignmentWithFollowingComment2)
 {
-    std::string ssTOML = R"code(
+    std::string ssTOML = R"toml(
 
 
 # This is a separate comment with several line-breaks before.
@@ -661,7 +662,7 @@ value = "this is the value text" # Comment following the value.
 # This is also a separate comment.
 # Followed by this text on the same line.
 
-# And another text on a separate line.)code";
+# And another text on a separate line.)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssTOML);
@@ -701,15 +702,15 @@ value = "this is the value text" # Comment following the value.
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, TableAssignmentWithDedicatedComment)
+TEST(StatementBoundary, TableAssignmentWithDedicatedComment)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
 token_f = "ghi" # after
                 # more after
 # belonging to next
 [token_g]
 
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -725,14 +726,14 @@ token_f = "ghi" # after
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, AssignmentWithFollowingCommentWithoutIndentation)
+TEST(StatementBoundary, AssignmentWithFollowingCommentWithoutIndentation)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
 token_h = "jkl"#after without whitespace
 # more after due to following empty line
 
 [token_i]
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -751,16 +752,16 @@ token_h = "jkl"#after without whitespace
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, AssignmentCommentsExcluded)
+TEST(StatementBoundary, AssignmentCommentsExcluded)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
 token_h = "jkl"#after without whitespace
 # more after due to following empty line
 
 [token_i]
 # not after
 token_j = 20
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -773,13 +774,13 @@ token_j = 20
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, SmartExtendTokenRange)
+TEST(StatementBoundary, SmartExtendTokenRange)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
 [token_i]
 # not after
 token_j = 20
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -796,12 +797,12 @@ token_j = 20
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, StandardAssignmentWithIndentation)
+TEST(StatementBoundary, StandardAssignmentWithIndentation)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
     token_k = 30
 
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -818,11 +819,11 @@ TEST(TOMLLexerStatementBoundaryTests, StandardAssignmentWithIndentation)
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, ArrayOfStringsAssignment)
+TEST(StatementBoundary, ArrayOfStringsAssignment)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
     token_l = ["abc", "def", "ghi"]
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -846,16 +847,16 @@ TEST(TOMLLexerStatementBoundaryTests, ArrayOfStringsAssignment)
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, InlineTableAssignmentWithIndependentComment)
+TEST(StatementBoundary, InlineTableAssignmentWithIndependentComment)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
     token_m = {x = 10, str = "gfh"}
 
     # middle followed by double newlines
 
 
     token_n = 100
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -885,9 +886,9 @@ TEST(TOMLLexerStatementBoundaryTests, InlineTableAssignmentWithIndependentCommen
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, IndentedAssignmentNoComments)
+TEST(StatementBoundary, IndentedAssignmentNoComments)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
     # begin followed by double newlines
 
 
@@ -896,7 +897,7 @@ TEST(TOMLLexerStatementBoundaryTests, IndentedAssignmentNoComments)
     # before
     # more before
     token_o = 123.456
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -913,15 +914,15 @@ TEST(TOMLLexerStatementBoundaryTests, IndentedAssignmentNoComments)
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, IndentedAssignmentWithCommentsBefore)
+TEST(StatementBoundary, IndentedAssignmentWithCommentsBefore)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
 
     # before
     # more before
     token_o = 123.456
 
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -944,15 +945,15 @@ TEST(TOMLLexerStatementBoundaryTests, IndentedAssignmentWithCommentsBefore)
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, IndentedBooleanArrayAssignmentWithDedicatedComments)
+TEST(StatementBoundary, IndentedBooleanArrayAssignmentWithDedicatedComments)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
 
     token_p = [true, false] # after
             # more after
     # belonging to next
     token_q = "next"
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -978,15 +979,15 @@ TEST(TOMLLexerStatementBoundaryTests, IndentedBooleanArrayAssignmentWithDedicate
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, IndentedAssignmentWithDedicatedCommentsBefore)
+TEST(StatementBoundary, IndentedAssignmentWithDedicatedCommentsBefore)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
     token_p = [true, false] # after
             # more after
     # belonging to next
     token_q = "next"
 
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -1006,14 +1007,14 @@ TEST(TOMLLexerStatementBoundaryTests, IndentedAssignmentWithDedicatedCommentsBef
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, IndentedAssignmentFollowedByCommentWithoutSpace)
+TEST(StatementBoundary, IndentedAssignmentFollowedByCommentWithoutSpace)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
     token_r =987#after without whitespace
     # more after due to following empty line
 
     [token_s]
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -1033,13 +1034,13 @@ TEST(TOMLLexerStatementBoundaryTests, IndentedAssignmentFollowedByCommentWithout
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, IndentedTableWithoutComments)
+TEST(StatementBoundary, IndentedTableWithoutComments)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
     [token_s]
     # not after
     [token_t]
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -1053,16 +1054,16 @@ TEST(TOMLLexerStatementBoundaryTests, IndentedTableWithoutComments)
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, IndentedTableWithAndWithoutComments)
+TEST(StatementBoundary, IndentedTableWithAndWithoutComments)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
     [token_s]
     # not after
     [token_t]
 
 # comment before a table member (belongs to token_bb)
 token_u.token_aa.token_bb = 10     # table token_u has a table token_aa which has a value token_bb
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -1080,12 +1081,12 @@ token_u.token_aa.token_bb = 10     # table token_u has a table token_aa which ha
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, InlineTableWithParentChildAssignment)
+TEST(StatementBoundary, InlineTableWithParentChildAssignment)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
 # comment before a table member (belongs to token_bb)
 token_u.token_aa.token_bb = 10     # table token_u has a table token_aa which has a value token_bb
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -1116,9 +1117,9 @@ token_u.token_aa.token_bb = 10     # table token_u has a table token_aa which ha
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, ComplexInlineTableWithParentChildAssignmentOfTablesAndMultiDimensionalArrays)
+TEST(StatementBoundary, ComplexInlineTableWithParentChildAssignmentOfTablesAndMultiDimensionalArrays)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
 # Super inline table with sub-tables and arrays
 token_u.token_aa.token_cc = { dd = { ee = 10, ff = 11 },    # this is the comment for dd
                               gg = [{hh = 1, ii = 2},
@@ -1128,7 +1129,7 @@ token_u.token_aa.token_cc = { dd = { ee = 10, ff = 11 },    # this is the commen
                                                            # and this as well
                               jj = [["abc", "def"], [1, 2, 3], []]}
 
-)code";
+)toml";
 
     // NOTE EVE 22.10.2025: the value token_u.token_aa.token_cc.jj is the last value in the table. This means that the scope of
     // the value included the comma before the value jj (following value gg). This has the consequence, that the comments, which
@@ -1292,9 +1293,9 @@ token_u.token_aa.token_cc = { dd = { ee = 10, ff = 11 },    # this is the commen
             toml_parser::ETokenCategory::token_syntax_array_close}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, ArrayOfTables)
+TEST(StatementBoundary, ArrayOfTables)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
 [[token_v]]
 token_kk = 10
 token_ll = 20
@@ -1303,7 +1304,7 @@ token_mm = 30
 [[token_v]]
 token_kk = 110
 token_ll = 120
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);
@@ -1316,15 +1317,15 @@ token_ll = 120
             toml_parser::ETokenCategory::token_syntax_new_line}));
 }
 
-TEST(TOMLLexerStatementBoundaryTests, ParentChildTable)
+TEST(StatementBoundary, ParentChildTable)
 {
-    std::string ssCode  = R"code(
+    std::string ssCode  = R"toml(
 [[token_v]]
 token_kk = 110
 token_ll = 120
 # Comments before (belongs ot child only)
 [token_x.token_nn] # Comments following (belongs to child only)
-)code";
+)toml";
 
     // Process the code
     toml_parser::CLexer lexerCode(ssCode);

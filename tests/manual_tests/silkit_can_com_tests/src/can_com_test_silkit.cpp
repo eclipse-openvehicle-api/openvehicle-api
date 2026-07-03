@@ -53,7 +53,7 @@ public:
     virtual bool OnInitialize() override
     {
         m_StopThread = false;
-        //m_thSend2DatalinkThread = std::thread(&CDummyCANSockets::Send2DatalinkThread, this);
+        //m_thSend2DatalinkThread = sdv::core::secure_thread(&CDummyCANSockets::Send2DatalinkThread, this);
         return true;
     }
 
@@ -116,7 +116,7 @@ public:
 
 private:
     std::atomic_bool                m_StopThread = false;
-    std::thread                     m_thSend2DatalinkThread;
+    sdv::core::secure_thread        m_thSend2DatalinkThread;
     mutable std::mutex              m_mtxReceivers;
     std::set<sdv::can::IReceive*>   m_setReceivers;
 };
@@ -304,7 +304,7 @@ Class = "CAN_data_link"
 
     // Create an object of the CDummyCANSilKit class
     CDummyCANSilKit canComObj;
-    canComObj.Initialize("");
+    canComObj.Initialize(sdv::SObjectInfo());
 
     sdv::can::ISend* pCanSend = &canComObj;
     EXPECT_NE(pCanSend, nullptr);
@@ -358,7 +358,7 @@ TEST_F(CANCommunicationTest, ExtractAndCompareSignals)
 
     // Create a normal object of the CDummyCANSilKit class
     CDummyCANSilKit canComObj;
-    canComObj.Initialize("");
+    canComObj.Initialize(sdv::SObjectInfo());
 
     sdv::can::ISend* pCanSend = &canComObj;
     EXPECT_NE(pCanSend, nullptr);

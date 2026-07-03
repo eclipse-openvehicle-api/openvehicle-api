@@ -40,12 +40,6 @@
 // @endcond
 
 /**
- * @brief Get the location of the core_services.sdv.
- * @return Path to the directory containing the loaded core directory.
- */
-std::filesystem::path GetCoreDirectory();
-
-/**
  * @brief Application configuration service
  * @details In the configuration system objects, devices, basic services, complex services and apps are defined and will be started
  * suring the load process. The objects are loaded in this order (system objects first, apps last) unless dependencies define

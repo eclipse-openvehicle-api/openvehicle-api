@@ -71,12 +71,19 @@ int ListComponents(const SContext& rsContext, const sdv::TObjectPtr& rptrReposit
 int ListInstallations(const SContext& rsContext, const sdv::TObjectPtr& rptrRepository, std::ostream& rstream);
 
 /**
- * @brief List the current connections.
+ * @brief List the current configured listeners.
  * @param[in] rsContext Reference to the context.
- * @param[in] rptrRepository Reference to the saerver repository.
  * @param[in] rstream The output stream to use for printing (table only).
  * @return The application exit code. 0 is no error.
  */
-int ListConnections(const SContext& rsContext, const sdv::TObjectPtr& rptrRepository, std::ostream& rstream);
+int ListListeners(const SContext& rsContext, std::ostream& rstream);
+
+/**
+ * @brief List the current connections.
+ * @param[in] rsContext Reference to the context.
+ * @param[in] rstream The output stream to use for printing (table only).
+ * @return The application exit code. 0 is no error.
+ */
+int ListConnections(const SContext& rsContext, std::ostream& rstream);
 
 #endif // !defined LIST_ELEMENTS_H

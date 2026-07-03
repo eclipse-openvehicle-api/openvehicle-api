@@ -103,12 +103,6 @@ module sdv
              * @return The instance ID.
              */
             uint32 GetInstanceID() const;
-
-            /**
-             * @brief Return the number of retries to establish a connection.
-             * @return Number of retries.
-             */            
-            uint32 GetRetries() const;
         };
 
         /**
@@ -179,6 +173,97 @@ module sdv
              * @brief Request a shutdown. The function will only place the request to shut down.
              */
             void RequestShutdown() raises(XAccessDenied, XInvalidState);
+        };
+
+        /**
+         * @brief Load and save the application settings.
+         * @remarks The interface is only available in maintenance mode.
+         */
+        interface IAppSettingsPersist
+        {
+            /**
+             * @brief Load the application settings.
+             * @remarks When there is no settings file, this is not an error. Default settings will be assumed.
+             * @return Returns whether the loading was successful.
+             */
+            boolean LoadSettings();
+
+            /**
+             * @brief Save the application settings file (or create when not existing yet).
+             * @return Returns whether the saving was successful.
+             */
+            boolean SaveSettings();
+        };
+
+        /**
+         * @brief Application connections
+         * @remarks The interface is only available in maintenance mode.
+         */
+        interface IAppConnections
+        {
+            /**
+             * @brief Get a sequence with listener names.
+             * @return Sequence with listener name strings.
+             */
+            sequence<u8string> GetListeners() const;
+
+            /**
+             * @brief Get the listener configuration.
+             * @param[in] ssName Name of the listener.
+             * @return String containing the listener configuration.
+             */
+            u8string GetListenerConfig(in u8string ssName) const;
+
+            /**
+             * @brief Add or update a listener configuration.
+             * @param[in] ssName Name of the listener configuration.
+             * @param[in] ssConfig The configuration string for the listener.
+             * @return Returns whether the listener could be added.
+             */
+            boolean AddListenerConfig(in u8string ssName, in u8string ssConfig);
+
+            /**
+             * @brief Remove a listener configuration with the provided name.
+             * @param[in] ssName Name of the listener configuration.
+             * @return Returns whether the removal was successful.
+             */
+            boolean RemoveListenerConfig(in u8string ssName);
+
+            /**
+             * @brief Get a sequence with connection names.
+             * @return Sequence with name strings.
+             */
+            sequence<u8string> GetConnections() const;
+
+            /**
+             * @brief Get the connection configuration.
+             * @param[in] ssName Name of the connection.
+             * @return String containing the connection configuration.
+             */
+            u8string GetConnectionConfig(in u8string ssName) const;
+        
+            /**
+             * @brief Add or update a connection configuration.
+             * @param[in] ssName Name of the connection configuration.
+             * @param[in] ssConfig The configuration string for the connection.
+             * @param[in] ssInsertBefore Reference to the string to connection to insert the the new connection before, or empty
+             * when the the new connection should be placed at the end.
+             * @return Returns whether the connection could be added (fails when the connection already exists).
+             */
+            boolean AddConnectionConfig(in u8string ssName, in u8string ssConfig, in u8string ssInsertBefore);
+
+            /**
+             * @brief Remove a connection configuration with the provided name.
+             * @param[in] ssName Name of the connection configuration.
+             * @return Returns whether the removal was successful.
+             */
+            boolean RemoveConnectionConfig(in u8string ssName);
+
+            /**
+             * @brief Return the number of retries to establish a connection.
+             * @return Number of retries.
+             */
+            uint32 GetConnectRetries() const;
         };
 
     }; // module app

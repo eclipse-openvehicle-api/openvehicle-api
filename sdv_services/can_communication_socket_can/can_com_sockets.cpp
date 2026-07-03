@@ -64,7 +64,7 @@ bool CCANSockets::OnInitialize()
     }
 
     LogConfigurations();    
-    m_threadReceive = std::thread(&CCANSockets::ReceiveThreadFunc, this);
+    m_threadReceive = sdv::core::secure_thread(&CCANSockets::ReceiveThreadFunc, this);
 
     return true;
 }

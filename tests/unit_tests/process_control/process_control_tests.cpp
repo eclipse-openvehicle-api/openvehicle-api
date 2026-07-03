@@ -23,8 +23,8 @@
 TEST(ProcessControlTest, Instantiate)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessControl control;
     EXPECT_EQ(control.GetProcessID(), static_cast<sdv::process::TProcessID>(getpid()));
@@ -35,11 +35,11 @@ Mode="Maintenance")code"));
 TEST(ProcessControlTest, ParentRightsExecuteProcessNormalShutdown)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessControl control;
-    control.Initialize("");             // Needed since local instantiation
+    control.Initialize(sdv::SObjectInfo());             // Needed since local instantiation
 #ifdef _WIN32
     const std::string ssModule = "UnitTest_ProcessControlApp.exe";
 #else
@@ -61,11 +61,11 @@ Mode="Maintenance")code"));
 TEST(ProcessControlTest, ParentRightsExecuteProcessEmergencyExit)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessControl control;
-    control.Initialize("");             // Needed since local instantiation
+    control.Initialize(sdv::SObjectInfo());             // Needed since local instantiation
 #ifdef _WIN32
     const std::string ssModule = "UnitTest_ProcessControlApp.exe";
 #else
@@ -87,13 +87,13 @@ Mode="Maintenance")code"));
 TEST(ProcessControlTest, ParentRightsExecuteProcessNormalShutdownWithMonitor)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessMonitorHelper monitor;
 
     CProcessControl control;
-    control.Initialize("");             // Needed since local instantiation
+    control.Initialize(sdv::SObjectInfo());             // Needed since local instantiation
 #ifdef _WIN32
     const std::string ssModule = "UnitTest_ProcessControlApp.exe";
 #else
@@ -119,13 +119,13 @@ Mode="Maintenance")code"));
 TEST(ProcessControlTest, ParentRightsExecuteProcessEmergencyExitWithMonitor)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessMonitorHelper monitor;
 
     CProcessControl control;
-    control.Initialize("");             // Needed since local instantiation
+    control.Initialize(sdv::SObjectInfo());             // Needed since local instantiation
 #ifdef _WIN32
     const std::string ssModule = "UnitTest_ProcessControlApp.exe";
 #else
@@ -151,14 +151,14 @@ Mode="Maintenance")code"));
 TEST(ProcessControlTest, ParentRightsExecuteMultiProcessNormalShutdown)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessMonitorHelper monitor1;
     CProcessMonitorHelper monitor2;
 
     CProcessControl control;
-    control.Initialize("");             // Needed since local instantiation
+    control.Initialize(sdv::SObjectInfo());             // Needed since local instantiation
 #ifdef _WIN32
     const std::string ssModule = "UnitTest_ProcessControlApp.exe";
 #else
@@ -198,14 +198,14 @@ Mode="Maintenance")code"));
 TEST(ProcessControlTest, ParentRightsExecuteMultiEmergencyAccess)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessMonitorHelper monitor1;
     CProcessMonitorHelper monitor2;
 
     CProcessControl control;
-    control.Initialize("");             // Needed since local instantiation
+    control.Initialize(sdv::SObjectInfo());             // Needed since local instantiation
 #ifdef _WIN32
     const std::string ssModule = "UnitTest_ProcessControlApp.exe";
 #else
@@ -244,13 +244,13 @@ Mode="Maintenance")code"));
 TEST(ProcessControlTest, ParentRightsExecuteProcessAndTerminate)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessMonitorHelper monitor;
 
     CProcessControl control;
-    control.Initialize("");             // Needed since local instantiation
+    control.Initialize(sdv::SObjectInfo());             // Needed since local instantiation
 #ifdef _WIN32
     const std::string ssModule = "UnitTest_ProcessControlApp.exe";
 #else
@@ -265,7 +265,7 @@ Mode="Maintenance")code"));
     EXPECT_NE(uiCookie, 0u);
 
     bool bTerminateResult = false;
-    std::thread thread([&]()
+    sdv::core::secure_thread thread([&]()
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(250));
             bTerminateResult = control.Terminate(tProcessID);
@@ -285,14 +285,14 @@ Mode="Maintenance")code"));
 TEST(ProcessControlTest, ParentRightsExecuteMultiTerminate)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessMonitorHelper monitor1;
     CProcessMonitorHelper monitor2;
 
     CProcessControl control;
-    control.Initialize("");             // Needed since local instantiation
+    control.Initialize(sdv::SObjectInfo());             // Needed since local instantiation
 #ifdef _WIN32
     const std::string ssModule = "UnitTest_ProcessControlApp.exe";
 #else
@@ -330,11 +330,11 @@ Mode="Maintenance")code"));
 TEST(ProcessControlTest, ReducedRightsExecuteProcessNormalShutdown)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessControl control;
-    control.Initialize("");             // Needed since local instantiation
+    control.Initialize(sdv::SObjectInfo());             // Needed since local instantiation
 #ifdef _WIN32
     const std::string ssModule = "UnitTest_ProcessControlApp.exe";
 #else
@@ -356,11 +356,11 @@ Mode="Maintenance")code"));
 TEST(ProcessControlTest, ReducedRightsExecuteProcessEmergencyExit)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessControl control;
-    control.Initialize("");             // Needed since local instantiation
+    control.Initialize(sdv::SObjectInfo());             // Needed since local instantiation
 #ifdef _WIN32
     const std::string ssModule = "UnitTest_ProcessControlApp.exe";
 #else
@@ -382,13 +382,13 @@ Mode="Maintenance")code"));
 TEST(ProcessControlTest, ReducedRightsExecuteProcessNormalShutdownWithMonitor)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessMonitorHelper monitor;
 
     CProcessControl control;
-    control.Initialize("");             // Needed since local instantiation
+    control.Initialize(sdv::SObjectInfo());             // Needed since local instantiation
 #ifdef _WIN32
     const std::string ssModule = "UnitTest_ProcessControlApp.exe";
 #else
@@ -414,13 +414,13 @@ Mode="Maintenance")code"));
 TEST(ProcessControlTest, ReducedRightsExecuteProcessEmergencyExitWithMonitor)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessMonitorHelper monitor;
 
     CProcessControl control;
-    control.Initialize("");             // Needed since local instantiation
+    control.Initialize(sdv::SObjectInfo());             // Needed since local instantiation
 #ifdef _WIN32
     const std::string ssModule = "UnitTest_ProcessControlApp.exe";
 #else
@@ -446,14 +446,14 @@ Mode="Maintenance")code"));
 TEST(ProcessControlTest, ReducedRightsExecuteMultiProcessNormalShutdown)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessMonitorHelper monitor1;
     CProcessMonitorHelper monitor2;
 
     CProcessControl control;
-    control.Initialize("");             // Needed since local instantiation
+    control.Initialize(sdv::SObjectInfo());             // Needed since local instantiation
 #ifdef _WIN32
     const std::string ssModule = "UnitTest_ProcessControlApp.exe";
 #else
@@ -491,14 +491,14 @@ Mode="Maintenance")code"));
 TEST(ProcessControlTest, ReducedRightsExecuteMultiEmergencyAccess)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessMonitorHelper monitor1;
     CProcessMonitorHelper monitor2;
 
     CProcessControl control;
-    control.Initialize("");             // Needed since local instantiation
+    control.Initialize(sdv::SObjectInfo());             // Needed since local instantiation
 #ifdef _WIN32
     const std::string ssModule = "UnitTest_ProcessControlApp.exe";
 #else
@@ -537,13 +537,13 @@ Mode="Maintenance")code"));
 TEST(ProcessControlTest, ReducedRightsExecuteProcessAndTerminate)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessMonitorHelper monitor;
 
     CProcessControl control;
-    control.Initialize("");             // Needed since local instantiation
+    control.Initialize(sdv::SObjectInfo());             // Needed since local instantiation
 #ifdef _WIN32
     const std::string ssModule = "UnitTest_ProcessControlApp.exe";
 #else
@@ -558,7 +558,7 @@ Mode="Maintenance")code"));
     EXPECT_NE(uiCookie, 0u);
 
     bool bTerminateResult = false;
-    std::thread thread([&]()
+    sdv::core::secure_thread thread([&]()
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(250));
             bTerminateResult = control.Terminate(tProcessID);
@@ -578,14 +578,14 @@ Mode="Maintenance")code"));
 TEST(ProcessControlTest, ReducedRightsExecuteMultiTerminate)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessMonitorHelper monitor1;
     CProcessMonitorHelper monitor2;
 
     CProcessControl control;
-    control.Initialize("");             // Needed since local instantiation
+    control.Initialize(sdv::SObjectInfo());             // Needed since local instantiation
 #ifdef _WIN32
     const std::string ssModule = "UnitTest_ProcessControlApp.exe";
 #else
@@ -623,15 +623,15 @@ Mode="Maintenance")code"));
 TEST(ProcessControlTest, ExecuteProcessNormalShutdownWithMultipleMonitors)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode="Maintenance")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode="Maintenance")toml"));
 
     CProcessMonitorHelper monitor1;
     CProcessMonitorHelper monitor2;
     CProcessMonitorHelper monitor3;
 
     CProcessControl control;
-    control.Initialize("");             // Needed since local instantiation
+    control.Initialize(sdv::SObjectInfo());             // Needed since local instantiation
 #ifdef _WIN32
     const std::string ssModule = "UnitTest_ProcessControlApp.exe";
 #else

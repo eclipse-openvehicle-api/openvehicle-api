@@ -15,7 +15,8 @@ void ReceiveData()
     sdv::app::CAppControl appControl;
     appControl.Startup("");
 
-    sdv::u8string config = R"(
+    sdv::SObjectInfo sObjectInfo{};
+    sObjectInfo.ssConfig = R"(
     DebugInfo = true
     SyncMode = true
     SilKitParticipantName = "can_reader"
@@ -29,7 +30,7 @@ void ReceiveData()
     )"; 
 
     CTestCanSilKit canComObj;
-    canComObj.Initialize(config.c_str());
+    canComObj.Initialize(sObjectInfo);
     canComObj.SetOperationMode(sdv::EOperationMode::configuring);
 
     CanReceiver mockRcv; 

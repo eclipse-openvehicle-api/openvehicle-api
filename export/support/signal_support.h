@@ -546,10 +546,10 @@ namespace sdv
                     if (m_ptrValue) m_ptrValue->Receive(anyVal);
                 }
 
-                CDispatchService&               m_rDispatch;                ///< Reference to the dispatch service.
-                std::function<void(any_t)> m_funcSignalReceive;        ///< Receive signal data - callback function.
-                IInterfaceAccess*               m_pSubscription = nullptr;  ///< Cookie received by adding an receive subscription.
-                std::unique_ptr<CValueAssignmentHelper>     m_ptrValue;     ///< Value to update instead of a callback function.
+                CDispatchService&                       m_rDispatch;                ///< Reference to the dispatch service.
+                std::function<void(any_t)>              m_funcSignalReceive;        ///< Receive signal data - callback function.
+                IInterfaceAccess*                       m_pSubscription = nullptr;  ///< Cookie received by adding a subscription.
+                std::unique_ptr<CValueAssignmentHelper> m_ptrValue;                 ///< Value to update instead of callback func.
             };
 
             /**

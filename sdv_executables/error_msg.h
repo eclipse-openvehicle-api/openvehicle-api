@@ -60,12 +60,22 @@ MAKE_ERROR_MSG(-134, CONFIG_SERVICE_ACCESS_ERROR, "Configuration service is not 
 MAKE_ERROR_MSG(-135, COMMUNICATION_CONTROL_SERVICE_ACCESS_ERROR, "Communication control service is not accessible.", "The communication control service service could not be accessed.")
 MAKE_ERROR_MSG(-136, APP_CONTROL_SERVICE_ACCESS_ERROR, "Application control service is not accessible.", "The application control service could not be accessed.")
 MAKE_ERROR_MSG(-170, CANNOT_FIND_OBJECT, "The object cannot be found.", "A search for an object with supplied name was not successful.")
+MAKE_ERROR_MSG(-180, CANNOT_LOAD_SETTINGS, "The system settings cannot be loaded.", "For a specific instance, the system settings cannot be loaded.")
+MAKE_ERROR_MSG(-180, CANNOT_SAVE_SETTINGS, "The system settings cannot be saved.", "For a specific instance, the system settings cannot be saved.")
+MAKE_ERROR_MSG(-181, PROCESS_LISTENER_CONFIG_ERROR, "The listener configuration contains errors.", "The listener configuration contains errors and cannot be processed.")
+MAKE_ERROR_MSG(-182, PROCESS_CONNECTION_CONFIG_ERROR, "The connection configuration contains errors.", "The connection configuration contains errors and cannot be processed.")
+MAKE_ERROR_MSG(-183, ADD_LISTENER_ERROR, "Failed to add a listener to the system settings.", "The listener configuration could not be added to the system settings. This might be caused by a duplicate listener configuration.")
+MAKE_ERROR_MSG(-184, REMOVE_LISTENER_ERROR, "Failed to remove a listener from the system settings.", "The listener configuration could not be removed from the system settings. This might be caused by a missing listener configuration.")
+MAKE_ERROR_MSG(-185, SHOW_LISTENER_ERROR, "Failed to request the listener configuration from the system settings.", "The listener configuration could not be requested. This might be caused by a missing listener configuration.")
+MAKE_ERROR_MSG(-186, ADD_CONNECTION_ERROR, "Failed to add a connection to the system settings.", "The connection configuration could not be added to the system settings. This might be caused by a duplicate connection configuration.")
+MAKE_ERROR_MSG(-187, REMOVE_CONNECTION_ERROR, "Failed to remove a connection from the system settings.", "The connection configuration could not be removed from the system settings. This might be caused by a missing connection configuration.")
+MAKE_ERROR_MSG(-188, SHOW_CONNECTION_ERROR, "Failed to request the connection configuration from the system settings.", "The connection configuration could not be requested. This might be caused by a missing connection configuration.")
 
 
 ////////// LOCAL APP CONTROL ERROR CODES ////////////
 
 MAKE_ERROR_MSG(-204, APP_CONTROL_STARTUP_ERROR, "Cannot start application control.", "Application control start was initiated, but returned an error.")
-MAKE_ERROR_MSG(-205, APP_CONTROL_START_LOOP_FAIELD, "Starting the running loop failed.", "Failed to enter the processing loop for a server application.")
+MAKE_ERROR_MSG(-205, APP_CONTROL_START_LOOP_FAILED, "Starting the running loop failed.", "Failed to enter the processing loop for a server application.")
 MAKE_ERROR_MSG(-206, APP_CONTROL_DUPLICATE_INSTANCE, "Another process with specified instance is already running.", "Another core process initiated the application control with the same instance. Only one core process per instance is allowed.")
 MAKE_ERROR_MSG(-210, APP_CONTROL_INVALID_ISOLATION_CONFIG, "An invalid isolation configuration was supplied.", "The application control configuration section contains an invalid isolation configuration.")
 MAKE_ERROR_MSG(-218, SETTING_FILE_VERSION_INVALID, "Settings file has an invalid version.", "Settings file contains an invalid/incompatible version number.")

@@ -118,7 +118,12 @@ public:
     */
     virtual bool Terminate(/*in*/ sdv::process::TProcessID tProcessID) override;
 
-  private:
+    /**
+     * @brief Enable process control access (explicitly bypass application check for testing).
+     */
+    void EnableProcessControlAccessBypass();
+  
+private:
     /**
      * @brief Monitor thread function.
      */
@@ -151,12 +156,13 @@ public:
 #else
     #error OS is not supported!
 #endif
-    mutable std::mutex            m_mtxProcesses;               ///< Access control for monitor map.
+    mutable std::mutex          m_mtxProcesses;             ///< Access control for monitor map.
     std::map<sdv::process::TProcessID, std::shared_ptr<SProcessHelper>> m_mapProcesses;   ///< Monitor map
-    uint32_t                      m_uiNextMonCookie = 1;        ///< Next monitor cookie
+    uint32_t                    m_uiNextMonCookie = 1;      ///< Next monitor cookie
     std::map<uint32_t, std::shared_ptr<SProcessHelper>> m_mapMonitors; ///< Map with monitors.
-    std::atomic_bool              m_bShutdown = false;          ///< Set to shutdown the monitor thread.
-    std::thread                   m_threadMonitor;              ///< Monitor thread.
+    std::atomic_bool            m_bShutdown = false;        ///< Set to shutdown the monitor thread.
+    sdv::core::secure_thread    m_threadMonitor;            ///< Monitor thread.
+    bool                        m_bEnableBypass = false;    ///< When set, enables process control regardless of application mode.
 };
 DEFINE_SDV_OBJECT(CProcessControl)
 

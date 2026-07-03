@@ -53,31 +53,56 @@ module sdv
         };
 
         /**
-         * @brief Connect to a remote system. Provided by the ConnectClient utility.
+         * @brief Connect to a remote system. Provided by the Connection service.
+         * @details This interface is exposed by the connection client service. The configuration is provided during instantiation
+         * of the object and is of the form:
+         * @code
+         * # Provider to use for the connection
+         * [Provider]
+         * Name = ""
+         * 
+         * # Additional channel information for the client
+         * [IpcChannel]
+         * xyz = ""
+         * @endcode
+         * 
+         * For example for shared memory:
+         * @code
+         * [Provider]
+         * Name = "DefaultSharedMemory"
+         * [IpcChannel]
+         * Name = "LISTENER_1234"
+         * @endcode
          */
         interface IClientConnect
         {
             /**
-             * @brief Connect to a remote system using the connection string to contact the system.
-             * @remarks After a successful connection, the ConnectClient utility is not needed any more.
-             * @param[in] ssConnectString Optional connection string to use for connection. If not provided, the connection will
-             * automatically get the connection ID from the app-control service (default). The connection string for a local
-             * connection can be of the form:
-             * @code
-             * [Client]
-             * Type = "local"
-             * Instance = 1234  # Optional: only use when connecting to a system with a different instance ID.
-             * @endcode
-             * And the following can be used for a remote connection:
-             * @code
-             * [Client]
-             * Type = "remote"
-             * Interface = "127.0.0.1"
-             * Port = 2000
-             * @endcode
-             * @return Returns an interface to the repository of the remote system or a NULL pointer if not found.
+             * @brief Connect to a remote system.
+             * @return Returns whether connect was successful.
              */
-            IInterfaceAccess Connect(in u8string ssConnectString) raises(XAccessDenied, XNotFound, XInvalidState, XTimeout);
+            boolean Connect() raises(XAccessDenied, XNotFound, XInvalidState, XTimeout);
+
+            /**
+             * @brief Disconnect from a connected system.
+             * @return Returns whether disconnect was successful.
+             */
+            boolean Disconnect() raises(XAccessDenied, XNotFound, XInvalidState, XTimeout);
+
+            /**
+             * @brief State of the current connection.
+             * @return Returns whether an active connection exists.
+             */
+            boolean IsConnected() const;
+
+            /**
+             * @brief Get the remote repository that is available after connection.
+             * @remarks For main, isolated and external applications, the remote repository will be automatically linked to the
+             * local repository. Hence a requests for the repository is not needed. For all other applications, access must be
+             * explicitly acquired through this interface.
+             * @return Interface to the remote repository if a successful connection is established. The interface is valid until
+             * disconnect is called or the client connection service is terminated.
+             */
+            IInterfaceAccess GetRemoteRepository();
         };
 
         /**

@@ -25,7 +25,7 @@ add_executable(sdv_control
     "startup_shutdown.h"
     "startup_shutdown.cpp"
     "context.h"
-    "print_table.h" "start_stop_service.cpp" "start_stop_service.h" "installation.h" "installation.cpp")
+    "print_table.h" "start_stop_service.cpp" "start_stop_service.h" "installation.h" "installation.cpp" "connection_config.h" "connection_config.cpp")
 
 target_link_libraries(sdv_control ${CMAKE_DL_LIBS})
 

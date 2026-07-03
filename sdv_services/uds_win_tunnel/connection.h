@@ -21,10 +21,12 @@
 #include <WinSock2.h>
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <mutex>
 #include <memory>
 #include <thread>
 #include <vector>
+#include <cstring>
 
 #include "../sdv_services/uds_win_sockets/connection.h" // existing AF_UNIX transport: CWinsockConnection
 
@@ -69,7 +71,7 @@ public:
     /**
      * @brief Destructor.
      */
-    virtual ~CWinTunnelConnection() = default;
+    virtual ~CWinTunnelConnection();
 
     BEGIN_SDV_INTERFACE_MAP()
         SDV_INTERFACE_ENTRY(sdv::ipc::IDataSend)
@@ -153,15 +155,19 @@ public:
     // Helpers
     void SetChannelId(uint16_t channelId) { m_ChannelId = channelId; }
     uint16_t GetChannelId() const noexcept { return m_ChannelId; }
+    void SetWatchDogRemoveCallback(std::function<void(const void*)> callback);
 
 private:
     std::shared_ptr<CWinsockConnection> m_Transport; ///< shared physical tunnel port
     uint16_t m_ChannelId{0};                  ///< default logical channel id
 
     // Upper layer callbacks (original VAPI receiver)
-    sdv::ipc::IDataReceiveCallback*   m_pUpperReceiver{nullptr};
+    sdv::ipc::IDataReceiveCallback*   m_pUpperRecv{nullptr};
     sdv::ipc::IConnectEventCallback*  m_pUpperEvent{nullptr};
     mutable std::mutex                m_CallbackMtx;
+    std::mutex                        m_WatchdogMtx;
+    std::function<void(const void*)>  m_WatchdogRemoveCallback;
+    std::atomic<bool>                 m_DestroyObjectCalled{false};
 };
 
 #endif // UDS_WIN_TUNNEL_CONNECTION_H
