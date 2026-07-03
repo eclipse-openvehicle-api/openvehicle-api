@@ -35,12 +35,15 @@ module sdv
                                                 ///< identification must be similar to the following example:
                                                 ///< @code
                                                 ///< [Provider]
-                                                ///< Name = "DefaultSharedMemoryChannelControl"
+                                                ///< Name = "DefaultSharedMemory"
                                                 ///< @endcode
         };
 
         /**
-         * @brief Interface for creating an IPC connection, which other participants can connect to via IChannelAccess
+         * @brief Interface for creating an IPC connection, which other participants can connect to via IChannelAccess.
+         * @attention The channel control object should allow the creation of channels with a fixed configuration (e.g. a provided
+         * name or a port), which is necessary for the creation of a listener. It also should allow dynamic channel creation (e.g.
+         * automatic name or port-number) to create additional connections between components.
          */
         interface ICreateEndpoint
         {

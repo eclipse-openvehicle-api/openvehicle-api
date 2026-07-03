@@ -36,13 +36,13 @@ public:
         m_uiInstanceID(uiInstanceID)
     {
         // Initialize system
-        std::string ssStartup = R"code(
+        std::string ssStartup = R"toml(
 [LogHandler]
 ViewFilter = "Fatal"
 
 [Application]
 Mode = "Maintenance"
-)code";
+)toml";
         if (uiInstanceID) ssStartup += "Instance = " + std::to_string(uiInstanceID) + "\n";
         Startup(ssStartup);
 

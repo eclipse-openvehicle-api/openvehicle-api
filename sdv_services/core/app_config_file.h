@@ -266,6 +266,9 @@ public:
      */
     void RemoveModule(const std::filesystem::path& rpathModule);
 
+    /**
+     * @brief Merge result enum.
+     */
     enum class EMergeResult
     {
         successful,

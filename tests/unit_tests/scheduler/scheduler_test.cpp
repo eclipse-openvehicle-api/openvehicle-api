@@ -15,7 +15,7 @@
 #include <gtest/gtest.h>
 #include <chrono>
 #include "../../../global/process_watchdog.h"
-#include "../../../global/scheduler/scheduler.cpp"
+#include "../../../global/scheduler/scheduler.h"
 
 #if defined(_WIN32) && defined(_UNICODE)
 extern "C" int wmain(int argc, wchar_t* argv[])
@@ -31,7 +31,7 @@ extern "C" int main(int argc, char* argv[])
 
 TEST(TaskSchedulerTest, Construction)
 {
-    CTaskScheduler scheduler(2);
+    CTaskScheduler<std::thread, 2> scheduler;
     EXPECT_EQ(scheduler.GetThreadCount(), 2);
     EXPECT_EQ(scheduler.GetBusyThreadCount(), 0);
     EXPECT_EQ(scheduler.GetIdleThreadCount(), 2);
@@ -50,7 +50,7 @@ TEST(TaskSchedulerTest, Construction)
 
 TEST(TaskSchedulerTest, PreallocatedConcurrencyExecution)
 {
-    CTaskScheduler scheduler(4);
+    CTaskScheduler<std::thread, 4> scheduler;
 
     // Schedule tasks onto 4 threads
     std::atomic_size_t nExecuted = 0;
@@ -74,7 +74,7 @@ TEST(TaskSchedulerTest, PreallocatedConcurrencyExecution)
 
 TEST(TaskSchedulerTest, AllocateConcurrency)
 {
-    CTaskScheduler scheduler(2);
+    CTaskScheduler<std::thread, 2> scheduler;
 
     // Schedule 4 tasks onto two threads pre-allocated and two just-in-time-allocated threads
     std::atomic_size_t nExecuted = 0;
@@ -98,7 +98,7 @@ TEST(TaskSchedulerTest, AllocateConcurrency)
 
 TEST(TaskSchedulerTest, ConcurrencyAndTaskQueueing)
 {
-    CTaskScheduler scheduler(2, 2);
+    CTaskScheduler<std::thread, 2, 2> scheduler;
 
     // Schedule 4 tasks onto two threads
     std::atomic_size_t nExecuted = 0;
@@ -122,7 +122,7 @@ TEST(TaskSchedulerTest, ConcurrencyAndTaskQueueing)
 
 TEST(TaskSchedulerTest, ConcurrencyAndDisallowTaskQueueing)
 {
-    CTaskScheduler scheduler(2, 2);
+    CTaskScheduler<std::thread, 2, 2> scheduler;
 
     // Schedule 4 tasks onto two threads.. Disallow the second task to be queued and the fourth task to be queued.
     std::atomic_size_t nExecuted = 0;
@@ -133,7 +133,8 @@ TEST(TaskSchedulerTest, ConcurrencyAndDisallowTaskQueueing)
                 while (bWait)
                     std::this_thread::sleep_for(std::chrono::milliseconds(100));
                 nExecuted++;
-            }, (n % 2 ? CTaskScheduler::EScheduleFlags::no_queue: CTaskScheduler::EScheduleFlags::normal));
+            },
+            (n % 2 ? EScheduleFlags::no_queue : EScheduleFlags::normal));
     bWait = false;
 
     // Wait until all threads are finalized
@@ -146,7 +147,7 @@ TEST(TaskSchedulerTest, ConcurrencyAndDisallowTaskQueueing)
 
 TEST(TaskSchedulerTest, ConcurrencyAndPrioritizedTaskQueueing)
 {
-    CTaskScheduler scheduler(2, 2);
+    CTaskScheduler<std::thread, 2, 2> scheduler;
 
     // Schedule 5 tasks onto two threads.. Queue the fifth task with high priority.
     std::atomic_size_t nExecuted = 0;
@@ -169,7 +170,7 @@ TEST(TaskSchedulerTest, ConcurrencyAndPrioritizedTaskQueueing)
                 std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
                 nExecuted++;
-            }, (n == 4 ? CTaskScheduler::EScheduleFlags::priority : CTaskScheduler::EScheduleFlags::normal));
+            }, (n == 4 ? EScheduleFlags::priority : EScheduleFlags::normal));
     bWait = false;
 
     // Wait until all threads are finalized

@@ -44,14 +44,18 @@ public:
      */
     virtual void SetUp()
     {
-        bool bRet = Startup(R"code(
+        bool bRet = Startup(R"toml(
 [LogHandler]
 ViewFilter = "Fatal"
 
 [Application]
 Mode = "Main"
 Instance = 2005
-)code");
+
+[Console]
+Report = "Silent"
+RedirectMon = true
+)toml");
         if (!bRet)
             std::cout << "Failed to start the application for instance 2005." << std::endl;
     }

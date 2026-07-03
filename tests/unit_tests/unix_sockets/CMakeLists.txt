@@ -33,7 +33,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         ${CMAKE_THREAD_LIBS_INIT} 
         stdc++fs ${CMAKE_DL_LIBS} 
         rt
-        uds_unix_sockets
+        uds_unix_sockets_static
     )
 else()
     target_link_libraries(UnitTest_UnixSocketConnectTests
@@ -41,7 +41,7 @@ else()
         Ws2_32 
         Winmm 
         Rpcrt4.lib
-        uds_unix_sockets
+        uds_unix_sockets_static
     )
 endif()
 
@@ -50,13 +50,11 @@ add_test(NAME UnitTest_UnixSocketConnectTests
 
 add_dependencies(UnitTest_UnixSocketConnectTests dependency_sdv_components)
 
-if ((NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (NOT WIN32))
 add_custom_command(TARGET UnitTest_UnixSocketConnectTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env TEST_EXECUTION_MODE=CMake
             "$<TARGET_FILE:UnitTest_UnixSocketConnectTests>"
             --gtest_output=xml:${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/UnitTest_UnixSocketConnectTests.xml
     VERBATIM
 )
-endif()
 
 endif()

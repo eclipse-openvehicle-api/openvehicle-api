@@ -1,2 +1,16 @@
-# Location of the SDV core library
-directory = "../../bin"
+# This file is used to overwrite the location of the SDV Core Library regardless of the values of Vehicle API environment variables.
+# For test and examples of the SDV Vehicle API Framework, the default location is the binary directory of the target builds. This
+# file redirects the location to the binary folder of the SDV Vehicle API Core Framework.
+# The environment variables will be updated for the application and all child-applications when using the core loader. The
+# locations the environment variables will direct to are:
+# - SDV_FRAMEWORK_RUNTIME           "../../bin"
+# - SDV_COMPONENT_INSTALL           "../../bin"
+# - SDV_FRAMEWORK_DEV_TOOLS         "../../bin"
+# - SDV_FRAMEWORK_DEV_INCLUDE       "../../../../export"
+
+[CoreLocation]
+Version = 100
+Runtime = "../../bin"
+Install = "../../bin"
+DevTools = "../../bin"
+Include = "../../../../export"

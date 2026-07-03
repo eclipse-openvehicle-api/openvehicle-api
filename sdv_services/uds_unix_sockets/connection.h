@@ -22,6 +22,8 @@
 #include <atomic>
 #include <cstdint>
 #include <condition_variable>
+#include <cstring>
+#include <functional>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -98,6 +100,9 @@ public:
     /** @brief Destroy object (IObjectDestroy). */
     void DestroyObject() override;
 
+    /** @brief Register callback used to remove this connection from manager watchdog storage. */
+    void SetWatchDogRemoveCallback(std::function<void(const void*)> callback);
+
     /** @brief Set state and notify listeners (callback-safe). */
     void SetConnectState(sdv::ipc::EConnectState eConnectState);
 
@@ -153,21 +158,27 @@ public:
         SMsgHdr GetMsgHdr() const
         {
             if (GetSize() < sizeof(SMsgHdr)) return SMsgHdr{0, EMsgType::connect_term};
-            return *reinterpret_cast<const SMsgHdr*>(GetData());
+            SMsgHdr hdr{};
+            std::memcpy(&hdr, GetData(), sizeof(SMsgHdr));
+            return hdr;
         }
 
         /** @return SDV connect header (or default if undersized). */
         SConnectMsg GetConnectHdr() const
         {
             if (GetSize() < sizeof(SConnectMsg)) return SConnectMsg{};
-            return *reinterpret_cast<const SConnectMsg*>(GetData());
+            SConnectMsg hdr{};
+            std::memcpy(&hdr, GetData(), sizeof(SConnectMsg));
+            return hdr;
         }
 
         /** @return SDV fragmented header (or default if undersized). */
         SFragmentedMsgHdr GetFragmentedHdr() const
         {
             if (GetSize() < sizeof(SFragmentedMsgHdr)) return SFragmentedMsgHdr{};
-            return *reinterpret_cast<const SFragmentedMsgHdr*>(GetData());
+            SFragmentedMsgHdr hdr{};
+            std::memcpy(&hdr, GetData(), sizeof(SFragmentedMsgHdr));
+            return hdr;
         }
 
         /** @return true if the SDV envelope is well-formed. */
@@ -252,6 +263,10 @@ public:
      * @brief Receive loop: read UDS frames and dispatch to the SDV state machine.
      */
     void ReceiveMessages();
+
+    bool SendConnectMessage(EMsgType type);
+
+    bool SendControlMessage(EMsgType type);
 
     /**
      * @brief Handle an incoming sync_request message.
@@ -360,6 +375,10 @@ public:
      */
     void StopThreadsAndCloseSockets(bool unlinkPath);
 
+    void WaitForClientEnd();
+
+    void CloseClientSocketOnly();
+
 private:
     //Transport state
     int         m_Fd                     { -1 };  ///< Active connection FD.
@@ -370,19 +389,24 @@ private:
     //Threads & control
     std::atomic<bool> m_StopReceiveThread { false };
     std::atomic<bool> m_StopConnectThread { false };
-    std::thread       m_ReceiveThread;
-    std::thread       m_ConnectThread;
+    sdv::core::secure_thread               m_ReceiveThread;
+    sdv::core::secure_thread               m_ConnectThread;
 
     //State & synchronization
     std::condition_variable                m_StateCv;
     std::atomic<sdv::ipc::EConnectState>   m_eConnectState { sdv::ipc::EConnectState::uninitialized };
+    std::atomic<bool>                       m_bConnectedOnce { false }; ///< Latched true once a connection was established.
     sdv::ipc::IDataReceiveCallback*        m_pReceiver { nullptr };
     sdv::ipc::IConnectEventCallback*       m_pEvent    { nullptr };
     std::mutex                             m_MtxConnect;
-    std::condition_variable                m_CvConnect;
+    std::condition_variable                m_cvConnect;
     std::mutex                             m_StateMtx;  ///< Protects receiver/event assignment.
     std::list<SEventCallback>              m_lstEventCallbacks;  ///< List containing event callbacks
     std::shared_mutex                      m_mtxEventCallbacks;  ///< Protect access to callback list
+    std::mutex                             m_WatchdogMtx;
+    std::function<void(const void*)>       m_WatchdogRemoveCallback;
+    std::atomic<bool>                      m_DestroyObjectCalled { false };
+    std::atomic<bool>                      m_CancelWait { false };
 
     //TX synchronization
     std::mutex m_SendMtx;

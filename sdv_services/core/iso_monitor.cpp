@@ -23,11 +23,11 @@ CIsoMonitor::~CIsoMonitor()
     GetAppControl().RequestShutdown();
 }
 
-void CIsoMonitor::Initialize(/*in*/ const sdv::u8string& ssObjectConfig)
+void CIsoMonitor::Initialize(/*in*/ const sdv::SObjectInfo& sObjectInfo)
 {
     if (m_pObjectControl)
     {
-        m_pObjectControl->Initialize(ssObjectConfig);
+        m_pObjectControl->Initialize(sObjectInfo);
         m_eObjectState = m_pObjectControl->GetObjectState();
     }
     else

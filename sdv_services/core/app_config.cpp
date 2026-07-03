@@ -33,61 +33,6 @@ CAppConfig& GetAppConfig()
     return app_config;
 }
 
-// GetCoreDirectory might have been redirected for unit tests.
-#ifndef GetCoreDirectory
-std::filesystem::path GetCoreDirectory()
-{
-    static std::filesystem::path pathCoreDir;
-    if (!pathCoreDir.empty())
-        return pathCoreDir;
-
-#ifdef _WIN32
-    // Windows specific
-    std::wstring ssPath(32768, '\0');
-
-    MEMORY_BASIC_INFORMATION sMemInfo{};
-    if (!VirtualQuery(&pathCoreDir, &sMemInfo, sizeof(sMemInfo)))
-        return pathCoreDir;
-    DWORD dwLength = GetModuleFileNameW(reinterpret_cast<HINSTANCE>(sMemInfo.AllocationBase), ssPath.data(), 32767);
-    ssPath.resize(dwLength);
-    pathCoreDir = std::filesystem::path(ssPath);
-    return pathCoreDir.remove_filename();
-#elif __linux__
-    // Read the maps file. It contains all loaded SOs.
-    std::ifstream fstream("/proc/self/maps");
-    std::stringstream sstreamMap;
-    sstreamMap << fstream.rdbuf();
-    std::string ssMap = sstreamMap.str();
-    if (ssMap.empty())
-        return pathCoreDir; // Some error
-
-    // Find the "core_services.sdv"
-    size_t nPos = ssMap.find("core_services.sdv");
-    if (nPos == std::string::npos)
-        return pathCoreDir;
-    size_t nEnd = nPos;
-
-    // Find the start... runbackwards until the beginning of the line and remember the earliest occurance of a slash
-    size_t nBegin = 0;
-    while (nPos && ssMap[nPos] != '\n')
-    {
-        if (ssMap[nPos] == '/')
-            nBegin = nPos;
-        nPos--;
-    }
-    if (!nBegin)
-        nBegin = nPos;
-
-    // Return the path
-    pathCoreDir = ssMap.substr(nBegin, nEnd - nBegin);
-
-    return pathCoreDir;
-#else
-    #error The OS is not supported!
-#endif
-}
-#endif // !defined GetCoreDirectory
-
 bool CAppConfig::LoadInstallationManifests()
 {
     // Check for allowance
@@ -96,13 +41,14 @@ bool CAppConfig::LoadInstallationManifests()
     {
     case sdv::app::EAppContext::main:
     case sdv::app::EAppContext::isolated:
+    case sdv::app::EAppContext::external:
     case sdv::app::EAppContext::maintenance:
         bServerApp = true;
     default:
         break;
     }
 
-    std::filesystem::path pathCore = GetCoreDirectory();
+    std::filesystem::path pathCore = GetAppSettings().GetFrameworkDir();
     std::filesystem::path pathExe = GetExecDirectory();
     std::filesystem::path pathInstall = GetAppSettings().GetInstallDir();
 
@@ -155,8 +101,8 @@ void CAppConfig::UnloadInstallatonManifests()
 
 bool CAppConfig::LoadAppConfigs()
 {
-    // Isolated applications do not load configurations
-    if (GetAppSettings().IsIsolatedApplication()) return false;
+    // Isolated and external applications do not load configurations
+    if (GetAppSettings().IsIsolatedApplication() || GetAppSettings().IsExternalApplication()) return false;
 
     // When running as server application, load the system configurations
     if (GetAppSettings().IsMainApplication() || GetAppSettings().IsMaintenanceApplication())
@@ -243,6 +189,7 @@ sdv::core::EConfigProcessResult CAppConfig::ProcessConfig(/*in*/ const sdv::u8st
     {
     case sdv::app::EAppContext::main:
     case sdv::app::EAppContext::isolated:
+    case sdv::app::EAppContext::external:
     case sdv::app::EAppContext::maintenance:
         return sdv::core::EConfigProcessResult::failed;
     default:
@@ -275,7 +222,7 @@ sdv::core::EConfigProcessResult CAppConfig::ProcessConfig(/*in*/ const sdv::u8st
     //size_t nLoadable = 0;
     //size_t nNotLoadable = 0;
     //if (!GetAppSettings().IsMainApplication() && !GetAppSettings().IsIsolatedApplication() &&
-    //    !GetAppSettings().IsMaintenanceApplication())
+    //    !GetAppSettings().IsExternalApplication() && !GetAppSettings().IsMaintenanceApplication())
     //{
     //    // Load all modules in the component section
     //    auto ptrComponents = parser.Root().Direct("Component");
@@ -394,7 +341,7 @@ sdv::core::EConfigProcessResult CAppConfig::ProcessConfig(/*in*/ const sdv::u8st
     //            // loaded; get the module ID.
     //            sdv::core::TObjectID tObjectID = 0;
     //            if (!GetAppSettings().IsMainApplication() && !GetAppSettings().IsIsolatedApplication() &&
-    //                !GetAppSettings().IsMaintenanceApplication())
+    //                !GetAppSettings().IsExternalApplication() && !GetAppSettings().IsMaintenanceApplication())
     //            {
     //                auto itModule = mapModules.find(pathModule);
     //                if (itModule == mapModules.end()) continue; // Module was not loaded before...
@@ -880,6 +827,7 @@ std::filesystem::path CAppConfig::FindInstalledModule(const std::filesystem::pat
     {
     case sdv::app::EAppContext::main:
     case sdv::app::EAppContext::isolated:
+    case sdv::app::EAppContext::external:
     case sdv::app::EAppContext::maintenance:
         bServerApp = true;
     default:
@@ -914,6 +862,7 @@ std::string CAppConfig::FindInstalledModuleManifest(const std::filesystem::path&
     {
     case sdv::app::EAppContext::main:
     case sdv::app::EAppContext::isolated:
+    case sdv::app::EAppContext::external:
     case sdv::app::EAppContext::maintenance:
         bServerApp = true;
     default:
@@ -948,6 +897,7 @@ std::optional<sdv::SClassInfo> CAppConfig::FindInstalledComponent(const std::str
     {
     case sdv::app::EAppContext::main:
     case sdv::app::EAppContext::isolated:
+    case sdv::app::EAppContext::external:
     case sdv::app::EAppContext::maintenance:
         bServerApp = true;
     default:
@@ -980,6 +930,7 @@ bool CAppConfig::RemoveFromConfig(const CInstallManifest& /*rManifest*/)
     //{
     //case sdv::app::EAppContext::main:
     //case sdv::app::EAppContext::isolated:
+    //case sdv::app::EAppContext::external:
     //case sdv::app::EAppContext::maintenance:
     //    bServerApp = true;
     //default:
@@ -1043,7 +994,7 @@ void CAppConfig::AddCurrentPath()
     if (!m_lstSearchPaths.empty()) return;
 
     // Add the core directory
-    std::filesystem::path pathCoreDir = GetCoreDirectory().lexically_normal();
+    std::filesystem::path pathCoreDir = GetAppSettings().GetFrameworkDir().lexically_normal();
     m_lstSearchPaths.push_back(pathCoreDir / "config/");
 
     // Add the exe dir

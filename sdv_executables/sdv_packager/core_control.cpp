@@ -24,4 +24,5 @@
 #include "../../sdv_services/core/toml_parser/character_reader_utf_8.cpp"
 #include "../../sdv_services/core/toml_parser/miscellaneous.cpp"
 #include "../../sdv_services/core/toml_parser/code_snippet.cpp"
+#include "../../sdv_services/core/toml_parser/parser_node_indexer.cpp"
 

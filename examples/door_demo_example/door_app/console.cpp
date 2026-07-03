@@ -128,7 +128,6 @@ void CConsole::PrintHeader(const uint32_t numberOfDoors)
         PrintText(g_sTitle, title.c_str());
         PrintText(g_sControlDescription, "Press 'X' to quit; Doors are toggled automatically");
     }
-
 }
 
 bool CConsole::PrepareDataConsumers()
@@ -205,8 +204,7 @@ void CConsole::ResetSignals()
     // Set the cursor position at the end
     SetCursorPos(g_sCursor);
 
-    // Registrate for the vehicle device & basic service of the front left door. Front left door mzust exist, the others are optional
-    auto vehicleDevice =
+     auto vehicleDevice =
         sdv::core::GetObject("Vehicle.Body.Door.Axle._01.Left_Device").GetInterface < vss::Vehicle::Body::Door::Axle::_01 ::LeftDevice::IVSS_ReadIsOpen > ();
     if (vehicleDevice)
         vehicleDevice->UnregisterIsOpenEvent(dynamic_cast<vss::Vehicle::Body::Door::Axle::_01::LeftDevice::IVSS_WriteIsOpen_Event*> (this));
@@ -254,7 +252,7 @@ void CConsole::StartUpdateDataThread()
     m_bThreadStarted = true;
 
     m_bRunning = true;
-    m_threadReadTxSignals = std::thread(&CConsole::UpdateDataThreadFunc, this);
+    m_threadReadTxSignals = sdv::core::secure_thread(&CConsole::UpdateDataThreadFunc, this);
 }
 
 void CConsole::StopUpdateDataThread()
@@ -299,21 +297,21 @@ bool CConsole::PrepareDataConsumersForStandAlone()
 {
     // Subscribe for the door and if available get TX signal. Either both exists or none of them
     sdv::core::CDispatchService dispatch;
-    m_SignalFrontLeftDoorIsOpen = dispatch.Subscribe(doors::dsLeftDoorIsOpen01, [&](sdv::any_t value) {  CallbackFrontLeftDoorIsOpen(value); });
+    m_SignalFrontLeftDoorIsOpen = dispatch.Subscribe(frontdoors::dsLeftDoorIsOpen01, [&](sdv::any_t value) {  CallbackFrontLeftDoorIsOpen(value); });
     if(m_SignalFrontLeftDoorIsOpen)
-        m_SignalFrontLeftDoorIsLocked = dispatch.RegisterTxSignal(doors::dsLeftLatch01, 0);
+        m_SignalFrontLeftDoorIsLocked = dispatch.RegisterTxSignal(frontdoors::dsLeftLatch01, 0);
 
-    m_SignalFrontRightDoorIsOpen = dispatch.Subscribe(doors::dsRightDoorIsOpen01, [&](sdv::any_t value) { CallbackFrontRightDoorIsOpen(value); });
+    m_SignalFrontRightDoorIsOpen = dispatch.Subscribe(frontdoors::dsRightDoorIsOpen01, [&](sdv::any_t value) { CallbackFrontRightDoorIsOpen(value); });
     if(m_SignalFrontRightDoorIsOpen)
-        m_SignalFrontRightDoorIsLocked = dispatch.RegisterTxSignal(doors::dsRightLatch01, 0);
+        m_SignalFrontRightDoorIsLocked = dispatch.RegisterTxSignal(frontdoors::dsRightLatch01, 0);
 
-    m_SignalRearLeftDoorIsOpen = dispatch.Subscribe(doors::dsLeftDoorIsOpen02, [&](sdv::any_t value) {CallbackRearLeftDoorIsOpen(value); });
+    m_SignalRearLeftDoorIsOpen = dispatch.Subscribe(reardoors::dsLeftDoorIsOpen02, [&](sdv::any_t value) {CallbackRearLeftDoorIsOpen(value); });
     if(m_SignalRearLeftDoorIsOpen)
-        m_SignalRearLeftDoorIsLocked = dispatch.RegisterTxSignal(doors::dsLeftLatch02, 0);
+        m_SignalRearLeftDoorIsLocked = dispatch.RegisterTxSignal(reardoors::dsLeftLatch02, 0);
 
-    m_SignalRearRightDoorIsOpen = dispatch.Subscribe(doors::dsRightDoorIsOpen02, [&](sdv::any_t value) { CallbackRearRightDoorIsOpen(value); });
+    m_SignalRearRightDoorIsOpen = dispatch.Subscribe(reardoors::dsRightDoorIsOpen02, [&](sdv::any_t value) { CallbackRearRightDoorIsOpen(value); });
     if(m_SignalRearRightDoorIsOpen)
-        m_SignalRearRightDoorIsLocked = dispatch.RegisterTxSignal(doors::dsRightLatch02, 0);
+        m_SignalRearRightDoorIsLocked = dispatch.RegisterTxSignal(reardoors::dsRightLatch02, 0);
 
     // Validate: Either both exists or none of them
     if (m_SignalFrontLeftDoorIsOpen != m_SignalFrontLeftDoorIsLocked)
@@ -337,7 +335,7 @@ bool CConsole::PrepareDataConsumersForStandAlone()
         return false;
     }
 
-    // Registrate for the vehicle device & basic service of the front left door. Front left door mzust exist, the others are optional
+    // Register for the vehicle device & basic service of the front left door. Front left door must exist, the others are optional
     auto vehicleDevice = sdv::core::GetObject("Vehicle.Body.Door.Axle._01.Left_Device").GetInterface<vss::Vehicle::Body::Door::Axle::_01::LeftDevice::IVSS_ReadIsOpen>();
     if (!vehicleDevice)
     {

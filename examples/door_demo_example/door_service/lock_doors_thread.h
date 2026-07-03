@@ -40,7 +40,7 @@ public:
         m_timeIn100MilliSeconds = timeSpan;
         m_counter = 0;
         m_running = true;
-        m_thread = std::thread(&LockDoorsThread::run, this);
+        m_thread = sdv::core::secure_thread(&LockDoorsThread::run, this);
     }
 
     /**
@@ -94,11 +94,11 @@ public:
         m_running = false;
     }
 
-    std::function<void()> m_callback; ///< callback function
-    std::atomic<bool> m_running;      ///< status if loop is running
-    std::thread m_thread;             ///< timer  thread
-    uint32_t m_counter;               ///< loop counter
-    uint32_t m_timeIn100MilliSeconds; ///< time before the callback will be executed
+    std::function<void()>       m_callback;                 ///< callback function
+    std::atomic<bool>           m_running;                  ///< status if loop is running
+    sdv::core::secure_thread    m_thread;                   ///< timer  thread
+    uint32_t                    m_counter;                  ///< loop counter
+    uint32_t                    m_timeIn100MilliSeconds;    ///< time before the callback will be executed
 };
 
 #endif // !define LOCK_DOORS_THREAD_H

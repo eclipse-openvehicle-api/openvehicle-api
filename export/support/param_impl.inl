@@ -412,13 +412,14 @@ namespace sdv
 
         template <typename TVar>
         template <typename... TInfoConstruct>
-        inline CParamValue<TVar>::CParamValue(TVar& rtVar, bool bLockable, bool bAutoDirty, TInfoConstruct... tConstruct) :
+        inline CParamValue<TVar>::CParamValue(TVar& rtVar, bool bReadOnly, bool bLockable, bool bAutoDirty,
+            TInfoConstruct... tConstruct) :
             CParamGuardian(bLockable, bAutoDirty, rtVar, tConstruct...), m_rtVar(rtVar)
         {
             // Assign the default value
             if constexpr (!CSdvParamInfo::TypeIsReadOnly<TVar>())
             {
-                m_rtVar = DefaultVal().get<TVar>();
+                if (!bReadOnly) m_rtVar = DefaultVal().get<TVar>();
                 UpdateDirty(DefaultVal());
                 ResetDirty();
             }
@@ -678,10 +679,10 @@ namespace sdv
     }
 
     template <typename TVar, typename... TConstruct>
-    inline std::shared_ptr<CSdvParamInfo> CSdvParamMap::RegisterParameter(TVar& rtVar, bool bLockable, bool bAutoDirty,
-        TConstruct... tConstruct)
+    inline std::shared_ptr<CSdvParamInfo> CSdvParamMap::RegisterParameter(TVar& rtVar, bool bReadOnly, bool bLockable,
+        bool bAutoDirty, TConstruct... tConstruct)
     {
-        auto ptrParam = std::make_shared<internal::CParamValue<TVar>>(rtVar, bLockable, bAutoDirty, tConstruct...);
+        auto ptrParam = std::make_shared<internal::CParamValue<TVar>>(rtVar, bReadOnly, bLockable, bAutoDirty, tConstruct...);
         m_vecParamMapRegistration.push_back(SParamRegistration(ptrParam));
         return ptrParam;
     }

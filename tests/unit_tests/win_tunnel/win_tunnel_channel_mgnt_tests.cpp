@@ -76,6 +76,12 @@ inline std::string Unique(const char* prefix)
     return MakeShortUdsPath((std::string(prefix) + "_" + RandomHex() + ".sock").c_str());
 }
 
+inline std::string UniqueTunnel()
+{
+    return "t_" + RandomHex();
+}
+
+
 inline void SpinUntilServerArmed(sdv::ipc::IConnect* server)
 {
     using namespace std::chrono;
@@ -126,8 +132,10 @@ public:
     bool WaitForData(uint32_t ms = 2000)
     {
         std::unique_lock<std::mutex> lk(m_mtx);
-        return m_cv.wait_for(lk, std::chrono::milliseconds(ms),
-                             [&]{ return m_has; });
+        bool bRet = m_has || m_cv.wait_for(lk, std::chrono::milliseconds(ms),
+                             [&]{ return m_has ? true : false; });
+        if (bRet) m_has = false;
+        return bRet;
     }
 
     sdv::sequence<sdv::pointer<uint8_t>> Data()
@@ -141,33 +149,34 @@ private:
     std::condition_variable m_cv;
     sdv::ipc::EConnectState m_state{sdv::ipc::EConnectState::uninitialized};
     sdv::sequence<sdv::pointer<uint8_t>> m_last;
-    bool m_has{false};
+    std::atomic_bool m_has{false};
 };
 
-// Helper to create server + client
-struct TunnelPair
+struct EndpointClientPair
 {
-    sdv::TObjectPtr serverObj;
-    sdv::ipc::IConnect* server = nullptr;
-
+    sdv::ipc::IConnect* server = nullptr;  // from ep.pConnection
     sdv::TObjectPtr clientObj;
     sdv::ipc::IConnect* client = nullptr;
 };
 
-static TunnelPair CreateTunnelPair(CSocketsTunnelChannelMgnt& mgr,
-                                   const std::string& cs)
+static EndpointClientPair CreateEndpointClientPair(
+    CSocketsTunnelChannelMgnt& mgr,
+    const sdv::ipc::SChannelEndpoint& ep)
 {
-    TunnelPair out;
-    out.serverObj = mgr.Access(cs);
-    out.server    = out.serverObj ?
-        out.serverObj.GetInterface<sdv::ipc::IConnect>() : nullptr;
+    EndpointClientPair out;
 
-    out.clientObj = mgr.Access(cs);
-    out.client    = out.clientObj ?
-        out.clientObj.GetInterface<sdv::ipc::IConnect>() : nullptr;
+    out.server = ep.pConnection
+        ? ep.pConnection->GetInterface<sdv::ipc::IConnect>()
+        : nullptr;
+
+    out.clientObj = mgr.Access(ep.ssConnectString);
+    out.client = out.clientObj
+        ? out.clientObj.GetInterface<sdv::ipc::IConnect>()
+        : nullptr;
 
     return out;
 }
+
 
 // TESTS
 // Manager instantiate + lifecycle
@@ -178,7 +187,7 @@ TEST(WinTunnelChannelMgnt, InstantiateAndLifecycle)
 
     CSocketsTunnelChannelMgnt mgr;
 
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     EXPECT_EQ(mgr.GetObjectState(), sdv::EObjectState::initialized);
 
     mgr.SetOperationMode(sdv::EOperationMode::configuring);
@@ -194,23 +203,24 @@ TEST(WinTunnelChannelMgnt, InstantiateAndLifecycle)
 }
 
 // Basic connect/disconnect using manager (server + client)
+
 TEST(WinTunnelChannelMgnt, BasicConnectDisconnect)
 {
     sdv::app::CAppControl app;
     ASSERT_TRUE(app.Startup(""));
-
     app.SetRunningMode();
+
     CSocketsTunnelChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
-    const std::string uds = Unique("tunnel_mgr_basic");
-    const std::string cs = "proto=tunnel;path=" + uds + ";";
+    const std::string tunnel = "t_" + RandomHex();
+    const std::string cs = "proto=tunnel;path=" + Unique("tunnel_mgr_basic") + ";tunnel=" + tunnel + ";";
 
     auto ep = mgr.CreateEndpoint(cs);
     ASSERT_FALSE(ep.ssConnectString.empty());
 
-    auto pair = CreateTunnelPair(mgr, ep.ssConnectString);
+    auto pair = CreateEndpointClientPair(mgr, ep);
     ASSERT_NE(pair.server, nullptr);
     ASSERT_NE(pair.client, nullptr);
 
@@ -232,6 +242,7 @@ TEST(WinTunnelChannelMgnt, BasicConnectDisconnect)
 }
 
 // Simple hello (header stripped)
+
 TEST(WinTunnelChannelMgnt, DataPath_SimpleHello_ViaManager)
 {
     sdv::app::CAppControl app;
@@ -239,14 +250,16 @@ TEST(WinTunnelChannelMgnt, DataPath_SimpleHello_ViaManager)
     app.SetRunningMode();
 
     CSocketsTunnelChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
-    const std::string cs = "proto=tunnel;path=" + Unique("hello_mgr") + ";";
+    const std::string tunnel = "t_" + RandomHex();
+    const std::string cs = "proto=tunnel;path=" + Unique("hello_mgr") + ";tunnel=" + tunnel + ";";
 
     auto ep = mgr.CreateEndpoint(cs);
-    auto pair = CreateTunnelPair(mgr, ep.ssConnectString);
+    ASSERT_FALSE(ep.ssConnectString.empty());
 
+    auto pair = CreateEndpointClientPair(mgr, ep);
     ASSERT_NE(pair.server, nullptr);
     ASSERT_NE(pair.client, nullptr);
 
@@ -256,27 +269,26 @@ TEST(WinTunnelChannelMgnt, DataPath_SimpleHello_ViaManager)
     SpinUntilServerArmed(pair.server);
 
     pair.client->AsyncConnect(&cr);
-
     ASSERT_TRUE(pair.server->WaitForConnection(5000));
     ASSERT_TRUE(pair.client->WaitForConnection(5000));
 
-    sdv::pointer<uint8_t> msg;
-    msg.resize(5);
-    memcpy(msg.get(), "hello", 5);
+    sdv::pointer<uint8_t> p;
+    p.resize(5);
+    std::memcpy(p.get(), "hello", 5);
 
     sdv::sequence<sdv::pointer<uint8_t>> seq;
-    seq.push_back(msg);
+    seq.push_back(p);
 
     auto* sender = dynamic_cast<sdv::ipc::IDataSend*>(pair.client);
     ASSERT_NE(sender, nullptr);
-
     EXPECT_TRUE(sender->SendData(seq));
-    ASSERT_TRUE(sr.WaitForData(3000));
 
+    ASSERT_TRUE(sr.WaitForData(3000));
     auto recv = sr.Data();
+
     ASSERT_EQ(recv.size(), 1u);
     ASSERT_EQ(recv[0].size(), 5u);
-    EXPECT_EQ(memcmp(recv[0].get(), "hello", 5), 0);
+    EXPECT_EQ(std::memcmp(recv[0].get(), "hello", 5), 0);
 
     pair.client->Disconnect();
     pair.server->Disconnect();
@@ -286,6 +298,7 @@ TEST(WinTunnelChannelMgnt, DataPath_SimpleHello_ViaManager)
 }
 
 // Multi-chunk
+
 TEST(WinTunnelChannelMgnt, DataPath_MultiChunk_ViaManager)
 {
     sdv::app::CAppControl app;
@@ -293,19 +306,20 @@ TEST(WinTunnelChannelMgnt, DataPath_MultiChunk_ViaManager)
     app.SetRunningMode();
 
     CSocketsTunnelChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
-    const std::string cs = "proto=tunnel;path=" + Unique("mc_mgr") + ";";
+    const std::string tunnel = "t_" + RandomHex();
+    const std::string cs = "proto=tunnel;path=" + Unique("mc_mgr") + ";tunnel=" + tunnel + ";";
 
     auto ep = mgr.CreateEndpoint(cs);
-    auto pair = CreateTunnelPair(mgr, ep.ssConnectString);
+    ASSERT_FALSE(ep.ssConnectString.empty());
 
+    auto pair = CreateEndpointClientPair(mgr, ep);
     ASSERT_NE(pair.server, nullptr);
     ASSERT_NE(pair.client, nullptr);
 
     CTunnelMgrTestReceiver sr, cr;
-
     pair.server->AsyncConnect(&sr);
     SpinUntilServerArmed(pair.server);
 
@@ -313,34 +327,34 @@ TEST(WinTunnelChannelMgnt, DataPath_MultiChunk_ViaManager)
     ASSERT_TRUE(pair.server->WaitForConnection(5000));
     ASSERT_TRUE(pair.client->WaitForConnection(5000));
 
-    sdv::pointer<uint8_t> a, b;
-    a.resize(3);
-    memcpy(a.get(), "sdv", 3);
-    b.resize(9);
-    memcpy(b.get(), "framework", 9);
+    sdv::pointer<uint8_t> p1, p2;
+    p1.resize(3); std::memcpy(p1.get(), "sdv", 3);
+    p2.resize(9); std::memcpy(p2.get(), "framework", 9);
 
     sdv::sequence<sdv::pointer<uint8_t>> seq;
-    seq.push_back(a);
-    seq.push_back(b);
+    seq.push_back(p1);
+    seq.push_back(p2);
 
     auto* sender = dynamic_cast<sdv::ipc::IDataSend*>(pair.client);
     ASSERT_NE(sender, nullptr);
-
     EXPECT_TRUE(sender->SendData(seq));
-    ASSERT_TRUE(sr.WaitForData(3000));
 
+    ASSERT_TRUE(sr.WaitForData(3000));
     auto recv = sr.Data();
+
     ASSERT_EQ(recv.size(), 2u);
-    EXPECT_EQ(memcmp(recv[0].get(), "sdv", 3), 0);
-    EXPECT_EQ(memcmp(recv[1].get(), "framework", 9), 0);
+    EXPECT_EQ(std::memcmp(recv[0].get(), "sdv", 3), 0);
+    EXPECT_EQ(std::memcmp(recv[1].get(), "framework", 9), 0);
 
     pair.client->Disconnect();
     pair.server->Disconnect();
+
     mgr.Shutdown();
     app.Shutdown();
 }
 
 // Header stripping invariant
+
 TEST(WinTunnelChannelMgnt, HeaderStrippedInvariant)
 {
     sdv::app::CAppControl app;
@@ -348,13 +362,16 @@ TEST(WinTunnelChannelMgnt, HeaderStrippedInvariant)
     app.SetRunningMode();
 
     CSocketsTunnelChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
-    const std::string cs ="proto=tunnel;path=" + Unique("hdr_mgr") + ";";
+    const std::string tunnel = "t_" + RandomHex();
+    const std::string cs = "proto=tunnel;path=" + Unique("hdr_mgr") + ";tunnel=" + tunnel + ";";
 
     auto ep = mgr.CreateEndpoint(cs);
-    auto pair = CreateTunnelPair(mgr, ep.ssConnectString);
+    ASSERT_FALSE(ep.ssConnectString.empty());
+
+    auto pair = CreateEndpointClientPair(mgr, ep);
     ASSERT_NE(pair.server, nullptr);
     ASSERT_NE(pair.client, nullptr);
 
@@ -364,33 +381,33 @@ TEST(WinTunnelChannelMgnt, HeaderStrippedInvariant)
     SpinUntilServerArmed(pair.server);
 
     pair.client->AsyncConnect(&cr);
-
     ASSERT_TRUE(pair.server->WaitForConnection(5000));
     ASSERT_TRUE(pair.client->WaitForConnection(5000));
 
-    const char* msg = "HDR_TEST";
-    const size_t len = strlen(msg);
+    const char* msg = "HEADER_TEST";
+    const size_t len = std::strlen(msg);
 
-    sdv::pointer<uint8_t> buf;
-    buf.resize(len);
-    memcpy(buf.get(), msg, len);
+    sdv::pointer<uint8_t> p;
+    p.resize(len);
+    std::memcpy(p.get(), msg, len);
 
     sdv::sequence<sdv::pointer<uint8_t>> seq;
-    seq.push_back(buf);
+    seq.push_back(p);
 
     auto* sender = dynamic_cast<sdv::ipc::IDataSend*>(pair.client);
     ASSERT_NE(sender, nullptr);
-
     EXPECT_TRUE(sender->SendData(seq));
-    ASSERT_TRUE(sr.WaitForData(3000));
 
+    ASSERT_TRUE(sr.WaitForData(3000));
     auto recv = sr.Data();
+
     ASSERT_EQ(recv.size(), 1u);
     ASSERT_EQ(recv[0].size(), len);
-    EXPECT_EQ(memcmp(recv[0].get(), msg, len), 0);
+    EXPECT_EQ(std::memcmp(recv[0].get(), msg, len), 0);
 
     pair.client->Disconnect();
     pair.server->Disconnect();
+
     mgr.Shutdown();
     app.Shutdown();
 }
@@ -403,18 +420,20 @@ TEST(WinTunnelChannelMgnt, CreateEndpoint_LongPath_Normalized)
     app.SetRunningMode();
 
     CSocketsTunnelChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
     std::string veryLong(200, 'A');
     const std::string raw ="C:\\Users\\" + veryLong + "\\AppData\\Local\\sdv\\tunnel_long_" + RandomHex() + ".sock";
-    const std::string cs = "proto=tunnel;path=" + raw + ";";
+    std::string tunnel = UniqueTunnel();
+    const std::string cs = "proto=tunnel;path=" + raw + ";tunnel=" + tunnel + ";";
 
     auto ep = mgr.CreateEndpoint(cs);
     ASSERT_FALSE(ep.ssConnectString.empty());
 
-    // path must be normalized (basename only)
-    EXPECT_NE(ep.ssConnectString.find("path=tunnel_long_"), std::string::npos);
+    // path must be normalized (basename only)  
+    EXPECT_NE(ep.ssConnectString.find("tunnel_long_"), std::string::npos);
+    EXPECT_NE(ep.ssConnectString.find("tunnel="), std::string::npos);
 
     sdv::TObjectPtr obj = mgr.Access(ep.ssConnectString);
     auto* server = obj.GetInterface<sdv::ipc::IConnect>();

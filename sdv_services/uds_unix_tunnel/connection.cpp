@@ -28,6 +28,12 @@ CUnixTunnelConnection::CUnixTunnelConnection(
     // No additional initialization required; acts as a thin wrapper.
 }
 
+void CUnixTunnelConnection::SetWatchDogRemoveCallback(std::function<void(const void*)> callback)
+{
+    std::lock_guard<std::mutex> lock(m_WatchdogMtx);
+    m_WatchdogRemoveCallback = std::move(callback);
+}
+
 
 /**
  * @brief Prepends a tunnel header and forwards the data to the underlying transport.
@@ -155,11 +161,38 @@ sdv::ipc::EConnectState CUnixTunnelConnection::GetConnectState() const
 
 void CUnixTunnelConnection::DestroyObject()
 {
+    bool expected = false;
+    if (!m_DestroyObjectCalled.compare_exchange_strong(expected, true))
+    {
+        return;
+    }
+
+    // Stop forwarding to upper layer before transport teardown.
+    {
+        std::lock_guard<std::mutex> lock(m_CallbackMtx);
+        m_pUpperReceiver = nullptr;
+        m_pUpperEvent = nullptr;
+    }
+
+    SetConnectState(sdv::ipc::EConnectState::terminating);
+
     // Disconnect underlying transport and clear callbacks.
     Disconnect();
 
-    std::lock_guard<std::mutex> lock(m_CallbackMtx);
-    m_Transport.reset();
+    {
+        std::lock_guard<std::mutex> lock(m_CallbackMtx);
+        m_Transport.reset();
+    }
+
+    std::function<void(const void*)> removeCallback;
+    {
+        std::lock_guard<std::mutex> watchdogLock(m_WatchdogMtx);
+        removeCallback = std::move(m_WatchdogRemoveCallback);
+    }
+    if (removeCallback)
+    {
+        removeCallback(this);
+    }
 }
 
 void CUnixTunnelConnection::ReceiveData(/*inout*/ sdv::sequence<sdv::pointer<uint8_t>>& seqData)

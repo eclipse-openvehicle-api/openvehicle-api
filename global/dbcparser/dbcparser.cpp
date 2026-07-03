@@ -451,7 +451,7 @@ namespace dbc
         if (!bNoDefaultDef)
         {
             // Parse the standard attribute definitions
-            CDbcSource source(std::string(R"code(
+            CDbcSource source(std::string(R"dbc(
 BA_DEF_ BO_ "VFrameFormat" ENUM "StandardCAN","ExtendedCAN","StandardFD","ExtendedFD";
 BA_DEF_ BO_ "GenMsgSendType" ENUM "cyclic","triggered","cyclicIfActive","cyclicAndTriggered","cyclicIfActiveAndTriggered","none";
 BA_DEF_ BO_ "GenMsgCycleTime" INT 0 10000;
@@ -472,7 +472,7 @@ BA_DEF_DEF_ "GenSigDelayTime" 0;
 BA_DEF_DEF_ "GenSigCycleTime" 0;
 BA_DEF_DEF_ "GenSigStartDelayTime" 0;
 BA_DEF_DEF_ "GenSigStartValue" 0;
-            )code"));
+            )dbc"));
             Parse(source);
         }
     }

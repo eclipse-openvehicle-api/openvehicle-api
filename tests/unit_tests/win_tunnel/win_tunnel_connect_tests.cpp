@@ -77,6 +77,12 @@ inline std::string UniqueUds(const char* prefix)
     return MakeShortUdsPath((std::string(prefix) + "_" + RandomHex() + ".sock").c_str());
 }
 
+inline std::string UniqueTunnel()
+{
+    return "t_" + RandomHex();
+}
+
+
 inline void SpinUntilServerArmed(sdv::ipc::IConnect* server, uint32_t maxWaitMs = 300)
 {
     using namespace std::chrono;
@@ -170,7 +176,12 @@ static TunnelPair CreateTunnelPair(CSocketsTunnelChannelMgnt& mgr, const std::st
 {
     TunnelPair out;
 
-    out.serverObj = mgr.Access(cs);
+    std::string serverCS = cs;
+    if (!serverCS.empty() && serverCS.back() != ';')
+        serverCS += ";";
+    serverCS += "role=server;";
+
+    out.serverObj = mgr.Access(serverCS);
     out.server = out.serverObj ? out.serverObj.GetInterface<sdv::ipc::IConnect>() : nullptr;
 
     out.clientObj = mgr.Access(cs);
@@ -187,7 +198,7 @@ TEST(WinTunnelIPC, InstantiateManager)
     ASSERT_TRUE(app.Startup(""));
 
     CSocketsTunnelChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     EXPECT_EQ(mgr.GetObjectState(), sdv::EObjectState::initialized);
 
     EXPECT_NO_THROW(mgr.Shutdown());
@@ -204,11 +215,13 @@ TEST(WinTunnelIPC, BasicConnectDisconnect)
 
     app.SetRunningMode();
     CSocketsTunnelChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
-    const std::string path = UniqueUds("tunnel_basic");
-    const std::string cs = "proto=tunnel;path=" + path + ";";
+    const std::string path = UniqueUds("tunnel_basic"); 
+    const std::string tunnel = "test_" + RandomHex();
+    const std::string cs = "proto=tunnel;path=" + path + ";tunnel=" + tunnel + ";";
+
 
     auto ep = mgr.CreateEndpoint(cs);
     ASSERT_FALSE(ep.ssConnectString.empty());
@@ -241,10 +254,12 @@ TEST(WinTunnelIPC, DataPath_SimpleHello_Tunnel)
     app.SetRunningMode();
 
     CSocketsTunnelChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
-    const std::string cs = "proto=tunnel;path=" + UniqueUds("hello_t") + ";";
+    const std::string tunnel = "test_" + RandomHex();
+    const std::string cs = "proto=tunnel;path=" + UniqueUds("hello_t") + ";tunnel=" + tunnel + ";";
+
     auto ep = mgr.CreateEndpoint(cs);
     auto pair = CreateTunnelPair(mgr, ep.ssConnectString);
     ASSERT_NE(pair.server, nullptr);
@@ -293,10 +308,11 @@ TEST(WinTunnelIPC, DataPath_MultiChunk_Tunnel)
     app.SetRunningMode();
 
     CSocketsTunnelChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
-    const std::string cs = "proto=tunnel;path=" + UniqueUds("mc_t") + ";";
+    const std::string tunnel = "test_" + RandomHex();
+    const std::string cs = "proto=tunnel;path=" + UniqueUds("mc_t") + ";tunnel=" + tunnel + ";";
 
     auto ep = mgr.CreateEndpoint(cs);
     auto pair = CreateTunnelPair(mgr, ep.ssConnectString);
@@ -347,10 +363,12 @@ TEST(WinTunnelIPC, DataPath_LargePayload_Tunnel)
     app.SetRunningMode();
 
     CSocketsTunnelChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
-    const std::string cs = "proto=tunnel;path=" + UniqueUds("big_t") + ";";
+    const std::string tunnel = "test_" + RandomHex();
+    const std::string cs = "proto=tunnel;path=" + UniqueUds("big_t") + ";tunnel=" + tunnel + ";";
+
     auto ep = mgr.CreateEndpoint(cs);
     auto pair = CreateTunnelPair(mgr, ep.ssConnectString);
 
@@ -402,11 +420,11 @@ TEST(WinTunnelIPC, DataPath_HeaderStripped_Tunnel)
     app.SetRunningMode();
 
     CSocketsTunnelChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
-    const std::string cs =
-        "proto=tunnel;path=" + UniqueUds("headerstrip") + ";";
+    const std::string tunnel = "test_" + RandomHex();
+    const std::string cs = "proto=tunnel;path=" + UniqueUds("headerstrip") + ";tunnel=" + tunnel + ";";
 
     auto ep = mgr.CreateEndpoint(cs);
     auto pair = CreateTunnelPair(mgr, ep.ssConnectString);

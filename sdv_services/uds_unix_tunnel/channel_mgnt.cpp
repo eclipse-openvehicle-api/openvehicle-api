@@ -1,3 +1,15 @@
+/********************************************************************************
+* Copyright (c) 2025-2026 ZF Friedrichshafen AG
+*
+* This program and the accompanying materials are made available under the
+* terms of the Apache License Version 2.0 which is available at
+* https://www.apache.org/licenses/LICENSE-2.0
+*
+* SPDX-License-Identifier: Apache-2.0
+*
+* Contributors:
+*   Denisa Ros - initial API and implementation
+********************************************************************************/
 #if defined(__unix__)
 
 #include "channel_mgnt.h"
@@ -15,6 +27,7 @@
 
 namespace
 {
+static std::atomic<uint32_t> g_nextChannelId{1};
 
 /**
  * @brief Parses a semicolon-separated list of key=value pairs into a map.
@@ -52,23 +65,113 @@ static std::string ClampSunPath(const std::string& p)
     return (p.size() < MaxLen) ? p : p.substr(0, MaxLen - 1);
 }
 
+static std::string GetUserRuntimeDir()
+{
+    const std::string path = "/run/ipc/sdv";
+
+    struct stat st{};
+    if (::stat(path.c_str(), &st) == 0)
+    {
+        return path;
+    }
+
+    // fallback if /run/ipc/sdv is not available
+    const std::string fallback = "/tmp/sdv";
+    ::mkdir(fallback.c_str(), 0770);
+
+    return fallback;
+}
+
+
+static std::string BuildTunnelPath(const std::string& baseDir,
+                                   const std::string& tunnel,
+                                   uint32_t instanceId,
+                                   uint32_t pid)
+{
+    std::string dir = baseDir + "/" + tunnel;
+ 
+    if (::mkdir(dir.c_str(), 0770) != 0 && errno != EEXIST)
+    {
+        SDV_LOG_WARNING("Failed to create tunnel directory");
+    }
+
+    return dir + "/vapi_" +
+           std::to_string(instanceId) + "_" +
+           std::to_string(pid) + ".sock";
+}
+
+static bool ExtractTunnelPathFromConfig(const std::string& input, std::string& outPath)
+{
+    const auto kv = ParseKV(input);
+    if (kv.count("proto"))
+    {
+        if (kv.at("proto") != "tunnel")
+            return false;
+
+        auto it = kv.find("path");
+        outPath = (it != kv.end()) ? it->second : std::string{};
+        return true;
+    }
+
+    sdv::toml::CTOMLParser parser(input);
+    if (!parser.IsValid())
+        return false;
+
+    const std::string providerName = parser.GetDirect("Provider.Name").GetValue();
+    if (!providerName.empty() &&
+        providerName != "unix_domain_sockets_tunnel" &&
+        providerName != "UnixTunnelChannelControl" &&
+        providerName != "WinTunnelChannelControl")
+    {
+        return false;
+    }
+
+    const std::string nested = parser.GetDirect("Provider.ConnectString").GetValue();
+    if (!nested.empty())
+    {
+        return ExtractTunnelPathFromConfig(nested, outPath);
+    }
+
+    auto pathNode = parser.GetDirect("IpcChannel.Path");
+    if (pathNode.GetType() == sdv::toml::ENodeType::node_string)
+    {
+        outPath = static_cast<std::string>(pathNode.GetValue());
+        return true;
+    }
+
+    auto nameNode = parser.GetDirect("IpcChannel.Name");
+    if (nameNode.GetType() == sdv::toml::ENodeType::node_string)
+    {
+        const std::string name = static_cast<std::string>(nameNode.GetValue());
+        if (!name.empty())
+        {
+            outPath = GetUserRuntimeDir() + "/" + name + ".sock";
+            return true;
+        }
+    }
+
+    outPath.clear();
+    return true;
+}
+
+static std::string ExtractTunnelName(const std::string& input)
+{
+    const auto kv = ParseKV(input);
+    if (kv.count("tunnel"))
+    {
+        return kv.at("tunnel");
+    }
+
+    // Fallback default
+    return "default";
+}
+
+
 } // anonymous namespace
 
 std::string CUnixTunnelChannelMgnt::MakeUserRuntimeDir()
 {
-    std::ostringstream oss;
-    oss << "/run/user/" << ::getuid();
-
-    struct stat st{};
-    if (::stat(oss.str().c_str(), &st) == 0)
-    {
-        std::string path = oss.str() + "/sdv";
-        ::mkdir(path.c_str(), 0770);
-        return path;
-    }
-
-    ::mkdir("/tmp/sdv", 0770);
-    return "/tmp/sdv";
+    return GetUserRuntimeDir();
 }
 
 bool CUnixTunnelChannelMgnt::OnInitialize()
@@ -77,9 +180,11 @@ bool CUnixTunnelChannelMgnt::OnInitialize()
 }
 
 void CUnixTunnelChannelMgnt::OnShutdown()
+{}
+
+void CUnixTunnelChannelMgnt::OnDestroy()
 {
-    // Actual cleanup is handled by destructors of CUnixTunnelConnection
-    // and CUnixSocketConnection (shared_ptr).
+    m_watchdog.Clear();
 }
 
 sdv::ipc::SChannelEndpoint CUnixTunnelChannelMgnt::CreateEndpoint(
@@ -88,91 +193,270 @@ sdv::ipc::SChannelEndpoint CUnixTunnelChannelMgnt::CreateEndpoint(
     sdv::ipc::SChannelEndpoint endpoint{};
 
     const std::string baseDir = MakeUserRuntimeDir();
-    std::string name = "TUNNEL_" + std::to_string(::getpid());
-    std::string path = baseDir + "/" + name + ".sock";
+    uint32_t instanceId = 1000;
+    const sdv::app::IAppContext* pCtx = sdv::core::GetCore<sdv::app::IAppContext>();
+    if (pCtx && pCtx->GetInstanceID() != 0)
+    {
+        instanceId = pCtx->GetInstanceID();
+    }
 
-    // Parse optional TOML config for custom name/path
+    // Extract tunnel name from config
+    std::string input = static_cast<std::string>(ssChannelConfig);
+    std::string tunnel = ExtractTunnelName(input);
+
+    // Build safe path
+    std::string path = BuildTunnelPath(baseDir, tunnel, instanceId, static_cast<uint32_t>(::getpid()));
+
     if (!ssChannelConfig.empty())
     {
-        sdv::toml::CTOMLParser cfg(ssChannelConfig.c_str());
-        auto nameNode = cfg.GetDirect("IpcChannel.Name");
-        if (nameNode.GetType() == sdv::toml::ENodeType::node_string)
-            name = static_cast<std::string>(nameNode.GetValue());
+        std::string configuredPath;
 
-        auto pathNode = cfg.GetDirect("IpcChannel.Path");
-        if (pathNode.GetType() == sdv::toml::ENodeType::node_string)
-            path = static_cast<std::string>(pathNode.GetValue());
+        if (ExtractTunnelPathFromConfig(input, configuredPath) && !configuredPath.empty())
+        {
+            std::string baseName = configuredPath;
+            auto pos = baseName.find_last_of('/');
+            if (pos != std::string::npos)
+            {
+                baseName = baseName.substr(pos + 1);
+            }
+            path = baseDir + "/" + tunnel + "/" + baseName;
+            SDV_LOG_WARNING("Using custom path without tunnel isolation");
+        }
         else
-            path = baseDir + "/" + name + ".sock";
+        {
+            // fallback - still use tunnel-based path
+            tunnel = ExtractTunnelName(input);
+            instanceId = 1000;
+
+            if (pCtx && pCtx->GetInstanceID() != 0)
+            {
+                instanceId = pCtx->GetInstanceID();
+            }
+
+            path = BuildTunnelPath(baseDir, tunnel, instanceId, static_cast<uint32_t>(::getpid()));
+        }
     }
 
     path = ClampSunPath(path);
 
     // Create underlying UDS server transport
-    auto udsServer = std::make_shared<CUnixSocketConnection>(
-        -1,
-        /*acceptConnectionRequired*/ true,
-        path);
+    auto udsServer = std::make_shared<CUnixSocketConnection>(-1, /*acceptConnectionRequired*/ true, path);
 
+    uint32_t chId = g_nextChannelId++;
     // Create tunnel wrapper on top of UDS
-    auto tunnelServer = std::make_shared<CUnixTunnelConnection>(
-        udsServer,
-        /*channelId*/ 0u);
+    auto tunnelServer = std::make_shared<CUnixTunnelConnection>(udsServer,  /*channelId*/ chId);
 
-    m_ServerTunnels.push_back(tunnelServer);
+    // Ignore cppcheck warning; if construction failed, an exception is expected first.
+    // cppcheck-suppress knownConditionTrueFalse
+    if (!tunnelServer)
+        return {};
+
+    tunnelServer->SetWatchDogRemoveCallback([this](const void* connection)
+    {
+        m_watchdog.RemoveConnection(connection);
+    });
+    m_watchdog.AddConnection(tunnelServer);
 
     endpoint.pConnection = static_cast<sdv::IInterfaceAccess*>(tunnelServer.get());
-    endpoint.ssConnectString = "proto=tunnel;role=server;path=" + path + ";";
+    const std::string tunnelConnectString = "proto=tunnel;path=" + path + ";tunnel=" + tunnel + ";";
+    endpoint.ssConnectString = std::string("[Provider]\n") +
+        "Name = \"unix_domain_sockets_tunnel\"\n" +
+        "ConnectString = \"" + tunnelConnectString + "\"\n";
 
     return endpoint;
 }
 
-sdv::IInterfaceAccess* CUnixTunnelChannelMgnt::Access(
-    const sdv::u8string& ssConnectString)
+sdv::IInterfaceAccess* CUnixTunnelChannelMgnt::Access(const sdv::u8string& ssConnectString)
 {
-    const auto kv = ParseKV(static_cast<std::string>(ssConnectString));
+    const std::string input = static_cast<std::string>(ssConnectString);
+    std::string tunnel = ExtractTunnelName(input);
+    bool parsed = false;
+    bool isServer = false;
+    std::string path;
 
-    // Only handle proto=tunnel
-    if (!kv.count("proto") || kv.at("proto") != "tunnel")
+    // Parse structured TOML forms first; raw connect strings are handled below.
+    if (input.rfind("proto=tunnel", 0) != 0)
+    {
+
+        sdv::toml::CTOMLParser parser(input);
+        if (!parser.IsValid())
+        {
+            SDV_LOG_WARNING("[TUNNEL][Access] TOML parse failed. Trying text fallback.");
+
+            // Fallback for malformed TOML: try to recover an embedded proto=tunnel connect string.
+            const auto protoPos = input.find("proto=tunnel");
+            if (protoPos != std::string::npos)
+            {
+                std::string fallbackCs = input.substr(protoPos);
+
+                const auto quotePos = fallbackCs.find('"');
+                if (quotePos != std::string::npos)
+                    fallbackCs = fallbackCs.substr(0, quotePos);
+
+                const auto newlinePos = fallbackCs.find('\n');
+                if (newlinePos != std::string::npos)
+                    fallbackCs = fallbackCs.substr(0, newlinePos);
+
+                const auto kv = ParseKV(fallbackCs);
+                if (kv.count("proto") && kv.at("proto") == "tunnel")
+                {
+                    parsed = true;
+                    isServer = (kv.count("role") && kv.at("role") == "server");
+                    if (kv.count("path"))
+                        path = kv.at("path");
+                }
+            }
+
+            if (!parsed)
+            {
+                SDV_LOG_WARNING("[TUNNEL][Access] Fallback parse failed. Returning nullptr");
+                return nullptr;
+            }
+        }
+
+        if (!parsed)
+        {
+            const std::string providerName = parser.GetDirect("Provider.Name").GetValue();
+            if (!providerName.empty())
+            {
+                if (providerName != "unix_domain_sockets_tunnel" &&
+                    providerName != "UnixTunnelChannelControl" &&
+                    providerName != "WinTunnelChannelControl")
+                {
+                    SDV_LOG_WARNING("[TUNNEL][Access] Unsupported provider. Returning nullptr");
+                    return nullptr;
+                }
+
+                const std::string nested = parser.GetDirect("Provider.ConnectString").GetValue();
+                if (!nested.empty())
+                {
+                    const auto nestedKv = ParseKV(nested);                  
+                    if (nestedKv.count("tunnel"))
+                    {
+                        tunnel = nestedKv.at("tunnel");
+                    }
+
+                    if (nestedKv.count("proto") && nestedKv.at("proto") != "tunnel")
+                    {
+                        SDV_LOG_WARNING("[TUNNEL][Access] Nested proto is not tunnel. Returning nullptr");
+                        return nullptr;
+                    }
+
+                    if (nestedKv.count("path"))
+                    {                      
+                        std::string baseName = nestedKv.at("path");
+                        auto pos = baseName.find_last_of('/');
+                        if (pos != std::string::npos)
+                        {
+                            baseName = baseName.substr(pos + 1);
+                        }
+
+                        path = MakeUserRuntimeDir() + "/" + tunnel + "/" + baseName;
+                    }
+                }
+
+                parsed = true;
+                isServer = false;
+            }
+            else
+            {
+                // Callers can pass [IpcChannel] directly to Access().
+                parsed = true;
+                isServer = false;
+            }
+
+            if (path.empty())
+            {
+                auto pathNode = parser.GetDirect("IpcChannel.Path");
+                if (pathNode.GetType() == sdv::toml::ENodeType::node_string)
+                {
+                    std::string baseName = static_cast<std::string>(pathNode.GetValue());
+
+                    auto pos = baseName.find_last_of('/');
+                    if (pos != std::string::npos)
+                    {
+                        baseName = baseName.substr(pos + 1);
+                    }
+
+                    path = MakeUserRuntimeDir() + "/" + tunnel + "/" + baseName;
+                }
+                else
+                {
+                    auto nameNode = parser.GetDirect("IpcChannel.Name");
+                    if (nameNode.GetType() == sdv::toml::ENodeType::node_string)
+                    {
+                        const std::string name = static_cast<std::string>(nameNode.GetValue());
+                        if (!name.empty())
+                        {
+                            path = MakeUserRuntimeDir() + "/" + tunnel + "/" + name + ".sock";
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Raw KV fallback: proto=tunnel;role=...;path=...;
+    if (!parsed)
+    {
+        if (input.rfind("proto=tunnel", 0) != 0)
+        {
+            SDV_LOG_WARNING("[TUNNEL][Access] Raw KV parse rejected: input does not start with proto=tunnel. Returning nullptr");
+            return nullptr;
+        }
+
+        const auto kv = ParseKV(input);
+        if (!kv.count("proto") || kv.at("proto") != "tunnel")
+        {
+            SDV_LOG_WARNING("[TUNNEL][Access] Raw KV parse rejected: missing/invalid proto. Returning nullptr ");
+            return nullptr;
+        }
+
+        parsed = true;
+        isServer = (kv.count("role") && kv.at("role") == "server");
+        if (kv.count("path"))
+        {
+            path = kv.at("path");
+        }
+    }
+
+    if (!parsed)
     {
         return nullptr;
     }
 
-    const bool isServer =
-        (kv.count("role") && kv.at("role") == "server");
-
-    const std::string path =
-        kv.count("path")
-        ? kv.at("path")
-        : (MakeUserRuntimeDir() + "/TUNNEL_auto.sock");
-
-    if (isServer)
+    if (path.empty())
     {
-        // For simplicity, create a new server tunnel instance for each Access().
-        // The SDV framework is expected to call Access(serverCS) only once in normal cases.
-        auto udsServer = std::make_shared<CUnixSocketConnection>(
-            -1,
-            /*acceptConnectionRequired*/ true,
-            path);
+        tunnel = ExtractTunnelName(input);
 
-        auto tunnelServer = std::make_shared<CUnixTunnelConnection>(
-            udsServer,
-            /*channelId*/ 0u);
+        uint32_t instanceId = 1000;
+        const sdv::app::IAppContext* pCtx = sdv::core::GetCore<sdv::app::IAppContext>();
+        if (pCtx && pCtx->GetInstanceID() != 0)
+        {
+            instanceId = pCtx->GetInstanceID();
+        }
 
-        m_ServerTunnels.push_back(tunnelServer);
-        return static_cast<sdv::IInterfaceAccess*>(tunnelServer.get());
+        path = BuildTunnelPath(MakeUserRuntimeDir(), tunnel, instanceId, static_cast<uint32_t>(::getpid()));
     }
 
-    // Client: allocate raw pointer (expected to be managed by SDV framework via IObjectDestroy)
-    auto udsClient = std::make_shared<CUnixSocketConnection>(
-        -1,
-        /*acceptConnectionRequired*/ false,
-        path);
+    path = ClampSunPath(path);
 
-    auto* tunnelClient =
-        new CUnixTunnelConnection(udsClient, /*channelId*/ 0u);
+    std::shared_ptr<CUnixSocketConnection> transport = std::make_shared<CUnixSocketConnection>(-1, /*acceptConnectionRequired*/ isServer, path);
+    uint32_t chId = g_nextChannelId++;
+    std::shared_ptr<CUnixTunnelConnection> connection = std::make_shared<CUnixTunnelConnection>(transport, /*channelId*/ chId);
 
-    return static_cast<sdv::IInterfaceAccess*>(tunnelClient);
+    // Ignore cppcheck warning; if construction failed, an exception is expected first.
+    // cppcheck-suppress knownConditionTrueFalse
+    if (!connection)
+        return nullptr;
+
+    connection->SetWatchDogRemoveCallback([this](const void* instance)
+    {
+        m_watchdog.RemoveConnection(instance);
+    });
+
+    m_watchdog.AddConnection(connection);
+    return static_cast<sdv::IInterfaceAccess*>(connection.get());
 }
 
 #endif // defined(__unix__)

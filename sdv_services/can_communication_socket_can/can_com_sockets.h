@@ -146,7 +146,7 @@ private:
         std::string name;     ///< interface name, can be empty in case of an invalid socket element
     };
 
-    std::thread                     m_threadReceive;    ///< Receive thread.
+    sdv::core::secure_thread        m_threadReceive;    ///< Receive thread.
     mutable std::mutex              m_mtxReceivers;     ///< Protect the receiver set.
     std::set<sdv::can::IReceive*>   m_setReceivers;     ///< Set with receiver interfaces.
     mutable std::mutex              m_mtxSockets;       ///< Protect the socket list.

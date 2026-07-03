@@ -14,6 +14,7 @@
 #include "logger.h"
 #include <sstream>
 #include "../../global/exec_dir_helper.h"
+#include "app_settings.h"
 
 #ifdef __unix__
 #include <syslog.h>
@@ -38,7 +39,7 @@ CLogger::~CLogger()
 void CLogger::Log(sdv::core::ELogSeverity eSeverity, /*in*/ const sdv::u8string& ssSrcFile, /*in*/ uint32_t uiSrcLine,
     /*in*/ sdv::process::TProcessID tProcessID, /*in*/ const sdv:: u8string& ssObjectName, /*in*/ const sdv::u8string& ssMessage)
 {
-    if (static_cast<uint32_t>(eSeverity) >= static_cast<uint32_t>(m_eViewFilter))
+    if (GetAppSettings().IsConsoleVerbose() && static_cast<uint32_t>(eSeverity) >= static_cast<uint32_t>(m_eViewFilter))
     {
         if (tProcessID) std::clog << "[PID#" << static_cast<int64_t>(tProcessID) << "] ";
         if (!ssObjectName.empty()) std::clog << ssObjectName << " ";

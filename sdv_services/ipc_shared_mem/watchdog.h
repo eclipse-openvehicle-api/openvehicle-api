@@ -34,6 +34,7 @@
 
 #include <interfaces/process.h>
 #include <support/interface_ptr.h>
+#include <support/local_service_access.h>
 #include <mutex>
 #include <map>
 #include <memory>
@@ -127,7 +128,7 @@ private:
     std::condition_variable     m_cvTriggerConnectionDestruction;           ///< Condition variable used to trigger when a
                                                                             ///< connection is scheduled for destruction.
     std::queue<std::shared_ptr<CConnection>> m_queueScheduledConnectionDestructions;     ///< Scheduled connection for destruction.
-    std::thread                 m_threadScheduledConnectionDestructions;    ///< Thread processing the scheduled destructions.
+    sdv::core::secure_thread    m_threadScheduledConnectionDestructions;    ///< Thread processing the scheduled destructions.
     std::atomic_bool            m_bShutdown = false;                        ///< Set when shutting down the watchdog
 };
 

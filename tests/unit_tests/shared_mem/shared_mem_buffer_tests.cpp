@@ -88,7 +88,7 @@ TEST(SharedMemoryBufferTest, TriggerTestRx)
     };
 
     std::unique_lock<std::mutex> lockStart(mtxStart);
-    std::thread thread(fnWaitForTrigger);
+    sdv::core::secure_thread thread(fnWaitForTrigger);
     cvStart.wait(lockStart);
 
     for (size_t n = 0; n < 20; n++)
@@ -141,7 +141,7 @@ TEST(SharedMemoryBufferTest, TriggerTestTx)
     };
 
     std::unique_lock<std::mutex> lockStart(mtxStart);
-    std::thread thread(fnWaitForTrigger);
+    sdv::core::secure_thread thread(fnWaitForTrigger);
     cvStart.wait(lockStart);
 
     for (size_t n = 0; n < 20; n++)
@@ -208,8 +208,8 @@ TEST(SharedMemoryBufferTest, TriggerTestRxTx)
 
     std::unique_lock<std::mutex> lockStartSender(mtxSenderStart);
     std::unique_lock<std::mutex> lockStartReceiver(mtxReceiverStart);
-    std::thread threadSender(fnWaitForTriggerSender);
-    std::thread threadReceiver(fnWaitForTriggerReceiver);
+    sdv::core::secure_thread threadSender(fnWaitForTriggerSender);
+    sdv::core::secure_thread threadReceiver(fnWaitForTriggerReceiver);
     cvSenderStart.wait(lockStartSender);
     lockStartSender.unlock();
     cvReceiverStart.wait(lockStartReceiver);
@@ -693,8 +693,8 @@ TEST(SharedMemoryBufferTest, SendRepeatReceivePattern)
 TEST(SharedMemoryBufferTest, AppProcessSendRepeatReceivePattern)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode = "Essential")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode = "Essential")toml"));
     LoadSupportServices();
 
     CSharedMemBufferTx bufferTX;
@@ -747,8 +747,8 @@ Mode = "Essential")code"));
 TEST(SharedMemoryBufferTest, SendRepeatReceivePatternBetweenTwoAppProcesses)
 {
     sdv::app::CAppControl appcontrol;
-    ASSERT_TRUE(appcontrol.Startup(R"code([Application]
-Mode = "Essential")code"));
+    ASSERT_TRUE(appcontrol.Startup(R"toml([Application]
+Mode = "Essential")toml"));
     LoadSupportServices();
 
     // test starts 2 app processes, one should be the sender of the pattern, the other is the repeater

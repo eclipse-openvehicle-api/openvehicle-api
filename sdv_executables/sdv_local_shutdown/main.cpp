@@ -32,12 +32,6 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     // NOTE EVE 27.05.2025: This task has been taken over by the process watchdog.
     CProcessWatchdog watchdog;
 
-    // If not set, set the runtime location to the EXE directory.
-    if (sdv::app::CAppControl::GetFrameworkRuntimeDirectory().empty())
-        sdv::app::CAppControl::SetFrameworkRuntimeDirectory(GetExecDirectory());
-    if (sdv::app::CAppControl::GetComponentInstallDirectory().empty())
-        sdv::app::CAppControl::SetComponentInstallDirectory(GetExecDirectory());
-
     CCommandLine cmdln(static_cast<uint32_t>(CCommandLine::EParseFlags::no_assignment_character));
     bool bHelp = false;
     bool bError = false;
@@ -67,7 +61,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     if (!bSilent)
     {
         std::cout << "SDV Local Instance Shutdown Utility" << std::endl;
-        std::cout << "Copyright (C): 2022-2025 ZF Friedrichshafen AG" << std::endl;
+        std::cout << "Copyright (C): 2022-2026 ZF Friedrichshafen AG" << std::endl;
         std::cout << "Author: Erik Verhoeven" << std::endl << std::endl;
     }
 

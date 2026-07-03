@@ -1,3 +1,4 @@
+
 /********************************************************************************
  * Copyright (c) 2025-2026 ZF Friedrichshafen AG
  *
@@ -18,7 +19,7 @@
 #include <support/pssup.h>
 #include <interfaces/app.h>
 
-CRepositoryProxy::CRepositoryProxy(CClient& rClient, sdv::com::TConnectionID tConnection,
+CRepositoryProxy::CRepositoryProxy(CClientConnect& rClient, sdv::com::TConnectionID tConnection,
     sdv::IInterfaceAccess* pRepositoryProxy) :
     m_rClient(rClient), m_tConnection(tConnection), m_ptrRepositoryProxy(pRepositoryProxy)
 {}
@@ -26,120 +27,131 @@ CRepositoryProxy::CRepositoryProxy(CClient& rClient, sdv::com::TConnectionID tCo
 void CRepositoryProxy::DestroyObject()
 {
     // Call the client to disconnect the connection and destroy the object.
-    m_rClient.Disconnect(m_tConnection);
+    m_rClient.Disconnect();
 }
 
-bool CClient::OnInitialize()
+sdv::com::TConnectionID CRepositoryProxy::GetConnectionID() const
 {
-    return true;
+    return m_tConnection;
 }
 
-void CClient::OnShutdown()
-{
-    sdv::com::IConnectionControl* pConnectionControl = sdv::core::GetObject<sdv::com::IConnectionControl>("CommunicationControl");
-    if (!pConnectionControl)
-        SDV_LOG_ERROR("Failed to get communication control!");
-
-    // Disconnect from all repositories
-    std::unique_lock<std::mutex> lock(m_mtxRepositoryProxies);
-    auto mapRepositoryProxiesCopy = std::move(m_mapRepositoryProxies);
-    lock.unlock();
-    if (pConnectionControl)
-    {
-        for (const auto& rvtRepository : mapRepositoryProxiesCopy)
-            pConnectionControl->RemoveConnection(rvtRepository.first);
-    }
-}
-
-sdv::IInterfaceAccess* CClient::Connect(const sdv::u8string& ssConnectString)
+bool CClientConnect::OnInitialize()
 {
     const sdv::app::IAppContext* pContext = sdv::core::GetCore<sdv::app::IAppContext>();
     if (!pContext)
     {
         SDV_LOG_ERROR("Failed to get application context!");
-        return nullptr;
+        return false;
     }
     sdv::com::IConnectionControl* pConnectionControl = sdv::core::GetObject<sdv::com::IConnectionControl>("CommunicationControl");
     if (!pConnectionControl)
     {
         SDV_LOG_ERROR("Failed to get communication control!");
-        return nullptr;
+        return false;
     }
 
-    sdv::ipc::IChannelAccess* pChannelAccess = nullptr;
-    std::string ssConfig;
-    try
+    // Check for a provider. Without provider there is no object to use for listening.
+    if (m_ssProvider.empty())
     {
-        // Determine whether the service is running as server or as client.
-        sdv::toml::CTOMLParser config(ssConnectString);
-        std::string ssType = config.GetDirect("Client.Type").GetValue();
-        if (ssType.empty()) ssType = "Local";
-        if (ssType == "Local")
-        {
-            uint32_t uiInstanceID = config.GetDirect("Client.Instance").GetValue();
-            pChannelAccess = sdv::core::GetObject<sdv::ipc::IChannelAccess>("LocalChannelControl");
-            if (!pChannelAccess)
-            {
-                SDV_LOG_ERROR("No local channel control or channel control not configured as client!");
-                return nullptr;
-            }
-
-            ssConfig = std::string(R"code([IpcChannel]
-Name = "LISTENER_)code") + std::to_string(uiInstanceID ? uiInstanceID : pContext->GetInstanceID()) + R"code("
-)code";
-
-        }
-        else if (ssType == "Remote")
-        {
-            std::string ssInterface = config.GetDirect("Client.Interface").GetValue();
-            uint32_t uiPort = config.GetDirect("Client.Interface").GetValue();
-            if (ssInterface.empty() || !uiPort)
-            {
-                SDV_LOG_ERROR("Missing interface or port number to initialize a remote client!");
-                return nullptr;
-            }
-            pChannelAccess = sdv::core::GetObject<sdv::ipc::IChannelAccess>("RemoteChannelControl");
-            if (!pChannelAccess)
-            {
-                SDV_LOG_ERROR("No remote channel control or channel control not configured as client!");
-                return nullptr;
-            }
-
-            ssConfig = R"code([IpcChannel]
-Interface = ")code" + ssInterface + R"code(
-Port = ")code" + std::to_string(uiPort) + R"code(
-)code";
-        }
-        else
-        {
-            SDV_LOG_ERROR("Invalid or missing listener configuration for listener service!");
-            SetObjectIntoConfigErrorState();
-            return nullptr;
-        }
+        SDV_LOG_ERROR("Missing provider name for creating a client object!");
+        return false;
     }
-    catch (const sdv::toml::XTOMLParseException& rexcept)
+    sdv::ipc::IChannelAccess* pChannelAccess = sdv::core::GetObject<sdv::ipc::IChannelAccess>(m_ssProvider);
+    if (!pChannelAccess)
     {
-        SDV_LOG_ERROR("Invalid service configuration for listener service: ", rexcept.what(), "!");
-        SetObjectIntoConfigErrorState();
-        return nullptr;
+        SDV_LOG_ERROR("Cannot instantiate provider '", m_ssProvider, "' for the creation of a client object!");
+        return false;
     }
+
+    // The connection will be established in the Connect function.
+    return true;
+}
+
+void CClientConnect::OnShutdown()
+{
+    sdv::com::IConnectionControl* pConnectionControl = sdv::core::GetObject<sdv::com::IConnectionControl>("CommunicationControl");
+    if (!pConnectionControl)
+        SDV_LOG_ERROR("Failed to get communication control!");
+
+    // Disconnect
+    Disconnect();
+}
+
+bool CClientConnect::Connect()
+{
+    sdv::u8string ssProvider;
+    sdv::u8string ssConfig;
+
+    {
+        std::unique_lock<std::mutex> lock(m_mtx);
+        ssProvider = m_ssProvider;
+        ssConfig   = BuildObjectConfig();
+    }
+
+    const sdv::app::IAppContext* pContext = sdv::core::GetCore<sdv::app::IAppContext>();
+    if (!pContext)
+    {
+        SDV_LOG_ERROR("Failed to get application context!");
+        return false;
+    }
+    sdv::com::IConnectionControl* pConnectionControl = sdv::core::GetObject<sdv::com::IConnectionControl>("CommunicationControl");
+    if (!pConnectionControl)
+    {
+        SDV_LOG_ERROR("Failed to get communication control!");
+        return false;
+    }
+
+    // Check for a provider. Without provider there is no object to use for listening.
+    if (ssProvider.empty())
+    {
+        SDV_LOG_ERROR("Missing provider name for creating a client object!");
+        return false;
+    }
+
+    sdv::ipc::IChannelAccess* pChannelAccess = sdv::core::GetObject<sdv::ipc::IChannelAccess>(ssProvider);
+    if (!pChannelAccess)
+    {
+        SDV_LOG_ERROR("Cannot instantiate provider '", m_ssProvider, "' for the creation of a client object!");
+        return false;
+    }
+
+    // Get the repository
+    sdv::TInterfaceAccessPtr ptrRespository = sdv::core::GetObject("RepositoryService");
+    if (!ptrRespository)
+    {
+        SDV_LOG_ERROR("Failed to get repository service!");
+        return false;
+    }
+
+    // Add a dependency of the provider to this service (to prevent the provider to be terminated while the service is still
+    // running).
+    sdv::core::IObjectDependency* pObjectDependency = ptrRespository.GetInterface<sdv::core::IObjectDependency>();
+    if (!pObjectDependency)
+    {
+        SDV_LOG_ERROR("Failed to get the object dependency interface!");
+        return false;
+    }
+
+    pObjectDependency->AddObjectDependency(Self().ssName, ssProvider);
+
 
     // First access the listener channel. This allows us to access the channel creation interface.
 
     // TODO: Use named mutex to prevent multiple connections at the same time.
     // Connect to the channel.
     sdv::TObjectPtr ptrListenerEndpoint = pChannelAccess->Access(ssConfig);
+    
 
     // Assign the endpoint to the communication service.
     sdv::IInterfaceAccess* pListenerProxy = nullptr;
-    sdv::com::TConnectionID tListenerConnection = pConnectionControl->AssignClientEndpoint(ptrListenerEndpoint, 5000,
-        pListenerProxy);
+    sdv::com::TConnectionID tListenerConnection =
+        pConnectionControl->AssignClientEndpoint(ptrListenerEndpoint, 5000, pListenerProxy);
     ptrListenerEndpoint.Clear();    // Lifetime has been taken over by communication control.
     if (!tListenerConnection || !pListenerProxy)
     {
         SDV_LOG_ERROR("Could not assign the client endpoint!");
         if (tListenerConnection != sdv::com::TConnectionID{}) pConnectionControl->RemoveConnection(tListenerConnection);
-        return nullptr;
+        return false;
     }
     sdv::TInterfaceAccessPtr ptrListenerProxy(pListenerProxy);
 
@@ -149,9 +161,26 @@ Port = ")code" + std::to_string(uiPort) + R"code(
     {
         SDV_LOG_ERROR("Could not get the channel creation interface!");
         if (tListenerConnection != sdv::com::TConnectionID{}) pConnectionControl->RemoveConnection(tListenerConnection);
-        return nullptr;
+        return false;
     }
-    sdv::u8string ssConnectionString = pRequestChannel->RequestChannel("");
+    
+    sdv::u8string ssRequestConfig;
+
+    // Tunnel providers need the full object config so the private channel
+    // can preserve provider-specific fields such as the tunnel name.
+    // For shared memory we keep the legacy behavior and let the provider
+    // create its own private channel details.
+    if (ssProvider == "unix_domain_sockets_tunnel")
+    {
+        ssRequestConfig = ssConfig;
+    }
+    else
+    {
+        ssRequestConfig.clear();
+    }
+
+    sdv::u8string ssConnectionString = pRequestChannel->RequestChannel(ssRequestConfig);
+
 
     // Disconnect from the listener
     if (tListenerConnection != sdv::com::TConnectionID{}) pConnectionControl->RemoveConnection(tListenerConnection);
@@ -159,7 +188,7 @@ Port = ")code" + std::to_string(uiPort) + R"code(
     if (ssConnectionString.empty())
     {
         SDV_LOG_ERROR("Could not get the private channel connection information!");
-        return nullptr;
+        return false;
     }
 
     // TODO: Use named mutex to prevent multiple connections at the same time.
@@ -174,30 +203,64 @@ Port = ")code" + std::to_string(uiPort) + R"code(
     {
         SDV_LOG_ERROR("Could not assign the client endpoint to the private channel!");
         if (tPrivateConnection != sdv::com::TConnectionID{}) pConnectionControl->RemoveConnection(tPrivateConnection);
-        return nullptr;
+        return false;
     }
 
     // Create a remote repository object
-    std::unique_lock<std::mutex> lock(m_mtxRepositoryProxies);
-    m_mapRepositoryProxies.try_emplace(tPrivateConnection, *this, tPrivateConnection, pPrivateProxy);
+    m_ptrRemoteRepo = std::make_shared<CRepositoryProxy>(*this, tPrivateConnection, pPrivateProxy);
 
-    return pPrivateProxy;
+    return true;
 }
 
-void CClient::Disconnect(sdv::com::TConnectionID tConnectionID)
+bool CClientConnect::Disconnect()
 {
-    // Find the connection, disconnect and remove the connection from the repository list.
-    std::unique_lock<std::mutex> lock(m_mtxRepositoryProxies);
-    auto itRepository = m_mapRepositoryProxies.find(tConnectionID);
-    if (itRepository == m_mapRepositoryProxies.end()) return;
+    std::unique_lock<std::mutex> lock(m_mtx);
+
+    if (!m_ptrRemoteRepo) return false;
+
+    // Whatever happens, the connection will be removed
+    std::shared_ptr<CRepositoryProxy> ptrRemoteRepoLocal = std::move(m_ptrRemoteRepo);
 
     // Disconnect
     sdv::com::IConnectionControl* pConnectionControl = sdv::core::GetObject<sdv::com::IConnectionControl>("CommunicationControl");
     if (!pConnectionControl)
+    {
         SDV_LOG_ERROR("Failed to get communication control!");
-    else
-        pConnectionControl->RemoveConnection(itRepository->first);
+        return false;
+    }
+    pConnectionControl->RemoveConnection(ptrRemoteRepoLocal->GetConnectionID());
 
-    // Remove entry
-    m_mapRepositoryProxies.erase(itRepository);
+    // Get the repository
+    sdv::TInterfaceAccessPtr ptrRespository = sdv::core::GetObject("RepositoryService");
+    if (!ptrRespository)
+    {
+        SDV_LOG_ERROR("Failed to get repository service!");
+        return false;
+    }
+
+    // Add a dependency of the provider to this service (to prevent the provider to be terminated while the service is still
+    // running).
+    sdv::core::IObjectDependency* pObjectDependency = ptrRespository.GetInterface<sdv::core::IObjectDependency>();
+    if (!pObjectDependency)
+    {
+        SDV_LOG_ERROR("Failed to get the object dependency interface!");
+        return false;
+    }
+    pObjectDependency->RemoveObjectDependency("ClientConnectService", m_ssProvider);
+
+    return true;
+}
+
+bool CClientConnect::IsConnected() const
+{
+    std::unique_lock<std::mutex> lock(m_mtx);
+
+    return m_ptrRemoteRepo ? true : false;
+}
+
+sdv::IInterfaceAccess* CClientConnect::GetRemoteRepository()
+{
+    std::unique_lock<std::mutex> lock(m_mtx);
+
+    return m_ptrRemoteRepo ? m_ptrRemoteRepo.get() : nullptr;
 }

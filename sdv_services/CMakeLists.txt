@@ -171,6 +171,14 @@ add_custom_command(
     VERBATIM
     )
 add_custom_command(
+    OUTPUT ${INTERFACE_DIR}/permission.h
+    DEPENDS sdv_idl_compiler
+    MAIN_DEPENDENCY ${INTERFACE_DIR}/permission.idl
+    COMMENT "Compiling permission.idl"
+    COMMAND sdv_idl_compiler ${INTERFACE_DIR}/permission.idl -O${INTERFACE_DIR} --no_ps
+    VERBATIM
+    )
+add_custom_command(
     OUTPUT ${INTERFACE_DIR}/timer.h
     DEPENDS sdv_idl_compiler
     MAIN_DEPENDENCY ${INTERFACE_DIR}/timer.idl
@@ -198,6 +206,7 @@ add_custom_target(CompileCoreIDL
         ${INTERFACE_DIR}/process.h
         ${INTERFACE_DIR}/param.h
         ${INTERFACE_DIR}/repository.h
+        ${INTERFACE_DIR}/permission.h
         ${INTERFACE_DIR}/timer.h
     )
 
@@ -212,10 +221,14 @@ add_subdirectory(task_timer)
 add_subdirectory(ipc_com)
 add_subdirectory(ipc_connect)
 add_subdirectory(ipc_shared_mem)
-add_subdirectory(uds_unix_sockets)
-add_subdirectory(uds_unix_tunnel)
-add_subdirectory(uds_win_sockets)
-add_subdirectory(uds_win_tunnel)
+if(UNIX)
+    add_subdirectory(uds_unix_sockets)
+    add_subdirectory(uds_unix_tunnel)
+endif()
+if(WIN32)
+    add_subdirectory(uds_win_sockets)
+    add_subdirectory(uds_win_tunnel)
+endif()
 add_subdirectory(process_control)
 add_subdirectory(hardware_ident)
 add_subdirectory(manifest_util)

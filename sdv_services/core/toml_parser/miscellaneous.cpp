@@ -16,6 +16,8 @@
 #include "exception.h"
 #include <sstream>
 #include <limits>
+#include <support/toml.h>
+#include "parser_toml.h"
 
 namespace toml_parser
 {
@@ -560,4 +562,21 @@ namespace toml_parser
             return sstreamQuotedText.str();
         }
     }
+
+    bool CompareEqual(const std::string& rssToml1, const std::string& rssToml2)
+    {
+        try
+        {
+            CParser parser1(rssToml1);
+            CParser parser2(rssToml2);
+            sdv::toml::CNodeCollection collection1(&parser1.Root());
+            sdv::toml::CNodeCollection collection2(&parser2.Root());
+            return sdv::toml::internal::CompareNodes(collection1, collection2) == sdv::toml::ECompareResult::compare_identical;
+        }
+        catch (const toml_parser::XTOMLParseException&)
+        {
+            return false;
+        }
+    }
+
 } // namespace toml_parser

@@ -16,11 +16,12 @@
 #include <interfaces/com.h>
 #include <interfaces/app.h>
 #include <support/pssup.h>
+#include <support/local_service_access.h>
 
 CChannelBroker::CChannelBroker(CListener& rListener) : m_rListener(rListener)
 {}
 
-sdv::u8string CChannelBroker::RequestChannel(/*in*/ const sdv::u8string& /*ssConfig*/)
+sdv::u8string CChannelBroker::RequestChannel(/*in*/ const sdv::u8string& ssConfig)
 {
     // Get the communication control
     sdv::com::IConnectionControl* pConnectionControl = sdv::core::GetObject<sdv::com::IConnectionControl>("CommunicationControl");
@@ -39,25 +40,29 @@ sdv::u8string CChannelBroker::RequestChannel(/*in*/ const sdv::u8string& /*ssCon
     }
 
     // Get the channel control.
-    sdv::ipc::ICreateEndpoint* pEndpoint = nullptr;
-    if (m_rListener.IsLocalListener())
-        pEndpoint = sdv::core::GetObject<sdv::ipc::ICreateEndpoint>("LocalChannelControl");
-    else
-        pEndpoint = sdv::core::GetObject<sdv::ipc::ICreateEndpoint>("RemoteChannelControl");
+    sdv::ipc::ICreateEndpoint* pEndpoint = sdv::core::GetObject<sdv::ipc::ICreateEndpoint>(m_rListener.GetProviderName());
     if (!pEndpoint)
     {
         SDV_LOG_ERROR("No local channel control!");
         return {};
     }
 
-    // Create the endpoint
-    sdv::ipc::SChannelEndpoint sEndpoint = pEndpoint->CreateEndpoint(sdv::u8string());
+    // Forward protocol-specific configuration to the provider when creating the private channel.
+    SDV_LOG_INFO("[IPC_CONNECT][Listener] RequestChannel input config:\n", ssConfig);
+
+    sdv::ipc::SChannelEndpoint sEndpoint = pEndpoint->CreateEndpoint(ssConfig);
     if (!sEndpoint.pConnection)
     {
         SDV_LOG_ERROR("Could not create the endpoint for channel request!");
-        return sdv::u8string();
+        return {};
     }
+
+    SDV_LOG_INFO("[IPC_CONNECT][Listener] RequestChannel produced connect string: ", sEndpoint.ssConnectString);
+
     sdv::TObjectPtr ptrEndpoint(sEndpoint.pConnection); // Does automatic destruction if failure happens.
+
+    // Restrict access permissions
+    sdv::core::CAccessPermission permission = sdv::core::RestrictAccessPermission(sdv::core::EAccessPermission::local_access);
 
     // Assign the endpoint to the communication service.
     sdv::com::TConnectionID tConnection = pConnectionControl->AssignServerEndpoint(ptrEndpoint, ptrRespository, 100, false);
@@ -93,49 +98,21 @@ bool CListener::OnInitialize()
         return false;
     }
 
-    sdv::ipc::ICreateEndpoint* pEndpoint = nullptr;
-    std::string ssConfig;
-    if (m_ssType == "Local")
+    // Check for a provider. Without provider there is no object to use for listening.
+    if (m_ssProvider.empty())
     {
-        m_bLocalListener = true;
-        pEndpoint = sdv::core::GetObject<sdv::ipc::ICreateEndpoint>("LocalChannelControl");
-        if (!pEndpoint)
-        {
-            SDV_LOG_ERROR("No local channel control!");
-            return false;
-        }
-
-        // Request the instance ID from the app control
-        ssConfig = std::string(R"code([IpcChannel]
-Name = "LISTENER_)code") + std::to_string(m_uiInstanceID ? m_uiInstanceID : pContext->GetInstanceID()) + R"code("
-Size = 2048
-)code";
-    }
-    else if (m_ssType == "Remote")
-    {
-        m_bLocalListener = false;
-        if (m_ssInterface.empty() || !m_uiPort)
-        {
-            SDV_LOG_ERROR("Missing interface or port number to initialize a remote listener!");
-            return false;
-        }
-        pEndpoint = sdv::core::GetObject<sdv::ipc::ICreateEndpoint>("RemoteChannelControl");
-        if (!pEndpoint)
-        {
-            SDV_LOG_ERROR("No remote channel control!");
-            return false;
-        }
-
-        ssConfig = R"code([IpcChannel]
-Interface = ")code" + m_ssInterface + R"code(
-Port = ")code" + std::to_string(m_uiPort) + R"code(
-)code";
-    }
-    else
-    {
-        SDV_LOG_ERROR("Invalid or missing listener configuration for listener service!");
+        SDV_LOG_ERROR("Missing provider name for creating a listener object!");
         return false;
     }
+    sdv::ipc::ICreateEndpoint* pEndpoint = sdv::core::GetObject<sdv::ipc::ICreateEndpoint>(m_ssProvider);
+    if (!pEndpoint)
+    {
+        SDV_LOG_ERROR("Cannot instantiate provider '", m_ssProvider, "' for the creation of a listener object!");
+        return false;
+    }
+
+    // Get the IpcChannel information from the the configuration
+    auto ssConfig = BuildObjectConfig();
 
     // Create the endpoint
     sdv::ipc::SChannelEndpoint sEndpoint = pEndpoint->CreateEndpoint(ssConfig);
@@ -145,6 +122,24 @@ Port = ")code" + std::to_string(m_uiPort) + R"code(
         return false;
     }
     sdv::TObjectPtr ptrEndpoint(sEndpoint.pConnection); // Does automatic destruction if failure happens.
+
+    // Get the repository
+    sdv::TInterfaceAccessPtr ptrRespository = sdv::core::GetObject("RepositoryService");
+    if (!ptrRespository)
+    {
+        SDV_LOG_ERROR("Failed to get repository service!");
+        return false;
+    }
+
+    // Add a dependency of the provider to this service (to prevent the provider to be terminated while the service is still
+    // running).
+    sdv::core::IObjectDependency* pObjectDependency = ptrRespository.GetInterface<sdv::core::IObjectDependency>();
+    if (!pObjectDependency)
+    {
+        SDV_LOG_ERROR("Failed to get the object dependency interface!");
+        return false;
+    }
+    pObjectDependency->AddObjectDependency(Self().ssName, m_ssProvider);
 
     // Assign the endpoint to the communication service.
     m_tConnection = pConnectionControl->AssignServerEndpoint(ptrEndpoint, &m_broker, 100, true);
@@ -173,9 +168,8 @@ void CListener::OnShutdown()
     m_ptrConnection.Clear();
 }
 
-bool CListener::IsLocalListener() const
+
+const sdv::u8string& CListener::GetProviderName()
 {
-    return m_bLocalListener;
+    return m_ssProvider;
 }
-
-

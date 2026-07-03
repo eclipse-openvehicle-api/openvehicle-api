@@ -88,7 +88,7 @@ int Install(const SContext& rsContext)
         ssName = rsContext.seqCmdLine[1];
 
     // Try to connect
-    sdv::TObjectPtr ptrRepository = sdv::com::ConnectToLocalServerRepository(rsContext.uiInstanceID);
+    sdv::TObjectPtr ptrRepository = sdv::com::ConnectToLocalServerRepository();
     if (!ptrRepository)
     {
         if (!rsContext.bSilent)

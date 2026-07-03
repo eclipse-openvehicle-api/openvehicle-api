@@ -257,7 +257,7 @@ private:
     sdv::CLifetimeCookie                    m_cookie = sdv::CreateLifetimeCookie(); ///< Lifetime cookie to manage module lifetime.
     CSharedMemBufferTx                      m_sender;                       ///< Shared buffer for sending.
     CSharedMemBufferRx                      m_receiver;                     ///< Shared buffer for receiving.
-    std::thread                             m_threadReceive;                ///< Thread which receives data from the socket.
+    sdv::core::secure_thread                m_threadReceive;                ///< Thread which receives data from the socket.
     std::atomic<sdv::ipc::EConnectState>    m_eConnectState = sdv::ipc::EConnectState::uninitialized; ///< the state of the connection
     sdv::ipc::IDataReceiveCallback*         m_pReceiver = nullptr;          ///< Receiver to pass the messages to if available
     std::shared_mutex                       m_mtxEventCallbacks;            ///< Protect access to callback list. Only locking when
@@ -275,7 +275,7 @@ private:
 #if ENABLE_DECOUPLING > 0
     std::mutex                              m_mtxReceive;                   ///< Protect receive queue.
     std::queue<sdv::sequence<sdv::pointer<uint8_t>>> m_queueReceive;        ///< Receive queue to decouple receiving and processing.
-    std::thread                             m_threadDecoupleReceive;        ///< Decoupled receive thread.
+    sdv::core::secure_thread                m_threadDecoupleReceive;        ///< Decoupled receive thread.
     std::condition_variable                 m_cvReceiveAvailable;           ///< Condition variable synchronizing the processing.
     std::condition_variable                 m_cvReceiveProcessed;           ///< Condition variable synchronizing the processing.
 #endif

@@ -18,6 +18,7 @@
 #include "lexer_toml.h"
 #include "parser_node_toml.h"
 #include "miscellaneous.h"
+#include "parser_node_indexer.h"
 #include <stack>
 #include <memory>
 #include <string>
@@ -25,7 +26,9 @@
 /// The TOML parser namespace
 namespace toml_parser
 {
+    // Forward declarations
     class CNode;
+    class CNodeCollection;
 
     /**
      * @brief Creates a tree structure from input of UTF-8 encoded TOML source data
@@ -33,6 +36,10 @@ namespace toml_parser
     class CParser : public sdv::IInterfaceAccess, public sdv::toml::ITOMLParser
     {
     public:
+        // Forward declaration
+        class CLockRebuild;
+        friend CLockRebuild;        ///< Friend class can trigger manage rebuild lock counter.
+
         /**
          * @brief Construct a new Parser object
          * @param[in] rssString UTF-8 encoded data of a TOML source
@@ -67,6 +74,12 @@ namespace toml_parser
         CLexer& Lexer();
 
         /**
+         * @brief Get the indexer object managing the overall order of the nodes.
+         * @return Reference to the index object.
+        */
+        CNodeIndexer& Indexer();
+
+        /**
          * @{
          * @brief Return the root node.
          * @return Reference to the root node collection.
@@ -85,7 +98,65 @@ namespace toml_parser
          */
         std::string GenerateTOML(const std::string& rssPrefixKey = std::string()) const;
 
+        /**
+         * @brief Lock rebuild object preventing rebuilding the node order of all the tables.
+         */
+        class CLockRebuild
+        {
+            friend CParser;     ///< Parser can access the constructor
+
+            /**
+             * @brief Constructor
+             * @param[in] rParser Reference to the parser object
+             */
+            CLockRebuild(CParser& rParser);
+
+        public:
+            /**
+             * @brief Copy constructor
+             * @param[in] rLockRebuild Reference to another rebuild lock object.
+             */
+            CLockRebuild(const CLockRebuild& rLockRebuild);
+
+            /**
+             * @brief Move constructor
+             * @param[in] rLockRebuild Reference to another rebuild lock object.
+             */
+            CLockRebuild(CLockRebuild&& rLockRebuild);
+
+            /**
+             * @brief Destructor
+             */
+            ~CLockRebuild();
+
+        private:
+            CParser&    m_rParser;  ///< Reference to the parser object
+        };
+
+        /**
+         * @brief Create a rebuild lock object. During the lifetime of the object rebuilding the node order is locked using the lock
+         * counter method.
+         * @return An instance of the rebuild lock object.
+         */
+        CLockRebuild CreateRebuildLockObject();
+
+        /**
+         * @brief Returns whether rebuild is locked at the moment.
+         * @return Set when rebuild is locked.
+         */
+        bool RebuildLocked() const;
+
     private:
+        /**
+         * @brief Increase the rebuild lock counter. A lock count larger than 0 will prevent a rebuild.
+         */
+        void IncrRebuildLockCnt();
+
+        /**
+         * @brief Decrease the rebuild lock counter. A lock count of 0 will trigger the rebuild.
+         */
+        void DecrRebuildLockCnt();
+
         /**
          * @brief Process a table declaration.
          * @param[in, out] rNodeRange Reference to the extended token range of the node.
@@ -139,10 +210,13 @@ namespace toml_parser
             inline_table        ///< Environment for a table
         };
 
-        enum_stack<EEnvironment, EEnvironment::none>    m_stackEnvironment;     ///< Tracking of environments in nested structures.
-        std::shared_ptr<CRootTable>                     m_ptrRoot;              ///< The one root node.
-        std::shared_ptr<CNodeCollection>                m_ptrCurrentCollection; ///< The current collection node.
-        CLexer                                          m_lexer;                ///< Lexer.
+        enum_stack<EEnvironment, EEnvironment::none> m_stackEnvironment;    ///< Tracking of environments in nested structures.
+        std::shared_ptr<CRootTable>             m_ptrRoot;                  ///< The one root node.
+        std::shared_ptr<CNodeCollection>        m_ptrCurrentCollection;     ///< The current collection node.
+        CLexer                                  m_lexer;                    ///< Lexer object user for lexing the TOML code.
+        CNodeIndexer                            m_indexer;                  ///< Indexer managing the oberall order of the nodes.
+        size_t                                  m_nRebuildLockCnt = 0;      ///< A lock counter > 0 will prevent the node order
+                                                                            ///< rebuild.
     };
 } // namespace toml_parser
 

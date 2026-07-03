@@ -32,6 +32,7 @@
 #include <functional>
 #include <chrono>
 #include <queue>
+#include <list>
 
 namespace serdes
 {
@@ -378,7 +379,25 @@ namespace sdv
 
         inline CRawDataBypass& GetRawDataBypass()
         {
+#if defined __GNUC__ && defined _WIN32
+            // https://dev.azure.com/SW4ZF/AZP-431_DivDI_Vehicle_API/_workitems/edit/610009
+            // In MINGW GCC implementation of thread_local, there is an issue with complex classes being used after the destruction.
+            // This is caused by an architectural bug (https://github.com/msys2/MINGW-packages/issues/2519) causing the emutls (GCC
+            // Emulated TLS) managing the memory allocation to be executed before the __cxa_thread_exit, the thread cleanup callback
+            // of Windows. The solution is to use trivial data only (pointer, reference, integers, etc.). A workaround is
+            // implemented to use a reference of the permission list and map instead of an instance to the list and map.
+            static auto fnCreateBypass = []() -> CRawDataBypass&
+            {
+                static std::mutex mtx;
+                static std::list<CRawDataBypass> lstRawDataBypasses;
+                std::unique_lock<std::mutex> lock(mtx);
+                lstRawDataBypasses.resize(lstRawDataBypasses.size() + 1);
+                return lstRawDataBypasses.back();
+            };
+            thread_local static CRawDataBypass& bypass = fnCreateBypass();
+#else
             thread_local static CRawDataBypass bypass;
+#endif
             return bypass;
         }
 

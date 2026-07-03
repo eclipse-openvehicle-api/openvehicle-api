@@ -82,7 +82,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     if (!bSilent)
     {
         std::cout << "DBC utility" << std::endl;
-        std::cout << "Copyright (C): 2022-2025 ZF Friedrichshafen AG" << std::endl;
+        std::cout << "Copyright (C): 2022-2026 ZF Friedrichshafen AG" << std::endl;
         std::cout << "Author: Erik Verhoeven" << std::endl;
     }
     if (bHelp)

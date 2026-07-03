@@ -346,9 +346,9 @@ Version = )toml" + std::to_string(SDVFrameworkInterfaceVersion) + R"toml(
             // Modules leftover in the vector are added to the list
             auto vecModuleListCopy = m_vecModuleList;
             sdv::toml::CNodeCollection nodeModules = nodeConfig.GetDirect("Module");
-            for (size_t nIndex = nodeModules.GetCount() - 1; nIndex < nodeModules.GetCount(); --nIndex)
+            for (int64_t iIndex = static_cast<int64_t>(nodeModules.GetCount() - 1); iIndex >= 0; --iIndex)
             {
-                sdv::toml::CNodeCollection tableModule = nodeModules.Get(nIndex);
+                sdv::toml::CNodeCollection tableModule = nodeModules.Get(static_cast<size_t>(iIndex));
                 std::filesystem::path pathModule = tableModule.GetDirect("Path").GetValue().get<std::string>();
                 auto itModule = std::find_if(vecModuleListCopy.begin(), vecModuleListCopy.end(),
                     [&](const SModule& rsModule) { return pathModule == rsModule.pathModule; });
@@ -374,9 +374,9 @@ Version = )toml" + std::to_string(SDVFrameworkInterfaceVersion) + R"toml(
         // Classes leftover in the vector are added to the list
         auto vecClassListCopy = m_vecClassList;
         sdv::toml::CNodeCollection arrayClasses = nodeConfig.GetDirect("Class");
-        for (size_t nIndex = arrayClasses.GetCount() -1; nIndex < arrayClasses.GetCount(); --nIndex)
+        for (int64_t iIndex = static_cast<int64_t>(arrayClasses.GetCount() - 1); iIndex >= 0; --iIndex)
         {
-            sdv::toml::CNodeCollection tableClass = arrayClasses.Get(nIndex);
+            sdv::toml::CNodeCollection tableClass = arrayClasses.Get(static_cast<size_t>(iIndex));
             std::filesystem::path pathModule;
             if (!bServerApp)
                 pathModule = tableClass.GetDirect("Path").GetValue().get<std::string>();
@@ -419,8 +419,7 @@ Version = )toml" + std::to_string(SDVFrameworkInterfaceVersion) + R"toml(
                 if (ssExistingTOML != itClass->ssDefaultConfig)
                 {
                     if (tableParams) tableParams.Delete();
-                    if (!itClass->ssDefaultConfig.empty())
-                        tableClass.InsertTOML(sdv::toml::npos, itClass->ssDefaultConfig);
+                    if (!itClass->ssDefaultConfig.empty()) tableClass.InsertTOML("", itClass->ssDefaultConfig);
                     rbChanged = true;
                 }
 
@@ -433,8 +432,7 @@ Version = )toml" + std::to_string(SDVFrameworkInterfaceVersion) + R"toml(
             tableClass.AddValue("Class", rsClass.ssName);
             if (!bServerApp)
                 tableClass.AddValue("Path", std::filesystem::u8path(static_cast<std::string>(rsClass.ssModulePath)));
-            if (!rsClass.ssDefaultConfig.empty())
-                tableClass.InsertTOML(sdv::toml::npos, rsClass.ssDefaultConfig);
+            if (!rsClass.ssDefaultConfig.empty()) tableClass.InsertTOML("", rsClass.ssDefaultConfig);
             rbChanged = true;
         }
 
@@ -444,9 +442,9 @@ Version = )toml" + std::to_string(SDVFrameworkInterfaceVersion) + R"toml(
         // Components leftover in the vector are added to the list
         auto vecComponentListCopy = m_vecComponentList;
         sdv::toml::CNodeCollection nodeComponents = nodeConfig.GetDirect("Component");
-        for (size_t nIndex = nodeComponents.GetCount() - 1; nIndex < nodeComponents.GetCount(); --nIndex)
+        for (int64_t iIndex = static_cast<int64_t>(nodeComponents.GetCount() - 1); iIndex >= 0; --iIndex)
         {
-            sdv::toml::CNodeCollection tableComponent = nodeComponents.Get(nIndex);
+            sdv::toml::CNodeCollection tableComponent = nodeComponents.Get(static_cast<size_t>(iIndex));
             std::filesystem::path pathModule;
             if (!bServerApp)
                 pathModule = tableComponent.GetDirect("Path").GetValue().get<std::string>();
@@ -518,8 +516,8 @@ Version = )toml" + std::to_string(SDVFrameworkInterfaceVersion) + R"toml(
                     else if (!tableParams)
                     {
                         // Simply add the parameters
-                        tableParams = tableComponent.InsertTable(sdv::toml::npos, "Parameters");
-                        tableParams.InsertTOML(sdv::toml::npos, itComponent->ssParameterTOML);
+                        tableParams = tableComponent.InsertTable("", "Parameters");
+                        tableParams.InsertTOML("", itComponent->ssParameterTOML);
                         rbChanged = true;
                     }
                 }
@@ -536,8 +534,8 @@ Version = )toml" + std::to_string(SDVFrameworkInterfaceVersion) + R"toml(
                 tableComponent.AddValue("Name", rsComponent.ssInstanceName);
             if (!rsComponent.ssParameterTOML.empty())
             {
-                sdv::toml::CNodeCollection tableParams = tableComponent.InsertTable(sdv::toml::npos, "Parameters");
-                tableParams.InsertTOML(sdv::toml::npos, rsComponent.ssParameterTOML);
+                sdv::toml::CNodeCollection tableParams = tableComponent.InsertTable("", "Parameters");
+                tableParams.InsertTOML("", rsComponent.ssParameterTOML);
             }
             rbChanged = true;
         }
@@ -628,12 +626,12 @@ bool CAppConfigFile::InsertComponent(size_t nIndex, const std::filesystem::path&
             // Need to add a group?
             if (prKey.first != ssGroup)
             {
-                group = root.InsertTable(sdv::toml::npos, prKey.first);
+                group = root.InsertTable("", prKey.first);
                 ssGroup = prKey.first;
             }
 
             // Add the parameter
-            group.InsertValue(sdv::toml::npos, prKey.second, prParameter.second);
+            group.InsertValue("", prKey.second, prParameter.second);
         }
         ssParameterTOML = parser.GenerateTOML();
     }

@@ -18,7 +18,7 @@
 #include <support/serdes.h>
 #include <support/local_service_access.h>
 #include <interfaces/serdes/core_ps_serdes.h>
-#include "../../global/scheduler/scheduler.cpp"
+#include "../../global/scheduler/scheduler.h"
 
 CChannelConnector::CChannelConnector(CCommunicationControl& rcontrol, uint32_t uiIndex, sdv::IInterfaceAccess* pChannelEndpoint) :
     m_rcontrol(rcontrol), m_ptrChannelEndpoint(pChannelEndpoint),

@@ -450,7 +450,7 @@ bool CPackager::Configure()
         m_ssArgError = CMDLN_MISSING_TARGET_MSG;
         return false;
     }
-    if (!GetAppSettings().SaveSettingsFile())
+    if (!GetAppSettings().SaveSettings())
     {
         SDV_LOG_ERROR("Failed to save application settings. Cannot configure components!");
         return false;
@@ -743,7 +743,7 @@ bool CPackager::ConfigureFromManifest(const CInstallManifest& rmanifest)
             auto pathConfig = GetAppSettings().GetConfigPath(CAppSettings::EConfigType::user_config);
             WriteConfig(vecClasses, pathConfig, vecComponentsToAdd, true, vecAddedToConfig);
         }
-        if (!GetAppSettings().SaveSettingsFile())
+        if (!GetAppSettings().SaveSettings())
         {
             SDV_LOG_ERROR("Failed to save application settings. Cannot configure components!");
             return false;
@@ -806,11 +806,11 @@ void CPackager::WriteConfig(const std::vector<sdv::SClassInfo>& rvecAllClasses, 
                 break;
             case sdv::EObjectType::complex_service:
             case sdv::EObjectType::vehicle_function:
-            case sdv::EObjectType::utility:
                 eIncompatible = bUserConfig ? ECompatibility::compatible : ECompatibility::incompatible;
                 break;
             case sdv::EObjectType::proxy:
             case sdv::EObjectType::stub:
+            case sdv::EObjectType::utility:
                 eIncompatible = ECompatibility::silent_incompatible;
                 break;
             default:

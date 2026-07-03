@@ -163,20 +163,20 @@ private:
         verbose,        ///< Extensive reporting by application control
     };
 
-    bool                    m_bInitialized = false;             ///< Set when initialized.
-    bool                    m_bCmdLnError = false;              ///< Command line error occurred.
-    bool                    m_bCmdLnHelp = false;               ///< Command line help provided.
-    std::atomic_bool        m_bRunning = false;                 ///< When set, the application is running.
-    ERunAs                  m_eRunAs = ERunAs::standalone;      ///< Application operation.
-    EAppControlReporting    m_eReporting = EAppControlReporting::silent; ///< Application control reporting.
-    uint32_t                m_uiInstance = 1000u;               ///< Server instance to connect to.
-    std::filesystem::path   m_pathFramework;                    ///< Path to the SDV V-API framework.
-    sdv::app::CAppControl   m_appcontrol;                       ///< App-control of SDV V-API.
-    std::thread             m_threadSimulateDatalink;           ///< Simulation datalink thread.
-    sdv::core::CSignal      m_signalSteeringWheel;              ///< Steering wheel angle signal (input) - simulated datalink
-    sdv::core::CSignal      m_signalSpeed;                      ///< Speed signal (input) - simulated datalink
-    sdv::core::CSignal      m_signalRearAngle;                  ///< Rear angle signal (output) - simulated datalink
-    sdv::core::CSignal      m_signalCounter;                    ///< Simple counter signal (output) - simulated datalink
+    bool                        m_bInitialized = false;             ///< Set when initialized.
+    bool                        m_bCmdLnError = false;              ///< Command line error occurred.
+    bool                        m_bCmdLnHelp = false;               ///< Command line help provided.
+    std::atomic_bool            m_bRunning = false;                 ///< When set, the application is running.
+    ERunAs                      m_eRunAs = ERunAs::standalone;      ///< Application operation.
+    EAppControlReporting        m_eReporting = EAppControlReporting::silent; ///< Application control reporting.
+    uint32_t                    m_uiInstance = 1000u;               ///< Server instance to connect to.
+    std::filesystem::path       m_pathFramework;                    ///< Path to the SDV V-API framework.
+    sdv::app::CAppControl       m_appcontrol;                       ///< App-control of SDV V-API.
+    sdv::core::secure_thread    m_threadSimulateDatalink;           ///< Simulation datalink thread.
+    sdv::core::CSignal          m_signalSteeringWheel;              ///< Steering wheel angle signal (input) - simulated datalink
+    sdv::core::CSignal          m_signalSpeed;                      ///< Speed signal (input) - simulated datalink
+    sdv::core::CSignal          m_signalRearAngle;                  ///< Rear angle signal (output) - simulated datalink
+    sdv::core::CSignal          m_signalCounter;                    ///< Simple counter signal (output) - simulated datalink
 };
 
 template <typename TCharType>

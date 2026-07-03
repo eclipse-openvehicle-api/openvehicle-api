@@ -1,0 +1,10 @@
+﻿;Class name;Function name;Signal name;vss;Signal direction;type;DBC CAN name includes CAN message name
+;;;;;;;
+VD;RearDoorLeft;IsOpen;leftDoorIsOpen02;Vehicle.Body.Door.Axle.02.Left;RX;boolean;CAN_Input_L2.Door02LeftIsOpen
+VD;RearDoorRight;IsOpen;rightDoorIsOpen02;Vehicle.Body.Door.Axle.02.Right;RX;boolean;CAN_Input_R2.Door02RightIsOpen
+VD;RearDoorLeft;Lock;leftLatch02;Vehicle.Body.Door.Axle.02.Left;TX;boolean;CAN_Output.LockDoor02Left
+VD;RearDoorRight;Lock;rightLatch02;Vehicle.Body.Door.Axle.02.Right;TX;boolean;CAN_Output.LockDoor02Right
+BS;RearDoorLeft;IsOpenL2;leftDoorIsOpen02;Vehicle.Body.Door.Axle.02.Left;RX;boolean;Vehicle.Body.Door.Axle.02.Left
+BS;RearDoorRight;IsOpenR2;rightDoorIsOpen02;Vehicle.Body.Door.Axle.02.Right;RX;boolean;Vehicle.Body.Door.Axle.02.Right
+BS;RearDoorLeft;Lock;leftLatch02;Vehicle.Body.Door.Axle.02.Left;TX;boolean;Vehicle.Body.Door.Axle.02.Left
+BS;RearDoorRight;Lock;rightLatch02;Vehicle.Body.Door.Axle.02.Right;TX;boolean;Vehicle.Body.Door.Axle.02.Right

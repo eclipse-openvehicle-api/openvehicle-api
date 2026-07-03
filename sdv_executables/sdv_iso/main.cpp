@@ -22,6 +22,40 @@
 #include <support/local_service_access.h>
 #include "../error_msg.h"
 
+#ifdef _WIN32
+/**
+ * @brief Console application control handler (CTRL+C, close, shutdown, etc.).
+ * @param[in] dwCtrlType The control type triggered by the system.
+ * @return Returns TRUE when the signal was handled.
+ */
+static BOOL WINAPI ControlHandler(DWORD dwCtrlType)
+{
+    switch (dwCtrlType)
+    {
+    case CTRL_C_EVENT:
+    case CTRL_BREAK_EVENT:
+    case CTRL_CLOSE_EVENT:
+    case CTRL_LOGOFF_EVENT:
+    case CTRL_SHUTDOWN_EVENT:
+        return TRUE;
+        break;
+    default:
+        return FALSE;
+    }
+}
+#elif defined __unix__
+#include <signal.h>
+
+ /**
+ * @brief Signal handler to catch signal events.
+ * @param[in] iSigNum The signal type that was triggered.
+ */
+static void SignalHandler(int /*iSigNum*/)
+{
+    // Do nothing...
+}
+#endif
+
 /**
  * @brief Connect event callback wrapper. Calls shutdown request on disconnect or error.
  */
@@ -93,12 +127,6 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     if (thread.joinable())
         thread.join();
 
-    // If not set, set the runtime location to the EXE directory.
-    if (sdv::app::CAppControl::GetFrameworkRuntimeDirectory().empty())
-        sdv::app::CAppControl::SetFrameworkRuntimeDirectory(GetExecDirectory());
-    if (sdv::app::CAppControl::GetComponentInstallDirectory().empty())
-        sdv::app::CAppControl::SetComponentInstallDirectory(GetExecDirectory());
-
     CCommandLine cmdln(static_cast<uint32_t>(CCommandLine::EParseFlags::no_assignment_character));
     bool bHelp = false;
     bool bError = false;
@@ -126,23 +154,29 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     {
         ssArgError = rsExcept.what();
         bHelp = true;
-        bError = true;
     }
 
     if (!bSilent)
     {
         std::cout << "SDV isolation application" << std::endl;
-        std::cout << "Copyright (C): 2022-2025 ZF Friedrichshafen AG" << std::endl;
+        std::cout << "Copyright (C): 2022-2026 ZF Friedrichshafen AG" << std::endl;
         std::cout << "Author: Erik Verhoeven" << std::endl << std::endl;
     }
 
-    if (!ssArgError.empty() && !bSilent)
+    if (!ssArgError.empty() && !bSilent && !bHelp && !bVersion)
         std::cerr << "ERROR: " << ssArgError << std::endl;
 
-    if (ssConfigBase64.empty())
+    if (bVersion || bVerbose)
     {
-        ssArgError = "Missing app configuration.";
-        bHelp = true;
+        std::cout << "Version: " << (SDVFrameworkBuildVersion / 100) << "." << (SDVFrameworkBuildVersion % 100) << " build "
+                  << SDVFrameworkSubbuildVersion << " interface " << SDVFrameworkInterfaceVersion << std::endl;
+    }
+
+    if (!bHelp && ssConfigBase64.empty())
+    {
+        if (!bSilent && !bVersion)
+            std::cout << "Missing app configuration.";
+        bError = true;
     }
 
     if (bHelp)
@@ -153,17 +187,14 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
                 std::cout << std::endl;
             cmdln.PrintHelp(std::cout, "The isolation application is used to isolate components from the core process. The "
                 "isolation aims to improve the overall stability of the system.\n");
-            return bError ? CMDLN_ARG_ERR : NO_ERROR;
         }
+        return (bError && !bVersion && !bHelp) ? CMDLN_ARG_ERR : NO_ERROR;
     }
-    if (bError) return CMDLN_ARG_ERR;
+    if (bError) return (bError && !bVersion && !bHelp) ? CMDLN_ARG_ERR : NO_ERROR;
 
     // Check for encoded configuration
     std::string ssIsoAppConfig = Base64DecodePlainText(ssConfigBase64);
 
-    if (bVersion || bVerbose)
-        std::cout << "Version: " << (SDVFrameworkBuildVersion / 100) << "." << (SDVFrameworkBuildVersion % 100) << " build " <<
-        SDVFrameworkSubbuildVersion << " interface " << SDVFrameworkInterfaceVersion << std::endl;
     if (!bSilent)
         std::cout << "Instance ID: " << uiInstanceID << std::endl;
 
@@ -267,7 +298,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
             std::cerr << "ERROR: " << LINK_REPO_SERVICE_ERROR_MSG << std::endl;
         return LINK_REPO_SERVICE_ERROR;
     }
-    pLinkCoreRepo->LinkCoreRepository(pCoreRepo);
+    sdv::core::TLinkID tRepoLink = pLinkCoreRepo->LinkCoreRepository(pCoreRepo);
 
     // Create the one object... is this a service or a utility?
     std::string ssClassName = parser.GetDirect("Isolation.Class").GetValue();
@@ -332,6 +363,28 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     // The lifetime of the object is now taken over by the core or if failed, the object will be destroyed.
     ptrObject.Clear();
 
+#ifdef _WIN32
+    // Register the console control handler
+    if (!SetConsoleCtrlHandler(&ControlHandler, TRUE))
+    {
+        if (!bSilent)
+            std::cerr << "ERROR: " << APP_CONTROL_START_LOOP_FAILED_MSG << " - failed registering control handler." << std::endl;
+        return APP_CONTROL_START_LOOP_FAILED;
+    }
+#elif defined __unix__
+    // Install our signal handler
+    struct sigaction sSigAction
+    {};
+    sSigAction.sa_handler = SignalHandler;
+    sSigAction.sa_flags   = SA_RESTART;
+    if (sigaction(SIGINT, &sSigAction, NULL) == -1)
+    {
+        if (!bSilent)
+            std::cerr << "ERROR: " << APP_CONTROL_START_LOOP_FAILED_MSG << " - failed registering control handler." << std::endl;
+        return APP_CONTROL_START_LOOP_FAILED;
+    }
+#endif
+
     // Deactivate the configuration mode.
     appcontrol.SetRunningMode();
 
@@ -339,9 +392,13 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     if (!appcontrol.RunLoop())
     {
         if (!bSilent)
-            std::cerr << "ERROR: " << APP_CONTROL_START_LOOP_FAIELD_MSG << std::endl;
-        return APP_CONTROL_START_LOOP_FAIELD;
+            std::cerr << "ERROR: " << APP_CONTROL_START_LOOP_FAILED_MSG << std::endl;
+        return APP_CONTROL_START_LOOP_FAILED;
     }
+
+#ifdef _WIN32
+    SetConsoleCtrlHandler(&ControlHandler, FALSE);
+#endif
 
     // TODO EVE
     if (appcontrol.IsConfiguring())
@@ -358,7 +415,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     // Shutdwown
     pConnect->UnregisterStateEventCallback(uiCookie);
     parser.Clear();
-    pLinkCoreRepo->UnlinkCoreRepository();
+    pLinkCoreRepo->UnlinkCoreRepository(tRepoLink);
     appcontrol.Shutdown();
 
     if (!bSilent)

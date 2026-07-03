@@ -15,7 +15,6 @@
 #include "module_control.h"
 #include "repository.h"
 #include "../../global/base64.h"
-#include "../../global/tracefifo/trace_fifo.cpp"
 #include "toml_parser/parser_toml.h"
 #include "local_shutdown_request.h"
 #include "app_settings.h"
@@ -48,6 +47,9 @@ CAppControl& GetAppControl()
 bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfaceAccess* pEventHandler)
 {
     m_pEvent = pEventHandler ? pEventHandler->GetInterface<sdv::app::IAppEvent>() : nullptr;
+
+    // Allow this thread full access
+    m_optpermission = GetPermissionControl().CreatePermissionObject(sdv::core::EAccessPermission::full_access);
 
     // Intercept the logging...
     std::stringstream sstreamCOUT, sstreamCLOG, sstreamCERR;
@@ -86,7 +88,7 @@ bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfac
     }
 
     // Open the stream buffer and attach the streams if the application control is initialized as main app.
-    if (GetAppSettings().IsMainApplication())
+    if (!GetAppSettings().RedirectMonitorToConsole() && GetAppSettings().IsMainApplication())
     {
         m_fifoTraceStreamBuffer.SetInstanceID(GetAppSettings().GetInstanceID());
         m_fifoTraceStreamBuffer.Open(1000);
@@ -99,7 +101,7 @@ bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfac
     std::cerr << sstreamCERR.str();
 
     // Check for a correctly opened stream buffer
-    if (GetAppSettings().IsMainApplication() && !m_fifoTraceStreamBuffer.IsOpened())
+    if (!GetAppSettings().RedirectMonitorToConsole() && GetAppSettings().IsMainApplication() && !m_fifoTraceStreamBuffer.IsOpened())
     {
         if (!GetAppSettings().IsConsoleSilent())
             std::cerr << "ERROR: Log streaming could not be initialized; cannot continue!" << std::endl;
@@ -142,7 +144,7 @@ bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfac
     };
     auto fnCreateObject = [&ssErrorString](const sdv::u8string& rssClass, const sdv::u8string& rssObject, const sdv::u8string& rssConfig) -> bool
     {
-        bool bLocalRet = GetRepository().CreateObject2(rssClass, rssObject, rssConfig);
+        bool bLocalRet = GetRepository().CreateObject(rssClass, rssObject, rssConfig);
         if (!bLocalRet)
         {
             ssErrorString = std::string("Failed to instantiate a new object from class '") + rssClass + "'";
@@ -179,7 +181,7 @@ bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfac
     sdv::IInterfaceAccess* pLoggerObj = GetRepository().GetObject(GetAppSettings().GetLoggerClass());
     if (!pLoggerObj)
     {
-        GetRepository().DestroyObject2(GetAppSettings().GetLoggerClass());
+        GetRepository().DestroyObject(GetAppSettings().GetLoggerClass());
         if (!GetAppSettings().IsConsoleSilent())
             std::cerr << "ERROR: Failed to start the logger. Cannot continue!" << std::endl;
         Shutdown(true);
@@ -247,7 +249,7 @@ bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfac
     }
 
     // Load the application settings.
-    if (!GetAppSettings().LoadSettingsFile())
+    if (!GetAppSettings().LoadSettings())
     {
         if (!GetAppSettings().IsConsoleSilent())
             std::cerr << "ERROR: Failed to load application settings file. Cannot continue!" << std::endl;
@@ -275,32 +277,88 @@ bool CAppControl::Startup(/*in*/ const sdv::u8string& ssConfig, /*in*/ IInterfac
         bRet = fnLoadModule("hardware_ident.sdv") ? true : false;
         if (bRet) bRet = fnCreateObject("HardwareIdentificationService", "", "");
 
-        // Load shared memory channel
-        if (bRet) bRet = fnLoadModule("ipc_shared_mem.sdv") ? true : false;
-        if (bRet) bRet = fnCreateObject("DefaultSharedMemoryChannelControl", "", "");
+        // Load default communication provider
+        if (bRet) bRet = fnCreateObject(GetAppSettings().GetDefaultComProvider(), "", "");
 
         // Load IPC service
         if (bRet) bRet = fnLoadModule("ipc_com.sdv") ? true : false;
         if (bRet) bRet = fnCreateObject("CommunicationControl", "", "");
 
-        // Load IPC service and create listener local connections
-        if (bRet) bRet = fnLoadModule("ipc_listener.sdv") ? true : false;
-        if (bRet) bRet = fnCreateObject("ConnectionListenerService", "", R"code([Listener]
-Type = "Local"
-)code");
-
-        // Load IPC service
-        if (bRet) bRet = fnLoadModule("ipc_connect.sdv") ? true : false;
-        if (bRet) bRet = fnCreateObject("ConnectionService", "", "");
-
         // Load proxy/stub for core interfaces
         if (bRet) bRet = fnLoadModule("core_ps.sdv") ? true : false;
 
-//        // Start the listener
-//        if (bRet) bRet = fnLoadModule("ipc_listener.sdv") ? true : false;
-//        if (bRet) bRet = GetRepository().CreateObject("ConnectionListenerService", "ConnectionListenerService", R"code([Listener]
-//Type="local"
-//Instance=)code" + std::to_string(GetInstanceID()));
+        // Load the connection services
+        if (bRet) bRet = fnLoadModule("ipc_listener.sdv") ? true : false;
+        if (bRet) bRet = fnLoadModule("ipc_connect.sdv") ? true : false;
+
+        // For the main application start the configured listeners.
+        if (bRet)
+        {
+            auto seqListeners = GetAppSettings().GetListeners();
+            for (const auto& rssListener : seqListeners)
+            {
+                if (!bRet) break;
+                auto ssListenerConfig = GetAppSettings().GetListenerConfig(rssListener);
+                bRet = fnCreateObject("ListenerConnectService", "Listener_" + rssListener, ssListenerConfig);
+            }
+        }
+
+        // For the main application connect the configured connections (except default connection).
+        if (bRet)
+        {
+            auto seqConnections = GetAppSettings().GetConnections();
+            for (const auto& rssConnection : seqConnections)
+            {
+                if (!bRet) break;
+                if (rssConnection == "Default") continue;
+
+                if (!GetAppSettings().IsConsoleSilent())
+                    std::cout << "INFO: Trying to connect to " << rssConnection << "..." <<  std::endl;
+
+                auto ssConnectionConfig = GetAppSettings().GetConnectionConfig(rssConnection);
+                std::string ssObjectName = "Client_" + rssConnection;
+                bRet = fnCreateObject("ClientConnectService", ssObjectName, ssConnectionConfig);
+
+                // Try connect (for at least nTries) and when successful bind repositories
+                sdv::TInterfaceAccessPtr ptrClient = GetRepository().GetObject(ssObjectName);
+                sdv::com::IClientConnect* pClientConnect = ptrClient.GetInterface<sdv::com::IClientConnect>();
+                if (pClientConnect)
+                {
+                    for (uint32_t uiCnt = 0; uiCnt < GetAppSettings().GetConnectRetries(); uiCnt++)
+                    {
+                        // Try to connect. If not working, wait for 300 ms
+                        if (pClientConnect->Connect()) break;
+                        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+                    }
+
+                    if (pClientConnect->IsConnected())
+                    {
+                        // Register the core repo as repo access
+                        sdv::core::TLinkID tLinkID = GetRepository().LinkCoreRepository(pClientConnect->GetRemoteRepository());
+
+                        if (!GetAppSettings().IsConsoleSilent())
+                            std::cout << "INFO: Connection established... " << std::endl;
+
+                        // Store the connection object.
+                        m_vecConnections.push_back(std::make_pair(ssObjectName, tLinkID));
+                    }
+                    else
+                    {
+                        ssErrorString = "Not connected...";
+                        if (!GetAppSettings().IsConsoleSilent())
+                            std::cout << "ERROR: Failed to connect to " << ssConnectionConfig << std::endl;
+                        bRet = false;
+                    }
+                }
+                else
+                {
+                    ssErrorString = "No client connect interface...";
+                    if (!GetAppSettings().IsConsoleSilent())
+                        std::cerr << "ERROR: Cannot create connection object for " << rssConnection << std::endl;
+                    bRet = false;
+                }
+            }
+        }
 
         if (!bRet)
         {
@@ -314,25 +372,69 @@ Type = "Local"
     }
     else if (bRet && bLoadRPCClient)
     {
-        // Interpret the connect string...
-
-
         // Load hardware identification
         bRet = fnLoadModule("hardware_ident.sdv") ? true : false;
         if (bRet) bRet = fnCreateObject("HardwareIdentificationService", "", "");
 
-        // Load shared memory channel
-        if (bRet) bRet = fnLoadModule("ipc_shared_mem.sdv") ? true : false;
-        if (bRet) bRet = fnCreateObject("DefaultSharedMemoryChannelControl", "", "");
+        // Load default communication provider
+        if (bRet) bRet = fnCreateObject(GetAppSettings().GetDefaultComProvider(), "", "");
 
         // Load IPC service
         if (bRet) bRet = fnLoadModule("ipc_com.sdv") ? true : false;
         if (bRet) bRet = fnCreateObject("CommunicationControl", "", "");
 
-        // Load IPC service
-        if (bRet) bRet = fnLoadModule("ipc_connect.sdv") ? true : false;
-        if (bRet) bRet = fnCreateObject("ConnectionService", "", "");
+        // Connect to the core system when running as external aplication. Use the default connection for this.
+        if (bRet && GetAppSettings().GetContextType() == sdv::app::EAppContext::external)
+        {
+            // Load the connection services
+            bRet = fnLoadModule("ipc_connect.sdv") ? true : false;
 
+            if (!GetAppSettings().IsConsoleSilent())
+                std::cout << "INFO: Trying to connect to the core system..." << std::endl;
+
+            // And the one connection
+            auto ssConnectionConfig = GetAppSettings().GetConnectionConfig("Default");
+            if (bRet && !ssConnectionConfig.empty())
+                bRet = fnCreateObject("ClientConnectService", "Client_Default", ssConnectionConfig);
+
+            // Try connect (for at least nTries) and when successful bind repositories
+            sdv::TInterfaceAccessPtr ptrClient = GetRepository().GetObject("Client_Default");
+            sdv::com::IClientConnect* pClientConnect = ptrClient.GetInterface<sdv::com::IClientConnect>();
+            if (pClientConnect)
+            {
+                for (uint32_t uiCnt = 0; uiCnt < GetAppSettings().GetConnectRetries(); uiCnt++)
+                {
+                    // Try to connect. If not working, wait for 300 ms
+                    if (pClientConnect->Connect()) break;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+                }
+
+                if (pClientConnect->IsConnected())
+                {
+                    // Register the core repo as repo access
+                    sdv::core::TLinkID tLinkID = GetRepository().LinkCoreRepository(pClientConnect->GetRemoteRepository());
+
+                    if (!GetAppSettings().IsConsoleSilent())
+                        std::cout << "INFO: Connection established... " << std::endl;
+
+                    // Store the connection object.
+                    m_vecConnections.push_back(std::make_pair("Default", tLinkID));
+                }
+                else
+                {
+                    if (!GetAppSettings().IsConsoleSilent())
+                        std::cout << "ERROR: Failed to connect to the core system" << std::endl;
+                    bRet = false;
+                }
+            }
+            else
+            {
+                if (!GetAppSettings().IsConsoleSilent())
+                    std::cerr << "ERROR: Cannot create connection object for connecting to the core system." << std::endl;
+                bRet = false;
+            }
+        }
+   
         // Load proxy/stub for core interfaces
         if (bRet) bRet = fnLoadModule("core_ps.sdv") ? true : false;
 
@@ -428,6 +530,7 @@ void CAppControl::RunLoop()
     {
     case sdv::app::EAppContext::main:
     case sdv::app::EAppContext::isolated:
+    case sdv::app::EAppContext::external:
         bLocal = false;
         break;
     case sdv::app::EAppContext::maintenance:
@@ -490,8 +593,22 @@ void CAppControl::Shutdown(/*in*/ bool bForce)
     // Disable automatic configuration saving.
     m_bAutoSaveConfig = false;
 
-    // Update the application settings file
-    GetAppSettings().SaveSettingsFile();
+    // TODO EVE: This is likely not wanted
+    //// Update the application settings file
+    //GetAppSettings().SaveSettings();
+
+    // Disconnect all automatic connections.
+    for (const auto& rprConnectObject : m_vecConnections)
+    {
+        // If there is a registered link ID, unlink the ID.
+        if (rprConnectObject.second)
+            GetRepository().UnlinkCoreRepository(rprConnectObject.second);
+
+        sdv::TInterfaceAccessPtr ptrClient = GetRepository().GetObject(rprConnectObject.first);
+        sdv::com::IClientConnect* pClientConnect = ptrClient.GetInterface<sdv::com::IClientConnect>();
+        if (pClientConnect) pClientConnect->Disconnect();
+    }
+    m_vecConnections.clear();
 
     // Destroy all objects... this should also remove any registered services, except the custom logger.
     GetRepository().DestroyAllObjects(std::vector<std::string>({GetAppSettings().GetLoggerClass()}), bForce);
@@ -537,7 +654,7 @@ void CAppControl::Shutdown(/*in*/ bool bForce)
     }
 
     // End trace streaming
-    if (GetAppSettings().IsMainApplication())
+    if (!GetAppSettings().RedirectMonitorToConsole() && GetAppSettings().IsMainApplication())
     {
         std::cout << "**********************************************" << std::endl;
 
@@ -551,6 +668,7 @@ void CAppControl::Shutdown(/*in*/ bool bForce)
     m_bAutoSaveConfig = false;
     m_bEnableAutoSave = false;
     GetAppSettings().Reset();
+    m_optpermission.reset();
 }
 
 void CAppControl::RequestShutdown()

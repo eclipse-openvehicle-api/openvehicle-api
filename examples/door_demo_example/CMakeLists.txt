@@ -43,59 +43,63 @@ file (COPY ${PROJECT_SOURCE_DIR}/door_example_receiver.asc DESTINATION ${CMAKE_B
 ######################################################################################################################################################################
 
 # Execute sdv_vss_util to create IDL files for devices and basic services.
+# In this example we split into into front and rear (frontdoors_proxystub.sdv and frontdoors_proxystub.sdv)
+# because all interfaces combined in doors_proxystub.sdv would be to large 
 message("Create interface code for devices and basic services of doors example.")
-execute_process(COMMAND "${SDV_VSS_UTIL}" "${PROJECT_SOURCE_DIR}/vss_doors_example.csv" "-O${PROJECT_SOURCE_DIR}/generated/" --prefixdoors --version1.0.0.1 --enable_components)
+execute_process(COMMAND "${SDV_VSS_UTIL}" "${PROJECT_SOURCE_DIR}/vss_doors_front_example.csv" "-O${PROJECT_SOURCE_DIR}/generated/front/" --prefixfrontdoors --version1.0.0.1 --enable_components)
+execute_process(COMMAND "${SDV_VSS_UTIL}" "${PROJECT_SOURCE_DIR}/vss_doors_rear_example.csv" "-O${PROJECT_SOURCE_DIR}/generated/rear/" --prefixreardoors --version1.0.0.1 --enable_components)
 
 
 message("Compiling Interface Door01Left RX")
-execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclebodydooraxle_01left_vd_rx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
-execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclebodydooraxle_01left_bs_rx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/  --ps_lib_namedoors_proxystub)
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/front/vss_files/vss_vehiclebodydooraxle_01left_vd_rx.idl" "-O${PROJECT_SOURCE_DIR}/generated/front/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/front/vss_files/vss_vehiclebodydooraxle_01left_bs_rx.idl" "-O${PROJECT_SOURCE_DIR}/generated/front/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/  --ps_lib_namefrontdoors_proxystub)
 
 message("Compiling Interface Door01Right RX")
-execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclebodydooraxle_01right_vd_rx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
-execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclebodydooraxle_01right_bs_rx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/  --ps_lib_namedoors_proxystub)
-
-message("Compiling Interface Door02Left RX")
-execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclebodydooraxle_02left_vd_rx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
-execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclebodydooraxle_02left_bs_rx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/  --ps_lib_namedoors_proxystub)
-
-message("Compiling Interface Door02Right RX")
-execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclebodydooraxle_02right_vd_rx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
-execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclebodydooraxle_02right_bs_rx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/  --ps_lib_namedoors_proxystub)
-
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/front/vss_files/vss_vehiclebodydooraxle_01right_vd_rx.idl" "-O${PROJECT_SOURCE_DIR}/generated/front/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/front/vss_files/vss_vehiclebodydooraxle_01right_bs_rx.idl" "-O${PROJECT_SOURCE_DIR}/generated/front/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/  --ps_lib_namefrontdoors_proxystub)
 
 message("Compiling Interface Door01Left TX")
-execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclebodydooraxle_01left_vd_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
-execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclebodydooraxle_01left_bs_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/  --ps_lib_namedoors_proxystub)
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/front/vss_files/vss_vehiclebodydooraxle_01left_vd_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/front/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/front/vss_files/vss_vehiclebodydooraxle_01left_bs_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/front/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/  --ps_lib_namefrontdoors_proxystub)
 
 message("Compiling Interface Door01Right TX")
-execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclebodydooraxle_01right_vd_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
-execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclebodydooraxle_01right_bs_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/  --ps_lib_namedoors_proxystub)
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/front/vss_files/vss_vehiclebodydooraxle_01right_vd_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/front/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/front/vss_files/vss_vehiclebodydooraxle_01right_bs_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/front/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/  --ps_lib_namefrontdoors_proxystub)
+
+
+message("Compiling Interface Door02Left RX")
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/rear/vss_files/vss_vehiclebodydooraxle_02left_vd_rx.idl" "-O${PROJECT_SOURCE_DIR}/generated/rear/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/rear/vss_files/vss_vehiclebodydooraxle_02left_bs_rx.idl" "-O${PROJECT_SOURCE_DIR}/generated/rear/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/  --ps_lib_namereardoors_proxystub)
+
+message("Compiling Interface Door02Right RX")
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/rear/vss_files/vss_vehiclebodydooraxle_02right_vd_rx.idl" "-O${PROJECT_SOURCE_DIR}/generated/rear/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/rear/vss_files/vss_vehiclebodydooraxle_02right_bs_rx.idl" "-O${PROJECT_SOURCE_DIR}/generated/rear/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/  --ps_lib_namereardoors_proxystub)
 
 message("Compiling Interface Door02Left TX")
-execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclebodydooraxle_02left_vd_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
-execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclebodydooraxle_02left_bs_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/  --ps_lib_namedoors_proxystub)
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/rear/vss_files/vss_vehiclebodydooraxle_02left_vd_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/rear/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/rear/vss_files/vss_vehiclebodydooraxle_02left_bs_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/rear/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/  --ps_lib_namereardoors_proxystub)
 
 message("Compiling Interface Door02Right TX")
-execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclebodydooraxle_02right_vd_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
-execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/vss_files/vss_vehiclebodydooraxle_02right_bs_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/  --ps_lib_namedoors_proxystub)
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/rear/vss_files/vss_vehiclebodydooraxle_02right_vd_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/rear/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/ --no_ps)
+execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/generated/rear/vss_files/vss_vehiclebodydooraxle_02right_bs_tx.idl" "-O${PROJECT_SOURCE_DIR}/generated/rear/vss_files/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Igenerated/vss_files/  --ps_lib_namereardoors_proxystub)
 
 # Execute the IDL compiler for the complex service to digest interface code.
 message("Compiling door_ifc.idl")
 execute_process(COMMAND "${SDV_IDL_COMPILER}" "${PROJECT_SOURCE_DIR}/door_service/door_ifc.idl" "-O${PROJECT_SOURCE_DIR}/generated/door_service/" "-I${SDV_FRAMEWORK_DEV_INCLUDE}" -Iexample_service/ --ps_lib_namedoors_service_proxystub)
 
 add_subdirectory(generated/door_service/ps)
-add_subdirectory(generated/vss_files/ps)
+add_subdirectory(generated/front/vss_files/ps)
+add_subdirectory(generated/rear/vss_files/ps)
 
-add_subdirectory(generated/vss_files/vd_frontdoorleft)
-add_subdirectory(generated/vss_files/vd_frontdoorright)
-add_subdirectory(generated/vss_files/vd_reardoorleft)
-add_subdirectory(generated/vss_files/vd_reardoorright)
+add_subdirectory(generated/front/vss_files/vd_frontdoorleft)
+add_subdirectory(generated/front/vss_files/vd_frontdoorright)
+add_subdirectory(generated/front/vss_files/bs_frontdoorleft)
+add_subdirectory(generated/front/vss_files/bs_frontdoorright)
 
-add_subdirectory(generated/vss_files/bs_frontdoorleft)
-add_subdirectory(generated/vss_files/bs_frontdoorright)
-add_subdirectory(generated/vss_files/bs_reardoorleft)
-add_subdirectory(generated/vss_files/bs_reardoorright)
+add_subdirectory(generated/rear/vss_files/vd_reardoorleft)
+add_subdirectory(generated/rear/vss_files/vd_reardoorright)
+add_subdirectory(generated/rear/vss_files/bs_reardoorleft)
+add_subdirectory(generated/rear/vss_files/bs_reardoorright)
 
 # Execute sdv_dbc_util to create data link code & FMU code.
 message("Create data link for doors example")
@@ -167,7 +171,6 @@ else()
     target_link_libraries(door_external_app Rpcrt4.lib)
 endif()
 
-
 ######################################################################################################################################################################
 #                                                       create instance 3002 of door demo example
 ######################################################################################################################################################################
@@ -175,23 +178,25 @@ add_custom_target(vehicle_device_doors_config
     ALL
     DEPENDS
         can_dl_doors
-        doors_vd_frontdoorleft_rx
-        doors_vd_frontdoorright_rx
-        doors_vd_reardoorleft_rx
-        doors_vd_reardoorright_rx
-    COMMAND "${SDV_PACKAGER}" DIRECT_INSTALL VehicleDeviceDoors --instance3002 can_dl_doors.sdv doors_vd_frontdoorleft_rx.sdv doors_vd_frontdoorright_rx.sdv doors_vd_reardoorleft_rx.sdv doors_vd_reardoorright_rx.sdv "-I${CMAKE_RUNTIME_OUTPUT_DIRECTORY}" --interface_config --overwrite
+        frontdoors_vd_frontdoorleft_rx
+        frontdoors_vd_frontdoorright_rx
+        reardoors_vd_reardoorleft_rx
+        reardoors_vd_reardoorright_rx
+    COMMAND "${SDV_PACKAGER}" DIRECT_INSTALL VehicleDeviceDoors --instance3002 can_dl_doors.sdv frontdoors_vd_frontdoorleft_rx.sdv frontdoors_vd_frontdoorright_rx.sdv reardoors_vd_reardoorleft_rx.sdv reardoors_vd_reardoorright_rx.sdv "-I${CMAKE_RUNTIME_OUTPUT_DIRECTORY}" --interface_config --overwrite
     VERBATIM
 )
+
 
 add_custom_target(basic_service_doors_config
     ALL
     DEPENDS
-        doors_proxystub 
-        doors_bs_frontdoorleft_rx
-        doors_bs_frontdoorright_rx
-        doors_bs_reardoorleft_rx
-        doors_bs_reardoorright_rx
-    COMMAND "${SDV_PACKAGER}" DIRECT_INSTALL BasicServiceDoors --instance3002 doors_proxystub.sdv doors_bs_frontdoorleft_rx.sdv doors_bs_frontdoorright_rx.sdv doors_bs_reardoorleft_rx.sdv doors_bs_reardoorright_rx.sdv "-I${CMAKE_RUNTIME_OUTPUT_DIRECTORY}" --abstract_config --overwrite
+        frontdoors_proxystub 
+        reardoors_proxystub         
+        frontdoors_bs_frontdoorleft_rx
+        frontdoors_bs_frontdoorright_rx
+        reardoors_bs_reardoorleft_rx
+        reardoors_bs_reardoorright_rx
+    COMMAND "${SDV_PACKAGER}" DIRECT_INSTALL BasicServiceDoors --instance3002 frontdoors_proxystub.sdv reardoors_proxystub.sdv frontdoors_bs_frontdoorleft_rx.sdv frontdoors_bs_frontdoorright_rx.sdv reardoors_bs_reardoorleft_rx.sdv reardoors_bs_reardoorright_rx.sdv "-I${CMAKE_RUNTIME_OUTPUT_DIRECTORY}" --abstract_config --overwrite
     VERBATIM
 )
 

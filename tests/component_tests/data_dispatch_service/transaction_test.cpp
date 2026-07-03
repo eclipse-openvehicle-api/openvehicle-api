@@ -1546,12 +1546,12 @@ TEST(DataDispatchServiceTest, TransactionalRxTxSignalConcurrency)
     // Start the threads
     std::unique_lock<std::shared_mutex> lockStart(mtxStart);
     uint32_t uiCnt = 0;
-    std::thread rgPublishThreads[16];
-    for (std::thread& rThread : rgPublishThreads)
-        rThread = std::thread(fnPublisher, uiCnt++);
-    std::thread rgConsumeThreads[nConsumeThreads];
-    for (std::thread& rThread :rgConsumeThreads)
-        rThread = std::thread(fnConsumer, uiCnt++);
+    sdv::core::secure_thread rgPublishThreads[16];
+    for (sdv::core::secure_thread& rThread : rgPublishThreads)
+        rThread = sdv::core::secure_thread(fnPublisher, uiCnt++);
+    sdv::core::secure_thread rgConsumeThreads[nConsumeThreads];
+    for (sdv::core::secure_thread& rThread :rgConsumeThreads)
+        rThread = sdv::core::secure_thread(fnConsumer, uiCnt++);
 
     // Trigger the "GO"
     while (uiInitCnt < 32) std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -1630,11 +1630,11 @@ TEST(DataDispatchServiceTest, TransactionalRxTxSignalConcurrency)
     // Wait for all threads to finalize
     appcontrol.SetConfigMode();
     bShutdownPublisher = true;
-    for (std::thread& rThread : rgPublishThreads)
+    for (sdv::core::secure_thread& rThread : rgPublishThreads)
         if (rThread.joinable()) rThread.join();
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     bShutdownConsumer = true;
-    for (std::thread& rThread : rgConsumeThreads)
+    for (sdv::core::secure_thread& rThread : rgConsumeThreads)
         if (rThread.joinable()) rThread.join();
 
     // Check consume ranges

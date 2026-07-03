@@ -20,6 +20,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <mutex>
 #include <memory>
 #include <thread>
@@ -179,12 +180,20 @@ public:
      */
     uint16_t GetChannelId() const noexcept { return m_ChannelId; }
 
+    /**
+     * @brief Register callback used to remove this connection from manager watchdog storage.
+     */
+    void SetWatchDogRemoveCallback(std::function<void(const void*)> callback);
+
 private:
     std::shared_ptr<CUnixSocketConnection> m_Transport;             ///< shared physical tunnel port
     uint16_t m_ChannelId {0};                                       ///< default logical channel id
     sdv::ipc::IDataReceiveCallback* m_pUpperReceiver {nullptr};     ///< Callback to upper layer (data receive)
     sdv::ipc::IConnectEventCallback* m_pUpperEvent {nullptr};       ///< Callback to upper layer (state event)
     mutable std::mutex m_CallbackMtx;                               ///< Mutex to guard callback access
+    std::mutex m_WatchdogMtx;
+    std::function<void(const void*)> m_WatchdogRemoveCallback;
+    std::atomic<bool> m_DestroyObjectCalled { false };
 };
 
 #endif // UNIX_SOCKET_TUNNEL_CONNECTION_H

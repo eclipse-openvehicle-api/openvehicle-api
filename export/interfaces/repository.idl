@@ -26,11 +26,6 @@ module sdv
     {
 
         /**
-         * @brief Object ID.
-         */
-        typedef uint64 TObjectID;
-
-        /**
          * @brief Interface used to access objects from other modules via the repository service
          */
         interface IObjectAccess
@@ -230,6 +225,32 @@ module sdv
         };
 
         /**
+         * @brief The object dependency can be used to state dependencies between two objects. This influence is used during
+         * shutdown to determine the termination order.
+         */
+        interface IObjectDependency
+        {
+            /**
+             * @brief Add a dependency for an object.
+             * @param ssObjectName Name of the object.
+             * @param ssDependsOnObject Name of the object it depends on.
+             */
+            void AddObjectDependency(in u8string ssObjectName, in u8string ssDependsOnObject);
+
+            /**
+             * @brief Remove an object dependency.
+             * @param ssObjectName Name of the object.
+             * @param ssDependsOnObject Name of the object it depends on.
+             */
+            void RemoveObjectDependency(in u8string ssObjectName, in u8string ssDependsOnObject);
+        };
+
+        /**
+         * @brief Link ID.
+         */
+        typedef uint64 TLinkID;
+
+        /**
          * @brief Connect the core repository to the local repository to allow object access by the locally running components.
          * @remarks This interface is available only for isolated and external applications.
          */
@@ -238,13 +259,15 @@ module sdv
             /**
              * @brief Register the core repository.
              * @param[in] pCoreRepository Pointer to the proxy interface of the core repository.
+             * @return Returns a link ID to be used in the Unlink function. Or 0 on failure.
              */
-            void LinkCoreRepository(in IInterfaceAccess pCoreRepository);
+            TLinkID LinkCoreRepository(in IInterfaceAccess pCoreRepository);
 
             /**
              * @brief Unlink a previously linked core repository.
+             * @param[in] tLinkID Link ID of the repository link to remove.
              */
-            void UnlinkCoreRepository();
+            void UnlinkCoreRepository(in TLinkID tLinkID);
         };
 
     }; // module core

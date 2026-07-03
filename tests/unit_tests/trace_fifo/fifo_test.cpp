@@ -417,7 +417,7 @@ TEST(TraceFifoTest, Simple_Stream_Monitor)
 {
     std::stringstream sstreamWriter;
     CTraceFifoStreamBuffer fifoWriterStreamBuf(9999);
-    fifoWriterStreamBuf.Open(1000, static_cast<uint32_t>(ETraceFifoOpenFlags::force_create));
+    fifoWriterStreamBuf.Open(5000, static_cast<uint32_t>(ETraceFifoOpenFlags::force_create));
     EXPECT_TRUE(fifoWriterStreamBuf.IsOpened());
     fifoWriterStreamBuf.InterceptStream(sstreamWriter);
     CTraceFifoReader fifoReader(9999);

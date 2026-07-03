@@ -11,8 +11,8 @@
  *   Erik Verhoeven - initial API and implementation
  ********************************************************************************/
 
-#ifndef THREAD_POOL_H
-#define THREAD_POOL_H
+#ifndef SCHEDULER_H
+#define SCHEDULER_H
 
 #include <thread>
 #include <mutex>
@@ -27,32 +27,37 @@
 #include "../flags.h"
 
 /**
- * @brief Job scheduler that uses a dynamic threadpool to schedule the task.
+ * @brief Schedule flags to influence the scheduling.
  */
+enum class EScheduleFlags
+{
+    normal   = 0x0, ///< If thread level threshold has been reached, queue the call at the end of the queue.
+    priority = 0x1, ///< If thread level threshold has been reached, insert the call at the begin of the queue.
+    no_queue = 0x2, ///< If thread level threshold has been reached, fail the schedule call.
+};
+
+/**
+ * @brief Task scheduler that uses a dynamic threadpool to schedule the task.
+ * @tparam TThread Type of thread class to use for scheduling; must be derived from std::thread.
+ * @tparam nMinIdle The amount of idle threads that should stay present if there is nothing to process at the moment.
+ * @tparam nMaxBusy The maximum amount of threads that is used for processing.
+ */
+template <class TThread = std::thread, size_t nMinIdle = 4, size_t nMaxBusy = 32>
 class CTaskScheduler
 {
 public:
+    // The thread class must be derived from std::thread.
+    static_assert(std::is_base_of_v<std::thread, TThread>);
+
     /**
      * @brief Constructor
-     * @param[in] nMinIdle The amount of idle threads that should stay present if there is nothing to process at the moment.
-     * @param[in] nMaxBusy The maximum amount of threads that is used for processing.
      */
-    CTaskScheduler(size_t nMinIdle = 4, size_t nMaxBusy = 32);
+    CTaskScheduler();
 
     /**
      * @brief Destructor
      */
     ~CTaskScheduler();
-
-    /**
-     * @brief Schedule flags to influence the scheduling.
-     */
-    enum class EScheduleFlags
-    {
-        normal = 0x0,   ///< If thread level threshold has been reached, queue the call at the end of the queue.
-        priority = 0x1, ///< If thread level threshold has been reached, insert the call at the begin of the queue.
-        no_queue = 0x2, ///< If thread level threshold has been reached, fail the schedule call.
-    };
 
     /**
      * @brief Schedule the asynchronous execution of the task.
@@ -125,7 +130,7 @@ private:
          */
         void ThreadFunc();
 
-        std::thread             m_thread;               ///< The thread that executes the tasks.
+        TThread                 m_thread;               ///< The thread that executes the tasks.
         std::atomic_bool        m_bShutdown = false;    ///< Set when the thread should terminate.
         std::atomic_bool        m_bStarted = false;     ///< Set when the thread has started.
         std::function<void()>   m_fnTask;               ///< The task to execute (will be updated with new tasks before execution).
@@ -143,15 +148,18 @@ private:
      * @param[in] itThread The thread to use for the execution.
      * @param[in] fnTask The task to execute.
     */
-    void Execute(std::list<std::shared_ptr<CThread>>::iterator itThread, std::function<void()> fnTask);
+    void Execute(typename std::list<std::shared_ptr<CThread>>::iterator itThread, std::function<void()> fnTask);
 
     size_t                                  m_nMinIdle = 4;         ///< The minimal required amount of idle threads
     size_t                                  m_nMaxBusy = 32;        ///< The maximum allowed amount of busy threads
     size_t                                  m_nMaxThreads = 0;      ///< The maximum amount threads at the same time.
     mutable std::mutex                      m_mtxQueueAccess;       ///< Sync access to queue, list and double-ended-queue.
-    std::queue<std::list<std::shared_ptr<CThread>>::iterator> m_queueIdleThreads; ///< Idle thread queue.
-    std::list<std::shared_ptr<CThread>>     m_lstThreads;           ///< List with all threads.
+    std::queue<typename std::list<std::shared_ptr<CThread>>::iterator> m_queueIdleThreads; ///< Idle thread queue.
+    std::list<typename std::shared_ptr<CThread>>     m_lstThreads;  ///< List with all threads.
     std::deque<std::function<void()>>       m_dequeTasks;           ///< Double ended task queue.
 };
 
-#endif // !defined THREAD_POOL_H
+// Include the implementation
+#include "scheduler.inl"
+
+#endif // !defined SCHEDULER_H

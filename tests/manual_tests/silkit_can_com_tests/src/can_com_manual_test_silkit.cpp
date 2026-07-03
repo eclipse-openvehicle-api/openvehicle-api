@@ -31,9 +31,9 @@ class CANSilkitTest : public ::testing::Test
 class CTestCANSilkit : public CCANSilKit
 {
   public:
-    virtual void Initialize(const sdv::u8string& ssObjectConfig) override
+    virtual void Initialize(const sdv::SObjectInfo& sObjectInfo) override
     {
-        CCANSilKit::Initialize(ssObjectConfig);
+        CCANSilKit::Initialize(sObjectInfo);
     }
 
     virtual void Shutdown() override
@@ -113,7 +113,9 @@ bool InitializeAppControl(sdv::app::CAppControl* appcontrol, const std::string& 
 
 void InitializeCanComObject(CTestCANSilkit& canComObj, const std::string config, MockCANReceiver& mockRcv)
 {
-    ASSERT_NO_THROW(canComObj.Initialize(config.c_str()));
+    sdv::SObjectInfo sObjectInfo{};
+    sObjectInfo.ssConfig = config;
+    ASSERT_NO_THROW(canComObj.Initialize(sObjectInfo));
     EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialized);
     ASSERT_NO_THROW(canComObj.SetOperationMode(sdv::EOperationMode::configuring));
     ASSERT_NO_THROW(canComObj.RegisterReceiver(&mockRcv));
@@ -142,7 +144,8 @@ TEST_F(CANSilkitTest, ValidConfigString)
     sdv::app::CAppControl appControl;
     appControl.Startup("");
 
-    sdv::u8string ssObjectConfig =
+    sdv::SObjectInfo sObjectInfo{};
+    sObjectInfo.ssConfig =
     R"(
         DebugInfo = true
         SyncMode = true
@@ -156,7 +159,7 @@ TEST_F(CANSilkitTest, ValidConfigString)
             }"""
     )";
     CTestCANSilkit canComObj;
-    ASSERT_NO_THROW(canComObj.Initialize(ssObjectConfig.c_str()));
+    ASSERT_NO_THROW(canComObj.Initialize(sObjectInfo));
     ASSERT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialized);
 
     ASSERT_NO_THROW(canComObj.Send(testMsg, 0));
@@ -170,7 +173,8 @@ TEST_F(CANSilkitTest, InvalidConfigIdentifier)
     sdv::app::CAppControl appControl;
     appControl.Startup("");
 
-    sdv::u8string ssObjectConfig =
+    sdv::SObjectInfo sObjectInfo{};
+    sObjectInfo.ssConfig =
     R"(
         DebugInfo = true
         SyncMode = true
@@ -185,7 +189,7 @@ TEST_F(CANSilkitTest, InvalidConfigIdentifier)
     )";
 
     CTestCANSilkit canComObj;
-    ASSERT_NO_THROW(canComObj.Initialize(ssObjectConfig.c_str()));
+    ASSERT_NO_THROW(canComObj.Initialize(sObjectInfo));
     EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialization_failure);
 
     ASSERT_NO_THROW(canComObj.Shutdown());
@@ -197,7 +201,8 @@ TEST_F(CANSilkitTest, SendReceiveTest)
     sdv::app::CAppControl appControl;
     appControl.Startup("");
 
-    sdv::u8string ssConfig1 =
+    sdv::SObjectInfo sObjectInfo1{};
+    sObjectInfo1.ssConfig =
     R"(
         DebugInfo = true
         SyncMode = true
@@ -210,7 +215,8 @@ TEST_F(CANSilkitTest, SendReceiveTest)
                         },
             }"""
     )";
-    sdv::u8string ssConfig2 =
+    sdv::SObjectInfo sObjectInfo2{};
+    sObjectInfo2.ssConfig =
     R"(
         DebugInfo = true
         SyncMode = true
@@ -228,9 +234,9 @@ TEST_F(CANSilkitTest, SendReceiveTest)
     CTestCANSilkit canComObj2;
     MockCANReceiver mockRcv;
 
-    canComObj1.Initialize(ssConfig1.c_str());
+    canComObj1.Initialize(sObjectInfo1);
     ASSERT_EQ(canComObj1.GetObjectState(), sdv::EObjectState::initialized);
-    canComObj2.Initialize(ssConfig2.c_str());
+    canComObj2.Initialize(sObjectInfo2);
     ASSERT_EQ(canComObj2.GetObjectState(), sdv::EObjectState::initialized);
 
     ASSERT_NO_THROW(canComObj1.SetOperationMode(sdv::EOperationMode::running));

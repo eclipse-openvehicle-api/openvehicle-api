@@ -28,6 +28,7 @@
 #include "token.h"
 #include <fstream>
 #include <filesystem>
+#include <clocale>
 #include <locale>
 #include <codecvt>
 #include <cuchar>
@@ -71,7 +72,7 @@ const std::string& CSource::GetCodeRef() const
 void CSource::ReadFile(const std::filesystem::path& rpath)
 {
     // Set the locale to work with UTF8
-    std::setlocale(LC_ALL, "en_US.utf8");
+    ::setlocale(LC_ALL, "en_US.utf8");
 
     if (rpath.empty())
         throw CCompileException("File name missing");

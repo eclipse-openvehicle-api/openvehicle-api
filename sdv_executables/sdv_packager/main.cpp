@@ -41,12 +41,6 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     // NOTE EVE 27.05.2025: This task has been taken over by the process watchdog.
     CProcessWatchdog watchdog;
 
-    // If not set, set the runtime location to the EXE directory.
-    if (sdv::app::CAppControl::GetFrameworkRuntimeDirectory().empty())
-        sdv::app::CAppControl::SetFrameworkRuntimeDirectory(GetExecDirectory());
-    if (sdv::app::CAppControl::GetComponentInstallDirectory().empty())
-        sdv::app::CAppControl::SetComponentInstallDirectory(GetExecDirectory());
-
     // Process the command line.
     CSdvPackagerEnvironment environment(iArgc, rgszArgv);
 
@@ -54,7 +48,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     if (!environment.Silent())
     {
         std::cout << "SDV Component Installation Package Utility" << std::endl;
-        std::cout << "Copyright (C): 2022-2025 ZF Friedrichshafen AG" << std::endl;
+        std::cout << "Copyright (C): 2022-2026 ZF Friedrichshafen AG" << std::endl;
         std::cout << "Author: Erik Verhoeven" << std::endl << std::endl;
     }
 
@@ -114,7 +108,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     }
 
     // If running as server, load the settings file
-    if (!environment.Local() && !GetAppSettings().LoadSettingsFile())
+    if (!environment.Local() && !GetAppSettings().LoadSettings())
     {
         std::cerr << "ERROR: Failed to load the application settings file; cannot continue!" << std::endl;
         return -1;

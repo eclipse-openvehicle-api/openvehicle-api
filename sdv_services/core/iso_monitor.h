@@ -42,9 +42,9 @@ public:
 
     /**
      * @brief Initialize the object. Overload of sdv::IObjectControl::Initialize.
-     * @param[in] ssObjectConfig Optional configuration string.
+     * @param[in] sObjectInfo The registration information of this object.
      */
-    virtual void Initialize(/*in*/ const sdv::u8string& ssObjectConfig) override;
+    virtual void Initialize(/*in*/ const sdv::SObjectInfo& sObjectInfo) override;
 
     /**
      * @brief Get the current state of the object. Overload of sdv::IObjectControl::GetObjectState.

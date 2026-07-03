@@ -27,6 +27,7 @@
 #include "object_lifetime_control.h"
 #include "iso_monitor.h"
 #include "app_config_file.h"
+#include "../../global/unique_id.h"
 
 /**
  * @brief repository service providing functionality to load modules, create objects and access exiting objects
@@ -34,7 +35,8 @@
 class CRepository :
     public sdv::IInterfaceAccess, public sdv::core::IObjectAccess, public sdv::core::IRepositoryUtilityCreate,
     public sdv::core::IRepositoryMarshallCreate, public sdv::core::IRepositoryControl, public sdv::core::IRegisterForeignObject,
-    public sdv::core::IRepositoryInfo, public IObjectDestroyHandler, public sdv::core::ILinkCoreRepository
+    public sdv::core::IRepositoryInfo, public IObjectDestroyHandler, public sdv::core::ILinkCoreRepository,
+    public sdv::core::IObjectDependency
 {
 public:
     /**
@@ -45,6 +47,7 @@ public:
     // Interface map
     BEGIN_SDV_INTERFACE_MAP()
         SDV_INTERFACE_ENTRY(sdv::core::IObjectAccess)
+        SDV_INTERFACE_ENTRY(sdv::core::IObjectDependency)
         SDV_INTERFACE_ENTRY(sdv::core::IRepositoryMarshallCreate)
         SDV_INTERFACE_ENTRY(sdv::core::IRepositoryUtilityCreate)
     END_SDV_INTERFACE_MAP()
@@ -102,7 +105,6 @@ public:
      */
     virtual sdv::IInterfaceAccess* CreateStubObject(/*in*/ sdv::interface_id id) override;
 
-protected:
     /**
      * @brief Create an object and all its objects it depends on. Overload of Overload of
      * sdv::core::IRepositoryControl::CreateObject.
@@ -127,7 +129,7 @@ protected:
      */
     virtual sdv::core::TObjectID CreateObject(/*in*/ const sdv::u8string& ssClassName, /*in*/ const sdv::u8string& ssObjectName,
         /*in*/ const sdv::u8string& ssObjectConfig) override;
-public:
+
     /**
      * @brief Creates an object from a previously loaded module. Provide the module ID to explicitly define what module to
      * use during object creation. Overload of sdv::core::IRepositoryControl::CreateObjectFromModule.
@@ -145,7 +147,6 @@ public:
         /*in*/ const sdv::u8string& ssClassName, /*in*/ const sdv::u8string& ssObjectName,
         /*in*/ const sdv::u8string& ssObjectConfig) override;
 
-protected:
     /**
      * @brief Destroy a previously created object with the supplied name. Overload of sdv::core::IRepositoryControl::DestroyObject.
      * @details For standalone and essential applications previously created system, device and service objects can be
@@ -156,7 +157,29 @@ protected:
      */
     virtual bool DestroyObject(/*in*/ const sdv::u8string& ssObjectName) override;
 
-public:
+private:
+    /**
+     * @brief Object entry
+     * @details The object instance information. Objects that are running remotely are represented by their proxy. Objects can have
+     * multiple references by stubs.
+     */
+    struct SObjectEntry : sdv::SObjectInfo
+    {
+        sdv::TInterfaceAccessPtr        ptrObject;              ///< Object interface (could be proxy).
+        std::shared_ptr<CModuleInst>    ptrModule;              ///< Module instance.
+        bool                            bControlled = false;    ///< When set, the object is controlled.
+        bool                            bIsolated   = false;    ///< When set, the object is isolated and running in another process.
+        std::mutex                      mtxConnect;             ///< Mutex used to wait for connection
+        std::condition_variable         cvConnect;              ///< Condition variable used to wait for connection
+        std::shared_ptr<CIsoMonitor>    ptrIsoMon;              ///< Object being monitored for shutdown.
+        std::set<std::string>           setDependentObjects;    ///< List of dependent objects (needed during shutdown).
+    };
+
+    /**
+     * @brief List for collected objects ready for destruction.
+     */
+    using TDeferredObjectDestructionList = std::list<std::pair<std::shared_ptr<SObjectEntry>, sdv::IInterfaceAccess*>>;
+
     /**
      * @brief Create an object and all its objects it depends on. Internal function not accessible through the interface.
      * @param[in] ssClassName The name of the object class to be created. For the main application, the class string could
@@ -166,12 +189,13 @@ public:
      * the class name. Use the returned object ID to request the name of the object.
      * @param[in] ssObjectConfig Optional configuration handed over to the object upon creation via IObjectControl. Only
      * valid for standalone, essential and isolated applications.
+     * @param[in] bIndirect Set when the function was called through a call from GetObject.
      * @return Returns the object ID when the object creation was successful or 0 when not. On success the object is
      * available through the IObjectAccess interface. If the object already exists (class and object names are identical),
      * the object ID of the existing object is returned.
      */
-    sdv::core::TObjectID CreateObject2(/*in*/ const sdv::u8string& ssClassName, /*in*/ const sdv::u8string& ssObjectName,
-        /*in*/ const sdv::u8string& ssObjectConfig);
+    sdv::core::TObjectID CreateObject2(const sdv::u8string& ssClassName, const sdv::u8string& ssObjectName,
+        const sdv::u8string& ssObjectConfig, bool bIndirect);
 
     /**
      * @brief Destroy a previously created object with the supplied name. Internal function not accessible through the interface.
@@ -179,10 +203,14 @@ public:
      * destroyed. For the main and isolated applications, only the complex service can be destroyed. For isolated
      * applications a destruction of the object will end the application.
      * @param[in] ssObjectName The name of the object to destroy.
+     * @param[in] bIndirect Set when the function was not call directly through DestroyObject.
+     * @param[in] rlstDeferredObjectDestruction Reference to the list of objects to be filled with objects to be destroyed.
      * @return Returns whether the object destruction was successful.
      */
-    bool DestroyObject2(/*in*/ const sdv::u8string& ssObjectName);
+    bool DestroyObject2(const sdv::u8string& ssObjectName, bool bIndirect,
+        TDeferredObjectDestructionList& rlstDeferredObjectDestruction);
 
+public:
     /**
      * @brief Register as foreign object and make it public to the system with the given name. Overload of
      * sdv::core::IRegisterForeignObject::RegisterObject.
@@ -196,15 +224,17 @@ public:
         /*in*/ const sdv::u8string& ssObjectName) override;
 
     /**
-     * @brief Register the core repository.
+     * @brief Register the core repository. Overload of sdv::core::ILinkCoreRepository::LinkCoreRepository.
      * @param[in] pCoreRepository Pointer to the proxy interface of the core repository.
+     * @return Returns a link ID to be used in the Unlink function. Or 0 on failure.
      */
-    virtual void LinkCoreRepository(/*in*/ sdv::IInterfaceAccess* pCoreRepository) override;
+    virtual sdv::core::TLinkID LinkCoreRepository(/*in*/ sdv::IInterfaceAccess* pCoreRepository) override;
 
     /**
-     * @brief Unlink a previously linked core repository.
+     * @brief Unlink a previously linked core repository. Overload of sdv::core::ILinkCoreRepository::UnlinkCoreRepository.
+     * @param[in] tLinkID Link ID of the repository link to remove.
      */
-    virtual void UnlinkCoreRepository() override;
+    virtual void UnlinkCoreRepository(sdv::core::TLinkID tLinkID) override;
 
     /**
      * @brief Find the class information of an object with the supplied name. Overload of
@@ -257,6 +287,20 @@ public:
     void DestroyAllObjects(const std::vector<std::string>&rvecIgnoreObjects, bool bForce = false);
 
     /**
+     * @brief Add a dependency for an object. Overload of sdv::core::IObjectDependency::AddObjectDependency.
+     * @param[in] ssObjectName Name of the object.
+     * @param[in] ssDependsOnObject Name of the object it depends on.
+     */
+    void AddObjectDependency(/*in*/ const sdv::u8string& ssObjectName, /*in*/ const sdv::u8string& ssDependsOnObject) override;
+
+    /**
+     * @brief Remove an object dependency. Overload of sdv::core::IObjectDependency::RemoveObjectDependency.
+     * @param[in] ssObjectName Name of the object.
+     * @param[in] ssDependsOnObject Name of the object it depends on.
+     */
+    void RemoveObjectDependency(/*in*/ const sdv::u8string& ssObjectName, /*in*/ const sdv::u8string& ssDependsOnObject) override;
+
+    /**
      * @brief Reset the current config baseline.
      */
     void ResetConfigBaseline();
@@ -306,7 +350,7 @@ private:
      * @brief Create a new unique object ID.
      * @return The created object ID.
      */
-    static sdv::core::TObjectID CreateObjectID();
+    sdv::core::TObjectID CreateObjectID();
 
     /**
      * @brief Get a list of depending object instances of a specific class.
@@ -314,26 +358,6 @@ private:
      * @return Returns a list of object instances.
      */
     std::vector<sdv::core::TObjectID> GetDependingObjectInstancesByClass(const std::string& rssClass);
-
-    /**
-     * @brief Object entry
-     * @details The object instance information. Objects that are running remotely are represented by their proxy. Objects can have
-     * multiple references by stubs.
-     */
-    struct SObjectEntry
-    {
-        sdv::core::TObjectID                tObjectID = 0;          ///< Object ID (local to this process).
-        sdv::SClassInfo                     sClassInfo;             ///< Object class name.
-        std::string                         ssName;                 ///< Object name (can be zero with local objects).
-        std::string                         ssConfig;               ///< Object configuration.
-        sdv::TInterfaceAccessPtr            ptrObject;              ///< Object interface (could be proxy).
-        std::shared_ptr<CModuleInst>        ptrModule;              ///< Module instance.
-        bool                                bControlled = false;    ///< When set, the object is controlled.
-        bool                                bIsolated = false;      ///< When set, the object is isolated and running in another process.
-        std::mutex                          mtxConnect;             ///< Mutex used to wait for connection
-        std::condition_variable             cvConnect;              ///< Condition variable used to wait for connection
-        std::shared_ptr<CIsoMonitor>        ptrIsoMon;              ///< Object being monitored for shutdown.
-    };
 
     using TObjectMap = std::map<sdv::core::TObjectID, std::shared_ptr<SObjectEntry>>;
     using TOrderedObjectList = std::list<std::shared_ptr<SObjectEntry>>;
@@ -350,11 +374,11 @@ private:
     TIsolationMap                   m_mapIsolatedObjects;           ///< Map with isolated objects.
     TObjectMap                      m_mapObjects;                   ///< Map with all objects indexed by the object ID.
     TConfigSet                      m_setConfigObjects;             ///< Set with the objects for storing in the configuration.
-    sdv::TInterfaceAccessPtr        m_ptrCoreRepoAccess;            ///< Linked core repository access (proxy interface).
+    std::list<std::pair<sdv::core::TLinkID, sdv::TInterfaceAccessPtr>> m_lstCoreRepoAccess; ///< List to Linked core repositories.
     bool                            m_bIsoObjectLoaded = false;     ///< When set, the isolated object has loaded. Do not allow
                                                                     ///< another object of type complex service or utility to be
                                                                     ///< created.
-                                                                    /// 
+    CUniqueID<sdv::core::TObjectID> m_idgen;                        ///< Unique ID generator.
 };
 
 /**

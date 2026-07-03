@@ -25,8 +25,6 @@ add_library(ipc_com SHARED
      "com_channel.cpp"
      "marshall_object.h"
      "marshall_object.cpp"
-
-     #"scheduler.cpp"
      )
 if(UNIX)
 target_link_libraries(ipc_com rt ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})

@@ -209,8 +209,7 @@ bool CConsole::PrepareDataConsumers()
     m_pCounterSteeringSvc = sdv::core::GetObject("Counter Steering Example Service").GetInterface<ICounterSteeringService>();
     if (!m_pCounterSteeringSvc)
     {
-        std::cerr << "Console ERROR: Could not get complex service interface 'ICounterSteeringService'" << std::endl;
-        return false;
+        PrintText(g_sCSActive, "Attention: Complex service 'CounterSteeringService' is not available.");
     }
 
     return true;

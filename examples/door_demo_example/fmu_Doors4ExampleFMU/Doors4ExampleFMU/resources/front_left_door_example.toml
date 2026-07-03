@@ -2,11 +2,11 @@
 Version = 100
 
 [[Component]]
-Path = "doors_vd_frontdoorleft_rx.sdv"
+Path = "frontdoors_vd_frontdoorleft_rx.sdv"
 Class = "Vehicle.Body.Door.Axle._01.Left_Device"
 
 [[Component]]
-Path = "doors_bs_frontdoorleft_rx.sdv"
+Path = "frontdoors_bs_frontdoorleft_rx.sdv"
 Class = "Vehicle.Body.Door.Axle._01.Left_Service"
 
 

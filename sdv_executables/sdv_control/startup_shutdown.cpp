@@ -76,9 +76,9 @@ void StartupShutdownHelp(const SContext& rsContext)
             "Start the SDV server with the supplied instance ID. If no instance ID is supplied, use the default instance "
             "ID #1000.\n\n"
             "Options:\n"
-            " --server_silent   Server is started using silent option. Not compatible with 'server_verbose'.\n"
-            " --server_verbose  Server is started using verbose option. Not compatible with 'server_silent'.\n"
-            " --install_dir     Installation directory (absolute or relative to the sdv_core executable).\n\n");
+            " --server_silent        Server is started using silent option. Not compatible with 'server_verbose'.\n"
+            " --server_verbose       Server is started using verbose option. Not compatible with 'server_silent'.\n"
+            " --install_dir<path>    Installation directory (absolute or relative to the sdv_core executable).\n\n");
         return;
     }
     if (iequals(rsContext.seqCmdLine[0], "SHUTDOWN"))
@@ -156,7 +156,7 @@ int StartupSDVServer(const SContext& rsContext)
     }
 
     // Try to connect
-    auto ptrRepository = sdv::com::ConnectToLocalServerRepository(rsContext.uiInstanceID);
+    auto ptrRepository = sdv::com::ConnectToLocalServerRepository();
     if (!ptrRepository)
     {
         if (!rsContext.bSilent)
@@ -183,7 +183,7 @@ int ShutdownSDVServer(const SContext& rsContext)
         std::cout << "Connecting to the SDV #" << rsContext.uiInstanceID << " server..." << std::endl;
 
     // Try to connect
-    auto ptrRepository = sdv::com::ConnectToLocalServerRepository(rsContext.uiInstanceID);
+    auto ptrRepository = sdv::com::ConnectToLocalServerRepository();
     if (!ptrRepository)
     {
         if (!rsContext.bSilent)

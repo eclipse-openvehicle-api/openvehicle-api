@@ -44,13 +44,11 @@ add_test(NAME UnitTest_WinSocketConnectTests
 
 add_dependencies(UnitTest_WinSocketConnectTests dependency_sdv_components)
 
-if ((NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (NOT WIN32))
 add_custom_command(TARGET UnitTest_WinSocketConnectTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env TEST_EXECUTION_MODE=CMake
             "$<TARGET_FILE:UnitTest_WinSocketConnectTests>"
             --gtest_output=xml:${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/UnitTest_WinSocketConnectTests.xml
     VERBATIM
 )
-endif()
 
 endif()

@@ -109,7 +109,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     if (!bSilent)
     {
         std::cout << "abtract device / basic services utility" << std::endl;
-        std::cout << "Copyright (C): 2022-2025 ZF Friedrichshafen AG" << std::endl;
+        std::cout << "Copyright (C): 2022-2026 ZF Friedrichshafen AG" << std::endl;
         std::cout << "Author: Thomas Pfleiderer" << std::endl;
     }
 

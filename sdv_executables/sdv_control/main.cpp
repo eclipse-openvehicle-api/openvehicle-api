@@ -27,6 +27,7 @@
 #include "list_elements.h"
 #include "start_stop_service.h"
 #include "installation.h"
+#include "connection_config.h"
 #include "../error_msg.h"
 
 /**
@@ -53,12 +54,6 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     // NOTE EVE 27.05.2025: This task has been taken over by the process watchdog.
     CProcessWatchdog watchdog;
 
-    // If not set, set the runtime location to the EXE directory.
-    if (sdv::app::CAppControl::GetFrameworkRuntimeDirectory().empty())
-        sdv::app::CAppControl::SetFrameworkRuntimeDirectory(GetExecDirectory());
-    if (sdv::app::CAppControl::GetComponentInstallDirectory().empty())
-        sdv::app::CAppControl::SetComponentInstallDirectory(GetExecDirectory());
-
     CCommandLine cmdln(static_cast<uint32_t>(CCommandLine::EParseFlags::no_assignment_character));
     SContext sContext;
     bool bError = false;
@@ -67,24 +62,40 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     std::string ssArgError;
     try
     {
-        auto& rArgHelpDef = cmdln.DefineOption("?", bHelp, "Show help. Use <COMMAND> --help for specific help on the command.");
+        // Argument groups 1 - 10:
+        //  STARTUP
+        //  SHUTDOWN
+        //  LIST
+        //  INSTALL
+        //  UPDATE
+        //  UNINSTALL
+        //  START
+        //  STOP
+        //  LISTENER
+        //  CONNECTION
+        auto& rArgHelpDef =
+            cmdln.DefineOption("?", bHelp, "Show help. Use <COMMAND> --help for specific help on the command.");
         rArgHelpDef.AddSubOptionName("help");
-        auto& rArgSilentDef = cmdln.DefineOption("s", sContext.bSilent, "Do not show any information on std::cout. Not compatible with 'verbose'.");
+        auto& rArgSilentDef = cmdln.DefineOption("s", sContext.bSilent, "Do not show any information on std::cout. Not compatible "
+            "with 'verbose'.");
         rArgSilentDef.AddSubOptionName("silent");
-        auto& rArgVerboseDef = cmdln.DefineOption("v", sContext.bVerbose, "Provide verbose information. Not compatible with 'silent'.");
+        auto& rArgVerboseDef = cmdln.DefineOption("v", sContext.bVerbose, "Provide verbose information. Not compatible with "
+            "'silent'.");
         rArgVerboseDef.AddSubOptionName("verbose");
         cmdln.DefineSubOption("version", bVersion, "Show version information.");
         cmdln.DefineSubOption("instance", sContext.uiInstanceID, "The instance ID of the SDV instance (default ID is 1000).");
         cmdln.DefineSubOption("server_silent", sContext.bServerSilent, "Only used with STARTUP command: Server is started using "
-            "silent option. Not compatible with 'server_verbose'.");
+            "silent option. Not compatible with 'server_verbose'.", true, 1);
         cmdln.DefineSubOption("server_verbose", sContext.bServerVerbose, "Only used with STARTUP command: Server is started using "
-            "verbose option. Not compatible with 'server_silent'.");
+            "verbose option. Not compatible with 'server_silent'.", true, 1);
         cmdln.DefineSubOption("install_dir", sContext.pathInstallDir, "Only used with STARTUP command: Installation directory "
-            "(absolute or relative to the sdv_core executable).");
+            "(absolute or relative to the sdv_core executable).", true, 1);
         cmdln.DefineSubOption("no_header", sContext.bListNoHdr, "Only used with LIST command: Do not print a header for the "
-            "listing table.");
+            "listing table.", true, 3);
         cmdln.DefineSubOption("short", sContext.bListShort, "Only used with LIST command: Print only the most essential "
-            "information as one column.");
+            "information as one column.", true, 3);
+        cmdln.DefineSubOption(
+            "insert_before", sContext.ssInsertBeforeConnection, "Name of the connection to insert before.", true, 10);
         cmdln.DefineDefaultArgument(sContext.seqCmdLine, "COMMAND");
 
         cmdln.Parse(static_cast<size_t>(iArgc), rgszArgv);
@@ -98,7 +109,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     if (!sContext.bSilent)
     {
         std::cout << "SDV Server Control Utility" << std::endl;
-        std::cout << "Copyright (C): 2022-2025 ZF Friedrichshafen AG" << std::endl;
+        std::cout << "Copyright (C): 2022-2026 ZF Friedrichshafen AG" << std::endl;
         std::cout << "Author: Erik Verhoeven" << std::endl << std::endl;
     }
 
@@ -113,7 +124,7 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
         bError = true;
     }
 
-    enum class ECommand { unknown, startup, shutdown, list, install, update, uninstall, start, stop } eCommand = ECommand::unknown;
+    enum class ECommand { unknown, startup, shutdown, list, install, update, uninstall, start, stop, listener, connection } eCommand = ECommand::unknown;
     if (!sContext.seqCmdLine.empty())
     {
         if (iequals(sContext.seqCmdLine[0], "STARTUP")) eCommand = ECommand::startup;
@@ -124,6 +135,8 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
         else if (iequals(sContext.seqCmdLine[0], "UNINSTALL")) eCommand = ECommand::uninstall;
         else if (iequals(sContext.seqCmdLine[0], "START")) eCommand = ECommand::start;
         else if (iequals(sContext.seqCmdLine[0], "STOP")) eCommand = ECommand::stop;
+        else if (iequals(sContext.seqCmdLine[0], "LISTENER")) eCommand = ECommand::listener;
+        else if (iequals(sContext.seqCmdLine[0], "CONNECTION")) eCommand = ECommand::connection;
         else
         {
             if (!sContext.bSilent)
@@ -157,17 +170,25 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
             case ECommand::uninstall:
                 InstallationHelp(sContext);
                 break;
+            case ECommand::listener:
+                ListenerHelp(sContext);
+                break;
+            case ECommand::connection:
+                ConnectionHelp(sContext);
+                break;
             default:
-                cmdln.PrintHelp(std::cout, R"code(Supported commands:
-    STARTUP   Start the core application server
-    SHUTDOWN  Stop the core application server
-    LIST      List module/classes/component/installation/connection information.
-    INSTALL   Install a new application or service.
-    UPDATE    Update an existing installation.
-    UNINSTALL Uninstall an installed application or service.
-    START     Start a service (complex services only).
-    STOP      Stop a service (complex services only).
-)code");
+                cmdln.PrintHelp(std::cout, R"text(Supported commands:
+    STARTUP    Start the core application server
+    SHUTDOWN   Stop the core application server
+    LIST       List information about modules/classes/components/installations/listeners/connections.
+    INSTALL    Install a new application or service.
+    UPDATE     Update an existing installation.
+    UNINSTALL  Uninstall an installed application or service.
+    START      Start a service (complex services and vehicle functions only).
+    STOP       Stop a service (complex services and vehicle functions only).
+    LISTENER   Add or remove a communication listener configuration.
+    CONNECTION Add or remove a connection configuration.
+)text");
                 break;
             }
         }
@@ -185,11 +206,11 @@ extern "C" int main(int iArgc, const char* rgszArgv[])
     if (sContext.bVerbose)
         std::cout << "Starting local application control.." << std::endl;
     sdv::app::CAppControl appcontrol;
-    std::string ssAppConfig = std::string(R"code(
+    std::string ssAppConfig = std::string(R"toml(
 [Application]
 Mode = "Maintenance"
-Instance = )code") + std::to_string(sContext.uiInstanceID) + R"code(
-)code";
+Instance = )toml") + std::to_string(sContext.uiInstanceID) + R"toml(
+)toml";
     if (!appcontrol.Startup(ssAppConfig))
     {
         if (!sContext.bSilent)
@@ -223,6 +244,12 @@ Instance = )code") + std::to_string(sContext.uiInstanceID) + R"code(
         break;
     case ECommand::uninstall:
         iRet = Uninstall(sContext);
+        break;
+    case ECommand::listener:
+        iRet = ConfigureListener(sContext);
+        break;
+    case ECommand::connection:
+        iRet = ConfigureConnection(sContext);
         break;
     default:
         std::cout << "Command missing :-(" << std::endl;

@@ -17,6 +17,8 @@
 
 #include <support/component_impl.h>
 #include <interfaces/ipc.h>
+#include "watchdog.h"
+#include <algorithm>
 
 class CUnixSocketConnection;
 
@@ -37,9 +39,9 @@ public:
 
     // Object declarations
     DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
-    DECLARE_OBJECT_CLASS_NAME("UnixDomainSocketsChannelControl")
-    DECLARE_OBJECT_CLASS_ALIAS("LocalChannelControl")
-    DECLARE_DEFAULT_OBJECT_NAME("LocalChannelControl")
+    DECLARE_OBJECT_CLASS_NAME("UnixSocketsChannelControl")
+    DECLARE_OBJECT_CLASS_ALIAS("unix_domain_sockets")
+    DECLARE_DEFAULT_OBJECT_NAME("unix_domain_sockets")
     DECLARE_OBJECT_SINGLETON()
 
     /**
@@ -52,6 +54,11 @@ public:
      * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
     virtual void OnShutdown() override;
+
+    /**
+     * @brief Last function called before destruction. Overload of sdv::CSdvObject::OnDestroy.
+     */
+    virtual void OnDestroy() override;
 
     /**
      * @brief Create IPC connection object and return the endpoint information. Overload of
@@ -80,8 +87,7 @@ private:
 
     // Helper: choose runtime dir (/run/user/<uid>/sdv) or fallback (/tmp/sdv)
     static std::string MakeUserRuntimeDir();
-
-    std::vector<std::shared_ptr<CUnixSocketConnection>> m_ServerConnections;
+    CUnixSocketsConnectionWatchDog m_watchdog;
 
 };
 DEFINE_SDV_OBJECT(CUnixDomainSocketsChannelMgnt)

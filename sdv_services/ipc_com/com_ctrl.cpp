@@ -16,6 +16,8 @@
 #include <support/toml.h>
 #include "com_channel.h"
 #include "marshall_object.h"
+#include <support/app_control.h>
+#include <support/any.h>
 
 thread_local CChannelConnector* CCommunicationControl::m_pConnectorContext = nullptr;
 
@@ -40,7 +42,7 @@ void CCommunicationControl::OnShutdown()
     std::unique_lock<std::mutex> lock(m_mtxChannels);
     auto vecInitialConnectMon = std::move(m_vecInitialConnectMon);
     lock.unlock();
-    for (std::thread& rthread : vecInitialConnectMon)
+    for (sdv::core::secure_thread& rthread : vecInitialConnectMon)
     {
         if (rthread.joinable())
             rthread.join();
@@ -63,10 +65,11 @@ sdv::com::TConnectionID CCommunicationControl::CreateServerConnection(/*in*/ sdv
     switch (eChannelType)
     {
     case sdv::com::EChannelType::local_channel:
-        ssChannelServer = "LocalChannelControl";
+        ssChannelServer = static_cast<std::string>(sdv::app::GetAppSettingsAttribute("Communication.DefaultProvider"));
         break;
     case sdv::com::EChannelType::remote_channel:
-        ssChannelServer = "RemoteChannelControl";
+        // Currently not supported
+        ssChannelServer = "UnknownComProvider";
         break;
     default:
         return {};

@@ -27,9 +27,9 @@
 class CTestCanSilKit : public CCANSilKit
 {
     public:
-        virtual void Initialize(const sdv::u8string& ssObjectConfig) override
+        virtual void Initialize(const sdv::SObjectInfo& sObjectInfo) override
         {
-            return CCANSilKit::Initialize(ssObjectConfig);
+            return CCANSilKit::Initialize(sObjectInfo);
         }
 
         virtual sdv::EObjectState GetObjectState() const override

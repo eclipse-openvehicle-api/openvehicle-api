@@ -103,7 +103,7 @@ void CExampleControl::StartTestRun()
 
     // Start the simulated datalink
     m_bRunning = true;
-    m_threadSimulateDatalink = std::thread(&CExampleControl::SimulateDatalinkThreadFunc, this);
+    m_threadSimulateDatalink = sdv::core::secure_thread(&CExampleControl::SimulateDatalinkThreadFunc, this);
 }
 
 void CExampleControl::StopTestRun()

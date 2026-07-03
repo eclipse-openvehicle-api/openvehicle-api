@@ -1,0 +1,96 @@
+/********************************************************************************
+ * Copyright (c) 2025-2026 ZF Friedrichshafen AG
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Apache License Version 2.0 which is available at
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Contributors:
+ *   Erik Verhoeven - initial API and implementation
+ ********************************************************************************/
+
+#include "core.idl"
+
+/**
+ * @brief Software Defined Vehicle framework.
+ */
+module sdv
+{
+    /**
+     * @brief Core features.
+     */
+    module core
+    {
+        /// ID corresponding to a thread specific permission request.
+        typedef uint64 TPermissionID;
+
+        /// ID identifying a permission transfer.
+        typedef uint64 TPermissionTransferID;
+
+        /**
+         * @brief Access type restriction. The lower the access, the more restricted.
+         */
+        enum EAccessPermission : int32
+        {
+            not_set           = -1001, ///< Permissions are not set; will be treated as restricted access.
+            restricted_access = -1000, ///< Restricted access (default when no other set).
+            remote_access     = -200,  ///< Access for remote execution. Access allowed to basic and complex services.
+            local_access      = -100,  ///< Access for isolated execution. Access allowed to system, basic and complex services.
+            full_access       = 0,     ///< Full access is allowed to complete system.
+        };
+
+        /**
+         * @brief Permission control interface. This interface is used for restricting permission on a thread and transferring
+         * permissions from one thread to another.
+         */
+        interface IPermissionControl
+        {
+            /**
+             * @brief Restrict the access permission for the current thread.
+             * @remarks The access restriction will be assigned to the current thread and combined with previous and future
+             * permissions. The lowest assigned permission will determine the actual access permission for the current thread.
+             * @remarks The access restriction will stay in effect until it is released by the function ReleaseAccessPermission.
+             * @remarks A newly created thread has fully restricted access. This cannot be changed using this function. Use an
+             * access restriction transfer from one thread to this thread to set a higher level of access permission.
+             * @param[in] ePermission The permission to restrict to.
+             * @return The permission ID for this restriction or 0 when the access permission could not be set. Use the
+             * ReleaseAccessPermission to release the restriction again.
+             */
+            TPermissionID RestrictAccessPermission(in EAccessPermission ePermission);
+
+            /**
+             * @brief Release a previously set access restriction for the current thread.
+             * @param[in] tPermissionID The ID of the access restriction previously set for the current thread.
+             * @return Returns whether the restriction could be released successfully.
+             */
+            boolean ReleaseAccessPermission(in TPermissionID tPermissionID);
+
+            /**
+             * @brief Prepares a transfer of the access restriction from the current thread.
+             * @return The ID of the transfer object containing the current access permissions or 0 when the transfer preparation
+             * has failed.
+             */
+            TPermissionTransferID TransferCurrentPermission();
+
+            /**
+             * @brief Set the access permission using a transfer object from one thread to another.
+             * @remarks An new thread has fully restricted access per default. Use this function to set the required access level.
+             * If a thread has already initialized with the proper access level, this function will set identical or lower access
+             * permissions for the current thread.
+             * @param[in] tTransferID The IS of the prepared access permission transfer.
+             * @return The permission ID for this restriction or 0 when the access permission could not be transferred. Use the
+             * ReleaseAccessPermission to release the restriction again.
+             */
+            TPermissionID SetAccessPermission(in TPermissionTransferID tTransferID);
+
+            /**
+             * @brief Get the access permission level for the current thread. This will be the lowest restriction set for the
+             * current thread.
+             * @return The current access permission level.
+             */
+            EAccessPermission GetCurrentPermission() const;
+        };
+    }; // module core
+}; // module sdv

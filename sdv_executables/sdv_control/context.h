@@ -33,6 +33,7 @@ struct SContext
     bool                            bListShort = false;         ///< Print only a shortened list with one column.
     sdv::sequence<sdv::u8string>    seqCmdLine;                 ///< The commands provided on the command line.
     std::filesystem::path           pathInstallDir;             ///< Optional installation directory.
+    std::string                     ssInsertBeforeConnection;   ///< Insert before the provided connection
 };
 
 #include <cctype>    // std::tolower

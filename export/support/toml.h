@@ -11,12 +11,14 @@
  *   Erik Verhoeven - initial API and implementation
  ********************************************************************************/
 
-#ifndef SDV_CONFIG_H
-#define SDV_CONFIG_H
+#ifndef SDV_TOML_H
+#define SDV_TOML_H
 
+#include <charconv>
 #include "../interfaces/toml.h"
 #include "interface_ptr.h"
 #include "local_service_access.h"
+#include "interface_ptr.h"
 
 namespace sdv::toml
 {
@@ -83,6 +85,18 @@ namespace sdv::toml
         ENodeType GetType() const;
 
         /**
+         * @brief Get the index of this node within the parent collection.
+         * @return The index of the node within the parent collection node or npos when no parent is available.
+         */
+        uint32_t GetIndex() const;
+
+        /**
+         * @brief Is the node defined as inline node?
+         * @return The inline flag.
+         */
+        bool IsInline() const;
+
+        /**
          * @brief Return any associated comment text for this node.
          * @return The node comment or an empty string when there is not comment for this node.
          */
@@ -131,6 +145,12 @@ namespace sdv::toml
          * @brief Clear the node class.
          */
         virtual void Clear();
+
+        /**
+         * @brief Format the node automatically, remove redundant whitespace.
+         * @param[in] bRemoveComments When set, the comments are removed from the node.
+         */
+        void AutomaticFormat(bool bRemoveComments);
 
         /**
          * @brief Get the TOML string from this node including all children.
@@ -229,22 +249,28 @@ namespace sdv::toml
         CNode GetDirect(const sdv::u8string& rssNode) const;
 
         /**
+         * @brief Return the node name for a node in the collection. If the collection is an array, provides the index between
+         * square brackets.
+         * @param[in] nIndex Index to return the node name for.
+         * @return Name of the node or an empty string if the index is larger than the amount of nodes in the collection.
+         */
+        std::string GetNodeNameByIndex(size_t nIndex) const;
+
+        /**
          * @brief Insert a value node before the provided position.
-         * @remarks The actual position depends on the type of node and the order the nodes are stored. Inline nodes come before
-         * standard nodes.
-         * @param[in] nIndex The index before which to insert the node. Can be larger than the count value as well as
-         * sdv::toml::npos when adding the node at the end.
+         * @remarks In TOML, inline nodes are located before standard nodes. Since values are presented as inline node, they
+         * will be inserted before any standard node (table or table array if defined as standard node).
+         * @param[in] rssInsertBefore Name of the node to insert the value before. In case of an array, can be an index between
+         * square brackets. Can be empty, causing the node to be inserted at the end.
          * @param[in] rssName Reference to the name of the new value node. If this collection is an array, the name is ignored.
          * Otherwise the name must be unique within this collection.
          * @param[in] ranyValue The value to assign to the node. The value also determines the type of value node.
          * @return Returns the node when successfully inserted or an empty node when not.
          */
-        CNode InsertValue(size_t nIndex, const std::string& rssName, const sdv::any_t& ranyValue);
+        CNode InsertValue(const std::string& rssInsertBefore, const std::string& rssName, const sdv::any_t& ranyValue);
 
         /**
          * @brief Add a value node to the collection.
-         * @remarks The actual position depends on the type of node and the order the nodes are stored. Inline nodes come before
-         * standard nodes.
          * @param[in] rssName Reference to the name of the new array collection node. If this collection is an array, the name is
          * ignored. Otherwise the name must be unique within this collection.
          * @param[in] ranyValue The value to assign to the node. The value also determines the type of value node.
@@ -254,20 +280,18 @@ namespace sdv::toml
 
         /**
          * @brief Insert an array collection before the provided position.
-         * @remarks The actual position depends on the type of node and the order the nodes are stored. Inline nodes come before
-         * standard nodes.
-         * @param[in] nIndex The index before which to insert the node. Can be larger than the count value as well as
-         * sdv::toml::npos when adding the node at the end.
+         * @remarks In TOML, inline nodes are located before standard nodes. Since arrays are presented as inline node, they
+         * will be inserted before any standard node (table or table array if defined as standard node).
+         * @param[in] rssInsertBefore Name of the node to insert the value before. In case of an array, can be an index between
+         * square brackets. Can be empty, causing the node to be inserted at the end.
          * @param[in] rssName Reference to the name of the new value node. If this collection is an array, the name is ignored.
          * Otherwise the name must be unique within this collection.
          * @return Returns the collection node when successfully inserted or an empty node when not.
          */
-        CNodeCollection InsertArray(size_t nIndex, const std::string& rssName);
+        CNodeCollection InsertArray(const std::string& rssInsertBefore, const std::string& rssName);
 
         /**
          * @brief Add an array collection to this collection.
-         * @remarks The actual position depends on the type of node and the order the nodes are stored. Inline nodes come before
-         * standard nodes.
          * @param[in] rssName Reference to the name of the new array collection node. If this collection is an array, the name is
          * ignored. Otherwise the name must be unique within this collection.
          * @return Returns the collection node when successfully added or an empty node when not.
@@ -276,22 +300,20 @@ namespace sdv::toml
 
         /**
          * @brief Insert a table collection before the provided position.
-         * @remarks The actual position depends on the type of node and the order the nodes are stored. Inline nodes come before
-         * standard nodes.
-         * @param[in] nIndex The index before which to insert the node. Can be larger than the count value as well as
-         * sdv::toml::npos when adding the node at the end.
+         * @remarks In TOML, inline nodes are located before standard nodes. Tables can be inserted as inline node, in which
+         * case they will be inserted before any standard node (table or table array if defined as standard node).
+         * @param[in] rssInsertBefore Name of the node to insert the value before. In case of an array, can be an index between
+         * square brackets. Can be empty, causing the node to be inserted at the end.
          * @param[in] rssName Reference to the name of the new table collection node. If this collection is an array, the name is
          * ignored. Otherwise the name must be unique within this collection.
          * @param[in] bFavorInline When set, the node will be added as inline collection node. When not, the node will be inserted
          * as inline collection if the this collection is also inline, as standard when not.
          * @return Returns the collection node when successfully inserted or an empty node when not.
          */
-        CNodeCollection InsertTable(size_t nIndex, const std::string& rssName, bool bFavorInline = false);
+        CNodeCollection InsertTable(const std::string& rssInsertBefore, const std::string& rssName, bool bFavorInline = false);
 
         /**
          * @brief Add a table collection to this collection.
-         * @remarks The actual position depends on the type of node and the order the nodes are stored. Inline nodes come before
-         * standard nodes.
          * @param[in] rssName Reference to the name of the new table collection node. If this collection is an array, the name is
          * ignored. Otherwise the name must be unique within this collection.
          * @param[in] bFavorInline When set, the node will be added as inline collection node. When not, the node will be inserted
@@ -302,12 +324,12 @@ namespace sdv::toml
 
         /**
          * @brief Insert a table array collection before the provided position.
-         * @remarks The actual position depends on the type of node and the order the nodes are stored. Inline nodes come before
-         * standard nodes.
          * @remarks A table array is an array with table inside. Inserting a table array node can also be done by creating an array,
          * if not existing already, and adding a table to the array.
-         * @param[in] nIndex The index before which to insert the node. Can be larger than the count value as well as
-         * sdv::toml::npos when adding the node at the end.
+         * @remarks In TOML, inline nodes are located before standard nodes. Table arrays can be inserted as inline node, in
+         * which case they will be inserted before any standard node (table or table array if defined as standard node).
+         * @param[in] rssInsertBefore Name of the node to insert the value before. In case of an array, can be an index between
+         * square brackets. Can be empty, causing the node to be inserted at the end.
          * @param[in] rssName Reference to the name of the new table array node. If this collection is an array, the name is
          * ignored. Otherwise the name must be unique within this collection.
          * @param[in] bFavorInline When set, the node will be added as inline collection node. When not, the node will be inserted
@@ -315,12 +337,10 @@ namespace sdv::toml
          * @return Returns the collection node when successfully inserted or an empty node when not. The collection node represents
          * a table collection.
          */
-        CNodeCollection InsertTableArray(size_t nIndex, const std::string& rssName, bool bFavorInline = false);
+        CNodeCollection InsertTableArray(const std::string& rssInsertBefore, const std::string& rssName, bool bFavorInline = false);
 
         /**
          * @brief Add a table array collection to this collection.
-         * @remarks The actual position depends on the type of node and the order the nodes are stored. Inline nodes come before
-         * standard nodes.
          * @remarks A table array is an array with table inside. Inserting a table array node can also be done by creating an array,
          * if not existing already, and adding a table to the array.
          * @param[in] rssName Reference to the name of the new table array node. If this collection is an array, the name is
@@ -335,10 +355,10 @@ namespace sdv::toml
         /**
          * @brief Insert a TOML string to the collection. All nodes specified in the TOML will be added in the collection except
          * when the nodes already exist. Comment and whitespace are preserved when possible.
-         * @remarks The actual position depends on the type of node and the order the nodes are stored. Inline nodes come before
-         * standard nodes.
-         * @param[in] nIndex The index before which to insert the node. Can be larger than the count value as well as
-         * sdv::toml::npos when adding the node at the end.
+         * @remarks In TOML, inline nodes are located before standard nodes. Dependable on the nodes defined in the TOML they
+         * might be transferred to inline or they might be inserted at a different location.
+         * @param[in] rssInsertBefore Name of the node to insert the value before. In case of an array, can be an index between
+         * square brackets. Can be empty, causing the node to be inserted at the end.
          * @param[in] rssTOML Reference to the TOML string containing the nodes. The TOML string can be empty, which is not an
          * error. If required the TOML nodes are converted to inline nodes.
          * @param[in] bAllowPartial When set, duplicate nodes (already present in this collection) will be ignored and do not
@@ -346,7 +366,7 @@ namespace sdv::toml
          * @return Returns 1 if the complete TOMl could be inserted, 0 if no TOML could be inserted or -1 when the TOML could be
          * partially inserted.
          */
-        int InsertTOML(size_t nIndex, const std::string& rssTOML, bool bAllowPartial = false);
+        int InsertTOML(const std::string& rssInsertBefore, const std::string& rssTOML, bool bAllowPartial = false);
 
         /**
          * @brief Add a TOML string to this collection. All nodes specified in the TOML will be added in the collection except
@@ -373,15 +393,10 @@ namespace sdv::toml
     {
     public:
         /**
-         * @brief Default constructor.
-         */
-        CTOMLParser() = default;
-
-        /**
          * @brief Constructor providing automatic processing.
          * @param[in] rssConfig Reference to the configuration.
          */
-        CTOMLParser(const std::string& rssConfig);
+        CTOMLParser(const std::string& rssConfig = "");
 
         /**
          * @brief Process a configuration. This will clear any previous configuration.
@@ -413,6 +428,52 @@ namespace sdv::toml
         TObjectPtr      m_ptrParserUtil;        ///< TOML parser utility
         ITOMLParser*    m_pParser = nullptr;    ///< Pointer to the parser interface.
     };
+
+    /**
+     * @brief Compare flags
+     */
+    enum class ECompareFlags : uint32_t
+    {
+        compare_ignore_whitespace = 1,  ///< Compare, but ignore whitespace
+        compare_ignore_comments = 2,    ///< Compare, but ignore comments
+        compare_ignore_inline = 8,      ///< Compare, but ignore inline or explicit
+        compare_ignore_all = 255,       ///< Compare with all ignore flags
+    };
+
+    /**
+     * @brief Compare result
+     */
+    enum class ECompareResult : int32_t
+    {
+        compare_identical = 0,          ///< The comparison resulted into identical TOML strings
+        compare_different = 1,          ///< The comparison resulted into different TOML strings
+        compare_error = -1              ///< The comparison could not be done due to a failure
+    };
+
+    /// Internal namespace
+    namespace internal
+    {
+        /**
+         * @brief Compare the content of the node with the content of another node.
+         * @attention This function changes the nodes dependable on the provided flags.
+         * @param[in] rnode1 First node interface to compare with the second node.
+         * @param[in] rnode2 Second node interface to compare with the first node.
+         * @param[in] uiCompareFlags Zero or more flags from ECompareFlags.
+         * @return The comparison result.
+         */
+        ECompareResult CompareNodes(CNode& rnode1, CNode& rnode2,
+            uint32_t uiCompareFlags = static_cast<uint32_t>(ECompareFlags::compare_ignore_all));
+    } // namespace internal;
+
+    /**
+     * @brief Compare the content of TOML string with the content of another TOML string.
+     * @param[in] rssToml1 Reference to the first TOML string to compare with the second TOML string.
+     * @param[in] rssToml2 Reference to the second TOML string to compare with the first TOML string.
+     * @param[in] uiCompareFlags Zero or more flags from ECompareFlags.
+     * @return The comparison result.
+     */
+    ECompareResult Compare(const std::string& rssToml1, const std::string& rssToml2,
+        uint32_t uiCompareFlags = static_cast<uint32_t>(ECompareFlags::compare_ignore_all));
 
     inline CNode::CNode(const TInterfaceAccessPtr& rptrNode)
     {
@@ -459,6 +520,16 @@ namespace sdv::toml
     inline ENodeType CNode::GetType() const
     {
         return m_pNodeInfo ? m_pNodeInfo->GetType() : ENodeType::node_invalid;
+    }
+
+    inline uint32_t CNode::GetIndex() const
+    {
+        return m_pNodeInfo ? m_pNodeInfo->GetIndex() : npos;
+    }
+
+    inline bool CNode::IsInline() const
+    {
+        return m_pNodeInfo ? m_pNodeInfo->IsInline() : true;
     }
 
     inline std::string CNode::GetComment() const
@@ -527,13 +598,20 @@ namespace sdv::toml
     {
         INodeUpdate* pNodeUpdate = m_ptrNode.GetInterface<INodeUpdate>();
         if (!pNodeUpdate) return false;
-        return pNodeUpdate->DeleteNode();
+        bool bRet = pNodeUpdate->DeleteNode();
+        Clear();    // Not valid any more.
+        return bRet;
     }
 
     inline void CNode::Clear()
     {
         m_ptrNode = nullptr;
         m_pNodeInfo = nullptr;
+    }
+
+    inline void CNode::AutomaticFormat(bool bRemoveComments)
+    {
+        if (m_pNodeInfo) m_pNodeInfo->AutomaticFormat(bRemoveComments);
     }
 
     inline sdv::u8string CNode::GetTOML() const
@@ -605,76 +683,86 @@ namespace sdv::toml
         return m_pCollection ? CNode(m_pCollection->GetNodeDirect(rssNode)) : CNode();
     }
 
-    inline CNode CNodeCollection::InsertValue(size_t nIndex, const std::string& rssName, const sdv::any_t& ranyValue)
+    inline std::string CNodeCollection::GetNodeNameByIndex(size_t nIndex) const
+    {
+        if (!m_pCollection) return {};
+        if (nIndex >= m_pCollection->GetCount()) return {};
+        if (GetType() == ENodeType::node_array) return "[" + std::to_string(nIndex) + "]";
+        TInterfaceAccessPtr ptrNode = m_pCollection->GetNode(static_cast<uint32_t>(nIndex));
+        const auto* pAccess = ptrNode.GetInterface<INodeInfo>();
+        if (!pAccess) return {};
+        return pAccess->GetName();
+    }
+
+    inline CNode CNodeCollection::InsertValue(const std::string& rssInsertBefore, const std::string& rssName,
+        const sdv::any_t& ranyValue)
     {
         INodeCollectionInsert* pInsert = m_ptrNode.GetInterface<INodeCollectionInsert>();
         if (!pInsert) return {};
-        return CNode(pInsert->InsertValue(static_cast<uint32_t>(nIndex), rssName, ranyValue));
+        return CNode(pInsert->InsertValue(rssInsertBefore, rssName, ranyValue));
     }
 
     inline CNode CNodeCollection::AddValue(const std::string& rssName, const sdv::any_t& ranyValue)
     {
         INodeCollectionInsert* pInsert = m_ptrNode.GetInterface<INodeCollectionInsert>();
         if (!pInsert) return {};
-        return CNode(pInsert->InsertValue(npos, rssName, ranyValue));
+        return CNode(pInsert->InsertValue("", rssName, ranyValue));
     }
 
-    inline CNodeCollection CNodeCollection::InsertArray(size_t nIndex, const std::string& rssName)
+    inline CNodeCollection CNodeCollection::InsertArray(const std::string& rssInsertBefore, const std::string& rssName)
     {
         INodeCollectionInsert* pInsert = m_ptrNode.GetInterface<INodeCollectionInsert>();
         if (!pInsert) return {};
-        return CNodeCollection(pInsert->InsertArray(static_cast<uint32_t>(nIndex), rssName));
+        return CNodeCollection(pInsert->InsertArray(rssInsertBefore, rssName));
     }
 
     inline CNodeCollection CNodeCollection::AddArray(const std::string& rssName)
     {
         INodeCollectionInsert* pInsert = m_ptrNode.GetInterface<INodeCollectionInsert>();
         if (!pInsert) return {};
-        return CNodeCollection(pInsert->InsertArray(npos, rssName));
+        return CNodeCollection(pInsert->InsertArray("", rssName));
     }
 
-    inline CNodeCollection CNodeCollection::InsertTable(size_t nIndex, const std::string& rssName, bool bFavorInline /*= false*/)
+    inline CNodeCollection CNodeCollection::InsertTable(const std::string& rssInsertBefore, const std::string& rssName,
+        bool bFavorInline /*= false*/)
     {
         INodeCollectionInsert* pInsert = m_ptrNode.GetInterface<INodeCollectionInsert>();
         if (!pInsert) return {};
-        return CNodeCollection(pInsert->InsertTable(static_cast<uint32_t>(nIndex), rssName,
-            bFavorInline ? INodeCollectionInsert::EInsertPreference::prefer_inline :
-                INodeCollectionInsert::EInsertPreference::prefer_standard));
+        return CNodeCollection(pInsert->InsertTable(rssInsertBefore, rssName, bFavorInline ? EInsertPreference::prefer_inline :
+                EInsertPreference::prefer_standard));
     }
 
     inline CNodeCollection CNodeCollection::AddTable(const std::string& rssName, bool bFavorInline /*= false*/)
     {
         INodeCollectionInsert* pInsert = m_ptrNode.GetInterface<INodeCollectionInsert>();
         if (!pInsert) return {};
-        return CNodeCollection(pInsert->InsertTable(npos, rssName,
-            bFavorInline ? INodeCollectionInsert::EInsertPreference::prefer_inline :
-                INodeCollectionInsert::EInsertPreference::prefer_standard));
+        return CNodeCollection(pInsert->InsertTable("", rssName, bFavorInline ? EInsertPreference::prefer_inline :
+                EInsertPreference::prefer_standard));
     }
 
-    inline CNodeCollection CNodeCollection::InsertTableArray(size_t nIndex, const std::string& rssName,
+    inline CNodeCollection CNodeCollection::InsertTableArray(const std::string& rssInsertBefore, const std::string& rssName,
         bool bFavorInline /*= false*/)
     {
         INodeCollectionInsert* pInsert = m_ptrNode.GetInterface<INodeCollectionInsert>();
         if (!pInsert) return {};
-        return CNodeCollection(pInsert->InsertTableArray(static_cast<uint32_t>(nIndex), rssName,
-            bFavorInline ? INodeCollectionInsert::EInsertPreference::prefer_inline :
-                INodeCollectionInsert::EInsertPreference::prefer_standard));
+        return CNodeCollection(pInsert->InsertTableArray(rssInsertBefore, rssName, bFavorInline ? EInsertPreference::prefer_inline :
+                EInsertPreference::prefer_standard));
     }
 
     inline CNodeCollection CNodeCollection::AddTableArray(const std::string& rssName, bool bFavorInline /*= false*/)
     {
         INodeCollectionInsert* pInsert = m_ptrNode.GetInterface<INodeCollectionInsert>();
         if (!pInsert) return {};
-        return CNodeCollection(pInsert->InsertTableArray(npos, rssName,
-            bFavorInline ? INodeCollectionInsert::EInsertPreference::prefer_inline :
-                INodeCollectionInsert::EInsertPreference::prefer_standard));
+        return CNodeCollection(pInsert->InsertTableArray("", rssName, bFavorInline ? EInsertPreference::prefer_inline :
+                EInsertPreference::prefer_standard));
     }
 
-    inline int CNodeCollection::InsertTOML(size_t nIndex, const std::string& rssTOML, bool bAllowPartial /*= false*/)
+    inline int CNodeCollection::InsertTOML(const std::string& rssInsertBefore, const std::string& rssTOML,
+        bool bAllowPartial /*= false*/)
     {
         INodeCollectionInsert* pInsert = m_ptrNode.GetInterface<INodeCollectionInsert>();
         if (!pInsert) return 0;
-        INodeCollectionInsert::EInsertResult eRet = pInsert->InsertTOML(static_cast<uint32_t>(nIndex), rssTOML, !bAllowPartial);
+        INodeCollectionInsert::EInsertResult eRet = pInsert->InsertTOML(rssInsertBefore, rssTOML, !bAllowPartial);
         switch (eRet)
         {
         case INodeCollectionInsert::EInsertResult::insert_success:
@@ -691,7 +779,7 @@ namespace sdv::toml
     {
         INodeCollectionInsert* pInsert = m_ptrNode.GetInterface<INodeCollectionInsert>();
         if (!pInsert) return 0;
-        INodeCollectionInsert::EInsertResult eRet = pInsert->InsertTOML(npos, rssTOML, !bAllowPartial);
+        INodeCollectionInsert::EInsertResult eRet = pInsert->InsertTOML("", rssTOML, !bAllowPartial);
         switch (eRet)
         {
         case INodeCollectionInsert::EInsertResult::insert_success:
@@ -746,6 +834,59 @@ namespace sdv::toml
         m_ptrParserUtil.Clear();
     }
 
+    namespace internal
+    {
+        inline ECompareResult CompareNodes(CNode& rnode1, CNode& rnode2,
+            uint32_t uiCompareFlags /*= static_cast<uint32_t>(ECompareFlags::compare_ignore_all)*/)
+        {
+            if (!rnode1 || !rnode2) return ECompareResult::compare_error;
+
+            // Format the nodes when ignore whitespace and/or comments
+            bool bIgnoreComments = uiCompareFlags & static_cast<uint32_t>(ECompareFlags::compare_ignore_comments);
+            bool bIgnoreWhitespace = bIgnoreComments ||
+                (uiCompareFlags & static_cast<uint32_t>(ECompareFlags::compare_ignore_whitespace));
+            if (bIgnoreWhitespace)
+            {
+                INodeInfo* pNodeInfo1 = rnode1.GetInterface().GetInterface<INodeInfo>();
+                if (!pNodeInfo1) return ECompareResult::compare_error;
+                pNodeInfo1->AutomaticFormat(bIgnoreComments);
+                INodeInfo* pNodeInfo2 = rnode2.GetInterface().GetInterface<INodeInfo>();
+                if (!pNodeInfo2) return ECompareResult::compare_error;
+                pNodeInfo2->AutomaticFormat(bIgnoreComments);
+            }
+    
+            // Convert to standard if ignoring inline
+            INodeCollectionConvert* pConvert1 = rnode1.GetInterface().GetInterface<INodeCollectionConvert>();
+            INodeCollectionConvert* pConvert2 = rnode2.GetInterface().GetInterface<INodeCollectionConvert>();
+            if (pConvert1 && pConvert2 && uiCompareFlags & static_cast<uint32_t>(ECompareFlags::compare_ignore_inline))
+            {
+                // Making inline nodes as standard, might only change the upper node.
+                // Making standard nodes inline, will have all child nodes be made inline as well, because inline nodes can only
+                // have inline nodes.
+                pConvert1->MakeInline();
+                pConvert2->MakeInline();
+            }
+    
+            // Generate the TOMLs and compare
+            return rnode1.GetTOML() == rnode2.GetTOML() ? ECompareResult::compare_identical : ECompareResult::compare_different;
+        }
+    } // namespace internal
+
+    inline ECompareResult Compare(const std::string& rssToml1, const std::string& rssToml2,
+        uint32_t uiCompareFlags /*= static_cast<uint32_t>(ECompareFlags::compare_ignore_all)*/)
+    {
+        try
+        {
+            CTOMLParser parser1(rssToml1);
+            CTOMLParser parser2(rssToml2);
+            return internal::CompareNodes(parser1, parser2, uiCompareFlags);
+        }
+        catch (const sdv::toml::XTOMLParseException&)
+        {
+            return ECompareResult::compare_error;
+        }
+    }
+
 }
 
-#endif // !defined SDV_CONFIG_H
+#endif // !defined SDV_TOML_H

@@ -18,6 +18,7 @@
 #include <sstream>
 #include "parser_toml.h"
 #include <algorithm>
+#include <charconv>
 
 /// The TOML parser namespace
 namespace toml_parser
@@ -41,16 +42,13 @@ namespace toml_parser
         }
     }
 
-    bool CGenContext::PartOfExcludedParents(const std::shared_ptr<const CNode>& rptrNode) const
+    bool CGenContext::IsPartOfView(const std::shared_ptr<const CNode>& rptrNode) const
     {
+        if (!rptrNode) return false;
         if (!m_ptrTopMostNode) return false;
-        std::shared_ptr<const CNode> ptrParent = m_ptrTopMostNode->GetParentPtr();
-        while (ptrParent)
-        {
-            if (ptrParent == rptrNode) return true;
-            ptrParent = ptrParent->GetParentPtr();
-        }
-        return false;
+        if (rptrNode->Inline()) return true;
+        if (!rptrNode->GetParentPtr()) return false;
+        return m_bTopMost || rptrNode->GetParentPtr() == m_ptrTopMostNode;
     }
 
     CGenContext CGenContext::CopyWithContext(const std::string& rssNewKeyContext, const std::shared_ptr<CNode>& rptrNode,
@@ -230,7 +228,7 @@ namespace toml_parser
     }
 
     CNode::CNode(CParser& rparser, const std::string& rssName, const std::string& rssRawName) :
-        m_ssName(rssName), m_ssRawName(rssRawName), m_rParser(rparser)
+        m_index(rparser.Indexer().CreateIndex()), m_ssName(rssName), m_ssRawName(rssRawName), m_refParser(rparser)
     {}
 
     CNode::~CNode()
@@ -238,7 +236,32 @@ namespace toml_parser
 
     CParser& CNode::Parser()
     {
-        return m_rParser;
+        return m_refParser.get();
+    }
+
+    const CParser& CNode::Parser() const
+    {
+        return m_refParser.get();
+    }
+
+    const CNodeIndex& CNode::NodeIndex() const
+    {
+        return m_index;
+    }
+
+    CNodeIndex& CNode::NodeIndex()
+    {
+        return m_index;
+    }
+
+    bool CNode::operator<(const CNode& rNode) const
+    {
+        return m_index < rNode.m_index;
+    }
+
+    bool CNode::operator<(const std::shared_ptr<CNode>& rptrNode) const
+    {
+        return m_index < rptrNode->m_index;
     }
 
     sdv::u8string CNode::GetName() const
@@ -316,11 +339,9 @@ namespace toml_parser
 
     uint32_t CNode::GetIndex() const
     {
-        std::shared_ptr<CNodeCollection> ptrView = m_ptrView.lock();
-        if (!ptrView) ptrView = m_ptrParent.lock();
-        if (!ptrView) return sdv::toml::npos;
-
-        return ptrView->FindIndex(std::const_pointer_cast<CNode>(shared_from_this()));
+        auto ptrParent = GetParentPtr();
+        if (!ptrParent) return sdv::toml::npos;
+        return ptrParent->FindIndex(std::const_pointer_cast<CNode>(shared_from_this()));
     }
 
     sdv::IInterfaceAccess* CNode::GetParent() const
@@ -347,14 +368,19 @@ namespace toml_parser
         return CodeSnippet(eType).GetComment();
     }
 
-    void CNode::AutomaticFormat()
+    void CNode::AutomaticFormat(/*in*/ bool bRemoveComments)
     {
-        // Automatically format the code snippets of the node.
-        for (auto& rmapSnippets : m_vecCodeSnippets)
+        if (bRemoveComments)
+            m_vecCodeSnippets.clear();
+        else
         {
-            for (auto& rvtSnippet : rmapSnippets)
+            // Automatically format the code snippets of the node.
+            for (auto& rmapSnippets : m_vecCodeSnippets)
             {
-                rvtSnippet.second.RemoveFormat();
+                for (auto& rvtSnippet : rmapSnippets)
+                {
+                    rvtSnippet.second.RemoveFormat();
+                }
             }
         }
     }
@@ -421,9 +447,8 @@ namespace toml_parser
     {
         bool bRet = false;
 
-        // Remove the node from the view (this could also be the parent).
-        auto ptrView = GetViewPtr();
-        if (ptrView) ptrView->RemoveFromView(shared_from_this());
+        // Block rebuilding
+        auto lock = Parser().CreateRebuildLockObject();
 
         // Remove the node from the parent.
         auto ptrParent = GetParentPtr();
@@ -458,8 +483,14 @@ namespace toml_parser
                 ptrOldParent->m_lstNodes.erase(itNode);
         }
 
+        // Assign the parent
         m_ptrParent = rptrParent;
         if (!rptrParent) return;
+
+        // Assign the parser of the parent
+        ReassignParser(rptrParent->Parser());
+
+        // Add the node to the node list if not already present.
         auto itNode = std::find(rptrParent->m_lstNodes.begin(), rptrParent->m_lstNodes.end(), shared_from_this());
         if (itNode == rptrParent->m_lstNodes.end())
             rptrParent->m_lstNodes.push_back(shared_from_this());
@@ -475,26 +506,6 @@ namespace toml_parser
         std::shared_ptr<CNodeCollection> ptrParent = m_ptrParent.lock();
         if (!ptrParent) return {};
         return ptrParent->GetPath(false);
-    }
-
-    void CNode::SetViewPtr(const std::shared_ptr<CNodeCollection>& rptrView)
-    {
-        m_ptrView = rptrView;
-    }
-
-    std::shared_ptr<CNodeCollection> CNode::GetViewPtr() const
-    {
-        auto ptrView = m_ptrView.lock();
-        if (!ptrView) ptrView = m_ptrParent.lock();
-        return ptrView;
-    }
-
-    bool CNode::IsPartOfView(const CGenContext& rContext, const std::shared_ptr<const CNodeCollection>& rptrNode) const
-    {
-        std::shared_ptr<CNodeCollection> ptrStoredView = m_ptrView.lock();
-        if (ptrStoredView && !rContext.PartOfExcludedParents(ptrStoredView))
-            return ptrStoredView == rptrNode;
-        return true;
     }
 
     const CCodeSnippet& CNode::CodeSnippet(size_t nIndex, const std::string& rssKey /*= std::string()*/) const
@@ -635,6 +646,11 @@ namespace toml_parser
         return ssCustomKeyPath;
     }
 
+    void CNode::ReassignParser(CParser& rParser)
+    {
+        m_refParser = rParser;
+    }
+
     bool CNode::ExplicitlyDefined() const
     {
         // Default implementation is explicitly.
@@ -657,7 +673,7 @@ namespace toml_parser
         return true;
     }
 
-    bool CValueNode::Inline(bool bInline)
+    bool CValueNode::Inline(bool bInline, bool /*bIncludeChildren*/ /*= true*/)
     {
         return bInline; // When set to inline, okay; otherwise not.
     }
@@ -919,17 +935,17 @@ namespace toml_parser
         CNode(rparser, rssName, rssRawName)
     {}
 
-    void CNodeCollection::AutomaticFormat()
+    void CNodeCollection::AutomaticFormat(/*in*/ bool bRemoveComments)
     {
         // Format each child-node
         for (std::shared_ptr<CNode>& rptrNode : m_lstNodes)
-            rptrNode->AutomaticFormat();
-        CNode::AutomaticFormat();
+            rptrNode->AutomaticFormat(bRemoveComments);
+        CNode::AutomaticFormat(bRemoveComments);
     }
 
     uint32_t CNodeCollection::GetCount() const
     {
-        return static_cast<uint32_t>(m_vecNodeOrder.size());
+        return static_cast<uint32_t>(m_lstNodes.size());
     }
 
     sdv::IInterfaceAccess* CNodeCollection::GetNode(/*in*/ uint32_t uiIndex) const
@@ -940,10 +956,63 @@ namespace toml_parser
 
     std::shared_ptr<CNode> CNodeCollection::Get(uint32_t uiIndex) const
     {
-        if (static_cast<size_t>(uiIndex) >= m_vecNodeOrder.size())
+        if (static_cast<size_t>(uiIndex) >= m_lstNodes.size())
             return nullptr;
 
-        return m_vecNodeOrder[uiIndex];
+        auto it = m_lstNodes.begin();
+        std::advance(it, uiIndex);
+        return *it;
+    }
+
+    void CNodeCollection::RebuildNodeOrder(bool bForce)
+    {
+        // Is rebuild locked? Then do not rebuild.
+        if (!bForce && Parser().RebuildLocked()) return;
+
+        // Sort the nodes
+        m_lstNodes.sort([&](const std::shared_ptr<CNode>& rptrNode1, const std::shared_ptr<CNode>& rptrNode2) -> bool
+            {
+                if (!rptrNode2) return true;
+                if (!rptrNode1) return false;
+
+                // Check whether only one is inline. If so, node 1 is smaller when node 1 is inline.
+                if (rptrNode1->Inline() != rptrNode2->Inline())
+                    return rptrNode1->Inline();
+
+                // Check for the smallest index
+                return *rptrNode1 < *rptrNode2;
+            });
+
+        // Call rebuild for all sub-node-collections
+        for (auto& rptrNode : m_lstNodes)
+        {
+            std::shared_ptr<CNodeCollection> ptrCollection = rptrNode->Cast<CNodeCollection>();
+            if (ptrCollection)
+                ptrCollection->RebuildNodeOrder(bForce);
+        }
+    }
+
+    void CNodeCollection::FillNodeOrderVector(std::vector<std::shared_ptr<CNode>>& rvecNodes, bool bRootView /*= true*/,
+        bool bTopLevel /*= true*/)
+    {
+        // Run through the nodes and add the nodes that are explicit.
+        for (const auto& rptrNode : m_lstNodes)
+        {
+            // If top level is enabled, count all explicit nodes. If root view is enabled, count all explicit standard tables.
+            bool bIsTable = rptrNode->Cast<CTable>() ? true : false;
+            bool bIsTableArray = rptrNode->Cast<CArray>() && rptrNode->Cast<CArray>()->TableArray();
+            bool bExplicit = rptrNode->ExplicitlyDefined();
+            bool bIsInline = rptrNode->Inline();
+            if (bExplicit && (bTopLevel || (bRootView && bIsTable && !bIsInline)) && !(bIsTableArray && !bIsInline))
+                rvecNodes.push_back(rptrNode);
+
+            // Add children if the node is not explicitly defined (then all children if the top level flag is set) or root view
+            // is set and the node is not inline, all the tables within the collection.
+            auto ptrCollection = rptrNode->Cast<CNodeCollection>();
+            std::shared_ptr<CNode> ptrTargetNode;
+            if (ptrCollection && ((bRootView && !ptrCollection->Inline()) || !rptrNode->ExplicitlyDefined()))
+                ptrCollection->FillNodeOrderVector(rvecNodes, bRootView, bTopLevel && !rptrNode->ExplicitlyDefined());
+        }
     }
 
     std::shared_ptr<CNode> CNodeCollection::Direct(const std::string& rssPath) const
@@ -974,14 +1043,92 @@ namespace toml_parser
         return static_cast<sdv::IInterfaceAccess*>(ptrNode.get());
     }
 
-    sdv::IInterfaceAccess* CNodeCollection::InsertValue(uint32_t uiIndex, const sdv::u8string& ssName, sdv::any_t anyValue)
+    std::pair<std::shared_ptr<CNodeCollection>, std::string> CNodeCollection::SmartParentCreate(const std::string& rssPath,
+        bool bInsertTableArray /*= false*/)
     {
+        auto prKey = SplitNodeKey(rssPath);
+        if (prKey.first.empty()) return std::make_pair(Cast<CNodeCollection>(), rssPath);
+        if (prKey.second.empty())
+        {
+            // Check to see if the key exists already. If so, this could be an array. If not, return.
+            // Special treatment for table arrays needed.
+            auto ptrNode = Direct(prKey.first);
+            if (ptrNode && ptrNode->GetType() == sdv::toml::ENodeType::node_array &&
+                (!bInsertTableArray || !ptrNode->Cast<CArray>()->TableArray()))
+                return std::make_pair(ptrNode->Cast<CNodeCollection>(), "");
+            else
+                return std::make_pair(Cast<CNodeCollection>(), rssPath);
+        }
+
+        // Determine whether the node should be a table or an array. For this take the next name part and check for an index.
+        auto prKeyNext = SplitNodeKey(prKey.second);
+        sdv::toml::ENodeType eTargetType =
+            (!prKeyNext.first.empty() && prKeyNext.first.find_first_not_of("0123456789") != std::string::npos) ?
+            sdv::toml::ENodeType::node_table : sdv::toml::ENodeType::node_array;
+
+        // Find the node
+        std::shared_ptr<CNodeCollection> ptrNodeCollection;
+        for (auto& rptrNode : m_lstNodes)
+        {
+            if (!rptrNode) continue;
+            if (rptrNode->GetName() == prKey.first)
+            {
+                ptrNodeCollection = rptrNode->Cast<CNodeCollection>();
+                if (rptrNode->GetType() != eTargetType)
+                {
+                    // Special case... the type is an array, but no index was supplied. Use the index of the last element or if none
+                    // exists, the largest index number to indicate a new element.
+                    if (rptrNode->GetType() == sdv::toml::ENodeType::node_array)
+                        return SmartParentCreate(
+                            prKey.first + "[" + std::to_string(ptrNodeCollection->GetCount() - 1) + "]." + prKey.second,
+                            bInsertTableArray);
+
+                    // Incorrect type
+                    return std::make_pair(nullptr, rssPath);
+                }
+                break;
+            }
+        }
+
+        // If not found, create the node collection
+        if (!ptrNodeCollection)
+        {
+            // Determine whether the next key part is a number - then create an array or whether the next key part  is a name, then
+            // create a table.
+            if (eTargetType == sdv::toml::ENodeType::node_array)
+            {
+                auto* pArray = dynamic_cast<CNodeCollection*>(InsertArray("", prKey.first));
+                if (pArray) ptrNodeCollection = pArray->Cast<CNodeCollection>();
+            }
+            else
+            {
+                auto* pTable = dynamic_cast<CNodeCollection*>(InsertTable("", prKey.first,
+                    sdv::toml::EInsertPreference::prefer_standard));
+                if (pTable) ptrNodeCollection = pTable->Cast<CNodeCollection>();
+            }
+            if (!ptrNodeCollection) return std::make_pair(nullptr, rssPath); // Not found
+        }
+
+        // Get or create next node
+        return ptrNodeCollection->SmartParentCreate(prKey.second, bInsertTableArray);
+    }
+
+    sdv::IInterfaceAccess* CNodeCollection::InsertValue(/*in*/ const sdv::u8string& ssInsertBefore,
+        /*in*/ const sdv::u8string& ssName, /*in*/ sdv::any_t anyValue)
+    {
+        // Get the parent to inser this node into
+        auto prParent = SmartParentCreate(ssName);
+        if (!prParent.first) return nullptr;
+
+        // Determine the node to insert before and make sure that the node is not occurring before the parent.
+        std::shared_ptr<CNode> ptrInsertBefore = Direct(ssInsertBefore);
+        if (ptrInsertBefore && (ptrInsertBefore == prParent.first || ptrInsertBefore < prParent.first))
+            ptrInsertBefore = prParent.first->Get(0);
+
+        // Create TOML text
         std::stringstream sstreamTOML;
-        std::string ssAccessName = ssName;
-        if (GetType() == sdv::toml::ENodeType::node_array)
-            ssAccessName = "[" + std::to_string(std::min(uiIndex, GetCount())) + "]";
-        else
-            sstreamTOML << QuoteText(ssName, EQuoteRequest::smart_key) << " = ";
+        if (prParent.first->GetType() != sdv::toml::ENodeType::node_array)
+            sstreamTOML << QuoteText(prParent.second, EQuoteRequest::smart_key) << " = ";
         switch (anyValue.eValType)
         {
         case sdv::any_t::EValType::val_type_bool:
@@ -1023,114 +1170,139 @@ namespace toml_parser
         }
 
         // Insert the node
-        if (InsertTOML(uiIndex, sstreamTOML.str(), true) != EInsertResult::insert_success)
+        auto prResult = prParent.first->InsertTOML(ptrInsertBefore, sstreamTOML.str(), true);
+        if (prResult.first != EInsertResult::insert_success || prResult.second.empty())
             return nullptr;
-        
+
         // Return the inserted node.
-        return GetNodeDirect(ssAccessName);
+        return prResult.second.back().get();
     }
 
-    sdv::IInterfaceAccess* CNodeCollection::InsertArray(uint32_t uiIndex, const sdv::u8string& ssName)
+    sdv::IInterfaceAccess* CNodeCollection::InsertArray(/*in*/ const sdv::u8string& ssInsertBefore,
+        /*in*/ const sdv::u8string& ssName)
     {
+        // Get the parent to inser this node into
+        auto prParent = SmartParentCreate(ssName);
+        if (!prParent.first) return nullptr;
+
+        // Determine the node to insert before and make sure that the node is not occurring before the parent.
+        std::shared_ptr<CNode> ptrInsertBefore = Direct(ssInsertBefore);
+        if (ptrInsertBefore && (ptrInsertBefore == prParent.first || ptrInsertBefore < prParent.first))
+            ptrInsertBefore = prParent.first->Get(0);
+
         // Insert the array node
-        std::string ssAccessName = ssName;
         std::string ssTOML;
-        if (GetType() == sdv::toml::ENodeType::node_array)
-        {
+        if (prParent.first->GetType() == sdv::toml::ENodeType::node_array)
             ssTOML = "[]";
-            ssAccessName = "[" + std::to_string(std::min(uiIndex, GetCount())) + "]";
-        }
         else
-            ssTOML = QuoteText(ssName, EQuoteRequest::smart_key) + " = []";
-        if (InsertTOML(uiIndex, ssTOML, true) != EInsertResult::insert_success)
+            ssTOML = QuoteText(prParent.second, EQuoteRequest::smart_key) + " = []";
+        auto prResult = prParent.first->InsertTOML(ptrInsertBefore, ssTOML, true);
+        if (prResult.first != EInsertResult::insert_success || prResult.second.empty())
             return nullptr;
 
         // Return the inserted node.
-        return GetNodeDirect(ssAccessName);
+        return prResult.second.back().get();
     }
 
-    sdv::IInterfaceAccess* CNodeCollection::InsertTable(uint32_t uiIndex, const sdv::u8string& ssName,
-        sdv::toml::INodeCollectionInsert::EInsertPreference ePreference)
+    sdv::IInterfaceAccess* CNodeCollection::InsertTable(/*in*/ const sdv::u8string& ssInsertBefore,
+        /*in*/ const sdv::u8string& ssName, /*in*/ sdv::toml::EInsertPreference ePreference)
     {
+        // Get the parent to inser this node into
+        auto ptrArray = Cast<CArray>();
+        auto prParent = SmartParentCreate(ssName, ptrArray && ptrArray->TableArray());
+        if (!prParent.first) return nullptr;
+
+        // Determine the node to insert before and make sure that the node is not occurring before the parent.
+        std::shared_ptr<CNode> ptrInsertBefore = Direct(ssInsertBefore);
+        if (ptrInsertBefore && (ptrInsertBefore == prParent.first || ptrInsertBefore < prParent.first))
+            ptrInsertBefore = prParent.first->Get(0);
+
         // Insert inline or standard table
-        std::string ssAccessName = ssName;
         std::string ssTOML;
-        if (Inline() || ePreference == sdv::toml::INodeCollectionInsert::EInsertPreference::prefer_inline)
+        if (prParent.first->Inline() || ePreference == sdv::toml::EInsertPreference::prefer_inline)
         {
-            if (GetType() == sdv::toml::ENodeType::node_array)
-            {
+            if (prParent.first->GetType() == sdv::toml::ENodeType::node_array)
                 ssTOML = "{}";
-                ssAccessName = "[" + std::to_string(std::min(uiIndex, GetCount())) + "]";
-            }
             else
-                ssTOML = QuoteText(ssName, EQuoteRequest::smart_key) + " = {}";
+                ssTOML = QuoteText(prParent.second, EQuoteRequest::smart_key) + " = {}";
         }
-        else if (GetType() == sdv::toml::ENodeType::node_array) // Node is a table array
+        else if (prParent.first->GetType() == sdv::toml::ENodeType::node_array) // Node is a table array
         {
             ssTOML = "[[" + QuoteText(GetName(), EQuoteRequest::smart_key) + "]]";
-            ssAccessName = "[" + std::to_string(std::min(uiIndex, GetCount())) + "]";
         }
         else
-            ssTOML = "[" + QuoteText(ssName, EQuoteRequest::smart_key) + "]";
+            ssTOML = "[" + QuoteText(prParent.second, EQuoteRequest::smart_key) + "]";
 
         // Insert the table node
-        if (InsertTOML(uiIndex, ssTOML, true) != EInsertResult::insert_success)
+        auto prResult = prParent.first->InsertTOML(ptrInsertBefore, ssTOML, true);
+        if (prResult.first != EInsertResult::insert_success || prResult.second.empty())
             return nullptr;
 
         // Return the inserted node.
-        return GetNodeDirect(ssAccessName);
+        return prResult.second.back().get();
     }
 
-    sdv::IInterfaceAccess* CNodeCollection::InsertTableArray(uint32_t uiIndex, const sdv::u8string& ssName,
-        sdv::toml::INodeCollectionInsert::EInsertPreference ePreference)
+    sdv::IInterfaceAccess* CNodeCollection::InsertTableArray(/*in*/ const sdv::u8string& ssInsertBefore,
+        /*in*/ const sdv::u8string& ssName, /*in*/ sdv::toml::EInsertPreference ePreference)
     {
-        // Insert inline or standard table array
-        std::string ssAccessName = ssName;
-        std::string ssTOML;
+        // Get the parent to insert this node into
+        auto prParent = SmartParentCreate(ssName, true);
+        if (!prParent.first) return nullptr;
 
-        if (Inline() || ePreference == sdv::toml::INodeCollectionInsert::EInsertPreference::prefer_inline)
+        // Determine the node to insert before and make sure that the node is not occurring before the parent.
+        std::shared_ptr<CNode> ptrInsertBefore = Direct(ssInsertBefore);
+        if (ptrInsertBefore && (ptrInsertBefore == prParent.first || ptrInsertBefore < prParent.first))
+            ptrInsertBefore = prParent.first->Get(0);
+
+        // Insert inline or standard table array
+        std::string ssTOML;
+        if (prParent.first->Inline() || ePreference == sdv::toml::EInsertPreference::prefer_inline)
         {
-            if (GetType() == sdv::toml::ENodeType::node_array)
-            {
+            if (prParent.first->GetType() == sdv::toml::ENodeType::node_array)
                 ssTOML = "[{}]";
-                ssAccessName = "[" + std::to_string(std::min(uiIndex, GetCount())) + "][0]";
-            }
             else
             {
                 // If there is a table array with the same name already, the node will be added to the end.
-                auto ptrExistingNode = Direct(ssName);
+                auto ptrExistingNode = Direct(prParent.second);
                 auto ptrExistingArray = ptrExistingNode ? ptrExistingNode->Cast<CArray>() : std::shared_ptr<const CArray>();
-                if (ptrExistingArray && !ptrExistingArray->TableArray())
-                    return nullptr;
-                size_t nCount = ptrExistingArray ? ptrExistingArray->GetCount() : 0;
-                ssTOML = QuoteText(ssName, EQuoteRequest::smart_key) + " = [{}]";
-                ssAccessName += "[" + std::to_string(nCount) + "]";
+                if (ptrExistingArray && !ptrExistingArray->TableArray()) return nullptr;
+                ssTOML = QuoteText(prParent.second, EQuoteRequest::smart_key) + " = [{}]";
             }
         }
         else
         {
             // If there are table arrays, the node is added to the table array, but the order is determined by this node. Count the
             // amount of nodes before the insertion point.
-            ssTOML = "[[" + QuoteText(ssName, EQuoteRequest::smart_key) + "]]";
-            size_t nTableArrayCnt = std::count_if(m_vecNodeOrder.begin(),
-                m_vecNodeOrder.begin() + std::min(static_cast<size_t>(uiIndex), m_vecNodeOrder.size()),
-                [&](const std::shared_ptr<const CNode>& rptrNode) { return rptrNode->GetName() == ssName; });
-            ssAccessName += "[" + std::to_string(nTableArrayCnt) + "]";
+            ssTOML = "[[" + QuoteText(prParent.second, EQuoteRequest::smart_key) + "]]";
         }
 
         // Insert the table node
-        if (InsertTOML(uiIndex, ssTOML, true) != EInsertResult::insert_success)
+        auto prResult = prParent.first->InsertTOML(ptrInsertBefore, ssTOML, true);
+        if (prResult.first != EInsertResult::insert_success || prResult.second.empty())
             return nullptr;
 
         // Return the inserted node.
-        return GetNodeDirect(ssAccessName);
+        return prResult.second.back().get();
     }
 
-    sdv::toml::INodeCollectionInsert::EInsertResult CNodeCollection::InsertTOML(uint32_t uiIndex, const sdv::u8string& ssTOML,
-        bool bRollbackOnPartly)
+    sdv::toml::INodeCollectionInsert::EInsertResult CNodeCollection::InsertTOML(/*in*/ const sdv::u8string& ssInsertBefore,
+        /*in*/ const sdv::u8string& ssTOML, /*in*/ bool bRollbackOnPartly)
     {
+        std::shared_ptr<CNode> ptrInsertBefore = Direct(ssInsertBefore);
+
+        return InsertTOML(ptrInsertBefore, ssTOML, bRollbackOnPartly).first;
+    }
+
+    std::pair<sdv::toml::INodeCollectionInsert::EInsertResult, std::vector<std::shared_ptr<CNode>>>
+        CNodeCollection::InsertTOML(const std::shared_ptr<CNode>& rptrInsertBefore,const sdv::u8string& ssTOML,
+            bool bRollbackOnPartly)
+    {
+        std::vector<std::shared_ptr<CNode>> vecRetNodes;
         try
         {
+            // Lock the rebuild of the node order
+            auto lock = Parser().CreateRebuildLockObject();
+
             // Parser for the new TOML code
             CParser parser;
 
@@ -1157,7 +1329,7 @@ namespace toml_parser
                 if (ptrArray)
                     ptrCollection = ptrArray->Cast<const CNodeCollection>();
                 if (!ptrCollection)
-                    return sdv::toml::INodeCollectionInsert::EInsertResult::insert_fail;    
+                    return std::make_pair(sdv::toml::INodeCollectionInsert::EInsertResult::insert_fail, vecRetNodes);
             }
             else
             {
@@ -1193,13 +1365,13 @@ namespace toml_parser
                     if (ptrNode->Inline())
                         ptrPotentialNewNode->Cast<CNodeCollection>()->MakeInline();
                     else
-                        ptrPotentialNewNode->Cast<CNodeCollection>()->MakeStandard();
+                        ptrPotentialNewNode->Cast<CNodeCollection>()->MakeStandard(true);
                     continue;
                 }
 
                 // Node exists already. Add to duplicate name nodes vector (or fail if no all nodes should fit).
                 if (bRollbackOnPartly)
-                    return sdv::toml::INodeCollectionInsert::EInsertResult::insert_fail;
+                    return std::make_pair(sdv::toml::INodeCollectionInsert::EInsertResult::insert_fail, vecRetNodes);
                 vecDuplicateNameNodes.push_back(ptrPotentialNewNode);
             }
 
@@ -1209,115 +1381,67 @@ namespace toml_parser
 
             // Any nodes left to insert?
             if (!ptrCollection->GetCount())
-                return sdv::toml::INodeCollectionInsert::EInsertResult::insert_fail;
+                return std::make_pair(sdv::toml::INodeCollectionInsert::EInsertResult::insert_fail, vecRetNodes);
 
             // Add the child nodes to the collection (use a copy of the nodes list, since SetParentPtr changes the node list).
             auto lstCopyNodes = ptrCollection->m_lstNodes;
-            std::vector<std::shared_ptr<CNode>> vecSkipNodes;
             for (auto ptrNewNode : lstCopyNodes)
             {
                 // If the node is a table array, it is allowed that the tables are added to an existing table array.
                 auto ptrNewArray = ptrNewNode->Cast<CArray>();
                 auto ptrExistingNode = Direct(ptrNewNode->GetName());
                 auto ptrExistingArray = ptrExistingNode ? ptrExistingNode->Cast<CArray>() : std::shared_ptr<CArray>();
-                if (ptrNewArray && ptrNewArray->TableArray() && ptrExistingArray &&
-                    (ptrExistingArray->TableArray() || !ptrExistingArray->GetCount()))
+
+                // Shift the node to the target list
+                if (!ptrExistingArray)
                 {
-                    // Determine the current index of the array. This is used to determine to insert the nodes before or behind
-                    // the existing nodes within the array.
-                    uint32_t uiCurrentPos = ptrExistingNode->GetIndex();
-
-                    // Insert each table in the already existing table array. Assign the parent pointer and the location in the
-                    // parent table array.
-                    for (uint32_t uiNewArrayIndex = 0; uiNewArrayIndex < ptrNewArray->GetCount(); uiNewArrayIndex++)
-                    {
-                        auto ptrNewTable = ptrNewArray->Get(uiNewArrayIndex);
-                        ptrNewTable->SetParentPtr(ptrExistingArray);
-                        ptrExistingArray->m_vecNodeOrder.insert(
-                            uiCurrentPos > uiIndex ? (ptrExistingArray->m_vecNodeOrder.begin() + uiNewArrayIndex) : 
-                                ptrExistingArray->m_vecNodeOrder.end(),
-                            ptrNewTable);
-                    }
-
-                    // Do not process the table array when processing the position of all nodes in the parsed TOML code.
-                    vecSkipNodes.push_back(ptrNewNode);
-                    continue;
-                }
-
-                // Inserting values from an existing array into an array with the same name (which is not a table array) is not
-                // automatically supported. For this the array content needs to specifically be added to the existing array.
-                if (ptrExistingArray)
-                    return sdv::toml::INodeCollectionInsert::EInsertResult::insert_fail; // Should not happen
-
-                // Asign the new parent pointer.
-                if (ptrNewNode->Cast<CNodeCollection>() && Inline())
-                    ptrNewNode->Cast<CNodeCollection>()->MakeInline();
-                ptrNewNode->SetParentPtr(Cast<CNodeCollection>());
-            }
-            
-            // Insert the nodes in the node vector at the required index.
-            size_t nTargetIndex = uiIndex;
-            for (uint32_t uiNewNodeIndex = 0; uiNewNodeIndex < ptrCollection->GetCount(); uiNewNodeIndex++)
-            {
-                auto ptrNewNode = ptrCollection->Get(uiNewNodeIndex);
-
-                // Skip when the node is already inserted previously.
-                if (std::find(vecSkipNodes.begin(), vecSkipNodes.end(), ptrNewNode) != vecSkipNodes.end()) continue;
-
-                // The target index should not supercede the size of the vector
-                if (nTargetIndex > GetCount())
-                    nTargetIndex = GetCount();
-
-                // If the node collection is
-                // - inline table or table array
-                //   --> standard nodes will be converted to inline nodes.
-                //   --> table-arrays can be added to additional table arrays
-                // - standard table or table array
-                //   --> standard nodes will be inserted behind the inline nodes.
-                //   --> inline nodes will be inserted before the standard nodes.
-                if (Inline())
-                {
-                    // Only inline nodes can be inserted in other inline nodes.
-                    if (ptrNewNode->Cast<CNodeCollection>())
+                    // Asign the new parent pointer.
+                    if (ptrNewNode->Cast<CNodeCollection>() && Inline())
                         ptrNewNode->Cast<CNodeCollection>()->MakeInline();
+                    ptrNewNode->SetParentPtr(Cast<CNodeCollection>());
+                    if (rptrInsertBefore)
+                        ptrNewNode->NodeIndex().MoveBefore(rptrInsertBefore->NodeIndex());
+                    vecRetNodes.push_back(ptrNewNode);
                 }
                 else
                 {
-                    // Determine the begin of standard nodes in the node vector
-                    size_t nBeginStandardIndex = 0;
-                    for (; nBeginStandardIndex < m_vecNodeOrder.size(); nBeginStandardIndex++)
-                    {
-                        if (!m_vecNodeOrder[nBeginStandardIndex]->Inline())
-                            break;
-                    }
-
-                    // Correct the target index if necessary
-                    if (ptrNewNode->Inline())
-                    {
-                        if (nTargetIndex > nBeginStandardIndex)
-                            nTargetIndex = nBeginStandardIndex;
-                    }
-                    else
-                    {
-                        if (nTargetIndex < nBeginStandardIndex)
-                            nTargetIndex = nBeginStandardIndex;
-                    }
+                    // Inserting values from an existing array into an array with the same name (which is not a table array) is not
+                    // automatically supported. For this the array content needs to specifically be added to the existing array.
+                    if (!ptrExistingArray->TableArray()) // Should not happen
+                        return std::make_pair(sdv::toml::INodeCollectionInsert::EInsertResult::insert_fail, vecRetNodes);
                 }
 
-                // Insert the node
-                m_vecNodeOrder.insert(m_vecNodeOrder.begin() + nTargetIndex, ptrNewNode);
-
-                // Increase the target index for the next target
-                nTargetIndex++;
+                // Set the parent pointer for each table in the table array.
+                if (ptrNewArray && ptrNewArray->TableArray())
+                {
+                    // Insert each table in the already existing table array. Assign the parent pointer and the location in the
+                    // parent table array.
+                    uint32_t uiNewArrayIndex = 0;
+                    while (uiNewArrayIndex < ptrNewArray->GetCount())
+                    {
+                        auto ptrNewTable = ptrNewArray->Get(uiNewArrayIndex);
+                        // Since the new array might have received a new parent (or in any case a new parser reference), assign the
+                        // parent once more to also assign the parser reference.
+                        // Shift the table to the target array (this removes it from the current array).
+                        if (ptrExistingArray)
+                            ptrNewTable->SetParentPtr(ptrExistingArray);
+                        else
+                            ++uiNewArrayIndex;
+                        if (rptrInsertBefore)
+                            ptrNewTable->NodeIndex().MoveBefore(rptrInsertBefore->NodeIndex());
+                        vecRetNodes.push_back(ptrNewTable);
+                    }
+                }
             }
-
+            
             // Return the result
-            return vecDuplicateNameNodes.empty() ? sdv::toml::INodeCollectionInsert::EInsertResult::insert_success :
-                sdv::toml::INodeCollectionInsert::EInsertResult::insert_partly_success;
+            return std::make_pair(vecDuplicateNameNodes.empty() ? sdv::toml::INodeCollectionInsert::EInsertResult::insert_success :
+                sdv::toml::INodeCollectionInsert::EInsertResult::insert_partly_success, vecRetNodes);
         }
-        catch (const sdv::toml::XTOMLParseException& /*rexcept*/)
+        catch (const sdv::toml::XTOMLParseException& rexcept)
         {
-            return sdv::toml::INodeCollectionInsert::EInsertResult::insert_fail;
+            std::cerr << rexcept.what() << std::endl;
+            return std::make_pair(sdv::toml::INodeCollectionInsert::EInsertResult::insert_fail, vecRetNodes);
         }
     }
 
@@ -1336,6 +1460,26 @@ namespace toml_parser
         return bRet && CNode::DeleteNode();
     }
 
+    bool CNodeCollection::Inline() const
+    {
+        // Will be overridden
+        return false;
+    }
+
+    bool CNodeCollection::Inline(bool bInline, bool bIncludeChildren /*= true*/)
+    {
+        // Updating children, but only when inline or when include children flags has been set.
+        if (!bInline && !bIncludeChildren) return true;
+
+        // Update the children
+        for (auto& rptrNode : m_lstNodes)
+        {
+            rptrNode->Inline(bInline, bIncludeChildren);
+        }
+
+        return true;
+    }
+
     bool CNodeCollection::CanMakeInline() const
     {
         // To make a node inline is always possible.
@@ -1344,9 +1488,11 @@ namespace toml_parser
 
     bool CNodeCollection::MakeInline()
     {
-        if (Inline()) return true;
+        // Block rebuilding
+        auto lock = Parser().CreateRebuildLockObject();
+
         bool bRet = Inline(true);
-        if (bRet) AutomaticFormat();
+        if (bRet) AutomaticFormat(false);
         return bRet;
     }
 
@@ -1354,30 +1500,35 @@ namespace toml_parser
     {
         // To make a node as standard node, this is only possible when the parent is not inline.
         auto ptrParent = GetParentPtr();
-        if (!ptrParent) return false;
-        if (ptrParent->Inline()) return false;
+        if (ptrParent && ptrParent->Inline())
+            return false;
+
+        // If this is the root node, check if one of the nodes can be made standard
+        if (Cast<CRootTable>())
+        {
+            bool bRet = false;
+            for (const auto& rptrNode : m_lstNodes)
+                bRet |= rptrNode->Cast<CNodeCollection>() ? rptrNode->Cast<CNodeCollection>()->CanMakeStandard() : false;
+            return bRet;
+        }
+
         return true;
     }
 
-    bool CNodeCollection::MakeStandard()
+    bool CNodeCollection::MakeStandard(/*in*/ bool bIncludeChildren)
     {
-        if (!Inline()) return true;
-        bool bRet = Inline(false);
-        if (bRet) AutomaticFormat();
+        // Block rebuilding
+        auto lock = Parser().CreateRebuildLockObject();
+
+        if (!CanMakeStandard())
+            return false;
+        bool bRet = Inline(false, bIncludeChildren);
+        if (bRet) AutomaticFormat(false);
         return bRet;
     }
 
     bool CNodeCollection::DeleteNode(const std::shared_ptr<CNode>& rptrNode)
     {
-        // Remove from the view (just in case).
-        RemoveFromView(rptrNode);
-
-        // In case this is an array collection, it could still happen, that the node is in the vector. Explicitly remove the node
-        // from the vector.
-        auto itElementVec = std::find(m_vecNodeOrder.begin(), m_vecNodeOrder.end(), rptrNode);
-        if (itElementVec != m_vecNodeOrder.end())
-            m_vecNodeOrder.erase(itElementVec);
-
         // Find the element
         auto itElementLst = std::find(m_lstNodes.begin(), m_lstNodes.end(), rptrNode);
         if (itElementLst == m_lstNodes.end())
@@ -1389,171 +1540,12 @@ namespace toml_parser
         return true;
     }
 
-    bool CNodeCollection::InsertIntoView(uint32_t uiIndex, const std::shared_ptr<CNode>& rptrNode)
-    {
-        // Check for vaidity
-        if (!rptrNode) return false;
-        if (Inline() && !rptrNode->Inline()) return false;  // Cannot assign a standard node to an inline node
-        if (!IsDescendant(rptrNode)) return false;          // Must descent directly from this node
-
-        // Get the current view
-        auto ptrView = rptrNode->GetViewPtr();
-        if (!ptrView) ptrView = rptrNode->GetParentPtr();
-        if (!ptrView) return false;
-
-        // Determine the start of the standard nodes in the vector.
-        uint32_t uiStartStandard = 0;
-        while (m_vecNodeOrder.size() > uiStartStandard && !m_vecNodeOrder[uiStartStandard]->IsStandard())
-            ++uiStartStandard;
-
-        // Determine the potential new index location.
-        uint32_t uiNewIndex = uiIndex;
-        if (rptrNode->IsStandard() && uiIndex < uiStartStandard) uiNewIndex = uiStartStandard;
-        else if (rptrNode->IsInline() && uiIndex > uiStartStandard) uiNewIndex = uiStartStandard;
-        if (static_cast<size_t>(uiNewIndex) > m_vecNodeOrder.size()) uiNewIndex = static_cast<uint32_t>(m_vecNodeOrder.size());
-
-        // Special case, if the current view is identical and the node will be located at the same position, do not do anything.
-        // This is necessary to keep the code snippets in place. Otherwise they might be relocated.
-        // Also, if the current position is before the new position, correct the new index (since we remove the current position).
-        if (ptrView == Cast<CNodeCollection>())
-        {
-            uint32_t uiCurrentIndex = rptrNode->GetIndex();
-            if (uiCurrentIndex == uiNewIndex) return true;  // Nothing to do...
-            if (uiCurrentIndex < uiNewIndex) uiNewIndex--;
-            if (uiCurrentIndex < uiStartStandard) uiStartStandard--;
-        }
-
-        // Remove a previous view assignment (if necessary this will shift code snippets as well).
-        ptrView->RemoveFromView(rptrNode);
-
-        // Check whether the node is already part of the view
-        if (std::find(m_vecNodeOrder.begin(), m_vecNodeOrder.end(), rptrNode) != m_vecNodeOrder.end())
-            return true;    // Insert only once.
-        
-        // Determine the first position and the beyond-last position
-        uint32_t uiFirst = rptrNode->IsStandard() ? uiStartStandard : 0;
-        uint32_t uiLast = rptrNode->IsStandard() ? static_cast<uint32_t>(m_vecNodeOrder.size()) : uiStartStandard;
-
-        // If the node is inserted at the first position, shift the out-of-scope code snippet from the first node.
-        if ((uiNewIndex <= uiFirst) && (uiFirst < m_vecNodeOrder.size()))
-        {
-            rptrNode->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_before)
-                .Insert(m_vecNodeOrder[uiFirst]->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_before));
-            m_vecNodeOrder[uiFirst]->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_before).Clear();
-        }
-
-        // If the node is inserted at the last position, shift the out-of-scope code snippet from the last node.
-        if ((uiNewIndex >= uiLast) && (uiFirst < m_vecNodeOrder.size()))
-        {
-            rptrNode->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_behind)
-                .Append(m_vecNodeOrder[uiLast - 1]->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_behind));
-            m_vecNodeOrder[uiLast - 1]->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_before).Clear();
-        }
-
-        // Insert the node
-        m_vecNodeOrder.insert(m_vecNodeOrder.begin() + uiNewIndex, rptrNode);
-
-        return true;
-    }
-
-    bool CNodeCollection::RemoveFromView(const std::shared_ptr<CNode>& rptrNode)
-    {
-        // Check for validity
-        if (!rptrNode) return false;
-        if (rptrNode->GetViewPtr() != Cast<CNodeCollection>()) return false;
-
-        // Get the current position
-        uint32_t uiCurrentIndex = rptrNode->GetIndex();
-        if (uiCurrentIndex >= m_vecNodeOrder.size()) return false; // Not present (likely already removed)
-
-        // Determine the start of the standard nodes in the vector.
-        uint32_t uiStartStandard = 0;
-        while (m_vecNodeOrder.size() > uiStartStandard && !m_vecNodeOrder[uiStartStandard]->IsStandard())
-            ++uiStartStandard;
-
-        // Determine the first position and the beyond-last position
-        uint32_t uiFirst = rptrNode->IsStandard() ? uiStartStandard : 0;
-        uint32_t uiLast  = rptrNode->IsStandard() ? static_cast<uint32_t>(m_vecNodeOrder.size()) : uiStartStandard;
-
-        // Move the out-of-scope code to another node
-        if ((uiLast - uiFirst) > 1)
-        {
-            // If removing the node and a node with the same classification (standard or inline) is still available, shift the
-            // out-of-scope code to the left-over nodes with the same classification.
-            if (uiCurrentIndex <= uiFirst)
-            {
-                // The first node will be removed - copy the out-of-scope code to the node behind
-                m_vecNodeOrder[uiCurrentIndex + 1]->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_before)
-                    .Insert(rptrNode->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_behind));
-                m_vecNodeOrder[uiCurrentIndex + 1]->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_before)
-                    .Insert(rptrNode->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_before));
-            } else if (uiCurrentIndex >= (uiLast - 1))
-            {
-                // The last node will be removed - copy the out-of-scope code to the node before
-                m_vecNodeOrder[uiCurrentIndex - 1]->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_behind)
-                    .Append(rptrNode->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_before));
-                m_vecNodeOrder[uiCurrentIndex - 1]->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_behind)
-                    .Append(rptrNode->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_behind));
-            } else
-            {
-                // Copy the out-of-scope code from the end of the node to the node following
-                m_vecNodeOrder[uiCurrentIndex - 1]->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_behind)
-                    .Append(rptrNode->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_before));
-                m_vecNodeOrder[uiCurrentIndex + 1]->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_before)
-                    .Insert(rptrNode->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_behind));
-            }
-        }
-        else if (m_vecNodeOrder.size() > 1)
-        {
-            // If there are no more nodes with the same classification, but there are nodes with another classification, then move
-            // the out-of-scope code to the node with the other classification.
-            if (uiCurrentIndex == 0)
-            {
-                // The first node will be removed - copy the out-of-scope code to the node behind.
-                m_vecNodeOrder[uiCurrentIndex + 1]->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_before)
-                    .Insert(rptrNode->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_behind));
-                m_vecNodeOrder[uiCurrentIndex + 1]->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_before)
-                    .Insert(rptrNode->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_before));
-            } else
-            {
-                // The last node will be removed - copy the out-of-scope code to the node before.
-                m_vecNodeOrder[uiCurrentIndex - 1]->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_behind)
-                    .Append(rptrNode->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_before));
-                m_vecNodeOrder[uiCurrentIndex - 1]->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_behind)
-                    .Append(rptrNode->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_behind));
-            }
-        }
-        else if (IsStandard())
-        {
-            // If there are no nodes left over, but this node is a standard node, move the out-of-scope code to this node.
-            CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_behind)
-                .Insert(rptrNode->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_behind));
-            CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_behind)
-                .Insert(rptrNode->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_before));
-        }
-
-        // If this node is not a standard node, then the out-of-scope code cannot be maintained.
-
-        // Delete the out-of-scope code.
-        rptrNode->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_before).Clear();
-        rptrNode->CodeSnippet(sdv::toml::INodeInfo::ECommentType::out_of_scope_comment_behind).Clear();
-
-        // Remove the actual pointer.
-        rptrNode->SetViewPtr(nullptr);
-
-        // And remove from the vector (but only when the collection is not an array).
-        if (!Cast<CArray>())
-            m_vecNodeOrder.erase(m_vecNodeOrder.begin() + uiCurrentIndex);
-
-        return true;
-    }
-
     uint32_t CNodeCollection::FindIndex(const std::shared_ptr<CNode>& rptrNode) const
     {
         // Find the element
-        for (uint32_t uiIndex = 0; uiIndex < m_vecNodeOrder.size(); uiIndex++)
+        for (uint32_t uiIndex = 0; uiIndex < GetCount(); uiIndex++)
         {
-            if (rptrNode == m_vecNodeOrder[uiIndex])
+            if (rptrNode == Get(uiIndex))
                 return uiIndex;
         }
         return sdv::toml::npos;
@@ -1572,6 +1564,13 @@ namespace toml_parser
         return false;
     }
 
+    void CNodeCollection::ReassignParser(CParser& rParser)
+    {
+        CNode::ReassignParser(rParser);
+        for (auto& rptrNode : m_lstNodes)
+            rptrNode->ReassignParser(rParser);
+    }
+
     CTable::CTable(CParser& rparser, const std::string& rssName, const std::string& rssRawName, bool bDefaultInline,
         bool bExplicit /*= true*/) :
         CNodeCollection(rparser, rssName, rssRawName), m_bDefinedExplicitly(bExplicit), m_bInline(bDefaultInline)
@@ -1580,6 +1579,37 @@ namespace toml_parser
     sdv::toml::ENodeType CTable::GetType() const
     {
         return IsDeleted() ? sdv::toml::ENodeType::node_invalid : sdv::toml::ENodeType::node_table;
+    }
+
+    uint32_t CTable::GetCount() const
+    {
+        return static_cast<uint32_t>(m_vecNodeOrder.size());
+    }
+
+    std::shared_ptr<CNode> CTable::Get(uint32_t uiIndex) const
+    {
+        if (static_cast<size_t>(uiIndex) >= m_vecNodeOrder.size())
+            return nullptr;
+
+        return m_vecNodeOrder[uiIndex];
+    }
+
+    bool CTable::DeleteNode()
+    {
+        // Get parent
+        auto ptrParent = GetParentPtr();
+
+        // Check for inline
+        bool bInline = Inline();
+
+        // Delete the node
+        bool bRet = CNodeCollection::DeleteNode();
+
+        // If the parent node is an array and doesn't have any members any more and is not inline; remove the parent as well.
+        if (!bInline && ptrParent->GetType() == sdv::toml::ENodeType::node_array && !ptrParent->GetCount())
+            ptrParent->DeleteNode();
+
+        return bRet;
     }
 
     std::string CTable::GenerateTOML(const CGenContext& rContext /*= CGenContext()*/) const
@@ -1602,7 +1632,7 @@ namespace toml_parser
         // Special case, table as part of table array - but only if the parent is included in the generation. This can be identified
         // by the top most flag of the context.
         bool bTableArray = false;
-        if (!contextCopy.TopMostNode() || contextCopy.CheckOption(toml_parser::EGenerateOptions::full_header))
+        if (!contextCopy.TopMostNode() || contextCopy.CheckOption(EGenerateOptions::full_header))
             bTableArray =
                 !contextCopy.Embedded() && ptrParent && ptrParent->Cast<CArray>() && ptrParent->Cast<CArray>()->TableArray();
 
@@ -1614,7 +1644,7 @@ namespace toml_parser
         {
             std::shared_ptr<CNode> ptrNode = Get(uiIndex);
             if (!ptrNode) continue;
-            if (bTableArray || !ptrNode->Cast<CTable>() || ptrNode->Inline())
+            if (bTableArray || (!ptrNode->Cast<CTable>() && !ptrNode->Cast<CArray>()) || ptrNode->Inline())
                 bDoNotPrint = false;
         }
 
@@ -1651,9 +1681,8 @@ namespace toml_parser
             std::shared_ptr<CNode> ptrNode = Get(uiIndex);
             if (!ptrNode) continue;
 
-            // If the node has a view pointer, which is not identical to this pointer, do not print the node... it will be printed
-            // by a different node.
-            if (!ptrNode->IsPartOfView(contextCopy, Cast<CNodeCollection>())) continue;
+            // If the node is part of the view in the context, it is printed by the view node and not here.
+            if (!contextCopy.IsPartOfView(ptrNode)) continue;
 
             if (contextCopy.Inline() || ptrNode->Inline())
             {
@@ -1801,19 +1830,37 @@ namespace toml_parser
 
     bool CTable::Inline() const
     {
-        auto ptrParent = GetParentPtr();
-        if (!ptrParent) return m_bInline;
         return m_bInline;
     }
 
-    bool CTable::Inline(bool bInline)
+    bool CTable::Inline(bool bInline, bool bIncludeChildren /*= true*/)
     {
-        if (bInline == m_bInline) return true;
+        // When inline, all children are also inline.
+        if (m_bInline && bInline) return true; // Nothing to do
+
+        // When not inline and children are not to be considered, shortcut when possible
+        if (!m_bInline && !bInline && !bIncludeChildren) return true; // Nothing to do
+
+        // Allowed to make standard
+        if (!Cast<CRootTable>() && !bInline && !CanMakeStandard()) return false; // Nothing to do
+
+        // If a parent if inline, the child needs to be inline as well.
+        bool bTargetInline = bInline;
         auto ptrParent = GetParentPtr();
         if (ptrParent && ptrParent->Inline())
-            m_bInline = true;
-        else
-            m_bInline = bInline;
+            bTargetInline = true;
+
+        // If making inline, make children inline first (call to base class).
+        // If making standard, make standard before making children inline.
+        if (bTargetInline)
+        {
+            if (CNodeCollection::Inline(true))
+                m_bInline = true;
+        } else
+        {
+            m_bInline = false;
+            CNodeCollection::Inline(false, bIncludeChildren);
+        }
 
         return m_bInline == bInline;
     }
@@ -1833,6 +1880,9 @@ namespace toml_parser
         if (!rptrCollection) return false;  // No collection supplied.
         if (rptrCollection == Cast<CNodeCollection>()) return true; // Collections are identical, nothing to combine.
         if (rptrCollection->IsDescendant(shared_from_this())) return false; // Circular reference.
+
+        // Lock the rebuild of the node order
+        auto lock = Parser().CreateRebuildLockObject();
         
         // Run through the provided collection list
         // If nodes don't exist in the current collection, add the nodes
@@ -1850,11 +1900,12 @@ namespace toml_parser
             auto ptrExistNode = Direct(ptrNewNode->GetName());
 
             // Check whether the node is really new; if it is, add the node
-            // Exception to the rule... when the existing node is a table array and the node to add is a table, do not do replace the node.
+            // Exception to the rule... when the existing node is a table array and the node to add is a table, do not do replace
+            // the node.
             if (!ptrExistNode || (ptrNewNode->GetType() == sdv::toml::ENodeType::node_table &&
                     ptrExistNode->Cast<CArray>() && ptrExistNode->Cast<CArray>()->TableArray()))
             {
-                bResult &= InsertTOML(sdv::toml::npos, ptrNewNode->GenerateTOML(contextGeneration), true) ==
+                bResult &= InsertTOML("", ptrNewNode->GenerateTOML(contextGeneration), true) ==
                     sdv::toml::INodeCollectionInsert::EInsertResult::insert_success;
                 continue;
             }
@@ -1862,11 +1913,10 @@ namespace toml_parser
             // The node exists. Are the node types identical? If not, replace the existing node with the new node
             if (ptrNewNode->GetType() != ptrExistNode->GetType())
             {
-                uint32_t uiExistIndex = ptrExistNode->GetIndex();
                 bool bLocalResult = ptrExistNode->DeleteNode();
                 bResult &= bLocalResult;
                 if (bLocalResult)
-                    bResult &= InsertTOML(uiExistIndex, ptrNewNode->GenerateTOML(contextGeneration), true) ==
+                    bResult &= InsertTOML(ptrExistNode, ptrNewNode->GenerateTOML(contextGeneration), true).first ==
                         sdv::toml::INodeCollectionInsert::EInsertResult::insert_success;
                 continue;
             }
@@ -1897,6 +1947,9 @@ namespace toml_parser
         if (rptrCollection == Cast<CNodeCollection>()) return false; // Collections are identical, this would empty the collection.
         if (rptrCollection->IsDescendant(shared_from_this())) return false; // Circular reference.
         
+        // Lock the rebuild of the node order
+        auto lock = Parser().CreateRebuildLockObject();
+
         // Run through the provided collection list.
         // If nodes don't exist in the current collection, leave the nodes in the collection.
         // If nodes exist in the current collection, but are different, leave the nodes in the collection.
@@ -1910,7 +1963,7 @@ namespace toml_parser
             if (!ptrReductorNode) continue;
             auto ptrExistNode = Direct(ptrReductorNode->GetName());
 
-            // Check whether the node is exists; if not, leave the node in the collection.
+            // Check whether the node exists; if not, leave the node in the collection.
             if (!ptrExistNode) continue;
 
             // Deal with table arrays...
@@ -1948,7 +2001,37 @@ namespace toml_parser
         return bResult;
     }
 
-    CArray::CArray(CParser& rparser, const std::string& rssName, const std::string& rssRawName,
+    void CTable::RebuildNodeOrder(bool bForce)
+    {
+        // Is rebuild locked? Then do not rebuild.
+        if (!bForce && Parser().RebuildLocked()) return;
+
+        m_vecNodeOrder.clear();
+        FillNodeOrderVector(m_vecNodeOrder);
+
+        // Sort the nodes
+        std::sort(m_vecNodeOrder.begin(),
+            m_vecNodeOrder.end(),
+            [&](const std::shared_ptr<CNode>& rptrNode1, const std::shared_ptr<CNode>& rptrNode2) -> bool
+            {
+                if (!rptrNode2) return true;
+                if (!rptrNode1) return false;
+
+                // Check whether only one is inline. If so, node 1 is smaller when node 1 is inline.
+                if (rptrNode1->Inline() != rptrNode2->Inline())
+                    return rptrNode1->Inline();
+
+                // Check for the smallest index
+                return *rptrNode1 < *rptrNode2;
+            });
+
+        // Call base class
+        CNodeCollection::RebuildNodeOrder(bForce);
+    }
+
+    CArray::CArray(CParser& rparser,
+        const std::string& rssName,
+        const std::string& rssRawName,
         bool bExplicitTableArray /*= false*/) :
         CNodeCollection(rparser, rssName, rssRawName), m_bDefinedExplicitly(bExplicitTableArray), m_bInline(!bExplicitTableArray)
     {}
@@ -1995,6 +2078,80 @@ namespace toml_parser
         return ptrNode->Direct(ssSecond);
     }
 
+    std::pair<std::shared_ptr<CNodeCollection>, std::string> CArray::SmartParentCreate(const std::string& rssPath,
+        bool bInsertTableArray /*= false*/)
+    {
+        auto prKey = SplitNodeKey(rssPath);
+
+        // Special situation: if the first part of the name is empty or not a number, this is not an error, but should cause the
+        // node to be added to the end of the array.
+        if (rssPath.empty()) return std::make_pair(Cast<CNodeCollection>(), rssPath);
+        if (prKey.first.empty() || prKey.first.find_first_not_of("0123456789") != std::string::npos)
+            prKey = std::make_pair(std::to_string(GetCount()), rssPath);
+        uint32_t uiArrayIndex = 0;
+        std::from_chars(prKey.first.data(), prKey.first.data() + prKey.first.size(), uiArrayIndex);
+
+        // Determine whether the node should be a table or an array. For this take the next name part and check for an index.
+        auto prKeyNext = SplitNodeKey(prKey.second);
+        sdv::toml::ENodeType eTargetType =
+            (!prKeyNext.first.empty() && prKeyNext.first.find_first_not_of("0123456789") != std::string::npos)
+                ? sdv::toml::ENodeType::node_table
+                : sdv::toml::ENodeType::node_array;
+
+        // Find the node
+        std::shared_ptr<CNode> ptrNode = Get(uiArrayIndex);
+        std::shared_ptr<CNodeCollection> ptrNodeCollection;
+        if (ptrNode)
+        {
+            ptrNodeCollection = ptrNode->Cast<CNodeCollection>();
+            if (ptrNode->GetType() != eTargetType)
+            {
+                // If the node is an array and there is no index, take the last node in the array.
+                if (ptrNode->GetType() == sdv::toml::ENodeType::node_array && ptrNodeCollection->GetCount())
+                {
+                    ptrNode = ptrNodeCollection->Get(ptrNodeCollection->GetCount() - 1);
+                    ptrNodeCollection = ptrNode->Cast<CNodeCollection>();
+                } else
+                    return std::make_pair(nullptr, rssPath);
+            }
+        }
+
+        // If not found, create the node collection
+        if (!ptrNodeCollection)
+        {
+            // Determine whether the next key part is a number - then create an array or whether the next key part  is a name, then
+            // create a table.
+            if (eTargetType == sdv::toml::ENodeType::node_array)
+            {
+                auto* pArray = dynamic_cast<CNodeCollection*>(InsertArray("[" + std::to_string(uiArrayIndex) + "]", ""));
+                if (pArray)
+                    ptrNodeCollection = pArray->Cast<CNodeCollection>();
+            }
+            else
+            {
+                // If this is an array, do not insert another table. Use the last node collection instead.
+                if (!bInsertTableArray && GetCount())
+                {
+                    ptrNode = Get(GetCount() - 1);
+                    if (ptrNode)
+                        ptrNodeCollection = ptrNode->Cast<CNodeCollection>();
+                }
+                else
+                {
+                    auto* pTable = dynamic_cast<CNodeCollection*>(
+                        InsertTable("[" + std::to_string(uiArrayIndex) + "]", "", sdv::toml::EInsertPreference::prefer_standard));
+                    if (pTable)
+                        ptrNodeCollection = pTable->Cast<CNodeCollection>();
+                }
+            }
+            if (!ptrNodeCollection)
+                return std::make_pair(nullptr, rssPath); // Not found
+        }
+
+        // Get or create next node
+        return ptrNodeCollection->SmartParentCreate(prKey.second, bInsertTableArray);
+    }
+
     std::string CArray::GenerateTOML(const CGenContext& rContext /*= CGenContext()*/) const
     {
         if (IsDeleted()) return {};
@@ -2036,9 +2193,8 @@ namespace toml_parser
             std::shared_ptr<CNode> ptrNode = Get(uiIndex);
             if (!ptrNode) continue;
 
-            // If the node has a view pointer, which is not identical to the this pointer, do not print the node... it will be
-            // printed by a different node.
-            if (!ptrNode->IsPartOfView(contextCopy, Cast<CNodeCollection>()))
+            // If the node is part of the view in the context, it is printed by the view node and not here.
+            if (!contextCopy.IsPartOfView(ptrNode))
                 continue;
 
             // Generate the TOML for the array node. Copy the context with the full key path (when inline) or the key context of
@@ -2128,6 +2284,7 @@ namespace toml_parser
             return; // Unexpected
 
         // Check the last node of the array for a potential comma in the code snippet following the node assignment.
+        RebuildNodeOrder(true);
         if (GetCount())
         {
             auto ptrNode = Get(GetCount() - 1);
@@ -2188,6 +2345,45 @@ namespace toml_parser
         return true;
     }
 
+    bool CArray::Inline() const
+    {
+        return m_bInline;
+    }
+
+    bool CArray::Inline(bool bInline, bool bIncludeChildren /*= true*/)
+    {
+        // When inline, all children are also inline.
+        if (m_bInline && bInline) return true; // Nothing to do
+
+        // When not inline and children are not to be considered, shortcut when possible
+        if (!m_bInline && !bInline && !bIncludeChildren) return true; // Nothing to do
+
+        // Allowed to make standard
+        if (!bInline && !CanMakeStandard()) return false; // Nothing to do
+
+        // If a parent if inline, the child needs to be inline as well.
+        bool bTargetInline = bInline;
+        auto ptrParent = GetParentPtr();
+        if (ptrParent && ptrParent->Inline())
+            bTargetInline = true;
+
+        // If making inline, make children inline first (call to base class).
+        // If making standard, make standard before making children inline.
+        if (bTargetInline)
+        {
+            if (CNodeCollection::Inline(true))
+                m_bInline = true;
+        }
+        else
+        {
+            // Make standard
+            m_bInline = false;
+            CNodeCollection::Inline(false, bIncludeChildren);
+        }
+
+        return true;
+    }
+
     bool CArray::CanMakeStandard() const
     {
         // Check with the collection
@@ -2196,73 +2392,6 @@ namespace toml_parser
 
         // To make an array as standard node, this is only possible when the array is a table array.
         return TableArray();
-    }
-
-    bool CArray::Inline() const
-    {
-        return m_bInline;
-    }
-
-    bool CArray::Inline(bool bInline)
-    {
-        // Does anything change?
-        if (bInline == m_bInline) return true;
-
-        // When making standard, the parent should not be inline.
-        auto ptrParent = GetParentPtr();
-        if (!ptrParent) return false;
-        if (ptrParent->Inline() && !bInline) return false;
-
-        // The array is inline per default. Only in the case of a table array (an array with only tables, and at least one table)
-        // the array could be standard.
-        if (!TableArray()) return false;
-
-        // Check the order in the vector of the view or of the parent. When becoming inline, must be located before the standard
-        // nodes. When becoming standard, must be located behind the inline nodes.
-        // Special case for a table array: when becoming inline, remove all the tables from the view and add the array to the
-        // correct location. When becoming standard, remove the array from the location and add all the tables into the view.
-        m_bInline = bInline;
-        if (bInline)
-        {
-            // If becoming inline, remove the view and make all children inline as well.
-            uint32_t uiCurrentPos = sdv::toml::npos;
-            for (uint32_t uiIndex = 0; uiIndex < GetCount(); uiIndex++)
-            {
-                auto ptrNode = Get(uiIndex);
-                if (!ptrNode) continue;
-                if (uiCurrentPos == sdv::toml::npos)
-                    uiCurrentPos = ptrNode->GetIndex();
-                if (ptrNode->Cast<CNodeCollection>())
-                    ptrNode->Cast<CNodeCollection>()->MakeInline();
-                InsertIntoView(uiIndex, ptrNode);
-            }
-
-            // Move the array into the view of the parent.
-            ptrParent->InsertIntoView(uiCurrentPos, shared_from_this());
-        } else
-        {
-            // Get the current position
-            uint32_t uiCurrentPos = GetIndex();
-
-            // Make all the children standard as well and move the into the view of the parent.
-            for (uint32_t uiIndex = 0; uiIndex < GetCount(); uiIndex++)
-            {
-                auto ptrNode = Get(uiIndex);
-                if (!ptrNode) continue;
-                if (uiCurrentPos == sdv::toml::npos)
-                    uiCurrentPos = ptrNode->GetIndex();
-                if (ptrNode->Inline() && ptrNode->Cast<CNodeCollection>())
-                    ptrNode->Cast<CNodeCollection>()->MakeStandard();
-                ptrParent->InsertIntoView(uiCurrentPos, ptrNode);
-                if (uiCurrentPos != sdv::toml::npos)
-                    ++uiCurrentPos;
-            }
-
-            // Remove the array from the view of the parent
-            ptrParent->RemoveFromView(shared_from_this());
-        }
-
-        return true;
     }
 
     bool CArray::LastNodeWithSucceedingComma() const
@@ -2276,6 +2405,9 @@ namespace toml_parser
         if (rptrCollection == Cast<CNodeCollection>()) return true; // Collections are identical, nothing to combine.
         if (rptrCollection->IsDescendant(shared_from_this())) return false; // Circular reference.
 
+        // Lock the rebuild of the node order
+        auto lock = Parser().CreateRebuildLockObject();
+
         // Differentiate between a table array and a normal array:
         //  - A normal array should be identical. If not, take over the complete array.
         //  - A table array might contain tables that are identical, extend with tables that are not.
@@ -2285,7 +2417,7 @@ namespace toml_parser
         // In all other cases, update the content if necessary.
 
         bool bResult = true;
-        toml_parser::CGenContext contextGeneration;
+        CGenContext contextGeneration;
         contextGeneration.SetOption(EGenerateOptions::reduce_whitespace);
         contextGeneration.SetOption(EGenerateOptions::full_header);
         bool bTableArray = TableArray() && rptrCollection->Cast<CArray>()->TableArray();
@@ -2295,11 +2427,10 @@ namespace toml_parser
             auto ptrNewNode = rptrCollection->Get(uiIndex);
             if (!ptrNewNode) continue;
             std::shared_ptr<CNode> ptrExistNode;
-            uint32_t uiTargetIndex = uiIndex;
             if (bTableArray)
             {
                 // Go through the current array and compare the generate TOML string for identical values.
-                toml_parser::CGenContext contextComparison;
+                CGenContext contextComparison;
                 contextComparison.SetOption(EGenerateOptions::no_comments);
                 std::string ssNewNodeTOML = ptrNewNode->GenerateTOML(contextComparison);
                 bool bIdentical = false;
@@ -2311,17 +2442,14 @@ namespace toml_parser
                     bIdentical = ssNewNodeTOML == ssExistTOML;
                 }
                 if (!bIdentical)
-                {
-                    uiTargetIndex = sdv::toml::npos;    // New node will be added at the end of the array.
                     ptrExistNode.reset();
-                }
             } else
                 ptrExistNode = Get(uiIndex);
 
             // Check whether there is an existing node. If not, add the node.
             if (!ptrExistNode)
             {
-                bResult &= InsertTOML(uiTargetIndex, ptrNewNode->GenerateTOML(contextGeneration), true) ==
+                bResult &= InsertTOML("", ptrNewNode->GenerateTOML(contextGeneration), true) ==
                     sdv::toml::INodeCollectionInsert::EInsertResult::insert_success;
                 continue;
             }
@@ -2333,8 +2461,8 @@ namespace toml_parser
                 bool bLocalResult = ptrExistNode->DeleteNode();
                 bResult &= bLocalResult;
                 if (bLocalResult)
-                    bResult &= InsertTOML(uiExistIndex, ptrNewNode->GenerateTOML(contextGeneration), true) ==
-                        sdv::toml::INodeCollectionInsert::EInsertResult::insert_success;
+                    bResult &= InsertTOML(Get(uiExistIndex), ptrNewNode->GenerateTOML(contextGeneration), true).first
+                               == sdv::toml::INodeCollectionInsert::EInsertResult::insert_success;
                 continue;
             }
 
@@ -2375,13 +2503,16 @@ namespace toml_parser
         if (rptrCollection == Cast<CNodeCollection>()) return false; // Collections are identical, this would empty the collection.
         if (rptrCollection->IsDescendant(shared_from_this())) return false; // Circular reference.
         
+        // Lock the rebuild of the node order
+        auto lock = Parser().CreateRebuildLockObject();
+
         // DIfferentiate between a table array and a normal array:
         //  - A normal array should be identical. If so, remove the complete array.
         //  - A table array might contain tables that are identical, those are removed. All others stay.
 
         // For normal array, simply compare the generate TOML strings. If identical, remove the array content.
         bool bResult = true;
-        toml_parser::CGenContext context;
+        CGenContext context;
         context.SetOption(EGenerateOptions::no_comments);
         if (!TableArray() || !rptrCollection->Cast<CArray>()->TableArray())
         {

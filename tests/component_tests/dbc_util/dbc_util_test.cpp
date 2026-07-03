@@ -107,7 +107,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitBigEndian)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -217,7 +217,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmit64BitBigEndian)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -361,7 +361,7 @@ TEST(DbcUtilCanDLTest, ReceiveBigEndian)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -479,7 +479,7 @@ TEST(DbcUtilCanDLTest, Receive64BitBigEndian)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -539,7 +539,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitLittleEndian)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -649,7 +649,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmit64BitLittleEndian)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -793,7 +793,7 @@ TEST(DbcUtilCanDLTest, ReceiveLittleEndian)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -911,7 +911,7 @@ TEST(DbcUtilCanDLTest, Receive64BitLittleEndian)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -971,7 +971,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransactionalTransmitBigEndian)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -1064,7 +1064,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransactionalTransmitLittleEndian)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -1157,7 +1157,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitBigEndianAllDataTypes)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -1443,7 +1443,7 @@ TEST(DbcUtilCanDLTest, ReceiveBigEndianAllDataTypes)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -1629,7 +1629,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitLittleEndianAllDataTypes)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -1915,7 +1915,7 @@ TEST(DbcUtilCanDLTest, ReceiveLittleEndianAllDataTypes)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -2101,7 +2101,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitBigEndianScaledDataTypes)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -2271,7 +2271,7 @@ TEST(DbcUtilCanDLTest, ReceiveBigEndianScaledDataType)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -2378,7 +2378,7 @@ TEST(DbcUtilCanDLTest, SpontaneousTransmitLittleEndianScaledDataTypes)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -2548,7 +2548,7 @@ TEST(DbcUtilCanDLTest, ReceiveLittleEndianScaledDataType)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -2655,7 +2655,7 @@ TEST(DbcUtilCanDLTest, CyclicTransmit)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -2804,7 +2804,7 @@ TEST(DbcUtilCanDLTest, CyclicIfActiveTransmit)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -2971,7 +2971,7 @@ TEST(DbcUtilCanDLTest, CyclicAndSpontaneousTransmit)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -3112,7 +3112,7 @@ TEST(DbcUtilCanDLTest, SpontaneousDelayTransmit)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -3250,7 +3250,7 @@ TEST(DbcUtilCanDLTest, CyclicAndSpontaneousDelayTransmit)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);
@@ -3394,7 +3394,7 @@ TEST(DbcUtilCanDLTest, CyclicIfActiveAndSpontaneousTransmit)
     // Start the data link
     CDbcStructDataLink dl;
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialization_pending);
-    dl.Initialize("");
+    dl.Initialize(sdv::SObjectInfo());
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::initialized);
     dl.SetOperationMode(sdv::EOperationMode::running);
     EXPECT_EQ(dl.GetObjectState(), sdv::EObjectState::running);

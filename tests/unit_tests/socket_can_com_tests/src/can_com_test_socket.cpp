@@ -96,15 +96,15 @@ bool CANSocketTest::vcanIsInstalled = false;
 class CTestCANSocket : public CCANSockets
 {
 public:
-    virtual void Initialize(const sdv::u8string& ssObjectConfig) override
-    {
-        CCANSockets::Initialize(ssObjectConfig);
-    }
+    // virtual void OnInitialize(const sdv::ObjectInfo& sObjectInfo) override
+    // {
+    //     CCANSockets::OnInitialize(sObjectInfo);
+    // }
 
-    virtual void Shutdown() override
-    {
-        CCANSockets::Shutdown();
-    }
+    // virtual void Shutdown() override
+    // {
+    //     CCANSockets::Shutdown();
+    // }
 
     virtual void Send(const sdv::can::SMessage& sMsg, uint32_t uiIfcIndex) override
     {
@@ -199,7 +199,9 @@ bool InitializeAppControl(sdv::app::CAppControl* appcontrol, const std::string& 
 
 void InitializeCanComObject(CTestCANSocket& canComObj, const std::string config, MockCANReceiver& mockRcv)
 {
-    ASSERT_NO_THROW(canComObj.Initialize(config.c_str()));
+    sdv::SObjectInfo sObjectInfo{};
+    sObjectInfo.ssConfig = config;
+    ASSERT_NO_THROW(canComObj.Initialize(sObjectInfo));
     EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialized);
     ASSERT_NO_THROW(canComObj.SetOperationMode(sdv::EOperationMode::configuring));
     ASSERT_NO_THROW(canComObj.RegisterReceiver(&mockRcv));
@@ -228,9 +230,10 @@ TEST_F(CANSocketTest, ValidConfigString)
     sdv::app::CAppControl appControl;
     appControl.Startup("");
 
-    sdv::u8string ssObjectConfig = R"(canSockets = "vcan0")"; // vcan0 interface must exist
+    sdv::SObjectInfo sObjectInfo{};
+    sObjectInfo.ssConfig = R"(canSockets = "vcan0")"; // vcan0 interface must exist
     CTestCANSocket canComObj;
-    ASSERT_NO_THROW(canComObj.Initialize(ssObjectConfig.c_str()));
+    ASSERT_NO_THROW(canComObj.Initialize(sObjectInfo));
     ASSERT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialized);
 
     ASSERT_NO_THROW(canComObj.Send(testMsg, 0));
@@ -244,9 +247,10 @@ TEST_F(CANSocketTest, InvalidConfigString)
     sdv::app::CAppControl appControl;
     appControl.Startup("");
 
-    sdv::u8string ssObjectConfig = R"(canSockets = "vcan08")";
+    sdv::SObjectInfo sObjectInfo{};
+    sObjectInfo.ssConfig = R"(canSockets = "vcan08")";
     CTestCANSocket canComObj;
-    ASSERT_NO_THROW(canComObj.Initialize(ssObjectConfig.c_str()));
+    ASSERT_NO_THROW(canComObj.Initialize(sObjectInfo));
     EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialization_failure);
 
     ASSERT_NO_THROW(canComObj.Shutdown());
@@ -260,9 +264,10 @@ TEST_F(CANSocketTest, ValidConfigArray)
     sdv::app::CAppControl appControl;
     appControl.Startup("");
 
-    sdv::u8string ssObjectConfig = R"(canSockets = ["vcan0", "vcan1"])";
+    sdv::SObjectInfo sObjectInfo{};
+    sObjectInfo.ssConfig = R"(canSockets = ["vcan0", "vcan1"])";
     CTestCANSocket canComObj;
-    ASSERT_NO_THROW(canComObj.Initialize(ssObjectConfig.c_str()));
+    ASSERT_NO_THROW(canComObj.Initialize(sObjectInfo));
     EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialized);
 
     ASSERT_NO_THROW(canComObj.Send(testMsg, 0));
@@ -276,9 +281,10 @@ TEST_F(CANSocketTest, InvalidConfigArray)
     sdv::app::CAppControl appControl;
     appControl.Startup("");
 
-    sdv::u8string ssObjectConfig = R"(canSockets = ["vcan08", "vcan09"])";
+    sdv::SObjectInfo sObjectInfo{};
+    sObjectInfo.ssConfig = R"(canSockets = ["vcan08", "vcan09"])";
     CTestCANSocket canComObj;
-    ASSERT_NO_THROW(canComObj.Initialize(ssObjectConfig.c_str()));
+    ASSERT_NO_THROW(canComObj.Initialize(sObjectInfo));
     EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialization_failure);
 
     ASSERT_NO_THROW(canComObj.Shutdown());
@@ -292,9 +298,10 @@ TEST_F(CANSocketTest, ValidConfigArrayButUnknownElement)
     sdv::app::CAppControl appControl;
     appControl.Startup("");
 
-    sdv::u8string ssObjectConfig = R"(canSockets = ["vcan0", "vcan08"])";
+    sdv::SObjectInfo sObjectInfo{};
+    sObjectInfo.ssConfig = R"(canSockets = ["vcan0", "vcan08"])";
     CTestCANSocket canComObj;
-    ASSERT_NO_THROW(canComObj.Initialize(ssObjectConfig.c_str()));
+    ASSERT_NO_THROW(canComObj.Initialize(sObjectInfo));
     EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialized);
 
     ASSERT_NO_THROW(canComObj.Send(testMsg, 0));
@@ -308,9 +315,10 @@ TEST_F(CANSocketTest, InvalidConfigIdentifier)
     sdv::app::CAppControl appControl;
     appControl.Startup("");
 
-    sdv::u8string ssObjectConfig = R"(invalidCanSockets = ["vcan0", "vcan1"])"; // Invalid config identifier
+    sdv::SObjectInfo sObjectInfo{};
+    sObjectInfo.ssConfig = R"(invalidCanSockets = ["vcan0", "vcan1"])"; // Invalid config identifier
     CTestCANSocket canComObj;
-    ASSERT_NO_THROW(canComObj.Initialize(ssObjectConfig.c_str()));
+    ASSERT_NO_THROW(canComObj.Initialize(sObjectInfo));
     EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialization_failure);
 
     ASSERT_NO_THROW(canComObj.Shutdown());
@@ -478,11 +486,11 @@ TEST_F(CANSocketTest, StressTestWith3Objects)
 
 	std::atomic_bool stopSendThread = false;
     std::cout << "Start thread sending messages..." << std::endl;
-	std::thread thSendThread1(SendThread, std::ref(stopSendThread), std::ref(canComObj1), std::ref(testData1));
+	sdv::core::secure_thread thSendThread1(SendThread, std::ref(stopSendThread), std::ref(canComObj1), std::ref(testData1));
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-	std::thread thSendThread2(SendThread, std::ref(stopSendThread), std::ref(canComObj2), std::ref(testData2));
+	sdv::core::secure_thread thSendThread2(SendThread, std::ref(stopSendThread), std::ref(canComObj2), std::ref(testData2));
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-	std::thread thSendThread3(SendThread, std::ref(stopSendThread), std::ref(canComObj3), std::ref(testData3));
+	sdv::core::secure_thread thSendThread3(SendThread, std::ref(stopSendThread), std::ref(canComObj3), std::ref(testData3));
 
     std::this_thread::sleep_for(std::chrono::seconds(10));
 
@@ -702,9 +710,10 @@ TEST_F(CANSocketTest, ManualSendAndReceiveTestOfMulitpleSockets)
     uint32_t vcan2Index = 6;
     uint32_t vcan3Index = 1;
     uint32_t vcan4Index = 5;
-    sdv::u8string ssConfig = R"(canSockets = ["vcan0", "vcan3", "vcan8", "vcan1", "vcan9", "vcan4", "vcan2"])";
     CTestCANSocket canComObj;
-    ASSERT_NO_THROW(canComObj.Initialize(ssConfig.c_str()));
+    sdv::SObjectInfo sObjectInfo{};
+    sObjectInfo.ssConfig = R"(canSockets = ["vcan0", "vcan3", "vcan8", "vcan1", "vcan9", "vcan4", "vcan2"])";
+    ASSERT_NO_THROW(canComObj.Initialize(sObjectInfo));
     EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialized);
 
     // Register a receiver.
@@ -772,9 +781,10 @@ TEST_F(CANSocketTest, ManualSendAndReceiveTestWithDifferentDataSizes)
     uint32_t vcan2Index = 6;
     uint32_t vcan3Index = 1;
     uint32_t vcan4Index = 5;
-    sdv::u8string ssConfig = R"(canSockets = ["vcan0", "vcan3", "vcan8", "vcan1", "vcan9", "vcan4", "vcan2"])";
+    sdv::SObjectInfo sObjectInfo{};
+    sObjectInfo.ssConfig = R"(canSockets = ["vcan0", "vcan3", "vcan8", "vcan1", "vcan9", "vcan4", "vcan2"])";
     CTestCANSocket canComObj;
-    ASSERT_NO_THROW(canComObj.Initialize(ssConfig.c_str()));
+    ASSERT_NO_THROW(canComObj.Initialize(sObjectInfo));
     EXPECT_EQ(canComObj.GetObjectState(), sdv::EObjectState::initialized);
 
     // Register a receiver.

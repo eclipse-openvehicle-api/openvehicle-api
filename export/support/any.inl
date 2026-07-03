@@ -24,6 +24,9 @@
 #ifdef _MSC_VER
     #pragma warning(push)
     #pragma warning(disable : 26495)
+#else
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
 
 namespace sdv
@@ -1738,6 +1741,8 @@ namespace sdv
 
 #ifdef _MSC_VER
     #pragma warning(pop)
+#else
+    #pragma GCC diagnostic pop
 #endif
 
 #endif // !defined SDV_ANY_INL

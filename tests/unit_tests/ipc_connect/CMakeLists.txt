@@ -17,8 +17,10 @@ project (UnitTest_IPC_Connect VERSION 1.0 LANGUAGES CXX)
 # Compile the source code
 add_executable(UnitTest_IPC_Connect
     "main.cpp"
-
-    "ipc_connect.cpp"
+    "ipc_connect_shared_mem.cpp"
+    "ipc_connect_false_positiv.cpp"
+    "ipc_connect_uds.cpp"
+    "ipc_connect_uds_tunnel.cpp"
     )
 target_link_libraries(UnitTest_IPC_Connect ${CMAKE_DL_LIBS} GTest::GTest)
 

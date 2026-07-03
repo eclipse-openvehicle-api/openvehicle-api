@@ -16,7 +16,7 @@
 #include <functional>
 
 CTimer::CTimer(CTaskTimerService& rtimersvc, uint32_t uiPeriod, sdv::core::ITaskExecute* pExecute) :
-    m_rtimersvc(rtimersvc), m_pExecute(pExecute)
+    m_rtimersvc(rtimersvc), m_pExecute(pExecute), m_tPermissionTransferID(sdv::core::TransferCurrentPermission())
 {
     if (!pExecute) return;
 
@@ -35,6 +35,11 @@ CTimer::CTimer(CTaskTimerService& rtimersvc, uint32_t uiPeriod, sdv::core::ITask
     sev.sigev_notify_function = [](sigval sv)
     {
         CTimer* pTimer = reinterpret_cast<CTimer*>(sv.sival_ptr);
+        if (pTimer->m_tPermissionTransferID)
+        {
+            sdv::core::SetAccessPermission(pTimer->m_tPermissionTransferID);
+            pTimer->m_tPermissionTransferID = 0u;
+        }
         std::unique_lock<std::mutex> lock(pTimer->m_mtxExecution);
         if (!pTimer->m_bRunning) return;
         sdv::core::ITaskExecute* pExecuteLocal = reinterpret_cast<sdv::core::ITaskExecute*>(pTimer->m_pExecute);
@@ -111,6 +116,11 @@ void CTimer::ExecuteCallback()
 {
     if (m_rtimersvc.GetObjectState() != sdv::EObjectState::running) return;
     if (!m_pExecute) return;
+    if (m_tPermissionTransferID)
+    {
+        sdv::core::SetAccessPermission(m_tPermissionTransferID);
+        m_tPermissionTransferID = 0u;
+    }
     if (!m_bPrioritySet)
         SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
     m_bPrioritySet = true;

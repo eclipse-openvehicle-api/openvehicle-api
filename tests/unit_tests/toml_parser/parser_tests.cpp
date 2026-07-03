@@ -13,6 +13,7 @@
  ********************************************************************************/
 
 #include <gtest/gtest.h>
+#include "../../../global/localmemmgr.h"
 #include "../../../sdv_services/core/toml_parser/parser_toml.h"
 #include "../../../sdv_services/core/toml_parser/parser_node_toml.h"
 
@@ -444,32 +445,32 @@ TEST(NestedContent, InlineTable)
 TEST(NestedContent, InlineTableBreakLine)
 {
     // The following are not allowed
-    EXPECT_THROW(toml_parser::CParser(R"code(
+    EXPECT_THROW(toml_parser::CParser(R"toml(
 table = { a = 1, b = 2,
     c = 3, d = 4 }
-)code"), sdv::toml::XTOMLParseException);
-    EXPECT_THROW(toml_parser::CParser(R"code(
+)toml"), sdv::toml::XTOMLParseException);
+    EXPECT_THROW(toml_parser::CParser(R"toml(
 table = { a = 1, b = 2
     ,c = 3, d = 4 }
-)code"), sdv::toml::XTOMLParseException);
+)toml"), sdv::toml::XTOMLParseException);
 
     // Line breaks are allowed when part of an array or have multi-line strings
-    EXPECT_NO_THROW(toml_parser::CParser(R"code(
+    EXPECT_NO_THROW(toml_parser::CParser(R"toml(
 array = [{ a = 1, b = 2},
     {c = 3, d = 4}]
-)code"));
-    EXPECT_NO_THROW(toml_parser::CParser(R"code(
+)toml"));
+    EXPECT_NO_THROW(toml_parser::CParser(R"toml(
 table = { a = 1, b = [2, 3,
     4, 5], c = 6, d = 7}
-)code"));
-    EXPECT_NO_THROW(toml_parser::CParser(R"code(
+)toml"));
+    EXPECT_NO_THROW(toml_parser::CParser(R"toml(
 table = { x = "abc", y = """def-
 ghi""", z = "jkl" }
-)code"));
-    EXPECT_NO_THROW(toml_parser::CParser(R"code(
+)toml"));
+    EXPECT_NO_THROW(toml_parser::CParser(R"toml(
 table = { x = 'abc', y = '''def-
 ghi''', z = 'jkl' }
-)code"));
+)toml"));
 }
 
 TEST(SpecialCases, Keys)
@@ -863,6 +864,60 @@ TEST(Ordering, TableAray)
     EXPECT_EQ(ptrArray->GetCount(), 12u);
     for (uint32_t uiIndex = 0; uiIndex < ptrArray->GetCount(); uiIndex++)
         EXPECT_EQ(ptrArray->Get(uiIndex)->Cast<toml_parser::CTable>()->Direct("a")->GetValue(), (int64_t) uiIndex);
+}
+
+TEST(Ordering, TableArayWithTables)
+{
+    using namespace std::string_literals;
+    toml_parser::CParser parser(R"(
+        [topTable]
+        [[topTable.tableArray]]
+        [topTable.tableArray.MyTable]
+        a = 0
+        [[topTable.tableArray]]
+        [topTable.tableArray.MyTable]
+        a = 1
+        [[topTable.tableArray]]
+        [topTable.tableArray.MyTable]
+        a = 2
+        [[topTable.tableArray]]
+        [topTable.tableArray.MyTable]
+        a = 3
+        [[topTable.tableArray]]
+        [topTable.tableArray.MyTable]
+        a = 4
+        [[topTable.tableArray]]
+        [topTable.tableArray.MyTable]
+        a = 5
+        [[topTable.tableArray]]
+        [topTable.tableArray.MyTable]
+        a = 6
+        [[topTable.tableArray]]
+        [topTable.tableArray.MyTable]
+        a = 7
+        [[topTable.tableArray]]
+        [topTable.tableArray.MyTable]
+        a = 8
+        [[topTable.tableArray]]
+        [topTable.tableArray.MyTable]
+        a = 9
+        [[topTable.tableArray]]
+        [topTable.tableArray.MyTable]
+        a = 10
+        [[topTable.tableArray]]
+        [topTable.tableArray.MyTable]
+        a = 11
+    )"s);
+
+    auto tableArray = parser.Root().Direct("topTable.tableArray");
+
+    ASSERT_NE(tableArray, nullptr);
+    auto ptrArray = tableArray->Cast<toml_parser::CArray>();
+    EXPECT_EQ(ptrArray->GetCount(), 12u);
+    for (uint32_t uiIndex = 0; uiIndex < ptrArray->GetCount(); uiIndex++)
+    {
+        EXPECT_EQ(ptrArray->Get(uiIndex)->Cast<toml_parser::CTable>()->Direct("MyTable.a")->GetValue(), (int64_t)uiIndex);
+    }
 }
 
 TEST(Ordering, NodeGetDirect)

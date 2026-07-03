@@ -108,6 +108,16 @@ namespace toml_parser
      * @return The quoted key (if applicable); otherwise the key without quotes.
      */
     std::string QuoteText(const std::string& rssText, EQuoteRequest eQuoteRequest = EQuoteRequest::smart_text);
+
+    /**
+     * @brief Compare the content of TOML string with the content of another TOML string. Use internal TOML parser for the
+     * comparison.
+     * @param[in] rssToml1 Reference to the first TOML string to compare with the second TOML string.
+     * @param[in] rssToml2 Reference to the second TOML string to compare with the first TOML string.
+     * @return The comparison result.
+     */
+    bool CompareEqual(const std::string& rssToml1, const std::string& rssToml2);
+
 } // namespace toml_parser
 
 #endif // !defined MISCELLANEOUS_H

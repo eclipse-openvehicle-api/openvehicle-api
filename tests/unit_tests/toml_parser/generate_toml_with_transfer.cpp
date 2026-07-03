@@ -12,6 +12,7 @@
  ********************************************************************************/
 
 #include <gtest/gtest.h>
+#include "../../../global/localmemmgr.h"
 #include "../../../sdv_services/core/toml_parser/parser_toml.h"
 #include "../../../sdv_services/core/toml_parser/parser_node_toml.h"
 
@@ -19,13 +20,13 @@ TEST(GenerateTOML, TransferNodeComment)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput  = R"code(# This is a full-line comment
+    std::string ssTOMLInput  = R"toml(# This is a full-line comment
 key = "value"  # This is a comment at the end of a line
-another = "# This is not a comment")code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+another = "# This is not a comment")toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 # This is a full-line comment
 key = "value"  # This is a comment at the end of a line
-another = "# This is not a comment")code";
+another = "# This is not a comment")toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -39,15 +40,15 @@ TEST(GenerateTOML, TransferNodeCommentWithSpaces)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(
+    std::string ssTOMLInput = R"toml(
     # This is a full-line comment
     key   =   "value"  # This is a comment at the end of a line
-)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 
     # This is a full-line comment
     key   =   "value"  # This is a comment at the end of a line
-)code";
+)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -61,21 +62,21 @@ TEST(GenerateTOML, TransferUnattachedComment)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(# Comment not belonging to node
+    std::string ssTOMLInput = R"toml(# Comment not belonging to node
 
 # This is a full-line comment
 key = "value"  # This is a comment at the end of a line
 another = "# This is not a comment"
 
-# Comment not belonging to node)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+# Comment not belonging to node)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 # Comment not belonging to node
 
 # This is a full-line comment
 key = "value"  # This is a comment at the end of a line
 another = "# This is not a comment"
 
-# Comment not belonging to node)code";
+# Comment not belonging to node)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -89,15 +90,15 @@ TEST(GenerateTOML, TransferArrayWhitespace)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(
+    std::string ssTOMLInput = R"toml(
     array = [ 1, 2, 3,  
               4, 5, 6 ]
-)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 
     array = [ 1, 2, 3,  
               4, 5, 6 ]
-)code";
+)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -111,7 +112,7 @@ TEST(GenerateTOML, TransferArrayComment)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(
+    std::string ssTOMLInput = R"toml(
 # Pre-array
 array = [   1,              # Value #1
             2,              # Value #2  
@@ -120,8 +121,8 @@ array = [   1,              # Value #1
             5,              # Value #5  
             6,              # Value #6
         ] # Post-array
-)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 
 # Pre-array
 array = [   1,              # Value #1
@@ -131,7 +132,7 @@ array = [   1,              # Value #1
             5,              # Value #5  
             6,              # Value #6
         ] # Post-array
-)code";
+)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -145,7 +146,7 @@ TEST(GenerateTOML, TransferArrayCommentWithSpace)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(
+    std::string ssTOMLInput = R"toml(
 
 # unattached comment
 
@@ -178,8 +179,8 @@ array = [   1,              # Value #1
 
 # unattached comment
 
-)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 
 
 # unattached comment
@@ -213,7 +214,7 @@ array = [   1,              # Value #1
 
 # unattached comment
 
-)code";
+)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -228,13 +229,13 @@ TEST(GenerateTOML, TransferInlineTableWhitespace)
     toml_parser::CParser parser;
 
     // NOTE: Line-breaks within inline tables are not allowed.
-    std::string ssTOMLInput = R"code(
+    std::string ssTOMLInput = R"toml(
     table = { a = 1, b = 2, d = 3, e = 4, f = 5, g = 6 }
-)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 
     table = { a = 1, b = 2, d = 3, e = 4, f = 5, g = 6 }
-)code";
+)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -249,15 +250,15 @@ TEST(GenerateTOML, TransferInlineTableComment)
     toml_parser::CParser parser;
 
     // NOTE: Line-breaks within inline tables are not allowed.
-    std::string ssTOMLInput  = R"code(
+    std::string ssTOMLInput  = R"toml(
 # Pre-table
     table = { a = 1, b = 2, d = 3, e = 4, f = 5, g = 6 } # Post-table
-)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 
 # Pre-table
     table = { a = 1, b = 2, d = 3, e = 4, f = 5, g = 6 } # Post-table
-)code";
+)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -271,15 +272,15 @@ TEST(GenerateTOML, TransferKeys)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(key = "value"
+    std::string ssTOMLInput = R"toml(key = "value"
 bare_key = "value"
 bare-key = "value"
-1234 = "value")code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+1234 = "value")toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 key = "value"
 bare_key = "value"
 bare-key = "value"
-1234 = "value")code";
+1234 = "value")toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -293,17 +294,17 @@ TEST(GenerateTOML, TransferQuotedKeys)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = u8R"code("127.0.0.1" = "value"
+    std::string ssTOMLInput = u8R"toml("127.0.0.1" = "value"
 "character encoding" = "value"
 "ʎǝʞ" = "value"
 'key2' = "value"
-'quoted "value"' = "value")code";
-    std::string ssTOMLOutput = u8R"code([tree.branch]
+'quoted "value"' = "value")toml";
+    std::string ssTOMLOutput = u8R"toml([tree.branch]
 "127.0.0.1" = "value"
 "character encoding" = "value"
 "ʎǝʞ" = "value"
 'key2' = "value"
-'quoted "value"' = "value")code";
+'quoted "value"' = "value")toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -315,12 +316,12 @@ TEST(GenerateTOML, TransferQuotedKeys)
 
 TEST(GenerateTOML, TransferBlankKeys)
 {
-    std::string ssTOMLInput1 = R"code("" = "blank"     # VALID but discouraged)code";
-    std::string ssTOMLInput2 = R"code('' = 'blank'     # VALID but discouraged)code";
-    std::string ssTOMLOutput1 = R"code([tree.branch]
-"" = "blank"     # VALID but discouraged)code";
-    std::string ssTOMLOutput2 = R"code([tree.branch]
-'' = 'blank'     # VALID but discouraged)code";
+    std::string ssTOMLInput1 = R"toml("" = "blank"     # VALID but discouraged)toml";
+    std::string ssTOMLInput2 = R"toml('' = 'blank'     # VALID but discouraged)toml";
+    std::string ssTOMLOutput1 = R"toml([tree.branch]
+"" = "blank"     # VALID but discouraged)toml";
+    std::string ssTOMLOutput2 = R"toml([tree.branch]
+'' = 'blank'     # VALID but discouraged)toml";
 
     toml_parser::CParser parser1, parser2;
     EXPECT_NO_THROW(parser1.Process(ssTOMLInput1));
@@ -338,15 +339,15 @@ TEST(GenerateTOML, TransferDottedKeys)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(name = "Orange"
+    std::string ssTOMLInput = R"toml(name = "Orange"
 physical.color = "orange"
 physical.shape = "round"
-site."google.com" = true)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+site."google.com" = true)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 name = "Orange"
 physical.color = "orange"
 physical.shape = "round"
-site."google.com" = true)code";
+site."google.com" = true)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -360,13 +361,13 @@ TEST(GenerateTOML, TransferWhitespaceKeys)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(fruit.name = "banana"     # this is best practice
+    std::string ssTOMLInput = R"toml(fruit.name = "banana"     # this is best practice
 fruit. color = "yellow"    # same as fruit.color
-fruit . flavor = "banana"   # same as fruit.flavor)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+fruit . flavor = "banana"   # same as fruit.flavor)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 fruit.name = "banana"     # this is best practice
 fruit. color = "yellow"    # same as fruit.color
-fruit . flavor = "banana"   # same as fruit.flavor)code";
+fruit . flavor = "banana"   # same as fruit.flavor)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -380,15 +381,15 @@ TEST(GenerateTOML, TransferOutOfOrderKeys)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(apple.type = "fruit"
+    std::string ssTOMLInput = R"toml(apple.type = "fruit"
 orange.type = "fruit"
 
 apple.skin = "thin"
 orange.skin = "thick"
 
 apple.color = "red"
-orange.color = "orange")code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+orange.color = "orange")toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 apple.type = "fruit"
 orange.type = "fruit"
 
@@ -396,7 +397,7 @@ apple.skin = "thin"
 orange.skin = "thick"
 
 apple.color = "red"
-orange.color = "orange")code";
+orange.color = "orange")toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -410,9 +411,9 @@ TEST(GenerateTOML, TransferFloatLookingAlikeKeys)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(3.14159 = "pi")code";
-    std::string ssTOMLOutput = R"code([tree.branch]
-3.14159 = "pi")code";
+    std::string ssTOMLInput = R"toml(3.14159 = "pi")toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
+3.14159 = "pi")toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -426,9 +427,9 @@ TEST(GenerateTOML, TransferBasicStrings)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(str = "I'm a string. \"You can quote me\". Name\tJos\u00E9\nLocation\tSF.")code";
-    std::string ssTOMLOutput = R"code([tree.branch]
-str = "I'm a string. \"You can quote me\". Name\tJos\u00E9\nLocation\tSF.")code";
+    std::string ssTOMLInput = R"toml(str = "I'm a string. \"You can quote me\". Name\tJos\u00E9\nLocation\tSF.")toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
+str = "I'm a string. \"You can quote me\". Name\tJos\u00E9\nLocation\tSF.")toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -442,13 +443,13 @@ TEST(GenerateTOML, TransferMultiLineStrings)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(str1 = """
+    std::string ssTOMLInput = R"toml(str1 = """
 Roses are red
-Violets are blue""")code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+Violets are blue""")toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 str1 = """
 Roses are red
-Violets are blue""")code";
+Violets are blue""")toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -462,7 +463,7 @@ TEST(GenerateTOML, TransferLongMultiLineStrings)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(str1 = "The quick brown fox jumps over the lazy dog."
+    std::string ssTOMLInput = R"toml(str1 = "The quick brown fox jumps over the lazy dog."
 
 str2 = """
 The quick brown \
@@ -475,8 +476,8 @@ str3 = """\
        The quick brown \
        fox jumps over \
        the lazy dog.\
-       """)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+       """)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 str1 = "The quick brown fox jumps over the lazy dog."
 
 str2 = """
@@ -490,7 +491,7 @@ str3 = """\
        The quick brown \
        fox jumps over \
        the lazy dog.\
-       """)code";
+       """)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -504,21 +505,21 @@ TEST(GenerateTOML, TransferQuotingStrings)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(str4 = """Here are two quotation marks: "". Simple enough."""
+    std::string ssTOMLInput = R"toml(str4 = """Here are two quotation marks: "". Simple enough."""
 # str5 = """Here are three quotation marks: """."""  # INVALID
 str5 = """Here are three quotation marks: ""\"."""
 str6 = """Here are fifteen quotation marks: ""\"""\"""\"""\"""\"."""
 
 # "This," she said, "is just a pointless statement."
-str7 = """"This," she said, "is just a pointless statement."""")code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+str7 = """"This," she said, "is just a pointless statement."""")toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 str4 = """Here are two quotation marks: "". Simple enough."""
 # str5 = """Here are three quotation marks: """."""  # INVALID
 str5 = """Here are three quotation marks: ""\"."""
 str6 = """Here are fifteen quotation marks: ""\"""\"""\"""\"""\"."""
 
 # "This," she said, "is just a pointless statement."
-str7 = """"This," she said, "is just a pointless statement."""")code";
+str7 = """"This," she said, "is just a pointless statement."""")toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -532,15 +533,15 @@ TEST(GenerateTOML, TransferLiteralStrings)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(winpath  = 'C:\Users\nodejs\templates'
+    std::string ssTOMLInput = R"toml(winpath  = 'C:\Users\nodejs\templates'
 winpath2 = '\\ServerX\admin$\system32\'
 quoted   = 'Tom "Dubs" Preston-Werner'
-regex    = '<\i\c*\s*>')code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+regex    = '<\i\c*\s*>')toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 winpath  = 'C:\Users\nodejs\templates'
 winpath2 = '\\ServerX\admin$\system32\'
 quoted   = 'Tom "Dubs" Preston-Werner'
-regex    = '<\i\c*\s*>')code";
+regex    = '<\i\c*\s*>')toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -554,21 +555,21 @@ TEST(GenerateTOML, TransferMultiLineLiteralStrings)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(regex2 = '''I [dw]on't need \d{2} apples'''
+    std::string ssTOMLInput = R"toml(regex2 = '''I [dw]on't need \d{2} apples'''
 lines  = '''
 The first newline is
 trimmed in raw strings.
    All other whitespace
    is preserved.
-''')code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+''')toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 regex2 = '''I [dw]on't need \d{2} apples'''
 lines  = '''
 The first newline is
 trimmed in raw strings.
    All other whitespace
    is preserved.
-''')code";
+''')toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -582,21 +583,21 @@ TEST(GenerateTOML, TransferQuotedLiteralStrings)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(quot15 = '''Here are fifteen quotation marks: """""""""""""""'''
+    std::string ssTOMLInput = R"toml(quot15 = '''Here are fifteen quotation marks: """""""""""""""'''
 
 # apos15 = '''Here are fifteen apostrophes: ''''''''''''''''''  # INVALID
 apos15 = "Here are fifteen apostrophes: '''''''''''''''"
 
 # 'That,' she said, 'is still pointless.'
-str = ''''That,' she said, 'is still pointless.'''')code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+str = ''''That,' she said, 'is still pointless.'''')toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 quot15 = '''Here are fifteen quotation marks: """""""""""""""'''
 
 # apos15 = '''Here are fifteen apostrophes: ''''''''''''''''''  # INVALID
 apos15 = "Here are fifteen apostrophes: '''''''''''''''"
 
 # 'That,' she said, 'is still pointless.'
-str = ''''That,' she said, 'is still pointless.'''')code";
+str = ''''That,' she said, 'is still pointless.'''')toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -610,15 +611,15 @@ TEST(GenerateTOML, TransferIntegers)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(int1 = +99
+    std::string ssTOMLInput = R"toml(int1 = +99
 int2 = 42
 int3 = 0
-int4 = -17)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+int4 = -17)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 int1 = +99
 int2 = 42
 int3 = 0
-int4 = -17)code";
+int4 = -17)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -632,15 +633,15 @@ TEST(GenerateTOML, TransferReadibleIntegers)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(int5 = 1_000
+    std::string ssTOMLInput = R"toml(int5 = 1_000
 int6 = 5_349_221
 int7 = 53_49_221  # Indian number system grouping
-int8 = 1_2_3_4_5  # VALID but discouraged)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+int8 = 1_2_3_4_5  # VALID but discouraged)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 int5 = 1_000
 int6 = 5_349_221
 int7 = 53_49_221  # Indian number system grouping
-int8 = 1_2_3_4_5  # VALID but discouraged)code";
+int8 = 1_2_3_4_5  # VALID but discouraged)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -654,7 +655,7 @@ TEST(GenerateTOML, TransferOtherBaseIntegers)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(# hexadecimal with prefix `0x`
+    std::string ssTOMLInput = R"toml(# hexadecimal with prefix `0x`
 hex1 = 0xDEADBEEF
 hex2 = 0xdeadbeef
 hex3 = 0xdead_beef
@@ -664,8 +665,8 @@ oct1 = 0o01234567
 oct2 = 0o755 # useful for Unix file permissions
 
 # binary with prefix `0b`
-bin1 = 0b11010110)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+bin1 = 0b11010110)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 # hexadecimal with prefix `0x`
 hex1 = 0xDEADBEEF
 hex2 = 0xdeadbeef
@@ -676,7 +677,7 @@ oct1 = 0o01234567
 oct2 = 0o755 # useful for Unix file permissions
 
 # binary with prefix `0b`
-bin1 = 0b11010110)code";
+bin1 = 0b11010110)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -690,7 +691,7 @@ TEST(GenerateTOML, TransferFloatingPoints)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(# fractional
+    std::string ssTOMLInput = R"toml(# fractional
 flt1 = +1.0
 flt2 = 3.1415
 flt3 = -0.01
@@ -701,8 +702,8 @@ flt5 = 1e06
 flt6 = -2E-2
 
 # both
-flt7 = 6.626e-34)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+flt7 = 6.626e-34)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 # fractional
 flt1 = +1.0
 flt2 = 3.1415
@@ -714,7 +715,7 @@ flt5 = 1e06
 flt6 = -2E-2
 
 # both
-flt7 = 6.626e-34)code";
+flt7 = 6.626e-34)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -728,9 +729,9 @@ TEST(GenerateTOML, TransferReadibleFloatingPoints)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(flt8 = 224_617.445_991_228)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
-flt8 = 224_617.445_991_228)code";
+    std::string ssTOMLInput = R"toml(flt8 = 224_617.445_991_228)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
+flt8 = 224_617.445_991_228)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -744,7 +745,7 @@ TEST(GenerateTOML, TransferSpecialFloatingPoints)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(# infinity
+    std::string ssTOMLInput = R"toml(# infinity
 sf1 = inf  # positive infinity
 sf2 = +inf # positive infinity
 sf3 = -inf # negative infinity
@@ -752,8 +753,8 @@ sf3 = -inf # negative infinity
 # not a number
 sf4 = nan  # actual sNaN/qNaN encoding is implementation-specific
 sf5 = +nan # same as `nan`
-sf6 = -nan # valid, actual encoding is implementation-specific)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+sf6 = -nan # valid, actual encoding is implementation-specific)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 # infinity
 sf1 = inf  # positive infinity
 sf2 = +inf # positive infinity
@@ -762,7 +763,7 @@ sf3 = -inf # negative infinity
 # not a number
 sf4 = nan  # actual sNaN/qNaN encoding is implementation-specific
 sf5 = +nan # same as `nan`
-sf6 = -nan # valid, actual encoding is implementation-specific)code";
+sf6 = -nan # valid, actual encoding is implementation-specific)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -776,11 +777,11 @@ TEST(GenerateTOML, TransferBooleans)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(bool1 = true
-bool2 = false)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+    std::string ssTOMLInput = R"toml(bool1 = true
+bool2 = false)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 bool1 = true
-bool2 = false)code";
+bool2 = false)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -794,13 +795,13 @@ TEST(GenerateTOML, DISABLED_TransferOffsetDateTimes)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(odt1 = 1979-05-27T07:32:00Z
+    std::string ssTOMLInput = R"toml(odt1 = 1979-05-27T07:32:00Z
 odt2 = 1979-05-27T00:32:00-07:00
-odt3 = 1979-05-27T00:32:00.999999-07:00)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+odt3 = 1979-05-27T00:32:00.999999-07:00)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 odt1 = 1979-05-27T07:32:00Z
 odt2 = 1979-05-27T00:32:00-07:00
-odt3 = 1979-05-27T00:32:00.999999-07:00)code";
+odt3 = 1979-05-27T00:32:00.999999-07:00)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -814,9 +815,9 @@ TEST(GenerateTOML, DISABLED_TransferReadibleOffsetDateTimes)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(odt4 = 1979-05-27 07:32:00Z)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
-odt4 = 1979-05-27 07:32:00Z)code";
+    std::string ssTOMLInput = R"toml(odt4 = 1979-05-27 07:32:00Z)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
+odt4 = 1979-05-27 07:32:00Z)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -830,11 +831,11 @@ TEST(GenerateTOML, DISABLED_TransferLocalDateTimes)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(ldt1 = 1979-05-27T07:32:00
-ldt2 = 1979-05-27T00:32:00.999999)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+    std::string ssTOMLInput = R"toml(ldt1 = 1979-05-27T07:32:00
+ldt2 = 1979-05-27T00:32:00.999999)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 ldt1 = 1979-05-27T07:32:00
-ldt2 = 1979-05-27T00:32:00.999999)code";
+ldt2 = 1979-05-27T00:32:00.999999)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -848,9 +849,9 @@ TEST(GenerateTOML, DISABLED_TransferLocalDates)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(ld1 = 1979-05-27)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
-ld1 = 1979-05-27)code";
+    std::string ssTOMLInput = R"toml(ld1 = 1979-05-27)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
+ld1 = 1979-05-27)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -864,11 +865,11 @@ TEST(GenerateTOML, DISABLED_TransferLocalTimes)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(lt1 = 07:32:00
-lt2 = 00:32:00.999999)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+    std::string ssTOMLInput = R"toml(lt1 = 07:32:00
+lt2 = 00:32:00.999999)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 lt1 = 07:32:00
-lt2 = 00:32:00.999999)code";
+lt2 = 00:32:00.999999)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -882,7 +883,7 @@ TEST(GenerateTOML, TransferArrays)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(integers = [ 1, 2, 3 ]
+    std::string ssTOMLInput = R"toml(integers = [ 1, 2, 3 ]
 colors = [ "red", "yellow", "green" ]
 nested_arrays_of_ints = [ [ 1, 2 ], [3, 4, 5] ]
 nested_mixed_array = [ [ 1, 2 ], ["a", "b", "c"] ]
@@ -893,8 +894,8 @@ numbers = [ 0.1, 0.2, 0.5, 1, 2, 5 ]
 contributors = [
   "Foo Bar <foo@example.com>",
   { name = "Baz Qux", email = "bazqux@example.com", url = "https://example.com/bazqux" }
-])code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+])toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 integers = [ 1, 2, 3 ]
 colors = [ "red", "yellow", "green" ]
 nested_arrays_of_ints = [ [ 1, 2 ], [3, 4, 5] ]
@@ -906,7 +907,7 @@ numbers = [ 0.1, 0.2, 0.5, 1, 2, 5 ]
 contributors = [
   "Foo Bar <foo@example.com>",
   { name = "Baz Qux", email = "bazqux@example.com", url = "https://example.com/bazqux" }
-])code";
+])toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -920,15 +921,15 @@ TEST(GenerateTOML, TransferMultiLineArrays)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(integers2 = [
+    std::string ssTOMLInput = R"toml(integers2 = [
   1, 2, 3
 ]
 
 integers3 = [
   1,
   2, # this is ok
-])code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+])toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 integers2 = [
   1, 2, 3
 ]
@@ -936,7 +937,7 @@ integers2 = [
 integers3 = [
   1,
   2, # this is ok
-])code";
+])toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -950,7 +951,7 @@ TEST(GenerateTOML, TransferTables)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code([table]
+    std::string ssTOMLInput = R"toml([table]
 
 [table-1]
 key1 = "some string"
@@ -958,8 +959,8 @@ key2 = 123
 
 [table-2]
 key1 = "another string"
-key2 = 456)code";
-    std::string ssTOMLOutput = R"code([tree.branch.table]
+key2 = 456)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch.table]
 
 [tree.branch.table-1]
 key1 = "some string"
@@ -967,7 +968,7 @@ key2 = 123
 
 [tree.branch.table-2]
 key1 = "another string"
-key2 = 456)code";
+key2 = 456)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -981,10 +982,10 @@ TEST(GenerateTOML, TransferQuotedKeyTables)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code([dog."tater.man"]
-type.name = "pug")code";
-    std::string ssTOMLOutput = R"code([tree.branch.dog."tater.man"]
-type.name = "pug")code";
+    std::string ssTOMLInput = R"toml([dog."tater.man"]
+type.name = "pug")toml";
+    std::string ssTOMLOutput = R"toml([tree.branch.dog."tater.man"]
+type.name = "pug")toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -998,22 +999,22 @@ TEST(GenerateTOML, TransferWhitespaceKeyTables)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = u8R"code([a.b.c]            # this is best practice
+    std::string ssTOMLInput = u8R"toml([a.b.c]            # this is best practice
 x = 1
 [ d.e.f ]          # same as [d.e.f]
 y = 1
 [ g .  h  . i ]    # same as [g.h.i]
 z = 1
 [ j . "ʞ" . 'l' ]  # same as [j."ʞ".'l']
-a = 1)code";
-    std::string ssTOMLOutput = u8R"code([tree.branch.a.b.c]            # this is best practice
+a = 1)toml";
+    std::string ssTOMLOutput = u8R"toml([tree.branch.a.b.c]            # this is best practice
 x = 1
 [tree.branch. d.e.f ]          # same as [d.e.f]
 y = 1
 [tree.branch. g .  h  . i ]    # same as [g.h.i]
 z = 1
 [tree.branch. j . "ʞ" . 'l' ]  # same as [j."ʞ".'l']
-a = 1)code";
+a = 1)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -1027,20 +1028,20 @@ TEST(GenerateTOML, TransferMixedOrderTables)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(# VALID BUT DISCOURAGED
+    std::string ssTOMLInput = R"toml(# VALID BUT DISCOURAGED
 [fruit.apple]
 a = 1
 [animal]
 b = 2
 [fruit.orange]
-aa = 11)code";
-    std::string ssTOMLOutput = R"code(# VALID BUT DISCOURAGED
+aa = 11)toml";
+    std::string ssTOMLOutput = R"toml(# VALID BUT DISCOURAGED
 [tree.branch.fruit.apple]
 a = 1
 [tree.branch.animal]
 b = 2
 [tree.branch.fruit.orange]
-aa = 11)code";
+aa = 11)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -1054,15 +1055,15 @@ TEST(GenerateTOML, TransferMixedValueAndTables)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(# Top-level table begins.
+    std::string ssTOMLInput = R"toml(# Top-level table begins.
 name = "Fido"
 breed = "pug"
 
 # Top-level table ends.
 [owner]
 name = "Regina Dogman"
-member_since = 1999)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+member_since = 1999)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 # Top-level table begins.
 name = "Fido"
 breed = "pug"
@@ -1070,7 +1071,7 @@ breed = "pug"
 # Top-level table ends.
 [tree.branch.owner]
 name = "Regina Dogman"
-member_since = 1999)code";
+member_since = 1999)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -1084,14 +1085,14 @@ TEST(GenerateTOML, TransferAutomaticTables)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(fruit.apple.color = "red"
-fruit.apple.taste.sweet = true)code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+    std::string ssTOMLInput = R"toml(fruit.apple.color = "red"
+fruit.apple.taste.sweet = true)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 fruit.apple.color = "red"
-fruit.apple.taste.sweet = true)code";
-    std::string ssTOMLOutput2 = R"code([tree.branch]
+fruit.apple.taste.sweet = true)toml";
+    std::string ssTOMLOutput2 = R"toml([tree.branch]
 apple.color = "red"
-apple.taste.sweet = true)code";
+apple.taste.sweet = true)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -1107,7 +1108,7 @@ TEST(GenerateTOML, TransferMixedAutomaticTables)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code([fruit]
+    std::string ssTOMLInput = R"toml([fruit]
 apple.color = "red"
 apple.taste.sweet = true
 
@@ -1115,8 +1116,8 @@ apple.taste.sweet = true
 # [fruit.apple.taste]  # INVALID
 
 [fruit.apple.texture]  # you can add sub-tables
-smooth = true)code";
-    std::string ssTOMLOutput = R"code([tree.branch.fruit]
+smooth = true)toml";
+    std::string ssTOMLOutput = R"toml([tree.branch.fruit]
 apple.color = "red"
 apple.taste.sweet = true
 
@@ -1124,7 +1125,7 @@ apple.taste.sweet = true
 # [fruit.apple.taste]  # INVALID
 
 [tree.branch.fruit.apple.texture]  # you can add sub-tables
-smooth = true)code";
+smooth = true)toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -1138,13 +1139,13 @@ TEST(GenerateTOML, TransferInlineTables)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(name = { first = "Tom", last = "Preston-Werner" }
+    std::string ssTOMLInput = R"toml(name = { first = "Tom", last = "Preston-Werner" }
 point = { x = 1, y = 2 }
-animal = { type.name = "pug" })code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+animal = { type.name = "pug" })toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 name = { first = "Tom", last = "Preston-Werner" }
 point = { x = 1, y = 2 }
-animal = { type.name = "pug" })code";
+animal = { type.name = "pug" })toml";
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
     std::string ssGenerated;
@@ -1157,13 +1158,13 @@ TEST(GenerateTOML, TransferEmbeddedInlineTables)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput  = R"code(test=[{ first = "Tom", last = "Preston-Werner" },
+    std::string ssTOMLInput  = R"toml(test=[{ first = "Tom", last = "Preston-Werner" },
 { x = 1, y = 2 },
-{ type.name = "pug" }])code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+{ type.name = "pug" }])toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 test=[{ first = "Tom", last = "Preston-Werner" },
 { x = 1, y = 2 },
-{ type.name = "pug" }])code";
+{ type.name = "pug" }])toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -1177,7 +1178,7 @@ TEST(GenerateTOML, TransferTableArrays)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code([[products]]
+    std::string ssTOMLInput = R"toml([[products]]
 name = "Hammer"
 sku = 738594937
 
@@ -1187,8 +1188,8 @@ sku = 738594937
 name = "Nail"
 sku = 284758393
 
-color = "gray")code";
-    std::string ssTOMLOutput = R"code([[tree.branch.products]]
+color = "gray")toml";
+    std::string ssTOMLOutput = R"toml([[tree.branch.products]]
 name = "Hammer"
 sku = 738594937
 
@@ -1198,7 +1199,7 @@ sku = 738594937
 name = "Nail"
 sku = 284758393
 
-color = "gray")code";
+color = "gray")toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -1212,7 +1213,7 @@ TEST(GenerateTOML, TransferMixedTableAndTableArrays)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code([[fruits]]
+    std::string ssTOMLInput = R"toml([[fruits]]
 name = "apple"
 
 [fruits.physical]  # subtable
@@ -1230,8 +1231,8 @@ name = "granny smith"
 name = "banana"
 
 [[fruits.varieties]]
-name = "plantain")code";
-    std::string ssTOMLOutput = R"code([[tree.branch.fruits]]
+name = "plantain")toml";
+    std::string ssTOMLOutput = R"toml([[tree.branch.fruits]]
 name = "apple"
 
 [tree.branch.fruits.physical]  # subtable
@@ -1249,7 +1250,7 @@ name = "granny smith"
 name = "banana"
 
 [[tree.branch.fruits.varieties]]
-name = "plantain")code";
+name = "plantain")toml";
 
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
@@ -1263,13 +1264,13 @@ TEST(GenerateTOML, TransferInlineTableArrays)
 {
     toml_parser::CParser parser;
 
-    std::string ssTOMLInput = R"code(points = [ { x = 1, y = 2, z = 3 },
+    std::string ssTOMLInput = R"toml(points = [ { x = 1, y = 2, z = 3 },
            { x = 7, y = 8, z = 9 },
-           { x = 2, y = 4, z = 8 } ])code";
-    std::string ssTOMLOutput = R"code([tree.branch]
+           { x = 2, y = 4, z = 8 } ])toml";
+    std::string ssTOMLOutput = R"toml([tree.branch]
 points = [ { x = 1, y = 2, z = 3 },
            { x = 7, y = 8, z = 9 },
-           { x = 2, y = 4, z = 8 } ])code";
+           { x = 2, y = 4, z = 8 } ])toml";
     EXPECT_NO_THROW(parser.Process(ssTOMLInput));
 
     std::string ssGenerated;

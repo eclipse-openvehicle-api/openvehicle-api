@@ -46,6 +46,7 @@ public:
     bool IsConsoleSilent() { return true; }
     bool IsConsoleVerbose() { return false; }
     uint32_t GetInstanceID() { return 1234u; }
+    std::filesystem::path GetFrameworkDir() const { return GetExecDirectory(); }
     std::filesystem::path GetRootDir() const { return GetExecDirectory(); }
     std::filesystem::path GetInstallDir() const { return GetExecDirectory(); }
     std::vector<std::filesystem::path> GetSystemConfigPaths() const { return {}; }
@@ -116,8 +117,5 @@ inline CRepository& GetRepository()
 #include "../../../sdv_services/core/module.h"
 #include "../../../sdv_services/core/app_settings.h"
 #include "../../../sdv_services/core/app_config.h"
-
-//inline std::filesystem::path GetCoreDirectoryMock() { return "../../bin"; }
-//#define GetCoreDirectory GetCoreDirectoryMock
 
 #endif // !defined MOCK_H

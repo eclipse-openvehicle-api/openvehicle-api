@@ -52,6 +52,25 @@ private:
 
 /**
  * @brief Listener object
+ * @details the lister is instantiated using the following parameter information
+ * @code
+ * # Provider to use for listening
+ * [Provider]
+ * Name = ""
+ * 
+ * # Additional channel information for the listener (needed for unique listener identification)
+ * [IpcChannel]
+ * xyz = ""
+ * @endcode
+ * 
+ * For example for shared memory:
+ * @code
+ * [Provider]
+ * Name = "DefaultSharedMemory"
+ * [IpcChannel]
+ * Name = "LISTENER_1234"
+ * Size = 10240
+ * @endcode
  */
 class CListener : public sdv::CSdvObject
 {
@@ -63,34 +82,18 @@ public:
 
     // Object declaration
     DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
-    DECLARE_OBJECT_CLASS_NAME("ConnectionListenerService")
+    DECLARE_OBJECT_CLASS_NAME("ListenerConnectService")
+    DECLARE_OBJECT_DEPENDENCIES("CommunicationControl")
 
     // Parameter map
     BEGIN_SDV_PARAM_MAP()
         SDV_PARAM_ENABLE_LOCKING()
-        SDV_PARAM_GROUP("Listener")
-        SDV_PARAM_ENTRY(m_ssType, "Type", "Local", "", "The type of listener \"Local\" or \"Remote\".")
-        SDV_PARAM_ENTRY(m_uiInstanceID, "Instance", 0, "", "The instance ID to listen for.")
-        SDV_PARAM_ENTRY(m_ssInterface, "Interface", "", "", "Interface identification.")
-        SDV_PARAM_ENTRY(m_uiPort, "Port", 0, "", "Port number for connection.")
+        SDV_PARAM_GROUP("Provider")
+        SDV_PARAM_ENTRY(m_ssProvider, "Name", "", "", "Provider name to create a listener for.")
     END_SDV_PARAM_MAP()
 
     /**
      * @brief Initialization event, called after object configuration was loaded. Overload of sdv::CSdvObject::OnInitialize.
-     * @details The object configuration contains the information needed to start the listener. The following configuration is
-     * available for the local listener:
-     * @code
-     * [Listener]
-     * Type = "Local"
-     * Instance = 1000    # Normally not used; system instance ID is used automatically.
-     * @endcode
-     * And the following is available for a remote listener:
-     * @code
-     * [Listener]
-     * Type = "Remote"
-     * Interface = "127.0.0.1"
-     * Port = 2000
-     * @endcode
      * @return Returns 'true' when the initialization was successful, 'false' when not.
      */
     virtual bool OnInitialize() override;
@@ -101,19 +104,15 @@ public:
     virtual void OnShutdown() override;
 
     /**
-     * @brief When set, the listener is configured to be a local listener. Otherwise the listerner is configured as remote listener.
-     * @return Boolean set when local lostener.
+     * @brief Get the provider name used by this listener.
+     * @return Reference to the provider name.
      */
-    bool IsLocalListener() const;
+    const sdv::u8string& GetProviderName();
 
 private:
-    sdv::u8string               m_ssType;                   ///< Listener type: "Local" or "Remote"
-    uint32_t                    m_uiInstanceID = 0;         ///< Instance ID to listen for.
-    std::string                 m_ssInterface;              ///< Interface string for remote listener.
-    uint32_t                    m_uiPort = 0;               ///< Port for remote listener.
+    sdv::u8string               m_ssProvider;               ///< Name of the provider to use for the listening.
     sdv::TObjectPtr             m_ptrConnection;            ///< The connection object.
     CChannelBroker              m_broker;                   ///< Channel broker, used to request new channels
-    bool                        m_bLocalListener = true;    ///< When set, the listener is a local listener; otherwise a remote listener.
     sdv::com::TConnectionID     m_tConnection = {};         ///< Channel connection ID.
 };
 

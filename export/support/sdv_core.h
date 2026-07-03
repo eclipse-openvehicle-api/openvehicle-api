@@ -25,6 +25,7 @@
 #include <cctype>
 #include <stdlib.h>
 #include <functional>
+#include <sstream>
 
 #ifdef _WIN32
 // Resolve conflict
@@ -58,6 +59,8 @@
 #else
 #error OS is not supported!
 #endif
+
+#include "simple_toml.h"
 
 namespace sdv
 {
@@ -148,7 +151,36 @@ namespace sdv{
         {
             /**
              * @brief The SDV core loader
-            */
+             * @details The SDV core loader class searches for the core library and does the first startup. The core library uses
+             * the following environment variables to identify its location:
+             * - SDV_FRAMEWORK_RUNTIME directs to the Vehicle API core location.
+             * - SDV_COMPONENT_INSTALL directs to the location of the component installations.
+             * - SDV_FRAMEWORK_DEV_TOOLS directs to the location of the development tools used during the build process of SDV
+             *   components.
+             * - SDV_FRAMEWORK_DEV_INCLUDE directs to the header file location to allow building components for use with the
+             *   Vehicle API framework.
+             * 
+             * The SDV core loader supports different core stacks to coexist. For this there is a location procedure for the core
+             * systems:
+             * 1. Check for a "sdv_core_reloc.toml" file that contain one or more paths to the core system. The paths defined in the
+             *    file override the global environment variables for this application and all child applications.
+             * 2. Check for the environment variables. If the SDV_FRAMEWORK_RUNTIM variable is set, it is used to extract all other
+             *    variables as well, if not set.
+             * 3. If no variable is set, use the location of the EXE as core location. This might work in some situations if the
+             *    path variable has been set properly.
+             * 
+             * If none of the above strategies work, the core cannot be loaded.
+             * 
+             * The "sdv_core_reloc.toml" file has the following format:
+             * @code
+             * [CoreLocation]
+             * Version = 100                                    # Version; currently supported 100 for version 1.0
+             * Runtime = "<core runtime directory>"
+             * Install = "<component install directory>"        # Typically identical to runtime directory
+             * DevTools = "<development tools directory>"      # Typically identical to runtime directory
+             * Include = "<include directory>"                  # Typically in the include subdirectory
+             * @endcode
+             */
             class CSDVCoreLoader
             {
             public:
@@ -189,77 +221,50 @@ namespace sdv{
                 {
                     if (m_bInit) return;    // Prevent trying to load again.
                     m_bInit = true;
-                    bool bRelocFileError = false;
-                    std::string ssRelocFileInfo = "";
                     std::string ssEnvironmentInfo = "";
 
-                    // Check for the executable directory
-                    std::filesystem::path pathCoreLib;
-                    if (std::filesystem::exists(GetExecDirectory() / "core_services.sdv"))
-                        pathCoreLib = GetExecDirectory() / "core_services.sdv";
+                    // Step 1: check for the "sdv_core_reloc.toml"
+                    ProcessRelocationFile();
 
-                    if (pathCoreLib.empty())
-                    {
-                        if (std::filesystem::exists(GetExecDirectory() / "sdv_core_reloc.toml"))
-                        {
-                            // Check for the library in the relocation directory
-                            auto relocFolder = GetRelocationPath();
-                            if (!relocFolder.empty())
-                            {
-                                auto coreLibFolder = std::filesystem::path(relocFolder) / "core_services.sdv";
-                                if (coreLibFolder.is_relative())
-                                     coreLibFolder = (GetExecDirectory() / coreLibFolder).lexically_normal();
-
-                                if (std::filesystem::exists(coreLibFolder))
-                                    pathCoreLib = coreLibFolder;                                
-                            }
-                            if (pathCoreLib.empty())
-                            {
-                                bRelocFileError = true;  // we found the file but not the core library, we must run into an error
-                                ssRelocFileInfo = "Error: Invalid \"sdv_core_reloc.toml\" file found (but no core library), it contains: " + relocFolder;
-                            }
-                        }
-                    }
-
-                    if (pathCoreLib.empty())
-                    {
+                    // Step 2: check for environment variables (either set globally or overwritten by the sdv_core_reloc.toml).
 #ifdef _WIN32
-                        std::wstring ssPathCoreTemp(32768, '\0');
-                        GetEnvironmentVariable(L"SDV_FRAMEWORK_RUNTIME", ssPathCoreTemp.data(), static_cast<DWORD>(ssPathCoreTemp.size()));
-                        ssPathCoreTemp.resize(wcsnlen(ssPathCoreTemp.c_str(), ssPathCoreTemp.size()));
-                        if (!ssPathCoreTemp.empty())
-                        {
-                            pathCoreLib = std::filesystem::path(ssPathCoreTemp) / "core_services.sdv";
+                    std::wstring ssPathCoreTemp(32768, '\0');
+                    GetEnvironmentVariable(
+                        L"SDV_FRAMEWORK_RUNTIME", ssPathCoreTemp.data(), static_cast<DWORD>(ssPathCoreTemp.size()));
+                    ssPathCoreTemp.resize(wcsnlen(ssPathCoreTemp.c_str(), ssPathCoreTemp.size()));
+                    if (!ssPathCoreTemp.empty())
+                    {
+                        m_pathCoreLib = std::filesystem::path(ssPathCoreTemp) / "core_services.sdv";
 #else
-                        std::string ssPathCoreTemp = std::getenv("SDV_FRAMEWORK_RUNTIME") ? std::getenv("SDV_FRAMEWORK_RUNTIME") : "";
-                        if (!ssPathCoreTemp.empty())
-                        {
-                            pathCoreLib = std::filesystem::path(ssPathCoreTemp) / "core_services.sdv";
+                    std::string ssPathCoreTemp = std::getenv("SDV_FRAMEWORK_RUNTIME") ? std::getenv("SDV_FRAMEWORK_RUNTIME") : "";
+                    if (!ssPathCoreTemp.empty())
+                    {
+                        m_pathCoreLib = std::filesystem::path(ssPathCoreTemp) / "core_services.sdv";
 #endif
-                            if (pathCoreLib.is_relative())
-                                pathCoreLib = (GetExecDirectory() / pathCoreLib).lexically_normal();
+                        if (m_pathCoreLib.is_relative())
+                            m_pathCoreLib = (GetExecDirectory() / m_pathCoreLib).lexically_normal();
 
-                            if (!pathCoreLib.empty())
-                                ssEnvironmentInfo = "System environment path: " + pathCoreLib.generic_string();
-                        }
                     }
 
-                    // Depend on system path to find the library
-                    if (pathCoreLib.empty())
-                        pathCoreLib = "core_services.sdv";
-
-                    // Open the library only if there is no or a valid 'sdv_core_reloc.toml' file
-                    if (!bRelocFileError)
+                    // Step 3: check for the executable directory or otherwise check globally
+                    if (m_pathCoreLib.empty())
                     {
+                        if (std::filesystem::exists(GetExecDirectory() / "core_services.sdv"))
+                            m_pathCoreLib = GetExecDirectory() / "core_services.sdv";
+                        else
+                            m_pathCoreLib = "core_services.sdv";
+                    }
+                    
+                    ssEnvironmentInfo = "System environment path: " + m_pathCoreLib.generic_string();
+
 #ifdef _WIN32
-                        SetErrorMode(SEM_FAILCRITICALERRORS);
-                        m_tModule = reinterpret_cast<core::TModuleID>(LoadLibraryW(pathCoreLib.native().c_str()));
+                    SetErrorMode(SEM_FAILCRITICALERRORS);
+                    m_tModule = reinterpret_cast<core::TModuleID>(LoadLibraryW(m_pathCoreLib.native().c_str()));
 #elif defined __unix__
-                        m_tModule = reinterpret_cast<core::TModuleID>(dlopen(pathCoreLib.native().c_str(), RTLD_LAZY));
+                    m_tModule = reinterpret_cast<core::TModuleID>(dlopen(m_pathCoreLib.native().c_str(), RTLD_LAZY));
 #else
 #error OS is not supported!
 #endif
-                    }
 
                     if (!m_tModule)
                     {
@@ -275,16 +280,12 @@ namespace sdv{
 #else
 #error OS is not supported!
 #endif
-                        if (ssRelocFileInfo.empty() && ssEnvironmentInfo.empty())
-                            std::cerr << "No environment variable set and no realocation file found." << std::endl;
-                        if (!ssRelocFileInfo.empty())
-                            std::cerr << ssRelocFileInfo << std::endl;
                         if (!ssEnvironmentInfo.empty())
                             std::cerr << ssEnvironmentInfo << std::endl;
-
-                        std::cerr << "Could not load \"core_services.sdv\" library";
-                        if (!ssError.empty()) std::cerr << ": " << ssError;
-                        std::cerr << std::endl;
+                        m_ssErrMsg = "Could not load \"core_services.sdv\" library";
+                        if (!ssError.empty())
+                            m_ssErrMsg += ": " + ssError;
+                        std::cerr << m_ssErrMsg << std::endl;
                         return;
                     }
 
@@ -301,7 +302,8 @@ namespace sdv{
 #endif
                     if (!fnSDVCore)
                     {
-                        std::cerr << "The library \"core_services.sdv\" doesn't expose the SDVCore function." << std::endl;
+                        m_ssErrMsg = "The library \"core_services.sdv\" doesn't expose the SDVCore function.";
+                        std::cerr << m_ssErrMsg << std::endl;
                         return;
                     }
 
@@ -311,7 +313,8 @@ namespace sdv{
                     m_pCore = fnSDVCore();
                     if (!m_pCore)
                     {
-                        std::cerr << "The library \"core_services.sdv\" doesn't provide a valid interface." << std::endl;
+                        m_ssErrMsg = "The library \"core_services.sdv\" doesn't provide a valid interface.";
+                        std::cerr << m_ssErrMsg << std::endl;
                         return;
                     }
                 }
@@ -321,7 +324,6 @@ namespace sdv{
                  */
                 operator TInterfaceAccessPtr() const { return m_pCore; }
 
-            private:
                 /**
                  * @brief Get the directory of the executable.
                  * @return Path to the directory.
@@ -346,84 +348,168 @@ namespace sdv{
                 }
 
                 /**
-                 * @brief Get the folder path in the file 'sdv_core_reloc.toml'.
-                 * @return Path content, empty string if not found.
-                 */
-                static std::string GetRelocationPath()
+                 * @brief Get the path to the core library.
+                 * @return Returns a reference to the path to the core library.
+                */
+                const std::filesystem::path& GetCoreLibPath() const
                 {
-                    if (std::filesystem::exists(GetExecDirectory() / "sdv_core_reloc.toml"))
-                    {
-                        std::ifstream fstream(GetExecDirectory() / "sdv_core_reloc.toml");
-                        std::string ssLine;
-                        while (std::getline(fstream, ssLine))
-                        {
-                            size_t nPos = 0;
-                            auto fnSkipWhitespace = [&]() { while (std::isspace(ssLine[nPos])) nPos++; };
-                            fnSkipWhitespace();
-                            if (ssLine[nPos] == '#') continue;  // Rest of the line is comments
-                            if (ssLine.substr(nPos, 9) != "directory") continue;    // not the keq of interest: skip line
-                            nPos += 9;
-                            fnSkipWhitespace();
-                            if (ssLine[nPos] != '=')
-                            {
-                                std::cout << "Error in \"sdv_core_reloc.toml\": expecting assignment character '=' following"
-                                    " keyword 'directory'." << std::endl;
-                                break;
-                            }
-                            nPos++;
-                            fnSkipWhitespace();
-                            if (ssLine[nPos] != '\"')
-                            {
-                                std::cout << "Error in \"sdv_core_reloc.toml\": expecting double quote character '\"' indicating"
-                                    " a string begin'." << std::endl;
-                                break;
-                            }
-                            nPos++;
-                            size_t nStart = nPos;
-                            while (nPos < ssLine.length() && ssLine[nPos] != '\"')
-                            {
-                                // Check for escape character
-                                if (ssLine[nPos] == '\\') nPos++;
-
-                                // Skip character
-                                nPos++;
-                            }
-                            if (nPos >= ssLine.length() || ssLine[nPos] != '\"')
-                            {
-                                std::cout << "Error in \"sdv_core_reloc.toml\": expecting double quote character '\"' indicating"
-                                    " a string end'." << std::endl;
-                                break;
-                            }
-                            std::string ssDirectory = ssLine.substr(nStart, nPos - nStart);
-                            while (ssDirectory.empty())
-                            {
-                                std::cout << "Error in \"sdv_core_reloc.toml\": expecting a valid value following the assignment"
-                                    " of the 'directory' key." << std::endl;
-                                break;
-                            }
-
-                            return ssDirectory;
-                        }
-                    }
-                    return "";
+                    return m_pathCoreLib;
                 }
 
-                bool                m_bInit = false;        ///< Is the loader initialized?
-                core::TModuleID     m_tModule = 0;          ///< Module ID
-                IInterfaceAccess*   m_pCore = nullptr;      ///< Pointer to the core services.
+                /**
+                 * @brief Has loaded successfully?
+                 * @return Returns whether loading was successful.
+                 */
+                bool HasLoaded() const
+                {
+                    return m_bInit && m_tModule && m_pCore;
+                }
+
+                /**
+                 * @brief Get the error message if loading was unsuccessful.
+                 * @return Returns the a reference to the string containing the error message or an empty string if not available.
+                 */
+                const std::string& GetErrorMsg() const
+                {
+                    return m_ssErrMsg;
+                }
+
+            private:
+                /**
+                 * @brief Check for the 'sdv_core_reloc.toml' file containing the information about core relocation.
+                 * @details Set the environment variables following the information from the core relocation file.
+                 */
+                static void ProcessRelocationFile()
+                {
+                    if (!std::filesystem::exists(GetExecDirectory() / "sdv_core_reloc.toml")) return;
+
+                    std::ifstream fstream(GetExecDirectory() / "sdv_core_reloc.toml");
+                    if (!fstream.is_open()) return;
+
+                    std::stringstream sstreamContent;
+                    sstreamContent << fstream.rdbuf();
+                    fstream.close();
+
+                    try
+                    {
+                        sdv::toml::simple_parser::CParser parser(sstreamContent.str());
+                        if (parser.Root().GetDirect("CoreLocation.Version").GetValue<uint32_t>() != SDVFrameworkInterfaceVersion)
+                        {
+                            std::cerr << "Invalid version in sdv_core_reloc.toml" << std::endl;
+                            return; // Version not supported
+                        }
+
+                        const auto& sRuntimeNode = parser.Root().GetDirect("CoreLocation.Runtime");
+                        if (sRuntimeNode)
+                        {
+                            // Note: since the system might load multiple executables and the path is relative to this executable,
+                            // but maybe not to another executable, create an absolute path before assigning the environment
+                            // variable.
+                            std::filesystem::path pathRuntime = sRuntimeNode.GetValue<std::string>();
+                            if (pathRuntime.is_relative())
+                                pathRuntime = (GetExecDirectory() / pathRuntime).lexically_normal();
+#ifdef _WIN32
+                            // NOTE: In windows there are two environment variables which need to be updated.
+                            std::ignore = SetEnvironmentVariable(L"SDV_FRAMEWORK_RUNTIME", pathRuntime.native().c_str());
+                            std::ignore = _wputenv((std::wstring(L"SDV_FRAMEWORK_RUNTIME=") + pathRuntime.native()).c_str());
+#elif defined __unix__
+                            std::ignore = setenv("SDV_FRAMEWORK_RUNTIME", pathRuntime.generic_u8string().c_str(), 1);
+#else
+#error The OS is not supported!
+#endif
+                        }
+
+                        const auto& sInstallNode = parser.Root().GetDirect("CoreLocation.Install");
+                        if (sInstallNode)
+                        {
+                            // Note: since the system might load multiple executables and the path is relative to this executable,
+                            // but maybe not to another executable, create an absolute path before assigning the environment
+                            // variable.
+                            std::filesystem::path pathInstall = sInstallNode.GetValue<std::string>();
+                            if (pathInstall.is_relative())
+                                pathInstall = (GetExecDirectory() / pathInstall).lexically_normal();
+#ifdef _WIN32
+                            // NOTE: In windows there are two environment variables which need to be updated.
+                            std::ignore = SetEnvironmentVariable(L"SDV_COMPONENT_INSTALL", pathInstall.native().c_str());
+                            std::ignore = _wputenv((std::wstring(L"SDV_COMPONENT_INSTALL=") + pathInstall.native()).c_str());
+#elif defined __unix__
+                            std::ignore = setenv("SDV_COMPONENT_INSTALL", pathInstall.generic_u8string().c_str(), 1);
+#else
+#error The OS is not supported!
+#endif
+                        }
+
+                        const auto& sDevToolsNode = parser.Root().GetDirect("CoreLocation.DevTools");
+                        if (sDevToolsNode)
+                        {
+                            // Note: since the system might load multiple executables and the path is relative to this executable,
+                            // but maybe not to another executable, create an absolute path before assigning the environment
+                            // variable.
+                            std::filesystem::path pathDevTools = sDevToolsNode.GetValue<std::string>();
+                            if (pathDevTools.is_relative())
+                                pathDevTools = (GetExecDirectory() / pathDevTools).lexically_normal();
+#ifdef _WIN32
+                            // NOTE: In windows there are two environment variables which need to be updated.
+                            std::ignore = SetEnvironmentVariable(L"SDV_FRAMEWORK_DEV_TOOLS", pathDevTools.native().c_str());
+                            std::ignore = _wputenv((std::wstring(L"SDV_FRAMEWORK_DEV_TOOLS=") + pathDevTools.native()).c_str());
+#elif defined __unix__
+                            std::ignore = setenv("SDV_FRAMEWORK_DEV_TOOLS", pathDevTools.generic_u8string().c_str(), 1);
+#else
+#error The OS is not supported!
+#endif
+                        }
+
+                        const auto& sIncludeNode = parser.Root().GetDirect("CoreLocation.Include");
+                        if (sIncludeNode)
+                        {
+                            // Note: since the system might load multiple executables and the path is relative to this executable,
+                            // but maybe not to another executable, create an absolute path before assigning the environment
+                            // variable.
+                            std::filesystem::path pathInclude = sIncludeNode.GetValue<std::string>();
+                            if (pathInclude.is_relative())
+                                pathInclude = (GetExecDirectory() / pathInclude).lexically_normal();
+#ifdef _WIN32
+                            // NOTE: In windows there are two environment variables which need to be updated.
+                            std::ignore = SetEnvironmentVariable(L"SDV_FRAMEWORK_DEV_INCLUDE", pathInclude.native().c_str());
+                            std::ignore = _wputenv((std::wstring(L"SDV_FRAMEWORK_DEV_INCLUDE=") + pathInclude.native()).c_str());
+#elif defined __unix__
+                            std::ignore = setenv("SDV_FRAMEWORK_DEV_INCLUDE", pathInclude.generic_u8string().c_str(), 1);
+#else
+#error The OS is not supported!
+#endif
+                        }
+                    }
+                    catch (const std::exception&)
+                    {}
+                }
+
+                bool                    m_bInit = false;        ///< Is the loader initialized?
+                core::TModuleID         m_tModule = 0;          ///< Module ID
+                IInterfaceAccess*       m_pCore = nullptr;      ///< Pointer to the core services.
+                std::filesystem::path   m_pathCoreLib;          ///< Path to the core library.
+                std::string             m_ssErrMsg;             ///< Error message for failed loading.
             };
         } // namespace internal
 
 #ifndef NO_SDV_CORE_FUNC
         /**
-         * @brief Access to the core.
-         * @return Smart pointer to the core services interface.
+         * @brief Access to the core loader.
+         * @return Reference to the one core loader instance.
          */
-        inline TInterfaceAccessPtr GetCore()
+        inline internal::CSDVCoreLoader& GetCoreLoader()
         {
             static internal::CSDVCoreLoader core;
             core.Load();
             return core;
+        }
+
+        /**
+         * @brief Access to the core interfaces.
+         * @return Smart pointer to the core services interfaces.
+         */
+        inline TInterfaceAccessPtr GetCore()
+        {
+            return GetCoreLoader();
         }
 
         /**

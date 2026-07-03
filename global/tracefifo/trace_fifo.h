@@ -20,6 +20,8 @@
 #include <sstream>
 #include <map>
 #include <atomic>
+#include <memory>
+#include <thread>
 
 /**
  * @brief trace fifo open flags

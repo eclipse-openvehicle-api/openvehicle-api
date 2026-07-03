@@ -12,9 +12,8 @@
  ********************************************************************************/
 
 #include "environment.h"
-
 #include <string_view>
-
+#include "../../global/exec_dir_helper.h"
 #include "../../global/cmdlnparser/cmdlnparser.cpp"
 
 CSdvPackagerEnvironment::CSdvPackagerEnvironment() :
@@ -862,13 +861,16 @@ bool CSdvPackagerEnvironment::ProcessCommandLine(const std::vector<std::string>&
             {
 #ifdef _WIN32
                 const wchar_t* szInstallDir = _wgetenv(L"SDV_COMPONENT_INSTALL");
+                if (!szInstallDir) szInstallDir = _wgetenv(L"SDV_FRAMEWORK_RUNTIME");
                 if (szInstallDir) m_pathTargetLocation = szInstallDir;
 #elif defined __unix__
                 const char* szInstallDir = getenv("SDV_COMPONENT_INSTALL");
+                if (!szInstallDir) szInstallDir = getenv("SDV_FRAMEWORK_RUNTIME");
                 if (szInstallDir) m_pathTargetLocation = std::filesystem::u8path(szInstallDir);
 #else
     #error OS not supported!
 #endif
+                if (m_pathTargetLocation.empty()) m_pathTargetLocation = GetExecDirectory();
             }
 
             // Is the directory existing? If not, create the directory

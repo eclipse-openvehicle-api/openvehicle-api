@@ -18,16 +18,14 @@
 #include <support/component_impl.h>
 #include <interfaces/ipc.h>
 #include "connection.h"
+#include "watchdog.h"
 
-#include <map>
-#include <unordered_set>
-#include <mutex>
-#include <memory>
+#include <algorithm>
+
 #include <string>
 
 #ifdef _WIN32
 // Winsock headers are required for SOCKET / AF_UNIX / WSAStartup
-// NOTE: The actual initialization is done via StartUpWinSock()
 #   include <ws2tcpip.h>
 #endif
 
@@ -78,40 +76,6 @@ struct CAddrInfo
 };
 
 /**
- * @brief Initialize WinSock on Windows (idempotent)
- *
- * This helper ensures WSAStartup() is called only once in the process
- *
- * @return 0 on success, otherwise a WinSock error code
- */
-inline int StartUpWinSock()
-{
-#ifdef _WIN32
-    static bool isInitialized = false;
-    if (isInitialized)
-    {
-        return 0;
-    }
-
-    WSADATA wsaData {};
-    const int error = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (error != 0)
-    {
-        SDV_LOG_ERROR("WSAStartup failed with error: ", std::to_string(error));
-    }
-    else
-    {
-        SDV_LOG_INFO("WSAStartup initialized");
-        isInitialized = true;
-    }
-    return error;
-#else
-    // Non-Windows: nothing to do. Return success for symmetry
-    return 0;
-#endif
-}
-
-/**
  * @brief Simple pair of sockets used to connect two child processes
  *
  * This is reserved for potential future use (e.g. TCP/IP or in-proc socket pairs)
@@ -147,8 +111,8 @@ public:
     // Object declarations
     DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
     DECLARE_OBJECT_CLASS_NAME("WinSocketsChannelControl")
-    DECLARE_OBJECT_CLASS_ALIAS("LocalChannelControl")
-    DECLARE_DEFAULT_OBJECT_NAME("LocalChannelControl")
+    DECLARE_OBJECT_CLASS_ALIAS("unix_domain_sockets")
+    DECLARE_DEFAULT_OBJECT_NAME("unix_domain_sockets")
     DECLARE_OBJECT_SINGLETON()
 
     virtual ~CSocketsChannelMgnt() = default;
@@ -163,6 +127,11 @@ public:
      * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
     virtual void OnShutdown() override;
+
+    /**
+     * @brief Last function called before destruction. Overload of sdv::CSdvObject::OnDestroy.
+     */
+    virtual void OnDestroy() override;
 
     /**
      * @brief Create an IPC endpoint and return its connection information
@@ -208,29 +177,8 @@ public:
      */
     sdv::IInterfaceAccess* Access(const sdv::u8string& ssConnectString) override;
 
-    /**
-     * @brief Called by a CWinsockConnection instance when the server side is closed
-     *
-     * Used to clean up internal registries for a given UDS path
-     *
-     * @param ptr      Pointer to the CWinsockConnection instance that was closed
-     */
-    void OnServerClosed(const std::string& udsPath, CWinsockConnection* ptr);
-
 private:
-    /// @brief Registry of AF_UNIX server connections keyed by normalized UDS path
-    std::map<std::string, std::shared_ptr<CWinsockConnection>> m_udsServers;
-
-    /**
-     * @brief Set of UDS paths that already returned their server-side
-     *        connection once via Access()
-     *
-     * This prevents returning the same server object multiple times
-     */
-    std::unordered_set<std::string> m_udsServerClaimed;
-
-    /// @brief Mutex protecting m_udsServers and m_udsServerClaimed
-    std::mutex m_udsMtx;
+    CWinSocketsConnectionWatchDog m_watchdog;
 };
 
 // SDV object factory macro

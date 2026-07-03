@@ -17,6 +17,16 @@
 #include <chrono>
 #include <thread>
 #include <atomic>
+#include <string>
+
+namespace
+{
+std::string MakeUniqueMutexName(const char* suffix)
+{
+    return std::string("HELLO_") + suffix + "_" +
+        std::to_string(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+}
+}
 
 #if defined(_WIN32) && defined(_UNICODE)
 extern "C" int wmain(int argc, wchar_t* argv[])
@@ -32,12 +42,14 @@ extern "C" int main(int argc, char* argv[])
 
 TEST(NamedMutexTest, Construction)
 {
-    ipc::named_mutex mtx("HELLO");
+    ipc::named_mutex mtx(MakeUniqueMutexName("Construction"));
     EXPECT_NE(mtx.native_handle(), nullptr);
 }
 
 TEST(NamedMutexTest, CritSectSyncManualLock)
 {
+    const std::string mutexName = MakeUniqueMutexName("CritSectSyncManualLock");
+
     // Counter function check for correct counter value.
     // The checking is manipulated by the bEnable flag. When disabled, no sync will be done and the check will fail. When enabled,
     // sync will be done and the check will succeed.
@@ -46,7 +58,7 @@ TEST(NamedMutexTest, CritSectSyncManualLock)
     std::atomic_bool bEnable = false;
     auto fn = [&]()
     {
-        ipc::named_mutex mtx("HELLO");
+        ipc::named_mutex mtx(mutexName);
 
         if (bEnable)
             mtx.lock();
@@ -81,12 +93,14 @@ TEST(NamedMutexTest, CritSectSyncManualLock)
 
 TEST(NamedMutexTest, CritSectSyncAutoLock)
 {
+    const std::string mutexName = MakeUniqueMutexName("CritSectSyncAutoLock");
+
     // Counter function check for correct counter value.
     int32_t iCnt = 0;
     std::atomic_bool bSuccess = true;
     auto fn = [&]()
     {
-        ipc::named_mutex mtx("HELLO");
+        ipc::named_mutex mtx(mutexName);
 
         std::unique_lock<ipc::named_mutex> lock(mtx);
         bSuccess = bSuccess && (iCnt == 0);
@@ -108,10 +122,12 @@ TEST(NamedMutexTest, CritSectSyncAutoLock)
 
 TEST(NamedMutexTest, TryLock)
 {
+    const std::string mutexName = MakeUniqueMutexName("TryLock");
+
     std::atomic_bool bRunning = false;
     auto fn = [&]()
     {
-        ipc::named_mutex mtx("HELLO");
+        ipc::named_mutex mtx(mutexName);
 
         mtx.lock();
         while (bRunning) std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -123,7 +139,7 @@ TEST(NamedMutexTest, TryLock)
     std::this_thread::sleep_for(std::chrono::milliseconds(250));
 
     // Try locking; doesn't work since thread still locks.
-    ipc::named_mutex mtx2("HELLO");
+    ipc::named_mutex mtx2(mutexName);
     EXPECT_FALSE(mtx2.try_lock());
 
     bRunning = false;
@@ -137,7 +153,7 @@ TEST(NamedMutexTest, TryLock)
 
 TEST(NamedMutexTest, Naming)
 {
-    ipc::named_mutex mtx1("HELLO");
+    ipc::named_mutex mtx1(MakeUniqueMutexName("Naming"));
     EXPECT_FALSE(mtx1.name().empty());
 
     ipc::named_mutex mtx2;

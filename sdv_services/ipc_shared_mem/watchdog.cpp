@@ -22,7 +22,7 @@
 
 CWatchDog::CWatchDog()
 {
-    m_threadScheduledConnectionDestructions = std::thread(&CWatchDog::HandleScheduledConnectionDestructions, this);
+    m_threadScheduledConnectionDestructions = sdv::core::secure_thread(&CWatchDog::HandleScheduledConnectionDestructions, this);
 }
 
 CWatchDog::~CWatchDog()

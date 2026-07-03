@@ -16,43 +16,11 @@
 
 #include <support/component_impl.h>
 #include <interfaces/ipc.h>
-#include "../sdv_services/uds_unix_sockets/channel_mgnt.h"   // existing UDS transport
+#include "watchdog.h"
+#include <algorithm>
 
 class CUnixTunnelConnection;
-/**
- * @brief Initialize WinSock on Windows (idempotent).
- *
- * This helper ensures WSAStartup() is called only once in the process.
- * On non-Windows platforms, this is a no-op and always returns success.
- *
- * @return 0 on success, otherwise a WinSock error code (Windows only).
- */
-inline int StartUpWinSock()
-{
-#ifdef _WIN32
-    static bool isInitialized = false;
-    if (isInitialized)
-    {
-        return 0;
-    }
 
-    WSADATA wsaData {};
-    const int error = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (error != 0)
-    {
-        SDV_LOG_ERROR("WSAStartup failed with error: ", std::to_string(error));
-    }
-    else
-    {
-        SDV_LOG_INFO("WSAStartup initialized");
-        isInitialized = true;
-    }
-    return error;
-#else
-    // Non-Windows: nothing to do. Return success for symmetry
-    return 0;
-#endif
-}
 /**
  * @class CUnixTunnelChannelMgnt
  * @brief IPC channel management class for Unix Domain Socket tunnel communication.
@@ -76,8 +44,8 @@ public:
     // Object declarations
     DECLARE_OBJECT_CLASS_TYPE(sdv::EObjectType::system_object)
     DECLARE_OBJECT_CLASS_NAME("UnixTunnelChannelControl")
-    DECLARE_OBJECT_CLASS_ALIAS("TunnelChannelControl")
-    DECLARE_DEFAULT_OBJECT_NAME("TunnelChannelControl")
+    DECLARE_OBJECT_CLASS_ALIAS("unix_domain_sockets_tunnel")
+    DECLARE_DEFAULT_OBJECT_NAME("unix_domain_sockets_tunnel")
     DECLARE_OBJECT_SINGLETON()
 
     /**
@@ -95,6 +63,11 @@ public:
      * @brief Shutdown the object. Overload of sdv::CSdvObject::OnShutdown.
      */
     virtual void OnShutdown() override;
+
+    /**
+     * @brief Last function called before destruction. Overload of sdv::CSdvObject::OnDestroy.
+     */
+    virtual void OnDestroy() override;
 
     /**
      * @brief Creates a tunnel endpoint (server side) and returns endpoint info.
@@ -126,12 +99,7 @@ private:
      */
     static std::string MakeUserRuntimeDir();
 
-    /**
-     * @brief Keeps server-side tunnel connections alive for the lifetime of the manager.
-     *
-     * This ensures that server tunnel objects are not destroyed while the manager is active.
-     */
-    std::vector<std::shared_ptr<CUnixTunnelConnection>> m_ServerTunnels;
+    CUnixTunnelConnectionWatchDog m_watchdog;
 };
 
 DEFINE_SDV_OBJECT(CUnixTunnelChannelMgnt)

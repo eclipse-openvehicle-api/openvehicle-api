@@ -19,14 +19,14 @@
 #include <support/timer.h>
 
 // VSS interfaces - located in ../generated/vss_files/
-#include "../generated/vss_files/vss_vehiclebodydooraxle_01left_bs_rx.h"
-#include "../generated/vss_files/vss_vehiclebodydooraxle_01left_bs_tx.h"
-#include "../generated/vss_files/vss_vehiclebodydooraxle_01right_bs_rx.h"
-#include "../generated/vss_files/vss_vehiclebodydooraxle_01right_bs_tx.h"
-#include "../generated/vss_files/vss_vehiclebodydooraxle_02left_bs_rx.h"
-#include "../generated/vss_files/vss_vehiclebodydooraxle_02left_bs_tx.h"
-#include "../generated/vss_files/vss_vehiclebodydooraxle_02right_bs_rx.h"
-#include "../generated/vss_files/vss_vehiclebodydooraxle_02right_bs_tx.h"
+#include "../generated/front/vss_files/vss_vehiclebodydooraxle_01left_bs_rx.h"
+#include "../generated/front/vss_files/vss_vehiclebodydooraxle_01left_bs_tx.h"
+#include "../generated/front/vss_files/vss_vehiclebodydooraxle_01right_bs_rx.h"
+#include "../generated/front/vss_files/vss_vehiclebodydooraxle_01right_bs_tx.h"
+#include "../generated/rear/vss_files/vss_vehiclebodydooraxle_02left_bs_rx.h"
+#include "../generated/rear/vss_files/vss_vehiclebodydooraxle_02left_bs_tx.h"
+#include "../generated/rear/vss_files/vss_vehiclebodydooraxle_02right_bs_rx.h"
+#include "../generated/rear/vss_files/vss_vehiclebodydooraxle_02right_bs_tx.h"
 
 #include "lock_doors_thread.h"
 

@@ -13,6 +13,7 @@
  ********************************************************************************/
 
 #include <gtest/gtest.h>
+#include "../../../global/localmemmgr.h"
 #include "../../../sdv_services/core/toml_parser/character_reader_utf_8.h"
 #include "../../../sdv_services/core/toml_parser/exception.h"
 

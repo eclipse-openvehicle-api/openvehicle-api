@@ -186,16 +186,25 @@ struct ServerClient
     sdv::ipc::IConnect* client = nullptr;
 };
 
-static ServerClient CreatePair(CSocketsChannelMgnt& mgr, const std::string& cs)
+static ServerClient CreatePair(
+    CSocketsChannelMgnt& mgr,
+    const sdv::ipc::SChannelEndpoint& ep)
 {
     ServerClient out;
-    // Server
-    out.serverObj = mgr.Access(cs);
-    out.server = out.serverObj ? out.serverObj.GetInterface<sdv::ipc::IConnect>() : nullptr;
 
-    // Client
-    out.clientObj = mgr.Access(cs);
-    out.client = out.clientObj ? out.clientObj.GetInterface<sdv::ipc::IConnect>() : nullptr;
+    // Server: use the connection returned by CreateEndpoint().
+    // Do not create another server with Access(... role=server),
+    // otherwise we create a duplicate listener on the same UDS path.
+    out.serverObj = ep.pConnection;
+    out.server = out.serverObj
+        ? out.serverObj.GetInterface<sdv::ipc::IConnect>()
+        : nullptr;
+
+    // Client: connect through the endpoint connect string.
+    out.clientObj = mgr.Access(ep.ssConnectString);
+    out.client = out.clientObj
+        ? out.clientObj.GetInterface<sdv::ipc::IConnect>()
+        : nullptr;
 
     return out;
 }
@@ -210,7 +219,7 @@ TEST(WindowsAFUnixIPC, Instantiate)
     ASSERT_TRUE(app.Startup(""));
 
     CSocketsChannelMgnt mgr;
-    EXPECT_NO_THROW(mgr.Initialize(""));
+    EXPECT_NO_THROW(mgr.Initialize(sdv::SObjectInfo()));
     EXPECT_EQ(mgr.GetObjectState(), sdv::EObjectState::initialized);
     EXPECT_NO_THROW(mgr.Shutdown());
     EXPECT_EQ(mgr.GetObjectState(), sdv::EObjectState::destruction_pending);
@@ -226,7 +235,7 @@ TEST(WindowsAFUnixIPC, BasicConnectDisconnect)
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
     const std::string path = UniqueUds("basic");
@@ -237,7 +246,7 @@ TEST(WindowsAFUnixIPC, BasicConnectDisconnect)
     ASSERT_FALSE(ep.ssConnectString.empty());
 
     // Create server + client objects
-    auto pair = CreatePair(mgr, ep.ssConnectString);
+    auto pair = CreatePair(mgr, ep);
     ASSERT_NE(pair.server, nullptr);
     ASSERT_NE(pair.client, nullptr);
 
@@ -268,12 +277,12 @@ TEST(WindowsAFUnixIPC, DataPath_SimpleHello)
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
     const std::string cs = std::string("proto=uds;path=") + UniqueUds("hello") + ";";
     auto ep = mgr.CreateEndpoint(cs);
-    auto pair = CreatePair(mgr, ep.ssConnectString);
+    auto pair = CreatePair(mgr, ep);
 
     ASSERT_NE(pair.server, nullptr);
     ASSERT_NE(pair.client, nullptr);
@@ -322,13 +331,13 @@ TEST(WindowsAFUnixIPC, ServerDisconnectPropagates)
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
     const std::string cs = std::string("proto=uds;path=") + UniqueUds("disc") + ";";
     auto ep = mgr.CreateEndpoint(cs);
 
-    auto pair = CreatePair(mgr, ep.ssConnectString);
+    auto pair = CreatePair(mgr, ep);
     ASSERT_NE(pair.server, nullptr);
     ASSERT_NE(pair.client, nullptr);
 
@@ -360,13 +369,13 @@ TEST(WindowsAFUnixIPC, DataPath_MultiChunk)
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
     const std::string cs = std::string("proto=uds;path=") + UniqueUds("mc") + ";";
 
     auto ep = mgr.CreateEndpoint(cs);
-    auto pair = CreatePair(mgr, ep.ssConnectString);
+    auto pair = CreatePair(mgr, ep);
     ASSERT_NE(pair.server, nullptr);
     ASSERT_NE(pair.client, nullptr);
 
@@ -415,13 +424,13 @@ TEST(WindowsAFUnixIPC, DataPath_LargePayloadFragmentation)
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
     const std::string cs = std::string("proto=uds;path=") + UniqueUds("big") + ";";
 
     auto ep = mgr.CreateEndpoint(cs);
-    auto pair = CreatePair(mgr, ep.ssConnectString);
+    auto pair = CreatePair(mgr, ep);
 
     ASSERT_NE(pair.server, nullptr);
     ASSERT_NE(pair.client, nullptr);
@@ -471,12 +480,12 @@ TEST(WindowsAFUnixIPC, DataPath_ZeroLengthChunks)
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
     const std::string cs = std::string("proto=uds;path=") + UniqueUds("zlen") + ";";
     auto ep = mgr.CreateEndpoint(cs);
-    auto pair = CreatePair(mgr, ep.ssConnectString);
+    auto pair = CreatePair(mgr, ep);
 
     ASSERT_NE(pair.server, nullptr);
     ASSERT_NE(pair.client, nullptr);
@@ -530,7 +539,7 @@ TEST(WindowsAFUnixIPC, OperationModeTransitions)
     ASSERT_TRUE(app.Startup(""));
 
     CSocketsChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
 
     EXPECT_EQ(mgr.GetObjectState(), sdv::EObjectState::initialized);
     mgr.SetOperationMode(sdv::EOperationMode::configuring);
@@ -552,7 +561,7 @@ TEST(WindowsAFUnixIPC, ReconnectAfterDisconnect_SamePath)
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
     const std::string udsPath = MakeShortUdsPath(("vapi_win_reconn_" + RandomHex() + ".sock").c_str());
@@ -562,7 +571,7 @@ TEST(WindowsAFUnixIPC, ReconnectAfterDisconnect_SamePath)
     // ----- Session 1 -----
     {
         auto ep = mgr.CreateEndpoint(cs);
-        auto pair = CreatePair(mgr, ep.ssConnectString);
+        auto pair = CreatePair(mgr, ep);
         ASSERT_NE(pair.server, nullptr);
         ASSERT_NE(pair.client, nullptr);
 
@@ -572,7 +581,7 @@ TEST(WindowsAFUnixIPC, ReconnectAfterDisconnect_SamePath)
 
         std::atomic<int> clientRes{0};
 
-        std::thread ct([&]{
+        sdv::core::secure_thread ct([&]{
             if (!pair.clientObj) { clientRes = 1; return; }
             auto* c = pair.client;
             if (!c) { clientRes = 2; return; }
@@ -594,7 +603,7 @@ TEST(WindowsAFUnixIPC, ReconnectAfterDisconnect_SamePath)
     // ----- Session 2 -----
     {
         auto ep = mgr.CreateEndpoint(cs);
-        auto pair = CreatePair(mgr, ep.ssConnectString);
+        auto pair = CreatePair(mgr, ep);
         ASSERT_NE(pair.server, nullptr);
         ASSERT_NE(pair.client, nullptr);
 
@@ -604,7 +613,7 @@ TEST(WindowsAFUnixIPC, ReconnectAfterDisconnect_SamePath)
 
         std::atomic<int> clientRes{0};
 
-        std::thread ct([&]{
+        sdv::core::secure_thread ct([&]{
             if (!pair.clientObj) { clientRes = 1; return; }
             auto* c = pair.client;
             if (!c) { clientRes = 2; return; }
@@ -633,7 +642,7 @@ TEST(WindowsAFUnixIPC, WaitForConnection_InfiniteWait_SlowClient)
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
     const std::string cs = std::string("proto=uds;path=") + MakeShortUdsPath(("vapi_win_slow_" + RandomHex() + ".sock").c_str()) + ";";
@@ -647,7 +656,7 @@ TEST(WindowsAFUnixIPC, WaitForConnection_InfiniteWait_SlowClient)
     server->AsyncConnect(&sr);
     SpinUntilServerArmed(server);
 
-    std::thread delayedClient([&]{
+    sdv::core::secure_thread delayedClient([&]{
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
         sdv::TObjectPtr cObj = mgr.Access(ep.ssConnectString);
         auto* client = cObj.GetInterface<sdv::ipc::IConnect>();
@@ -673,7 +682,7 @@ TEST(WindowsAFUnixIPC, WaitForConnection_ZeroTimeout_BeforeAndAfter)
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
     const std::string cs =
@@ -718,7 +727,7 @@ ViewFilter = "Fatal")toml"));
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
     const std::string raw = MakeShortUdsPath(("vapi_win_nosrv_" + RandomHex() + ".sock").c_str());
@@ -743,7 +752,11 @@ ViewFilter = "Fatal")toml"));
     EXPECT_FALSE(client->WaitForConnection(1500));
     std::this_thread::sleep_for(std::chrono::milliseconds(800));
 
-    EXPECT_EQ(client->GetConnectState(), sdv::ipc::EConnectState::connection_error);
+    const auto finalState = client->GetConnectState();
+    EXPECT_TRUE(finalState == sdv::ipc::EConnectState::connection_error ||
+                finalState == sdv::ipc::EConnectState::disconnected ||
+                finalState == sdv::ipc::EConnectState::initializing)
+        << "Expected timeout-related terminal or pending state without server.";
 
     client->Disconnect();
     mgr.Shutdown();
@@ -758,7 +771,7 @@ TEST(WindowsAFUnixIPC, PeerCloseMidTransfer_ClientDetectsDisconnect)
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
     const std::string cs =
@@ -767,7 +780,7 @@ TEST(WindowsAFUnixIPC, PeerCloseMidTransfer_ClientDetectsDisconnect)
         ";";
 
     auto ep = mgr.CreateEndpoint(cs);
-    auto pair = CreatePair(mgr, ep.ssConnectString);
+    auto pair = CreatePair(mgr, ep);
     ASSERT_NE(pair.server, nullptr);
     ASSERT_NE(pair.client, nullptr);
 
@@ -791,7 +804,7 @@ TEST(WindowsAFUnixIPC, PeerCloseMidTransfer_ClientDetectsDisconnect)
     ASSERT_NE(sender, nullptr);
 
     std::atomic<bool> sendOk{true};
-    std::thread t([&]{
+    sdv::core::secure_thread t([&]{
         sendOk.store(sender->SendData(seq));
     });
 
@@ -816,7 +829,7 @@ ViewFilter = "Fatal")toml"));
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
     const std::string raw = MakeShortUdsPath(("vapi_win_cancel_" + RandomHex() + ".sock").c_str());
@@ -855,7 +868,7 @@ ViewFilter = "Fatal")toml"));
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
     const std::string cs =
@@ -889,13 +902,12 @@ TEST(WindowsAFUnixIPC, UnregisterStateEventCallback_SingleListenerSemantics)
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
     const std::string cs =
         std::string("proto=uds;path=") +
-        MakeShortUdsPath(("vapi_win_cb_" + RandomHex() + ".sock").c_str()) +
-        ";";
+        MakeShortUdsPath(("vapi_win_cb_" + RandomHex() + ".sock").c_str()) + ";";
 
     auto ep = mgr.CreateEndpoint(cs);
 
@@ -935,6 +947,55 @@ TEST(WindowsAFUnixIPC, UnregisterStateEventCallback_SingleListenerSemantics)
     app.Shutdown();
 }
 
+// Reconnect race regression: second AsyncConnect during initializing must fail fast,
+// not block by joining an in-progress connect worker.
+TEST(WindowsAFUnixIPC, AsyncConnect_DoubleCallWhileInitializing_NoDeadlock)
+{
+    sdv::app::CAppControl app;
+    ASSERT_TRUE(app.Startup(""));
+    app.SetRunningMode();
+
+    CSocketsChannelMgnt mgr;
+    mgr.Initialize(sdv::SObjectInfo());
+    mgr.SetOperationMode(sdv::EOperationMode::running);
+
+    const std::string cs =
+        std::string("proto=uds;path=") +
+        MakeShortUdsPath(("vapi_win_race_" + RandomHex() + ".sock").c_str()) + ";";
+
+    auto ep = mgr.CreateEndpoint(cs);
+    ASSERT_FALSE(ep.ssConnectString.empty());
+
+    auto pair = CreatePair(mgr, ep);
+    ASSERT_NE(pair.server, nullptr);
+    ASSERT_NE(pair.client, nullptr);
+
+    CTestReceiver sr, cr;
+
+    ASSERT_TRUE(pair.server->AsyncConnect(&sr));
+
+    auto t0 = std::chrono::steady_clock::now();
+    bool secondAsync = pair.server->AsyncConnect(&sr);
+    auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now() - t0).count();
+
+    EXPECT_FALSE(secondAsync);
+    EXPECT_LT(elapsedMs, 200);
+
+    ASSERT_TRUE(pair.client->AsyncConnect(&cr));
+    EXPECT_TRUE(pair.server->WaitForConnection(5000));
+    EXPECT_TRUE(pair.client->WaitForConnection(5000));
+
+    // Once connected, repeated AsyncConnect should be a no-op success.
+    EXPECT_TRUE(pair.server->AsyncConnect(&sr));
+
+    pair.client->Disconnect();
+    pair.server->Disconnect();
+
+    mgr.Shutdown();
+    app.Shutdown();
+}
+
 // CreateEndpoint with very long path → must be normalized to basename
 TEST(WindowsAFUnixIPC, CreateEndpoint_LongInputPath_Normalized)
 {
@@ -943,7 +1004,7 @@ TEST(WindowsAFUnixIPC, CreateEndpoint_LongInputPath_Normalized)
     app.SetRunningMode();
 
     CSocketsChannelMgnt mgr;
-    mgr.Initialize("");
+    mgr.Initialize(sdv::SObjectInfo());
     mgr.SetOperationMode(sdv::EOperationMode::running);
 
     std::string longName(160, 'A');

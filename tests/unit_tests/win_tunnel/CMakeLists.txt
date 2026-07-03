@@ -47,14 +47,12 @@ add_test(NAME UnitTest_WinTunnelConnectTests
 
 add_dependencies(UnitTest_WinTunnelConnectTests dependency_sdv_components)
 
-if ((NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (NOT WIN32))
 add_custom_command(TARGET UnitTest_WinTunnelConnectTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env TEST_EXECUTION_MODE=CMake
             "$<TARGET_FILE:UnitTest_WinTunnelConnectTests>"
             --gtest_output=xml:${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/UnitTest_WinTunnelConnectTests.xml
     VERBATIM
 )
-endif()
 
 add_executable(UnitTest_WinTunnelChannelMgntTests
     win_tunnel_channel_mgnt_tests.cpp           
@@ -84,14 +82,12 @@ add_test(NAME UnitTest_WinTunnelChannelMgntTests
 
 add_dependencies(UnitTest_WinTunnelChannelMgntTests dependency_sdv_components)
 
-if ((NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (NOT WIN32))
 add_custom_command(TARGET UnitTest_WinTunnelChannelMgntTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env TEST_EXECUTION_MODE=CMake
             "$<TARGET_FILE:UnitTest_WinTunnelChannelMgntTests>"
             --gtest_output=xml:${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/UnitTest_WinTunnelChannelMgntTests.xml
     VERBATIM
 )
-endif()
 
 # Add negative/edge case tests
 add_executable(UnitTest_WinTunnelNegativeEdgeTests
@@ -122,13 +118,11 @@ add_test(NAME UnitTest_WinTunnelNegativeEdgeTests
 
 add_dependencies(UnitTest_WinTunnelNegativeEdgeTests dependency_sdv_components)
 
-if ((NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU") OR (NOT WIN32))
 add_custom_command(TARGET UnitTest_WinTunnelNegativeEdgeTests POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E env TEST_EXECUTION_MODE=CMake
             "$<TARGET_FILE:UnitTest_WinTunnelNegativeEdgeTests>"
             --gtest_output=xml:${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/UnitTest_WinTunnelNegativeEdgeTests.xml
     VERBATIM
 )
-endif()
 
 endif()

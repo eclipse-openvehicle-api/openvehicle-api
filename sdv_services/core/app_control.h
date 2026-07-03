@@ -18,6 +18,8 @@
 #include <support/component_impl.h>
 #include <support/interface_ptr.h>
 #include "../../global/tracefifo/trace_fifo.h"
+#include "permission_control.h"
+#include <optional>
 
 /**
  * @brief Application control class.
@@ -140,17 +142,20 @@ private:
     */
     void BroadcastOperationState(sdv::app::EAppOperationState eState);
 
-    sdv::app::EAppOperationState        m_eState = sdv::app::EAppOperationState::not_started;  ///< The current operation state.
-    sdv::app::IAppEvent*                m_pEvent = nullptr;         ///< Pointer to the app event interface.
-    sdv::core::TModuleID                m_tLoggerModuleID = 0;      ///< ID of the logger module.
-    bool                                m_bEnableAutoSave = false;  ///< When set and when enabled in the system settings, allows
-                                                                    ///< the automatic saving of the configuration.
-    bool                                m_bRunLoop = false;         ///< Used to detect end of running loop function.
-    std::filesystem::path               m_pathLockFile;             ///< Lock file path name.
-    FILE*                               m_pLockFile = nullptr;      ///< Lock file to test for other instances.
-    CTraceFifoStdBuffer                 m_fifoTraceStreamBuffer;    ///< Trace stream buffer to redirect std::log, std::out and
-                                                                    ///< std::err when running as service.
-    bool                                m_bAutoSaveConfig = false;  ///< System setting for automatic saving of the user configuration.
+    sdv::app::EAppOperationState    m_eState = sdv::app::EAppOperationState::not_started;  ///< The current operation state.
+    sdv::app::IAppEvent*            m_pEvent = nullptr;         ///< Pointer to the app event interface.
+    sdv::core::TModuleID            m_tLoggerModuleID = 0;      ///< ID of the logger module.
+    bool                            m_bEnableAutoSave = false;  ///< When set and when enabled in the system settings, allows
+                                                                ///< the automatic saving of the configuration.
+    bool                            m_bRunLoop = false;         ///< Used to detect end of running loop function.
+    std::filesystem::path           m_pathLockFile;             ///< Lock file path name.
+    FILE*                           m_pLockFile = nullptr;      ///< Lock file to test for other instances.
+    CTraceFifoStdBuffer             m_fifoTraceStreamBuffer;    ///< Trace stream buffer to redirect std::log, std::out and
+                                                                ///< std::err when running as service.
+    bool                            m_bAutoSaveConfig = false;  ///< System setting for automatic saving of the user configuration.
+    std::vector<std::pair<std::string, sdv::core::TLinkID>> m_vecConnections; ///< Connection objects that were successfully
+                                                                ///< connected.
+    std::optional<CAccessPermission> m_optpermission;           ///< Main access permission for the core.
 };
 
 /**

@@ -95,8 +95,8 @@ public:
     * @brief Sends data consisting of multiple data chunks via the IPC connection.
     * @param[in] tProxyID Marshall ID of the proxy (source).
     * @param[in] tStubID Marshall ID of the stub (target).
-    * @param[in] rseqInputData Sequence of data buffers to be sent. May be altered during processing to add/change the sequence content
-    * without having to copy the data.
+    * @param[in] rseqInputData Sequence of data buffers to be sent. May be altered during processing to add/change the sequence
+    * content without having to copy the data.
     * @return Returns the results of the call or throws a marshall exception.
     */
     sdv::sequence<sdv::pointer<uint8_t>> MakeCall(sdv::ps::TMarshallID tProxyID, sdv::ps::TMarshallID tStubID,
@@ -155,7 +155,9 @@ private:
     sdv::ipc::IDataSend*                m_pDataSend = nullptr;          ///< Pointer to the send interface.
     std::mutex                          m_mtxCalls;                     ///< Call map protection.
     std::map<uint64_t, SCallEntry&>     m_mapCalls;                     ///< call map.
-    CTaskScheduler                      m_scheduler;                    ///< Scheduler to process incoming calls.
+    CTaskScheduler<sdv::core::secure_thread> m_scheduler;               ///< Scheduler to process incoming calls.
+    sdv::core::IPermissionControl*      m_pPermissionControl = nullptr; ///< Pointer to the permission control interface of the
+                                                                        ///< target system.
 };
 
 #endif // !defined COM_CHANNEL_H

@@ -56,15 +56,15 @@ sdv::IInterfaceAccess* CSharedMemChannelMgnt::Access(const sdv::u8string& ssConn
     sdv::toml::CTOMLParser parser(ssConnectString);
     if (!parser.IsValid()) return nullptr;
 
-    // Is this a configuration provided by the endpoint (uses a "Provider" key), then this is a connection string. Use this
+    // Is this a configuration provided by the endpoint (uses a "ConnectParam" key), then this is a connection string. Use this
     // to connect to the shared memory.
     std::shared_ptr<CConnection> ptrConnection;
-    if (parser.GetDirect("Provider").IsValid())
+    if (parser.GetDirect("ConnectParam").IsValid())
         ptrConnection = std::make_shared<CConnection>(m_watchdog, ssConnectString.c_str());
     else
     {
         std::string ssName = static_cast<std::string>(parser.GetDirect("IpcChannel.Name").GetValue());
-        ptrConnection = std::make_shared<CConnection>(m_watchdog, 0,ssName, false);
+        ptrConnection = std::make_shared<CConnection>(m_watchdog, 0, ssName, false);
     }
     if (!ptrConnection) return {};
     m_watchdog.AddConnection(ptrConnection);

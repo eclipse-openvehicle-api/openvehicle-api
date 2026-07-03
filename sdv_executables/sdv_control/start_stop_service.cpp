@@ -35,8 +35,8 @@ void StartStopServiceHelp(const SContext& rsContext)
             "       sdv_control START <class> <name> [options...]\n\n"
             "Start a complex service with the supplied object name as is defined in the configuration (first usage) or the "
             "supplied class name and with object name assignment and add to the configuration (second usage).\n"
-            "Only complex services can be started. If the service depends on not running other services, these are started as "
-            "well.\n\n");
+            "Only vehicle functions and complex services can be started. If the service depends on not running other services, "
+            "these are started as well.\n\n");
         return;
     }
     if (iequals(rsContext.seqCmdLine[0], "STOP"))
@@ -47,14 +47,13 @@ void StartStopServiceHelp(const SContext& rsContext)
             "       sdv_control STOP <module> [options...]\n\n"
             "Stop the complex service(s) with the supplied object name (first usage), with supplied object ID (second usage), with "
             "supplied class name (third usage) or contained in the module with the supplied module name (fourth usage).\n"
-            "Only complex services can be stopped. Dependent services are stopped as well. If one of object to be stopped is not a "
-            "complex service, the command fails.\n\n");
+            "Only vehicle functions and complex services can be stopped. Dependent services are stopped as well. If one of object "
+            "to be stopped is not a vehicle function or a complex service, the command fails.\n\n");
         return;
     }
     if (!rsContext.bSilent)
         std::cerr << "ERROR: invalid start/stop command..." << std::endl;
 }
-
 
 int StartService(const SContext& rsContext)
 {
@@ -88,7 +87,7 @@ int StartService(const SContext& rsContext)
         ssName = rsContext.seqCmdLine[1];
 
     // Try to connect
-    sdv::TObjectPtr ptrRepository = sdv::com::ConnectToLocalServerRepository(rsContext.uiInstanceID);
+    sdv::TObjectPtr ptrRepository = sdv::com::ConnectToLocalServerRepository();
     if (!ptrRepository)
     {
         if (!rsContext.bSilent)
@@ -154,7 +153,7 @@ int StopService(const SContext& rsContext)
         ssName = rsContext.seqCmdLine[1];
 
     // Try to connect
-    sdv::TObjectPtr ptrRepository = sdv::com::ConnectToLocalServerRepository(rsContext.uiInstanceID);
+    sdv::TObjectPtr ptrRepository = sdv::com::ConnectToLocalServerRepository();
     if (!ptrRepository)
     {
         if (!rsContext.bSilent)

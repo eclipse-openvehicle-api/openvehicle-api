@@ -65,6 +65,7 @@ namespace sdv
             bool Startup(const std::string& rssConfig)
             {
                 IAppControl* pAppControl = core::GetCore() ? core::GetCore<IAppControl>() : nullptr;
+
                 if (!pAppControl) return false;
                 if (m_eState != EAppOperationState::not_started) return false;
                 try
@@ -78,45 +79,6 @@ namespace sdv
                     {
                         m_eContext = pAppContext->GetContextType();
                         m_uiInstanceID = pAppContext->GetInstanceID();
-                        m_uiRetries = pAppContext->GetRetries();
-                    }
-
-                    // Automatically connect to the server
-                    if (m_eContext == EAppContext::external)
-                    {
-                        // Try to connect
-                        m_ptrServerRepository = sdv::com::ConnectToLocalServerRepository(m_uiInstanceID, m_uiRetries);
-                        if (!m_ptrServerRepository)
-                        {
-                            if (!ConsoleIsSilent())
-                                std::cerr << "ERROR: Failed to connect to the server repository." << std::endl;
-                            Shutdown();
-                            return false;
-                        }
-
-                        // Get access to the module control service
-                        sdv::core::IObjectAccess* pObjectAccess = m_ptrServerRepository.GetInterface<sdv::core::IObjectAccess>();
-                        const sdv::core::IRepositoryControl* pRepoControl = nullptr;
-                        if (pObjectAccess)
-                            pRepoControl = sdv::TInterfaceAccessPtr(pObjectAccess->GetObject("RepositoryService")).
-                            GetInterface<sdv::core::IRepositoryControl>();
-                        if (!pRepoControl)
-                        {
-                            if (!ConsoleIsSilent())
-                                std::cerr << "ERROR: Failed to access the server repository." << std::endl;
-                            return false;
-                        }
-
-                        // Link the local repository to the server repository.
-                        sdv::core::ILinkCoreRepository* pLinkCoreRepo =
-                            sdv::core::GetObject<sdv::core::ILinkCoreRepository>("RepositoryService");
-                        if (!pLinkCoreRepo)
-                        {
-                            if (!ConsoleIsSilent())
-                                std::cerr << "ERROR: Cannot link local and server repositories." << std::endl;
-                            return false;
-                        }
-                        pLinkCoreRepo->LinkCoreRepository(m_ptrServerRepository);
                     }
 
                     return bRet;
@@ -154,23 +116,6 @@ namespace sdv
              */
             void Shutdown()
             {
-                // Disconnect local and remote repositories.
-                if (m_ptrServerRepository)
-                {
-                    // Link the local repository to the server repository.
-                    sdv::core::ILinkCoreRepository* pLinkCoreRepo =
-                        sdv::core::GetObject<sdv::core::ILinkCoreRepository>("RepositoryService");
-                    if (!pLinkCoreRepo)
-                    {
-                        if (!ConsoleIsSilent())
-                            std::cerr << "ERROR: Cannot unlink local and server repositories." << std::endl;
-                    } else
-                        pLinkCoreRepo->UnlinkCoreRepository();
-                }
-
-                // Disconnect from the server (if connected at all).
-                m_ptrServerRepository.Clear();
-
                 // Shutdown.
                 IAppControl* pAppControl = core::GetCore() ? core::GetCore<IAppControl>() : nullptr;
                 try
@@ -195,27 +140,85 @@ namespace sdv
             }
 
             /**
+             * @brief Get the absolute path to the currently run executable
+             * @return Absolute std::filesystem::path to the currently run executable
+             */
+            static std::filesystem::path GetAppDirectory()
+            {
+                static std::filesystem::path pathExeDir;
+                if (!pathExeDir.empty())
+                    return pathExeDir;
+#ifdef _WIN32
+                // Windows specific
+                std::wstring ssPath(32768, '\0');
+                GetModuleFileNameW(NULL, ssPath.data(), static_cast<DWORD>(ssPath.size() - 1));
+#elif defined __linux__
+                // Linux specific
+                std::string ssPath(PATH_MAX + 1, '\0');
+                const ssize_t nCount = readlink("/proc/self/exe", ssPath.data(), PATH_MAX);
+                if (nCount < 0 || nCount >= PATH_MAX)
+                    return pathExeDir; // some error
+                ssPath.at(nCount) = '\0';
+#else
+    #error OS is not supported!
+#endif
+                pathExeDir = std::filesystem::path{ssPath.c_str()}.parent_path() / ""; // To finish the folder path with (back)slash
+                return pathExeDir;
+            }
+
+            /**
+             * @brief Get the filename of the currently run executable
+             * @return The filename to the currently run executable
+             */
+            static std::filesystem::path GetAppFilename()
+            {
+                static std::filesystem::path pathExeFilename;
+                if (!pathExeFilename.empty())
+                    return pathExeFilename;
+#ifdef _WIN32
+                // Windows specific
+                std::wstring ssPath(32768, '\0');
+                GetModuleFileNameW(NULL, ssPath.data(), static_cast<DWORD>(ssPath.size() - 1));
+#elif defined __linux__
+                // Linux specific
+                std::string ssPath(PATH_MAX + 1, '\0');
+                const ssize_t nCount = readlink("/proc/self/exe", ssPath.data(), PATH_MAX);
+                if (nCount < 0 || nCount >= PATH_MAX)
+                    return pathExeFilename; // some error
+                ssPath.at(nCount)          = '\0';
+#else
+    #error OS is not supported!
+#endif
+                pathExeFilename = std::filesystem::path{ssPath.c_str()}.filename();
+                return pathExeFilename;
+            }
+
+
+            /**
              * @brief Get the SDV_FRAMEWORK_RUNTIME environment variable for this application.
-             * @return Path directing to the SDV V-API Framework directory if available or an empty path if not.
+             * @remarks If the environment variable is empty or if the variable contains a relative path, the path will be enhanced
+             * with the application path.
+             * @return Absolute path directing to the SDV Vehicle API Framework directory.
              */
             static std::filesystem::path GetFrameworkRuntimeDirectory()
             {
+                std::filesystem::path path;
 #ifdef _WIN32
                 const wchar_t* szFrameworkDir = _wgetenv(L"SDV_FRAMEWORK_RUNTIME");
-                if (!szFrameworkDir) return {};
-                return szFrameworkDir;
+                if (szFrameworkDir) path = szFrameworkDir;
 #elif defined __unix__
                 const char* szFrameworkDir = getenv("SDV_FRAMEWORK_RUNTIME");
-                if (!szFrameworkDir) return {};
-                return szFrameworkDir;
+                if (szFrameworkDir) path = szFrameworkDir;
 #else
     #error The OS is not supported!
 #endif
+                if (path.empty() || path.is_relative()) path = GetAppDirectory() / path;
+                return path.lexically_normal();
             }
 
             /**
              * @brief Set or overwrite the SDV_FRAMEWORK_RUNTIME environment variable for this application.
-             * @param[in] rpathDir Reference of the path directing to the SDV V-API Framework directory.
+             * @param[in] rpathDir Reference of the path directing to the SDV Vehicle API Framework directory.
              */
             static void SetFrameworkRuntimeDirectory(const std::filesystem::path& rpathDir)
             {
@@ -232,26 +235,30 @@ namespace sdv
 
             /**
              * @brief Get the SDV_COMPONENT_INSTALL environment variable for this application.
-             * @return Path directing to the SDV V-API component installation directory if available or an empty path if not.
+             * @remarks If the environment variable is empty, the runtime directory is taken. If the variable contains a relative
+             * path, the path will be enhanced with the application path.
+             * @return Absolute path directing to the SDV Vehicle API component installation directory.
              */
             static std::filesystem::path GetComponentInstallDirectory()
             {
+                std::filesystem::path path;
 #ifdef _WIN32
                 const wchar_t* szComponentDir = _wgetenv(L"SDV_COMPONENT_INSTALL");
-                if (!szComponentDir) return {};
-                return szComponentDir;
+                if (szComponentDir) path = szComponentDir;
 #elif defined __unix__
                 const char* szComponentDir = getenv("SDV_COMPONENT_INSTALL");
-                if (!szComponentDir) return {};
-                return szComponentDir;
+                if (szComponentDir) path = szComponentDir;
 #else
     #error The OS is not supported!
 #endif
+                if (path.empty()) return GetFrameworkRuntimeDirectory();
+                if (path.is_relative()) path = GetAppDirectory() / path;
+                return path.lexically_normal();
             }
 
             /**
              * @brief Set or overwrite the SDV_COMPONENT_INSTALL environment variable for this application.
-             * @param[in] rpathDir Reference of the path directing to the SDV V-API component installation directory.
+             * @param[in] rpathDir Reference of the path directing to the SDV Vehicle API component installation directory.
              */
             static void SetComponentInstallDirectory(const std::filesystem::path& rpathDir)
             {
@@ -527,8 +534,7 @@ namespace sdv
             EAppOperationState      m_eState = EAppOperationState::not_started;     ///< Application state.
             EAppContext             m_eContext = EAppContext::no_context;           ///< Application context.
             uint32_t                m_uiInstanceID = 0u;                            ///< Core instance.
-            uint32_t                m_uiRetries = 0u;                               ///< Number of retries to establish a connection.
-            sdv::TObjectPtr         m_ptrServerRepository;                          ///< Server repository interface.
+            uint32_t                m_uiConnectRetries = 0u;                        ///< Number of retries to establish a connection.
         };
     } // namespace app
 } // namespace sdv

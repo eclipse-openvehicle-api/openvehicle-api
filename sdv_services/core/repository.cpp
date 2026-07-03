@@ -16,12 +16,14 @@
 #include <iostream>
 #include <cassert>
 #include <algorithm>
+#include <optional>
 #include "object_lifetime_control.h"
 #include "../../global/base64.h"
 #include "module_control.h"
 #include "app_config.h"
 #include "app_control.h"
 #include "app_settings.h"
+#include "permission_control.h"
 
 // GetRepository might be redirected for unit tests.
 #ifndef GetRepository
@@ -60,39 +62,154 @@ void CRepository::SetRunningMode()
 
 sdv::IInterfaceAccess* CRepository::GetObject(const sdv::u8string& ssObjectName)
 {
+    auto eAccessPermission = GetPermissionControl().GetCurrentPermission();
+    if (eAccessPermission < sdv::core::EAccessPermission::remote_access)
+        return nullptr;
+
     std::shared_lock<std::shared_mutex> lock(m_mtxObjects);
     auto itService = m_mapServiceObjects.find(ssObjectName);
-    if (itService != m_mapServiceObjects.end()) return (*itService->second)->ptrObject;
+    if (itService != m_mapServiceObjects.end())
+    {
+        // Check access permissions
+        switch ((*itService->second)->sClassInfo.eType)
+        {
+        case sdv::EObjectType::complex_service:
+        case sdv::EObjectType::vehicle_function:
+        case sdv::EObjectType::basic_service:
+        case sdv::EObjectType::sensor:
+        case sdv::EObjectType::actuator:
+            // Allowed for remote access or higher
+            //if (eAccessPermission < sdv::core::EAccessPermission::remote_access)
+            //    return nullptr;
+            break;
+        case sdv::EObjectType::system_object:
+            // Allowed for local access or higher
+            if (eAccessPermission < sdv::core::EAccessPermission::local_access)
+                return nullptr;
+            break;
+        default:
+            // Allowed for full access only
+            if (eAccessPermission != sdv::core::EAccessPermission::full_access)
+                return nullptr;
+        }
+        return (*itService->second)->ptrObject;
+    }
     lock.unlock();
 
     // In case the object is not in the service map and this is a main or isolated application, create the object if the object is
-    // known in the installation manifest and is a system object.
+    // known in the installation manifest.
     auto optManifest = GetAppConfig().FindInstalledComponent(ssObjectName);
-    if (optManifest && optManifest->eType == sdv::EObjectType::system_object)
-        return GetObjectByID(CreateObject(optManifest->ssName, optManifest->ssDefaultObjectName, ""));
+    if (optManifest)
+    {
+        // Check access permissions
+        bool bAutoCreate = false;
+        switch (optManifest->eType)
+        {
+        case sdv::EObjectType::complex_service:
+        case sdv::EObjectType::vehicle_function:
+        case sdv::EObjectType::basic_service:
+        case sdv::EObjectType::sensor:
+        case sdv::EObjectType::actuator:
+            // Automatic component creation only for main application.
+            if (!GetAppSettings().IsMainApplication()) break;
+            bAutoCreate = true;
+            
+            // Allowed for remote access or higher
+            if (eAccessPermission < sdv::core::EAccessPermission::remote_access)
+                return nullptr;
+            break;
+        case sdv::EObjectType::system_object:
+            // Automatic component creation allowed for system objects. The objects themselves have to block in case of unwanted
+            // access by external or isolated applications.
+            bAutoCreate = true;
 
-    // Forward the request to core repository if one is linked here (this can only occur with isolated and external applications).
-    if (!m_ptrCoreRepoAccess) return nullptr;
-    sdv::core::IObjectAccess* pObjectAccess = m_ptrCoreRepoAccess.GetInterface<sdv::core::IObjectAccess>();
-    if (!pObjectAccess) return nullptr;
-    return pObjectAccess->GetObject(ssObjectName);
+            // Allowed for local access or higher
+            if (eAccessPermission < sdv::core::EAccessPermission::local_access)
+                return nullptr;
+            break;
+        default:
+            // Automatic component creation only for main application.
+            if (!GetAppSettings().IsMainApplication())
+                break;
+            bAutoCreate = true;
+
+            // Allowed for full access only
+            if (eAccessPermission != sdv::core::EAccessPermission::full_access)
+                return nullptr;
+        }
+
+        // Create the object if automatic creation is enabled
+        if (bAutoCreate)
+            return GetObjectByID(CreateObject2(optManifest->ssName, optManifest->ssDefaultObjectName, "", true));
+    }
+
+    // Copy the linked repository and then unlock; could cause a deadlock instead.
+    lock.lock();
+    auto lstCoreRepoAccessCopy = m_lstCoreRepoAccess;
+    lock.unlock();
+
+    // If there is a linked core, use the core to get ther object
+    for (auto& rprLink : lstCoreRepoAccessCopy)
+    {
+        sdv::core::IObjectAccess* pObjectAccess = rprLink.second.GetInterface<sdv::core::IObjectAccess>();
+        if (!pObjectAccess) continue;
+        auto* pObject = pObjectAccess->GetObject(ssObjectName);
+        if (pObject) return pObject;
+    }
+    return nullptr;
 }
 
 sdv::IInterfaceAccess* CRepository::GetObjectByID(/*in*/ sdv::core::TObjectID tObjectID)
 {
+    auto eAccessPermission = GetPermissionControl().GetCurrentPermission();
+    if (eAccessPermission < sdv::core::EAccessPermission::remote_access)
+        return nullptr;
+
     // Only controlled objects are allowed to be returned using GetObjectByID.
     std::shared_lock<std::shared_mutex> lock(m_mtxObjects);
     auto itObject = m_mapObjects.find(tObjectID);
     if (itObject != m_mapObjects.end())
-        return itObject->second->bControlled ? itObject->second->ptrObject : nullptr;
+    {
+        // Check access permissions
+        switch (itObject->second->sClassInfo.eType)
+        {
+        case sdv::EObjectType::complex_service:
+        case sdv::EObjectType::vehicle_function:
+        case sdv::EObjectType::basic_service:
+        case sdv::EObjectType::sensor:
+        case sdv::EObjectType::actuator:
+            //// Allowed for remote access or higher
+            //if (eAccessPermission < sdv::core::EAccessPermission::remote_access)
+            //    return nullptr;
+            break;
+        case sdv::EObjectType::system_object:
+            // Allowed for local access or higher
+            if (eAccessPermission < sdv::core::EAccessPermission::local_access)
+                return nullptr;
+            break;
+        default:
+            // Allowed for full access only
+            if (eAccessPermission != sdv::core::EAccessPermission::full_access)
+                return nullptr;
+        }
 
+        return itObject->second->bControlled ? itObject->second->ptrObject : nullptr;
+    }
     // TODO: Deal with overlapping IDs in this and in core process...
 
-    // Forward the request to core repository if one is linked here (this can only occur with isolated and external applications).
-    if (!m_ptrCoreRepoAccess) return nullptr;
-    sdv::core::IObjectAccess* pObjectAccess = m_ptrCoreRepoAccess.GetInterface<sdv::core::IObjectAccess>();
-    if (!pObjectAccess) return nullptr;
-    return pObjectAccess->GetObjectByID(tObjectID);
+    // Copy the linked repository and then unlock; could cause a deadlock instead.
+    auto lstCoreRepoAccessCopy = m_lstCoreRepoAccess;
+    lock.unlock();
+
+    // If there is a linked core, use the core to get ther object
+    for (auto& rprLink : lstCoreRepoAccessCopy)
+    {
+        sdv::core::IObjectAccess* pObjectAccess = rprLink.second.GetInterface<sdv::core::IObjectAccess>();
+        if (!pObjectAccess) continue;
+        auto* pObject = pObjectAccess->GetObjectByID(tObjectID);
+        if (pObject) return pObject;
+    }
+    return nullptr;
 }
 
 sdv::IInterfaceAccess* CRepository::CreateUtility(/*in*/ const sdv::u8string& ssClassName, /*in*/ const sdv::u8string& ssObjectConfig)
@@ -100,6 +217,11 @@ sdv::IInterfaceAccess* CRepository::CreateUtility(/*in*/ const sdv::u8string& ss
     if(ssClassName.empty()) return nullptr;
 
     std::unique_lock<std::shared_mutex> lock(m_mtxObjects);
+
+    // TODO EVE: Currently only allowed for local access. When utilities are instantiated using isolation, also allowed for remote
+    // access.
+    if (GetPermissionControl().GetCurrentPermission() < sdv::core::EAccessPermission::local_access)
+        return nullptr;
 
     // Get a fitting module instance
     std::shared_ptr<CModuleInst> ptrModule = GetModuleControl().FindModuleByClass(ssClassName);
@@ -161,7 +283,7 @@ sdv::IInterfaceAccess* CRepository::CreateUtility(/*in*/ const sdv::u8string& ss
     auto* pObjectControl = ptrObject.GetInterface<sdv::IObjectControl>();
     if (pObjectControl)
     {
-        pObjectControl->Initialize(ssObjectConfig);
+        pObjectControl->Initialize(*ptrObjectEntry);
         if (pObjectControl->GetObjectState() != sdv::EObjectState::initialized)
         {
             // Destroy the object
@@ -193,22 +315,23 @@ sdv::IInterfaceAccess* CRepository::CreateProxyObject(/*in*/ sdv::interface_id i
     // Get a fitting module instance
     std::string ssClassName = "Proxy_" + std::to_string(id);
     std::shared_ptr<CModuleInst> ptrModule = GetModuleControl().FindModuleByClass(ssClassName);
-    if (!ptrModule && m_ptrCoreRepoAccess)
-    {
-        // Request the server for the name of the module.
-        const sdv::core::IRepositoryInfo* pRepInfo = m_ptrCoreRepoAccess.GetInterface<sdv::core::IRepositoryInfo>();
-        if (pRepInfo)
-        {
-            std::string ssModuleName =
-                std::filesystem::u8path(static_cast<std::string>(pRepInfo->FindClass(ssClassName).ssModulePath)).
-                    filename().u8string();
-            if (!ssModuleName.empty())
-            {
-                sdv::core::TModuleID tModule = GetModuleControl().Load(ssModuleName);
-                if (tModule) ptrModule = GetModuleControl().GetModule(tModule);
-            }
-        }
-    }
+    // TODO EVE
+    //if (!ptrModule && m_ptrCoreRepoAccess)
+    //{
+    //    // Request the server for the name of the module.
+    //    const sdv::core::IRepositoryInfo* pRepInfo = m_ptrCoreRepoAccess.GetInterface<sdv::core::IRepositoryInfo>();
+    //    if (pRepInfo)
+    //    {
+    //        std::string ssModuleName =
+    //            std::filesystem::u8path(static_cast<std::string>(pRepInfo->FindClass(ssClassName).ssModulePath)).
+    //                filename().u8string();
+    //        if (!ssModuleName.empty())
+    //        {
+    //            sdv::core::TModuleID tModule = GetModuleControl().Load(ssModuleName);
+    //            if (tModule) ptrModule = GetModuleControl().GetModule(tModule);
+    //        }
+    //    }
+    //}
     if (!ptrModule)
     {
         SDV_LOG_ERROR("Object creation requested but object class was not found \"", ssClassName, "\"!");
@@ -270,7 +393,7 @@ sdv::IInterfaceAccess* CRepository::CreateProxyObject(/*in*/ sdv::interface_id i
     auto* pObjectControl = ptrObject.GetInterface<sdv::IObjectControl>();
     if (pObjectControl)
     {
-        pObjectControl->Initialize("");
+        pObjectControl->Initialize(*ptrObjectEntry);
         if (pObjectControl->GetObjectState() != sdv::EObjectState::initialized)
         {
             // Destroy the object
@@ -302,22 +425,23 @@ sdv::IInterfaceAccess* CRepository::CreateStubObject(/*in*/ sdv::interface_id id
     // Get a fitting module instance
     std::string ssClassName = "Stub_" + std::to_string(id);
     std::shared_ptr<CModuleInst> ptrModule = GetModuleControl().FindModuleByClass(ssClassName);
-    if (!ptrModule && m_ptrCoreRepoAccess)
-    {
-        // Request the server for the name of the module.
-        const sdv::core::IRepositoryInfo* pRepInfo = m_ptrCoreRepoAccess.GetInterface<sdv::core::IRepositoryInfo>();
-        if (pRepInfo)
-        {
-            std::string ssModuleName =
-                std::filesystem::u8path(static_cast<std::string>(pRepInfo->FindClass(ssClassName).ssModulePath)).
-                    filename().u8string();
-            if (!ssModuleName.empty())
-            {
-                sdv::core::TModuleID tModule = GetModuleControl().Load(ssModuleName);
-                if (tModule) ptrModule = GetModuleControl().GetModule(tModule);
-            }
-        }
-    }
+    // TODO EVE
+    //if (!ptrModule && m_ptrCoreRepoAccess)
+    //{
+    //    // Request the server for the name of the module.
+    //    const sdv::core::IRepositoryInfo* pRepInfo = m_ptrCoreRepoAccess.GetInterface<sdv::core::IRepositoryInfo>();
+    //    if (pRepInfo)
+    //    {
+    //        std::string ssModuleName =
+    //            std::filesystem::u8path(static_cast<std::string>(pRepInfo->FindClass(ssClassName).ssModulePath)).
+    //                filename().u8string();
+    //        if (!ssModuleName.empty())
+    //        {
+    //            sdv::core::TModuleID tModule = GetModuleControl().Load(ssModuleName);
+    //            if (tModule) ptrModule = GetModuleControl().GetModule(tModule);
+    //        }
+    //    }
+    //}
     if (!ptrModule)
     {
         SDV_LOG_ERROR("Object creation requested but object class was not found \"", ssClassName, "\"!");
@@ -378,7 +502,7 @@ sdv::IInterfaceAccess* CRepository::CreateStubObject(/*in*/ sdv::interface_id id
     auto* pObjectControl = ptrObject.GetInterface<sdv::IObjectControl>();
     if (pObjectControl)
     {
-        pObjectControl->Initialize("");
+        pObjectControl->Initialize(*ptrObjectEntry);
         if (pObjectControl->GetObjectState() != sdv::EObjectState::initialized)
         {
             // Destroy the object
@@ -414,11 +538,11 @@ sdv::core::TObjectID CRepository::CreateObject(const sdv::u8string& ssClassName,
 
     Build dependency list and do these checks on dependent objects as well
     */
-    return CreateObject2(ssClassName, ssObjectName, ssObjectConfig);
+    return CreateObject2(ssClassName, ssObjectName, ssObjectConfig, false);
 }
 
 sdv::core::TObjectID CRepository::CreateObject2(const sdv::u8string& ssClassName, const sdv::u8string& ssObjectName,
-    const sdv::u8string& ssObjectConfig)
+    const sdv::u8string& ssObjectConfig, bool bIndirect)
 {
     // TODO EVE: Link to core repo. Allow only creation of one object if not already created before...
     // Add support for automatic app control shutdown when utility is closed in case of isolated app.
@@ -457,21 +581,29 @@ sdv::core::TObjectID CRepository::CreateObject2(const sdv::u8string& ssClassName
     switch (optClassInfo->eType)
     {
     case sdv::EObjectType::system_object:
+        // Only allowed with full access
+        bError = !bIndirect && (GetPermissionControl().GetCurrentPermission() < sdv::core::EAccessPermission::full_access);
         break;
     case sdv::EObjectType::device:
     case sdv::EObjectType::platform_abstraction:
     case sdv::EObjectType::vehicle_bus:
-        bError = !bDeviceAndBasicServiceAllowed;
+        // Only allowed with full access
+        bError = !bIndirect && (GetPermissionControl().GetCurrentPermission() < sdv::core::EAccessPermission::full_access);
+        bError |= !bDeviceAndBasicServiceAllowed;
         break;
     case sdv::EObjectType::basic_service:
     case sdv::EObjectType::sensor:
     case sdv::EObjectType::actuator:
-        bError = !bDeviceAndBasicServiceAllowed;
+        // Only allowed with full access
+        bError = !bIndirect && (GetPermissionControl().GetCurrentPermission() < sdv::core::EAccessPermission::full_access);
+        bError |= !bDeviceAndBasicServiceAllowed;
         break;
     case sdv::EObjectType::complex_service:
     case sdv::EObjectType::vehicle_function:
+        // Only allowed with local access
+        bError = !bIndirect && (GetPermissionControl().GetCurrentPermission() < sdv::core::EAccessPermission::local_access);
         bIsolate = GetAppSettings().IsMainApplication();
-        bError = !bComplexServiceAllowed;
+        bError |= !bComplexServiceAllowed;
         m_bIsoObjectLoaded = true;
         break;
     default:
@@ -498,8 +630,11 @@ sdv::core::TObjectID CRepository::CreateObject2(const sdv::u8string& ssClassName
     auto itPreviousService = m_mapServiceObjects.find(ssObjectName2);
     if (itPreviousService != m_mapServiceObjects.end())
     {
+        // Get the service pointer
+        std::shared_ptr<SObjectEntry> ptrService = *itPreviousService->second;
+
         // Object entry is valid?
-        if (!*itPreviousService->second)
+        if (!ptrService)
         {
             // This should not occur... there is a previous object in the service map, but the object is empty.
             SDV_LOG_ERROR("Object creation requested for class \"", ssClassName, "\", but object with the same name \"",
@@ -508,12 +643,15 @@ sdv::core::TObjectID CRepository::CreateObject2(const sdv::u8string& ssClassName
         }
 
         // Trying to create an object with the same name is not an error if the classes are identical.
-        if ((*itPreviousService->second)->sClassInfo.ssName == ssClassName)
-            return (*itPreviousService->second)->tObjectID;
+        const auto& rsClassInfo = ptrService->sClassInfo;
+        if (rsClassInfo.ssName == ssClassName ||
+            std::find(rsClassInfo.seqClassAliases.begin(), rsClassInfo.seqClassAliases.end(), ssClassName) !=
+                rsClassInfo.seqClassAliases.end())
+            return ptrService->tObjectID;
 
         // Object name was already used by another class. This is an error.
         SDV_LOG_ERROR("Object creation requested for class \"", ssClassName, "\", but object with the same name \"",
-            ssObjectName2, "\" was already instantiated for class \"", (*itPreviousService->second)->sClassInfo.ssName,
+            ssObjectName2, "\" was already instantiated for class \"", rsClassInfo.ssName,
             "\"!");
         return 0;
     }
@@ -549,14 +687,18 @@ sdv::core::TObjectID CRepository::CreateObject2(const sdv::u8string& ssClassName
 sdv::core::TObjectID CRepository::CreateObjectFromModule(/*in*/ sdv::core::TModuleID tModuleID,
     /*in*/ const sdv::u8string& ssClassName, /*in*/ const sdv::u8string& ssObjectName, /*in*/ const sdv::u8string& ssObjectConfig)
 {
-    if(ssClassName.empty()) return false;
+    if(ssClassName.empty()) return 0u;
+
+    // Only allowed with full access
+    if (GetPermissionControl().GetCurrentPermission() != sdv::core::EAccessPermission::full_access)
+        return 0u;
 
     // Get a fitting module instance
     std::shared_ptr<CModuleInst> ptrModule = GetModuleControl().GetModule(tModuleID);
     if (!ptrModule)
     {
         SDV_LOG_ERROR("Object creation requested but object class was not found \"", ssClassName, "\"!");
-        return false;
+        return 0u;
     }
 
     // Check the class type
@@ -564,7 +706,7 @@ sdv::core::TObjectID CRepository::CreateObjectFromModule(/*in*/ sdv::core::TModu
     if (!optClassInfo)
     {
         SDV_LOG_ERROR("Object creation requested but object class was not found \"", ssClassName, "\"!");
-        return false;
+        return 0u;
     }
     bool bError = false;
     bool bDeviceAndBasicServiceAllowed = GetAppSettings().IsMainApplication() || GetAppSettings().IsStandaloneApplication() ||
@@ -602,7 +744,7 @@ sdv::core::TObjectID CRepository::CreateObjectFromModule(/*in*/ sdv::core::TModu
         // Utilities and marshall objects cannot be created using the CreateObject function.
         SDV_LOG_ERROR("Creation of an object of invalid type \"", sdv::ObjectType2String(optClassInfo->eType),
             "\" requested for class \"", ssClassName, "\"!");
-        return 0;
+        return 0u;
     }
 
     // Check for an object name. If not existing get the default name (being either one specified by the object or the class name).
@@ -626,7 +768,7 @@ sdv::core::TObjectID CRepository::CreateObjectFromModule(/*in*/ sdv::core::TModu
                 "\", but object with the same name \"",
                 ssObjectName2,
                 "\" was already instantiated, but cannot be found!");
-            return 0;
+            return 0u;
         }
 
         // Trying to create an object with the same name is not an error if the classes are identical.
@@ -641,7 +783,7 @@ sdv::core::TObjectID CRepository::CreateObjectFromModule(/*in*/ sdv::core::TModu
             "\" was already instantiated for class \"",
             (*itPreviousService->second)->sClassInfo.ssName,
             "\"!");
-        return 0;
+        return 0u;
     }
 
     // Check with singleton objects if the object was already instantiated.
@@ -657,7 +799,7 @@ sdv::core::TObjectID CRepository::CreateObjectFromModule(/*in*/ sdv::core::TModu
                 SDV_LOG_ERROR("Object creation requested but object from the same class \"",
                     ssClassName,
                     "\" was already instantiated and only one instance is allowed!");
-                return 0;
+                return 0u;
             }
         }
     }
@@ -671,17 +813,41 @@ sdv::core::TObjectID CRepository::CreateObjectFromModule(/*in*/ sdv::core::TModu
 
 bool CRepository::DestroyObject(/*in*/ const sdv::u8string& ssObjectName)
 {
-    return DestroyObject2(ssObjectName);
+    TDeferredObjectDestructionList lstDeferredObjectDestruction;
+    bool bRes = DestroyObject2(ssObjectName, false, lstDeferredObjectDestruction);
+    for (auto& rprObject : lstDeferredObjectDestruction)
+        rprObject.first->ptrModule->DestroyObject(rprObject.second);
+    return bRes;
 }
 
-bool CRepository::DestroyObject2(/*in*/ const sdv::u8string& ssObjectName)
+bool CRepository::DestroyObject2(const sdv::u8string& ssObjectName, bool bIndirect,
+    TDeferredObjectDestructionList& rlstDeferredObjectDestruction)
 {
     std::unique_lock<std::shared_mutex> lock(m_mtxObjects);
     auto itService = m_mapServiceObjects.find(ssObjectName);
     if (itService == m_mapServiceObjects.end()) return false;
+    auto ptrObjectEntry = *itService->second;
+
+    // When directly called, check the access permissions
+    if (!bIndirect)
+    {
+        switch (ptrObjectEntry->sClassInfo.eType)
+        {
+        case sdv::EObjectType::complex_service:
+        case sdv::EObjectType::vehicle_function:
+            // Only allowed having local or higher access permission
+            if (GetPermissionControl().GetCurrentPermission() < sdv::core::EAccessPermission::local_access)
+                return false;
+            break;
+        default:
+            // Only allowed having full access permission
+            if (GetPermissionControl().GetCurrentPermission() != sdv::core::EAccessPermission::full_access)
+                return false;
+            break;
+        }
+    }
 
     // Print info
-    auto ptrObjectEntry = *itService->second;
     if (GetAppSettings().IsConsoleVerbose())
         std::cout << "Destroy a " << sdv::ObjectType2String(ptrObjectEntry->sClassInfo.eType) << " #" << ptrObjectEntry->tObjectID <<
             " of type " << ptrObjectEntry->sClassInfo.ssName << " with the name " << ssObjectName << std::endl;
@@ -717,12 +883,24 @@ bool CRepository::DestroyObject2(/*in*/ const sdv::u8string& ssObjectName)
             lock.unlock();
 
             // Only controlled objects can be destroyed this way.
-            if (ptrDependingObject->bControlled) DestroyObject(ptrDependingObject->ssName);
+            if (ptrDependingObject->bControlled) DestroyObject2(ptrDependingObject->ssName, false, rlstDeferredObjectDestruction);
         }
     };
+
+    // Static dependance from object class
     fnDestroyDependingObjects(GetDependingObjectInstancesByClass(ptrObjectEntry->sClassInfo.ssName));
     if (ptrObjectEntry->sClassInfo.ssName != ptrObjectEntry->sClassInfo.ssDefaultObjectName)
         fnDestroyDependingObjects(GetDependingObjectInstancesByClass(ptrObjectEntry->sClassInfo.ssDefaultObjectName));
+
+    // Dynamic dependance from object entry
+    std::vector<sdv::core::TObjectID> vecDependingObjects;
+    for (const std::string& rssDependingObject : ptrObjectEntry->setDependentObjects)
+    {
+        auto itObject = m_mapServiceObjects.find(rssDependingObject);
+        if (itObject != m_mapServiceObjects.end())
+            vecDependingObjects.push_back((*itObject->second)->tObjectID);
+    }
+    fnDestroyDependingObjects(vecDependingObjects);
 
     // Shutdown the object (not all objects expose IObjectControl).
     auto* pObjectControl = ptrObjectEntry->ptrObject.GetInterface<sdv::IObjectControl>();
@@ -735,7 +913,8 @@ bool CRepository::DestroyObject2(/*in*/ const sdv::u8string& ssObjectName)
         sdv::IInterfaceAccess* pObject = ptrObjectEntry->ptrObject;
         if (ptrObjectEntry->ptrIsoMon)
             pObject = ptrObjectEntry->ptrIsoMon->GetContainedObject();
-        ptrObjectEntry->ptrModule->DestroyObject(pObject);
+        rlstDeferredObjectDestruction.push_back(std::make_pair(ptrObjectEntry, pObject));
+        //ptrObjectEntry->ptrModule->DestroyObject(pObject);
     }
 
     return true;
@@ -805,15 +984,22 @@ sdv::core::TObjectID CRepository::RegisterObject(IInterfaceAccess* pObjectIfc, c
     return tObjectID;
 }
 
-void CRepository::LinkCoreRepository(/*in*/ sdv::IInterfaceAccess* pCoreRepository)
+sdv::core::TLinkID CRepository::LinkCoreRepository(/*in*/ sdv::IInterfaceAccess* pCoreRepository)
 {
-    if (!pCoreRepository) return;
-    m_ptrCoreRepoAccess = pCoreRepository;
+    if (!pCoreRepository) return 0;
+    std::unique_lock<std::shared_mutex> lock(m_mtxObjects);
+    sdv::core::TLinkID tLinkID = CreateObjectID();
+    m_lstCoreRepoAccess.push_back(std::make_pair(tLinkID, pCoreRepository));
+    return tLinkID;
 }
 
-void CRepository::UnlinkCoreRepository()
+void CRepository::UnlinkCoreRepository(sdv::core::TLinkID tLinkID)
 {
-    m_ptrCoreRepoAccess = nullptr;
+    std::unique_lock<std::shared_mutex> lock(m_mtxObjects);
+    auto itLink = std::find_if(
+        m_lstCoreRepoAccess.begin(), m_lstCoreRepoAccess.end(), [&](const auto rprLink)
+        { return rprLink.first == tLinkID; });
+    m_lstCoreRepoAccess.erase(itLink);
 }
 
 sdv::SClassInfo CRepository::FindClass(/*in*/ const sdv::u8string& ssClassName) const
@@ -824,29 +1010,40 @@ sdv::SClassInfo CRepository::FindClass(/*in*/ const sdv::u8string& ssClassName) 
     if (GetAppSettings().IsMainApplication() || GetAppSettings().IsIsolatedApplication())
     {
         auto optManifest = GetAppConfig().FindInstalledComponent(ssClassName);
-        if (!optManifest) return {};
-        return *optManifest;
+        if (optManifest)
+            return *optManifest;
+    }
+    else
+    {
+        // Get the information through the module.
+        auto ptrModule = GetModuleControl().FindModuleByClass(ssClassName);
+        if (ptrModule)
+        {
+            auto optClassInfo = ptrModule->GetClassInfo(ssClassName);
+            if (optClassInfo) return *optClassInfo;
+        }
     }
 
-    // Get the information through the module.
-    auto ptrModule = GetModuleControl().FindModuleByClass(ssClassName);
-    if (!ptrModule) return {};
-    auto optClassInfo = ptrModule->GetClassInfo(ssClassName);
-    if (!optClassInfo) return {};
-    return *optClassInfo;
+    // Copy the linked repository and then unlock; could cause a deadlock instead.
+    auto lstCoreRepoAccessCopy = m_lstCoreRepoAccess;
+    lock.unlock();
+
+    // If there is a linked core, use the core to get class list
+    for (auto& rprLink : lstCoreRepoAccessCopy)
+    {
+        const sdv::core::IRepositoryInfo* pCoreRepoInfo = rprLink.second.GetInterface<sdv::core::IRepositoryInfo>();
+        sdv::SClassInfo sInfo = pCoreRepoInfo->FindClass(ssClassName);
+        if (!sInfo.ssName.empty()) return sInfo;
+    }
+
+    // Nothing found
+    return {};
 }
 
 sdv::sequence<sdv::core::SObjectInfo> CRepository::GetObjectList() const
 {
     std::shared_lock<std::shared_mutex> lock(m_mtxObjects);
     sdv::sequence<sdv::core::SObjectInfo> seqObjects;
-
-    // If there is a linked core, use the core to get object list
-    if (m_ptrCoreRepoAccess)
-    {
-        const sdv::core::IRepositoryInfo* pCoreRepoInfo = m_ptrCoreRepoAccess.GetInterface<sdv::core::IRepositoryInfo>();
-        return pCoreRepoInfo ? pCoreRepoInfo->GetObjectList() : seqObjects;
-    }
 
     // Add object function
     auto fnAddObject = [&seqObjects](const std::shared_ptr<SObjectEntry>& rptrObjectEntry)
@@ -878,6 +1075,21 @@ sdv::sequence<sdv::core::SObjectInfo> CRepository::GetObjectList() const
     for (const auto& prLocalObject : m_mapLocalObjects)
         fnAddObject(prLocalObject.second);
 
+    // Copy the linked repository and then unlock; could cause a deadlock instead.
+    auto lstCoreRepoAccessCopy = m_lstCoreRepoAccess;
+    lock.unlock();
+
+    // If there is a linked core, use the core to get object list
+    for (auto& rprLink : lstCoreRepoAccessCopy)
+    {
+        const sdv::core::IRepositoryInfo* pCoreRepoInfo = rprLink.second.GetInterface<sdv::core::IRepositoryInfo>();
+        if (pCoreRepoInfo)
+        {
+            auto seqListRemote = pCoreRepoInfo->GetObjectList();
+            seqObjects.insert(seqObjects.end(), seqListRemote.begin(), seqListRemote.end());
+        }
+    }
+
     return seqObjects;
 }
 
@@ -885,54 +1097,78 @@ sdv::core::SObjectInfo CRepository::GetObjectInfo(/*in*/ sdv::core::TObjectID tO
 {
     std::shared_lock<std::shared_mutex> lock(m_mtxObjects);
 
-    // If there is a linked core, use the core to get object info
-    if (m_ptrCoreRepoAccess)
+    // Use the internal object map for this.
+    sdv::core::SObjectInfo sInfo{};
+    auto itObject = m_mapObjects.find(tObjectID);
+    if (itObject != m_mapObjects.end())
     {
-        const sdv::core::IRepositoryInfo* pCoreRepoInfo = m_ptrCoreRepoAccess.GetInterface<sdv::core::IRepositoryInfo>();
-        return pCoreRepoInfo ? pCoreRepoInfo->GetObjectInfo(tObjectID) : sdv::core::SObjectInfo{};
+        if (!itObject->second) return {};
+
+        // Fill in information
+        sInfo.tObjectID = itObject->second->tObjectID;
+        sInfo.tModuleID = itObject->second->ptrModule ? itObject->second->ptrModule->GetModuleID() : 0;
+        sInfo.sClassInfo = itObject->second->sClassInfo;
+        sInfo.ssObjectName = itObject->second->ssName;
+        sInfo.ssObjectConfig = itObject->second->ssConfig;
+        sInfo.uiFlags = 0;
+        if (itObject->second->bControlled)
+            sInfo.uiFlags |= static_cast<uint32_t>(sdv::core::EObjectInfoFlags::object_controlled);
+        if (!itObject->second->ptrModule)
+            sInfo.uiFlags |= static_cast<uint32_t>(sdv::core::EObjectInfoFlags::object_foreign);
+        if (!itObject->second->bIsolated)
+            sInfo.uiFlags |= static_cast<uint32_t>(sdv::core::EObjectInfoFlags::object_isolated);
+
+        return sInfo;
     }
 
-    // Use the internal object map for this.
-    auto itObject = m_mapObjects.find(tObjectID);
-    if (itObject == m_mapObjects.end()) return {};
-    if (!itObject->second) return {};
+    // Copy the linked repository and then unlock; could cause a deadlock instead.
+    auto lstCoreRepoAccessCopy = m_lstCoreRepoAccess;
+    lock.unlock();
 
-    // Fill in information
-    sdv::core::SObjectInfo sInfo{};
-    sInfo.tObjectID = itObject->second->tObjectID;
-    sInfo.tModuleID = itObject->second->ptrModule ? itObject->second->ptrModule->GetModuleID() : 0;
-    sInfo.sClassInfo = itObject->second->sClassInfo;
-    sInfo.ssObjectName = itObject->second->ssName;
-    sInfo.ssObjectConfig = itObject->second->ssConfig;
-    sInfo.uiFlags = 0;
-    if (itObject->second->bControlled)
-        sInfo.uiFlags |= static_cast<uint32_t>(sdv::core::EObjectInfoFlags::object_controlled);
-    if (!itObject->second->ptrModule)
-        sInfo.uiFlags |= static_cast<uint32_t>(sdv::core::EObjectInfoFlags::object_foreign);
-    if (!itObject->second->bIsolated)
-        sInfo.uiFlags |= static_cast<uint32_t>(sdv::core::EObjectInfoFlags::object_isolated);
+    // If there is a linked core, use the core to get object info
+    for (auto& rprLink : lstCoreRepoAccessCopy)
+    {
+        const sdv::core::IRepositoryInfo* pCoreRepoInfo = rprLink.second.GetInterface<sdv::core::IRepositoryInfo>();
+        if (pCoreRepoInfo)
+        {
+            sInfo = pCoreRepoInfo->GetObjectInfo(tObjectID);
+            if (sInfo.tObjectID == tObjectID) return sInfo;
+        }
+    }
 
-    return sInfo;
+    // Info not found
+    return {};
 }
 
 sdv::core::SObjectInfo CRepository::FindObject(/*in*/ const sdv::u8string& ssObjectName) const
 {
     std::shared_lock<std::shared_mutex> lock(m_mtxObjects);
 
-    // If there is a linked core, use the core to get object info
-    if (m_ptrCoreRepoAccess)
-    {
-        const sdv::core::IRepositoryInfo* pCoreRepoInfo = m_ptrCoreRepoAccess.GetInterface<sdv::core::IRepositoryInfo>();
-        return pCoreRepoInfo ? pCoreRepoInfo->FindObject(ssObjectName) : sdv::core::SObjectInfo{};
-    }
-
     // Use internal service map for this.
     auto itService = m_mapServiceObjects.find(ssObjectName);
-    if (itService == m_mapServiceObjects.end()) return {};
-    auto ptrObjectEntry = *itService->second;
-    if (!ptrObjectEntry) return {};
+    if (itService != m_mapServiceObjects.end())
+    {
+        auto ptrObjectEntry = *itService->second;
+        if (!ptrObjectEntry) return {};
+        return GetObjectInfo(ptrObjectEntry->tObjectID);
+    }
+
+    // Copy the linked repository and then unlock; could cause a deadlock instead.
+    auto lstCoreRepoAccessCopy = m_lstCoreRepoAccess;
     lock.unlock();
-    return GetObjectInfo(ptrObjectEntry->tObjectID);
+
+    // If there is a linked core, use the core to get object info
+    for (auto& rprLink : lstCoreRepoAccessCopy)
+    {
+        const sdv::core::IRepositoryInfo* pCoreRepoInfo = rprLink.second.GetInterface<sdv::core::IRepositoryInfo>();
+        if (pCoreRepoInfo)
+        {
+            sdv::core::SObjectInfo sInfo = pCoreRepoInfo->FindObject(ssObjectName);
+            if (sInfo.tObjectID) return sInfo;
+        }
+    }
+
+    return {};
 }
 
 void CRepository::OnDestroyObject(sdv::IInterfaceAccess* pObject)
@@ -998,9 +1234,10 @@ void CRepository::DestroyAllObjects(const std::vector<std::string>& rvecIgnoreOb
     lock.unlock();
 
     // Destroy the objects in reverse order
+    TDeferredObjectDestructionList lstDeferredObjectDestruction;
     while (lstCopy.size())
     {
-        std::string ssObjectName = lstCopy.back() ? lstCopy.back()->ssName : std::string{};
+        sdv::u8string ssObjectName = lstCopy.back() ? lstCopy.back()->ssName : sdv::u8string{};
         lstCopy.pop_back();
         if (ssObjectName.empty()) continue;
 
@@ -1009,7 +1246,7 @@ void CRepository::DestroyAllObjects(const std::vector<std::string>& rvecIgnoreOb
             continue;
 
         // Destroy the object... -> call the repository function to remove it from the list.
-        DestroyObject(ssObjectName);
+        DestroyObject2(ssObjectName, true, lstDeferredObjectDestruction);
 
         // Needs force!
         if (bForce)
@@ -1037,6 +1274,34 @@ void CRepository::DestroyAllObjects(const std::vector<std::string>& rvecIgnoreOb
             m_mapObjects.erase(ptrObjectEntry->tObjectID);
             lock.unlock();
         }
+    }
+    for (auto& rprObject : lstDeferredObjectDestruction)
+        rprObject.first->ptrModule->DestroyObject(rprObject.second);
+}
+
+void CRepository::AddObjectDependency(/*in*/ const sdv::u8string& ssObjectName, /*in*/ const sdv::u8string& ssDependsOnObject)
+{
+    std::unique_lock<std::shared_mutex> lock(m_mtxObjects);
+    auto itService = m_mapServiceObjects.find(ssDependsOnObject);
+    if (itService != m_mapServiceObjects.end())
+    {
+        auto ptrObjectEntry = *itService->second;
+        if (!ptrObjectEntry) return;
+        auto itDependsOn = ptrObjectEntry->setDependentObjects.find(ssObjectName);
+        if (itDependsOn == ptrObjectEntry->setDependentObjects.end())
+            ptrObjectEntry->setDependentObjects.insert(ssObjectName);
+    }
+}
+
+void CRepository::RemoveObjectDependency(/*in*/ const sdv::u8string& ssObjectName, /*in*/ const sdv::u8string& ssDependsOnObject)
+{
+    std::unique_lock<std::shared_mutex> lock(m_mtxObjects);
+    auto itService = m_mapServiceObjects.find(ssDependsOnObject);
+    if (itService != m_mapServiceObjects.end())
+    {
+        auto ptrObjectEntry = *itService->second;
+        if (!ptrObjectEntry) return;
+        ptrObjectEntry->setDependentObjects.erase(ssObjectName);
     }
 }
 
@@ -1100,8 +1365,9 @@ sdv::core::EConfigProcessResult CRepository::StartFromConfig(const CAppConfigFil
     // Destroy the objects when an error occurred during loading.
     if (!bAllowPartialLoad && nFail)
     {
+        TDeferredObjectDestructionList lstDeferredObjectDestruction;
         for (const std::string& rssName : vecLoadedObjects)
-            DestroyObject(rssName);
+            DestroyObject2(rssName, true, lstDeferredObjectDestruction);
         return sdv::core::EConfigProcessResult::failed;
     }
 
@@ -1185,11 +1451,14 @@ sdv::core::TObjectID CRepository::CreateIsolatedObject(const sdv::SClassInfo& rs
         sdv::TInterfaceAccessPtr(GetObject("CommunicationControl")).GetInterface<sdv::com::IConnectionControl>();
     if (!pConnectionControl) return 0;
     sdv::u8string ssConnectionString;
+    std::optional<CAccessPermission> optPermissionObject =
+        GetPermissionControl().CreatePermissionObject(sdv::core::EAccessPermission::local_access);
     sdv::com::TConnectionID tConnection =
         pConnectionControl->CreateServerConnection(sdv::com::EChannelType::local_channel,
             sdv::core::GetObject("RepositoryService"), 5000, ssConnectionString);
     if (!tConnection.uiControl) return 0;
     if (ssConnectionString.empty()) return 0;
+    optPermissionObject.reset();
 
     // Create the isolation process configuration
     std::stringstream sstreamConfig;
@@ -1298,7 +1567,10 @@ sdv::core::TObjectID CRepository::InternalCreateObject(const std::shared_ptr<CMo
     if (!ptrObject)
     {
         // Destroy the object again
-        DestroyObject(rssObjectName);
+        TDeferredObjectDestructionList lstDeferredObjectDestruction;
+        DestroyObject2(rssObjectName, true, lstDeferredObjectDestruction);
+        for (auto& rprObject : lstDeferredObjectDestruction)
+            rprObject.first->ptrModule->DestroyObject(rprObject.second);
         return 0;
     }
 
@@ -1306,7 +1578,7 @@ sdv::core::TObjectID CRepository::InternalCreateObject(const std::shared_ptr<CMo
     auto* pObjectControl = ptrObject.GetInterface<sdv::IObjectControl>();
     if (pObjectControl)
     {
-        pObjectControl->Initialize(rssObjectConfig);
+        pObjectControl->Initialize(*ptrObjectEntry);
         if (pObjectControl->GetObjectState() != sdv::EObjectState::initialized)
         {
             // Shutdown the object (even if the initialization didn't work properly).
@@ -1315,8 +1587,8 @@ sdv::core::TObjectID CRepository::InternalCreateObject(const std::shared_ptr<CMo
             // Destroy the object
             rptrModule->DestroyObject(ptrObject);
 
-            // Destroy the object again
-            DestroyObject(rssObjectName);
+            //// Destroy the object again
+            //DestroyObject2(rssObjectName, true);
             return 0;
         }
         switch (GetAppControl().GetOperationState())
@@ -1350,14 +1622,7 @@ sdv::core::TObjectID CRepository::InternalCreateObject(const std::shared_ptr<CMo
 
 sdv::core::TObjectID CRepository::CreateObjectID()
 {
-    static sdv::core::TObjectID tCurrent = 0;
-    if (!tCurrent)
-    {
-        std::srand(static_cast<unsigned int>(time(0)));
-        tCurrent = 0;
-        while (!tCurrent) tCurrent = std::rand();
-    }
-    return ++tCurrent;
+    return m_idgen.Generate();
 }
 
 std::vector<sdv::core::TObjectID> CRepository::GetDependingObjectInstancesByClass(const std::string& rssClass)
@@ -1378,6 +1643,7 @@ std::vector<sdv::core::TObjectID> CRepository::GetDependingObjectInstancesByClas
 bool CRepositoryService::EnableRepositoryObjectControl()
 {
     return GetAppSettings().IsMainApplication() ||
+        GetAppSettings().IsMaintenanceApplication() ||
         GetAppSettings().IsStandaloneApplication() ||
         GetAppSettings().IsEssentialApplication() ||
         GetAppSettings().IsIsolatedApplication();

@@ -118,7 +118,7 @@ private:
      */
     void PlaybackFunc(const asc::SCanMessage& rsMsg);
 
-    std::thread                                 m_threadReceive;            ///< Receive thread.
+    sdv::core::secure_thread                    m_threadReceive;            ///< Receive thread.
     mutable std::mutex                          m_mtxReceivers;             ///< Protect the receiver set.
     std::set<sdv::can::IReceive*>               m_setReceivers;             ///< Set with receiver interfaces.
     mutable std::mutex                          m_mtxInterfaces;            ///< Protect the nodes set.
