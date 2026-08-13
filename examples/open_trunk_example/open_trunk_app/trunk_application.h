@@ -22,10 +22,12 @@ public:
 
     /**
     * @brief Start and initialize the application control and load vehicle devices and basic services
+    * @param[in] bSimulate used in case it is running as a standalone application
+    *                      if false an asc file is used for setting the input speed, otherwise a simulation thread 
     * @param[in] uiInstance Instance number the application will connect to. 0 will start a standalone application 
     * @return Return true on success otherwise false
     */
-    bool Initialize(uint32_t uiInstance);
+    bool Initialize(bool bSimulate, uint32_t uiInstance);
 
     /**
     * @brief After initialization/configuration the system mode needs to be set to running mode
@@ -37,6 +39,11 @@ public:
     */
     void Shutdown();
 
+    /**
+     * @brief Starts a thread to set the speed value.
+     */    
+    void StartSimulation();
+
 private:
 
     /**
@@ -46,6 +53,11 @@ private:
     bool IsSDVFrameworkEnvironmentSet();
 
     /**
+     * @brief Provide simulated signals until m_bRunning is disabled.
+     */
+    void SimulateThreadFunction();    
+
+    /**
      * @brief Load config file and register vehicle device and basic service.
      * @param[in] inputMsg message string to be printed on console in case of success and failure
      * @param[in] configFileName config toml file name
@@ -53,6 +65,11 @@ private:
      */
     bool LoadConfigFile(const std::string& inputMsg, const std::string& configFileName);
 
-    sdv::app::CAppControl m_appcontrol;           ///< App-control of SDV V-API.
-    bool                  m_bInitialized = false; ///< Set when initialized.
+    sdv::app::CAppControl    m_appcontrol;               ///< App-control of Eclipse Open Vehicle-API.
+    bool                     m_bInitialized = false;     ///< Set when initialized.
+
+    sdv::core::CSignal       m_signalSpeed;              ///< Vehicle speed signal (input) - simulated datalink
+    sdv::core::CSignal       m_signalTrunk;              ///< Trunk signal (output) - simulated datalink
+    std::atomic_bool         m_bSimulateRunning = false; ///< When set, the simulation thread is running.    
+    sdv::core::secure_thread m_threadSimulate;           ///< Simulation datalink thread.    
 };

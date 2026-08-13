@@ -43,7 +43,7 @@ bool CTrunkControl::IsSDVFrameworkEnvironmentSet()
     return false;
 }
 
-bool CTrunkControl::Initialize(uint32_t uiInstance)
+bool CTrunkControl::Initialize(bool bSimulate, uint32_t uiInstance)
 {
     if (m_bInitialized) 
         return true;
@@ -54,7 +54,7 @@ bool CTrunkControl::Initialize(uint32_t uiInstance)
         m_appcontrol.SetFrameworkRuntimeDirectory("../../bin");
     }
 
-    if (uiInstance != 0)
+    if (uiInstance != 0 && !bSimulate)
     {
         std::stringstream sstreamAppConfig;
         sstreamAppConfig << "[Application]" << std::endl;
@@ -76,8 +76,17 @@ bool CTrunkControl::Initialize(uint32_t uiInstance)
         bool bResult = LoadConfigFile("Load dispatch service: ", "data_dispatch_trunk.toml");
         bResult &= LoadConfigFile("Load task_timer_trunk: ", "task_timer_trunk.toml");
 
-        bResult &= LoadConfigFile("Load can_com_simulation_trunk: ", "can_com_simulation_trunk.toml");
-        bResult &= LoadConfigFile("Load data_link_trunk: ", "data_link_trunk.toml");
+        if (bSimulate)
+        {
+            sdv::core::CDispatchService dispatch;
+            m_signalSpeed = dispatch.RegisterRxSignal("CAN_Input.Speed");
+            m_signalTrunk = dispatch.RegisterTxSignal("CAN_Output.OpenTrunk", 0);          
+        }
+        else
+        {
+            bResult &= LoadConfigFile("Load can_com_simulation_trunk: ", "can_com_simulation_trunk.toml");
+            bResult &= LoadConfigFile("Load data_link_trunk: ", "data_link_trunk.toml");
+        }
 
         bResult &= LoadConfigFile("Load trunk_vehicle_device_and_basic_service: ", "trunk_vehicle_device_and_basic_service.toml");
         //bResult &= LoadConfigFile("Load trunk service (complex service): ", "complex_service_trunk.toml");
@@ -96,6 +105,19 @@ bool CTrunkControl::Initialize(uint32_t uiInstance)
 
 void CTrunkControl::Shutdown()
 {
+    m_bSimulateRunning = false;
+    if (m_threadSimulate.joinable())
+        m_threadSimulate.join();
+
+    if (m_signalSpeed)
+    {
+        m_signalSpeed.Reset();
+    }; 
+    if (m_signalTrunk)
+    {
+        m_signalTrunk.Reset();
+    };     
+
     if (!m_bInitialized)
         m_appcontrol.Shutdown();
     m_bInitialized = false;
@@ -105,4 +127,35 @@ void CTrunkControl::SetRunningMode()
 {
     m_appcontrol.SetRunningMode();
 }
+void CTrunkControl::StartSimulation()
+{
+    m_bSimulateRunning = true;
+    m_threadSimulate = sdv::core::secure_thread(&CTrunkControl::SimulateThreadFunction, this);     
+}
 
+
+void CTrunkControl::SimulateThreadFunction()
+{
+    bool bIsMoving = true;
+    uint32_t maxLoopCount  = 20;     
+    m_signalSpeed.Write(0);
+
+    while (m_bSimulateRunning)
+    {      
+        uint32_t loop  = 0;
+        uint32_t speed  = 0;  
+        while (loop < maxLoopCount && m_bSimulateRunning)
+        {
+            if (bIsMoving)
+            {
+                speed = loop * 5;
+            }
+
+            m_signalSpeed.Write(speed);
+            loop++;
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        }        
+
+        bIsMoving = !bIsMoving;
+    }
+}

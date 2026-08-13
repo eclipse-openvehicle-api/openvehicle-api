@@ -16,15 +16,20 @@
 #if defined(_WIN32) && defined(_UNICODE)
 extern "C" int wmain(int argc, wchar_t* argv[])
 {
+    bool bSimulate = false;
     uint32_t uiInstance = 0;
     if (argc < 2)
     {
-        std::cout << "Missing instance number to connect to, '0' will run as standalone application" << std::endl;
+        std::cout << "Parameter (instance number to connect to) missing. 0 or 1 will run a standalone application." << std::endl;
         return 1;
     }
     try
     {
         uiInstance = std::stoi(argv[1]);
+        if (uiInstance == 1)
+        {
+            bSimulate = true;
+        }
     }
     catch (const std::exception& )
     {
@@ -34,15 +39,20 @@ extern "C" int wmain(int argc, wchar_t* argv[])
 #else
 extern "C" int main(int argc, char* argv[])
 {
+    bool bSimulate = false;
     uint32_t uiInstance = 0;
     if (argc < 2) 
     {
-        std::cout << "Missing instance number to connect to, '0' will run as standalone application" << std::endl;
+        std::cout << "Parameter (instance number to connect to) missing. 0 or 1 will run a standalone application." << std::endl;
         return 1;
     }
     try 
     {
         uiInstance = std::stoi(argv[1]);
+        if (uiInstance == 1)
+        {
+            bSimulate = true;
+        }        
     }
     catch (const std::exception& ) 
     {
@@ -50,20 +60,27 @@ extern "C" int main(int argc, char* argv[])
     }
 #endif
     CTrunkControl appobj;
-    if (!appobj.Initialize(uiInstance))
+    if (!appobj.Initialize(bSimulate, uiInstance))
     {
         std::cout << "ERROR: Failed to initialize application control." << std::endl;
         return 0;
     }
 
     CConsole visual_obj;
-    visual_obj.PrintHeader(uiInstance);
+    visual_obj.PrintHeader(bSimulate, uiInstance);
     visual_obj.PrepareDataConsumers();
 
     appobj.SetRunningMode();
-    visual_obj.RunUntilBreak();
-
-    visual_obj.ResetSignals();
+    if (bSimulate)
+    {
+        appobj.StartSimulation();
+        visual_obj.RunUntilBreak();
+    }
+    else
+    {
+        visual_obj.RunUntilBreak();
+        visual_obj.ResetSignals();
+    }
 
     appobj.Shutdown();
     return 0;
