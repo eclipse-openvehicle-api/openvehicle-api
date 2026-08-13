@@ -64,9 +64,11 @@ public:
 
     /**
      * @brief Print the header.
+     * @param[in] bSimulate used in case it is running as a standalone application
+     *                      if false an asc file is used for setting the input speed, otherwise a simulation thread  
      * @param[in] uiInstance Instance number the application will connect to. 0 will start a standalone application 
      */
-    void PrintHeader(uint32_t uiInstance);
+    void PrintHeader(bool bSimulate, uint32_t uiInstance);
 
     /**
      * @brief Prepare the data consumers..

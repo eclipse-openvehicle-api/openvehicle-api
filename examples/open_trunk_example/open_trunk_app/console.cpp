@@ -84,17 +84,21 @@ CConsole::~CConsole()
 #endif
 }
 
-void CConsole::PrintHeader(uint32_t uiInstance)
+void CConsole::PrintHeader(bool bSimulate, uint32_t uiInstance)
 {
     // Clear the screen...
     std::cout << "\x1b[2J";
 
     std::string subTtitle = "Standalone application!";
-    if (uiInstance != 0)
+    if (uiInstance > 1)
     {
         subTtitle = "Connected to core instance ";
         subTtitle.append(std::to_string(uiInstance));
         subTtitle.append(" (not all interfaces available)");        
+    }
+    else if (bSimulate)
+    {
+        subTtitle.append(" simulation mode");
     }
     // Print the titles
     PrintText(g_sTitle, "Open Trunk example: Open trunk when vehicle is not moving");
